@@ -1,30 +1,45 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PrismaClient } from '@prisma/client';
-import { z } from 'zod';
-
-const prisma = new PrismaClient();
-
-const CHAIN_CONFIGS = {
-  BASE_SEPOLIA: {
-    paymentAddress: process.env.PAYMENT_ADDRESS_BASE_SEPOLIA || '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF',
-    usdcAddress: process.env.USDC_BASE_SEPOLIA || '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-  },
-  ETHEREUM_SEPOLIA: {
-    paymentAddress: process.env.PAYMENT_ADDRESS_ETHEREUM_SEPOLIA || '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF',
-    usdcAddress: process.env.USDC_ETHEREUM_SEPOLIA || '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
-  }
-};
-
-const createOrderSchema = z.object({
-  amount: z.number().positive(),
-  chain: z.enum(['BASE_SEPOLIA', 'ETHEREUM_SEPOLIA']),
-  customerEmail: z.string().email().optional(),
-  customerName: z.string().min(1).optional(),
-  expiryMinutes: z.number().positive().optional(),
-});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Add CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   try {
+    const { PrismaClient } = require('@prisma/client');
+    const { z } = require('zod');
+    
+    const prisma = new PrismaClient();
+
+    const CHAIN_CONFIGS = {
+      BASE_SEPOLIA: {
+        paymentAddress: process.env.PAYMENT_ADDRESS_BASE_SEPOLIA || '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF',
+        usdcAddress: process.env.USDC_BASE_SEPOLIA || '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+      },
+      ETHEREUM_SEPOLIA: {
+        paymentAddress: process.env.PAYMENT_ADDRESS_ETHEREUM_SEPOLIA || '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF',
+        usdcAddress: process.env.USDC_ETHEREUM_SEPOLIA || '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+      }
+    };
+
+    const createOrderSchema = z.object({
+      amount: z.number().positive(),
+      chain: z.enum(['BASE_SEPOLIA', 'ETHEREUM_SEPOLIA']),
+      customerEmail: z.string().email().optional(),
+      customerName: z.string().min(1).optional(),
+      expiryMinutes: z.number().positive().optional(),
+    });
+
     if (req.method === 'POST') {
       // Create order
       console.log('Creating order with data:', req.body);
@@ -62,7 +77,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         status: order.status,
       };
 
-      res.status(201).json(response);
+      await prisma.$disconnect();
+      return res.status(201).json(response);
       
     } else if (req.method === 'GET') {
       // Get all orders (for admin)
@@ -92,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           customerName: order.customerName,
           createdAt: order.createdAt.toISOString(),
           expiresAt: order.expiresAt.toISOString(),
-          transactionCount: 0, // Not including transactions in this response
+          transactionCount: 0,
         })),
         pagination: {
           page,
@@ -102,24 +118,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       };
 
-      res.status(200).json(response);
+      await prisma.$disconnect();
+      return res.status(200).json(response);
       
     } else {
-      res.status(405).json({ error: 'Method not allowed' });
+      return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('Validation error:', error.errors);
-      res.status(400).json({ error: 'Validation error', details: error.errors });
-    } else {
-      console.error('Orders API error:', error);
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      res.status(500).json({ 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  } finally {
-    await prisma.$disconnect();
+    console.error('Orders API error:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }

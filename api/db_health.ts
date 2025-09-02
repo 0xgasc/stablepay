@@ -1,11 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    
     const count = await prisma.order.count();
+    await prisma.$disconnect();
+    
     res.status(200).json({ 
       status: 'database connected', 
       orderCount: count,
@@ -18,7 +20,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }

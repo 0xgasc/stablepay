@@ -21,10 +21,5 @@
       "source": "/(.*)",
       "destination": "/public/$1"
     }
-  ],
-  "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
