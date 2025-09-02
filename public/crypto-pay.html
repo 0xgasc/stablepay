@@ -445,6 +445,14 @@
                 signer = await provider.getSigner();
             }
 
+            // Validate addresses
+            if (!order.usdcAddress || !order.paymentAddress) {
+                throw new Error('Missing contract or payment addresses');
+            }
+
+            console.log('USDC Address:', order.usdcAddress);
+            console.log('Payment Address:', order.paymentAddress);
+
             // Create USDC contract
             const usdcContract = new ethers.Contract(
                 order.usdcAddress,
@@ -470,16 +478,25 @@
             document.getElementById('txLink').href = explorerUrl;
             document.getElementById('txLink').classList.remove('hidden');
 
-            // Update order with transaction hash
+            // Update order with transaction hash (demo mode - localStorage)
             try {
-                await fetch(`/api/orders/${order.orderId}/transaction`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        txHash: tx.hash,
-                        fromAddress: connectedAddress
-                    })
-                });
+                const storedOrder = JSON.parse(localStorage.getItem('currentOrder'));
+                if (storedOrder) {
+                    storedOrder.txHash = tx.hash;
+                    storedOrder.fromAddress = connectedAddress;
+                    storedOrder.status = 'PAID';
+                    localStorage.setItem('currentOrder', JSON.stringify(storedOrder));
+                    
+                    // Update demo orders list
+                    const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
+                    const orderIndex = demoOrders.findIndex(o => o.id === order.orderId);
+                    if (orderIndex >= 0) {
+                        demoOrders[orderIndex].status = 'PAID';
+                        demoOrders[orderIndex].txHash = tx.hash;
+                        demoOrders[orderIndex].fromAddress = connectedAddress;
+                        localStorage.setItem('demoOrders', JSON.stringify(demoOrders));
+                    }
+                }
             } catch (err) {
                 console.error('Failed to update order with tx hash:', err);
             }

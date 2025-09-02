@@ -396,8 +396,29 @@
 
         async function viewOrderDetails(orderId) {
             try {
-                const response = await fetch(`/api/orders/${orderId}`);
-                const order = await response.json();
+                // Load from localStorage (demo mode)
+                const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
+                const order = demoOrders.find(o => o.id === orderId);
+                
+                if (!order) {
+                    throw new Error('Order not found in demo data');
+                }
+                
+                // Mock complete order structure for demo
+                const completeOrder = {
+                    ...order,
+                    transactions: order.txHash ? [{
+                        id: 'tx_' + Date.now(),
+                        txHash: order.txHash,
+                        chain: order.chain,
+                        amount: order.amount,
+                        fromAddress: order.fromAddress || 'Demo Address',
+                        status: 'CONFIRMED',
+                        confirmations: 12,
+                        blockNumber: 12345678,
+                        blockTimestamp: new Date().toISOString()
+                    }] : []
+                };
                 
                 const modalContent = document.getElementById('orderModalContent');
                 modalContent.innerHTML = `
@@ -406,27 +427,27 @@
                         <div>
                             <h4 class="font-semibold text-gray-900 mb-3">Order Information</h4>
                             <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div><strong>Order ID:</strong> ${order.id}</div>
-                                <div><strong>Amount:</strong> ${order.amount} USDC</div>
-                                <div><strong>Chain:</strong> ${order.chain.replace('_', ' ')}</div>
-                                <div><strong>Status:</strong> <span class="px-2 py-1 text-xs rounded-full status-${order.status.toLowerCase()}">${order.status}</span></div>
-                                <div><strong>Payment Address:</strong> <span class="font-mono text-xs">${order.paymentAddress}</span></div>
-                                <div><strong>Created:</strong> ${new Date(order.createdAt).toLocaleString()}</div>
-                                <div><strong>Expires:</strong> ${new Date(order.expiresAt).toLocaleString()}</div>
-                                <div><strong>Customer:</strong> ${order.customerEmail || 'Anonymous'}</div>
+                                <div><strong>Order ID:</strong> ${completeOrder.id}</div>
+                                <div><strong>Amount:</strong> ${completeOrder.amount} USDC</div>
+                                <div><strong>Chain:</strong> ${completeOrder.chain.replace('_', ' ')}</div>
+                                <div><strong>Status:</strong> <span class="px-2 py-1 text-xs rounded-full status-${completeOrder.status.toLowerCase()}">${completeOrder.status}</span></div>
+                                <div><strong>Payment Address:</strong> <span class="font-mono text-xs">0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF</span></div>
+                                <div><strong>Created:</strong> ${new Date(completeOrder.createdAt).toLocaleString()}</div>
+                                <div><strong>Expires:</strong> ${new Date(completeOrder.expiresAt).toLocaleString()}</div>
+                                <div><strong>Customer:</strong> ${completeOrder.customerEmail || 'Anonymous'}</div>
                             </div>
                         </div>
                         
                         <!-- Transactions -->
                         <div>
-                            <h4 class="font-semibold text-gray-900 mb-3">Transactions (${order.transactions.length})</h4>
-                            ${order.transactions.length === 0 ? 
+                            <h4 class="font-semibold text-gray-900 mb-3">Transactions (${completeOrder.transactions.length})</h4>
+                            ${completeOrder.transactions.length === 0 ? 
                                 '<p class="text-gray-500 text-sm">No transactions found</p>' :
-                                order.transactions.map(tx => `
+                                completeOrder.transactions.map(tx => `
                                     <div class="border rounded-lg p-4 mb-3">
                                         <div class="grid grid-cols-2 gap-2 text-sm">
                                             <div><strong>Tx Hash:</strong> 
-                                                <a href="${getExplorerUrl(order.chain, tx.txHash)}" target="_blank" 
+                                                <a href="${getExplorerUrl(completeOrder.chain, tx.txHash)}" target="_blank" 
                                                    class="text-blue-600 hover:underline font-mono text-xs">
                                                     ${tx.txHash.slice(0, 10)}...${tx.txHash.slice(-8)}
                                                 </a>
@@ -444,10 +465,10 @@
                         
                         <!-- Export Options -->
                         <div class="pt-4 border-t space-x-3">
-                            <button class="export-csv-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm" data-order-id="${order.id}">
+                            <button class="export-csv-btn bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm" data-order-id="${completeOrder.id}">
                                 📊 Export CSV
                             </button>
-                            <button class="export-pdf-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm" data-order-id="${order.id}">
+                            <button class="export-pdf-btn bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm" data-order-id="${completeOrder.id}">
                                 📄 Generate PDF
                             </button>
                         </div>
@@ -501,8 +522,13 @@
 
         async function exportOrderCSV(orderId) {
             try {
-                const response = await fetch(`/api/orders/${orderId}`);
-                const order = await response.json();
+                // Load from localStorage (demo mode)
+                const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
+                const order = demoOrders.find(o => o.id === orderId);
+                
+                if (!order) {
+                    throw new Error('Order not found in demo data');
+                }
                 
                 const headers = ['Order ID', 'Amount (USDC)', 'Chain', 'Status', 'Customer Email', 'Created At', 'Payment Address'];
                 const rows = [[
@@ -543,8 +569,13 @@
 
         async function generateOrderPDF(orderId) {
             try {
-                const response = await fetch(`/api/orders/${orderId}`);
-                const order = await response.json();
+                // Load from localStorage (demo mode)
+                const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
+                const order = demoOrders.find(o => o.id === orderId);
+                
+                if (!order) {
+                    throw new Error('Order not found in demo data');
+                }
                 
                 // Check if jsPDF is loaded with multiple fallback checks
                 console.log('Window object keys:', Object.keys(window).filter(k => k.toLowerCase().includes('jspdf')));
