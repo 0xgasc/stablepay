@@ -364,6 +364,7 @@
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 
                 const response = { ok: true };
+                const chainConfig = CHAIN_CONFIG[selectedChain.value];
                 const orderData = {
                     orderId: mockOrderId,
                     amount: currentProduct.price,
