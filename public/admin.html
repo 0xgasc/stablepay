@@ -251,18 +251,20 @@
                 const currentOrder = localStorage.getItem('currentOrder');
                 if (currentOrder) {
                     const order = JSON.parse(currentOrder);
-                    const exists = storedOrders.find(o => o.id === order.orderId);
+                    const exists = storedOrders.find(o => o.id === (order.id || order.orderId));
                     if (!exists) {
                         storedOrders.unshift({
-                            id: order.orderId,
+                            id: order.id || order.orderId,
                             amount: order.amount,
                             chain: order.chain,
-                            status: 'PENDING',
+                            status: order.status || 'PENDING',
                             customerEmail: null,
                             customerName: null,
-                            createdAt: new Date().toISOString(),
+                            createdAt: order.createdAt || new Date().toISOString(),
                             expiresAt: order.expiresAt,
-                            transactionCount: 0
+                            transactionCount: order.txHash ? 1 : 0,
+                            txHash: order.txHash || null,
+                            fromAddress: order.fromAddress || null
                         });
                         localStorage.setItem('demoOrders', JSON.stringify(storedOrders));
                     }
@@ -351,7 +353,10 @@
                             ${createdAt}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-xs text-gray-500">${order.transactionCount} tx(s)</div>
+                            ${order.txHash ? 
+                                `<a href="${getExplorerUrl(order.chain, order.txHash)}" target="_blank" class="text-blue-600 hover:underline font-mono text-xs">${order.txHash.slice(0, 8)}...${order.txHash.slice(-6)}</a>` : 
+                                '<span class="text-gray-400 text-xs">No hash</span>'
+                            }
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button class="view-btn text-blue-600 hover:text-blue-900" data-order-id="${order.id}">View</button>

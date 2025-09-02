@@ -368,17 +368,28 @@
                 const response = { ok: true };
                 const chainConfig = CHAIN_CONFIG[selectedChain.value];
                 const orderData = {
+                    id: mockOrderId,  // Use 'id' to match admin panel expectations
                     orderId: mockOrderId,
                     amount: currentProduct.price,
                     chain: selectedChain.value,
                     paymentAddress: chainConfig.paymentAddress,
                     usdcAddress: chainConfig.usdcAddress,
+                    productId: currentProduct.id,
+                    productName: currentProduct.name,
+                    createdAt: new Date().toISOString(),
                     expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-                    status: 'PENDING'
+                    status: 'PENDING',
+                    txHash: null,
+                    fromAddress: null
                 };
                 
                 // Store in localStorage for demo
                 localStorage.setItem('currentOrder', JSON.stringify(orderData));
+                
+                // Add to demoOrders array
+                const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
+                demoOrders.push(orderData);
+                localStorage.setItem('demoOrders', JSON.stringify(demoOrders));
                 
                 /* Original API call (for when backend is restored):
                 const response = await fetch('/api/orders', {
@@ -491,12 +502,15 @@
                     
                     // Update demo orders list
                     const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
-                    const orderIndex = demoOrders.findIndex(o => o.id === order.orderId);
+                    const orderIndex = demoOrders.findIndex(o => o.id === order.id);
                     if (orderIndex >= 0) {
                         demoOrders[orderIndex].status = 'PAID';
                         demoOrders[orderIndex].txHash = tx.hash;
                         demoOrders[orderIndex].fromAddress = connectedAddress;
                         localStorage.setItem('demoOrders', JSON.stringify(demoOrders));
+                        console.log('Updated order with tx hash:', tx.hash);
+                    } else {
+                        console.error('Order not found in demoOrders:', order.id);
                     }
                 }
             } catch (err) {
