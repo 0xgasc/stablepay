@@ -26,6 +26,7 @@ const createOrderSchema = z.object({
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === 'POST') {
+      // Create order
       console.log('Creating order with data:', req.body);
       const data = createOrderSchema.parse(req.body);
       console.log('Parsed order data:', data);
@@ -62,6 +63,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       };
 
       res.status(201).json(response);
+      
+    } else if (req.method === 'GET') {
+      // Get all orders (for admin)
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const skip = (page - 1) * limit;
+
+      const [orders, total] = await Promise.all([
+        prisma.order.findMany({
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            transactions: false,
+          },
+        }),
+        prisma.order.count(),
+      ]);
+
+      const response = {
+        orders: orders.map(order => ({
+          id: order.id,
+          amount: Number(order.amount),
+          chain: order.chain,
+          status: order.status,
+          customerEmail: order.customerEmail,
+          customerName: order.customerName,
+          createdAt: order.createdAt.toISOString(),
+          expiresAt: order.expiresAt.toISOString(),
+          transactionCount: 0, // Not including transactions in this response
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      };
+
+      res.status(200).json(response);
+      
     } else {
       res.status(405).json({ error: 'Method not allowed' });
     }
@@ -70,7 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Validation error:', error.errors);
       res.status(400).json({ error: 'Validation error', details: error.errors });
     } else {
-      console.error('Create order error:', error);
+      console.error('Orders API error:', error);
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       res.status(500).json({ 
         error: 'Internal server error',
