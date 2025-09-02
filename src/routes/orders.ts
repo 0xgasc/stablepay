@@ -15,15 +15,23 @@ const createOrderSchema = z.object({
 
 router.post('/', async (req, res) => {
   try {
+    console.log('Creating order with data:', req.body);
     const data = createOrderSchema.parse(req.body);
+    console.log('Parsed order data:', data);
     const order = await orderService.createOrder(data);
+    console.log('Order created successfully:', order.orderId);
     res.status(201).json(order);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
       res.status(400).json({ error: 'Validation error', details: error.errors });
     } else {
       console.error('Create order error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({ 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   }
 });

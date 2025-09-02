@@ -37,6 +37,26 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Database health check
+app.get('/api/db-health', async (req, res) => {
+  try {
+    const { db } = await import('./config/database');
+    const count = await db.order.count();
+    res.json({ 
+      status: 'database connected', 
+      orderCount: count,
+      timestamp: new Date().toISOString() 
+    });
+  } catch (error) {
+    console.error('Database health check failed:', error);
+    res.status(500).json({ 
+      status: 'database error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 app.get('/api/chains', (req, res) => {
   const chains = [
     { 
