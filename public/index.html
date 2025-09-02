@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StablePay - Multi-Chain USDC Payments</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <div class="bg-white shadow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-6 md:justify-start md:space-x-10">
+                    <div class="flex justify-start lg:w-0 lg:flex-1">
+                        <a href="#" class="text-2xl font-bold text-gray-900">StablePay</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="px-4 py-6 sm:px-0">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                            🧪 TESTNET MODE
+                        </span>
+                    </div>
+                    <h1 class="text-4xl font-bold text-gray-900 sm:text-5xl">
+                        Accept USDC Payments
+                    </h1>
+                    <p class="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+                        Create payment orders on testnet blockchains. Test with fake USDC - no real money!
+                    </p>
+                </div>
+
+                <div class="mt-10">
+                    <div class="bg-white overflow-hidden shadow rounded-lg max-w-2xl mx-auto">
+                        <div class="px-4 py-5 sm:p-6">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                                Create Payment Order
+                            </h3>
+                            <div class="mt-5">
+                                <form id="orderForm" class="space-y-4" onsubmit="return false;">
+                                    <div>
+                                        <label for="amount" class="block text-sm font-medium text-gray-700">Amount (USDC)</label>
+                                        <input type="number" 
+                                               id="amount" 
+                                               step="0.01" 
+                                               min="0.01" 
+                                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                               placeholder="100.00" 
+                                               required>
+                                    </div>
+                                    
+                                    <div>
+                                        <label for="chain" class="block text-sm font-medium text-gray-700">Testnet Blockchain</label>
+                                        <select id="chain" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
+                                            <option value="">Select a testnet</option>
+                                            <option value="BASE_SEPOLIA">Base Sepolia (Recommended)</option>
+                                            <option value="ETHEREUM_SEPOLIA">Ethereum Sepolia</option>
+                                        </select>
+                                        <p class="mt-1 text-xs text-gray-500">Need testnet ETH? Check the faucet links after creating your order.</p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label for="customerEmail" class="block text-sm font-medium text-gray-700">Email (Optional)</label>
+                                        <input type="email" 
+                                               id="customerEmail" 
+                                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                               placeholder="customer@example.com">
+                                    </div>
+                                    
+                                    <div>
+                                        <label for="customerName" class="block text-sm font-medium text-gray-700">Name (Optional)</label>
+                                        <input type="text" 
+                                               id="customerName" 
+                                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                               placeholder="John Doe">
+                                    </div>
+                                    
+                                    <div>
+                                        <button type="button" 
+                                                id="createOrderBtn"
+                                                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                            Create Order
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Details Modal -->
+                <div id="orderModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+                    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+                        <div class="mt-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-medium text-gray-900">Payment Order Created</h3>
+                                <button id="closeModal" class="text-gray-400 hover:text-gray-600">
+                                    <i data-lucide="x" class="h-6 w-6"></i>
+                                </button>
+                            </div>
+                            <div class="mt-4" id="orderDetails">
+                                <!-- Order details will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Check Order Section -->
+                <div class="mt-16">
+                    <div class="bg-white overflow-hidden shadow rounded-lg max-w-2xl mx-auto">
+                        <div class="px-4 py-5 sm:p-6">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                                Check Order Status
+                            </h3>
+                            <div class="mt-5">
+                                <div class="flex space-x-2">
+                                    <input type="text" 
+                                           id="orderIdCheck" 
+                                           class="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                           placeholder="Enter order ID">
+                                    <button id="checkOrderBtn" 
+                                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                                        Check Status
+                                    </button>
+                                </div>
+                                <div id="orderStatus" class="mt-4 hidden">
+                                    <!-- Order status will be shown here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        const orderForm = document.getElementById('orderForm');
+        const orderModal = document.getElementById('orderModal');
+        const orderDetails = document.getElementById('orderDetails');
+        const closeModal = document.getElementById('closeModal');
+        const checkOrderBtn = document.getElementById('checkOrderBtn');
+        const orderIdCheck = document.getElementById('orderIdCheck');
+        const orderStatus = document.getElementById('orderStatus');
+
+        document.getElementById('createOrderBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            console.log('Create Order button clicked!');
+            
+            const orderData = {
+                amount: parseFloat(document.getElementById('amount').value),
+                chain: document.getElementById('chain').value,
+                customerEmail: document.getElementById('customerEmail').value || undefined,
+                customerName: document.getElementById('customerName').value || undefined,
+            };
+
+            console.log('Order data:', orderData);
+
+            // Validate form
+            if (!orderData.amount || orderData.amount <= 0) {
+                alert('Please enter a valid amount');
+                return;
+            }
+            if (!orderData.chain) {
+                alert('Please select a blockchain');
+                return;
+            }
+
+            try {
+                console.log('Sending request to API...');
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(orderData),
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Failed to create order: ${errorText}`);
+                }
+
+                const order = await response.json();
+                console.log('Order created:', order);
+                showOrderDetails(order);
+            } catch (error) {
+                console.error('Error creating order:', error);
+                alert('Error creating order: ' + error.message);
+            }
+        });
+
+        function showOrderDetails(order) {
+            const expiresAt = new Date(order.expiresAt).toLocaleString();
+            
+            orderDetails.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-green-50 border border-green-200 rounded-md p-4">
+                        <div class="flex items-center">
+                            <i data-lucide="check-circle" class="h-5 w-5 text-green-400 mr-2"></i>
+                            <h4 class="text-sm font-medium text-green-800">Order Created Successfully</h4>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Order ID</dt>
+                            <dd class="mt-1 text-sm text-gray-900 font-mono">${order.orderId}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Amount</dt>
+                            <dd class="mt-1 text-sm text-gray-900">$${order.amount.toFixed(2)} USDC</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Chain</dt>
+                            <dd class="mt-1 text-sm text-gray-900">${order.chain}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Status</dt>
+                            <dd class="mt-1 text-sm text-gray-900">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    ${order.status}
+                                </span>
+                            </dd>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <h4 class="text-sm font-medium text-gray-900 mb-2">Payment Instructions</h4>
+                        <div class="bg-gray-50 rounded-md p-4">
+                            <p class="text-sm text-gray-700 mb-2">
+                                Send <strong>exactly ${order.amount.toFixed(6)} USDC</strong> to:
+                            </p>
+                            <div class="flex items-center space-x-2">
+                                <code class="flex-1 px-2 py-1 bg-white border rounded text-sm font-mono">${order.paymentAddress}</code>
+                                <button onclick="copyToClipboard('${order.paymentAddress}')" class="text-blue-600 hover:text-blue-800">
+                                    <i data-lucide="copy" class="h-4 w-4"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">
+                                USDC Contract: ${order.usdcAddress}
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                Expires: ${expiresAt}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+                        <div class="flex items-start">
+                            <i data-lucide="info" class="h-5 w-5 text-blue-400 mr-2 mt-0.5"></i>
+                            <div class="text-sm text-blue-700">
+                                <p class="font-medium">Important:</p>
+                                <ul class="mt-1 list-disc list-inside space-y-1">
+                                    <li>Send the exact amount from any wallet</li>
+                                    <li>Payment will be detected automatically</li>
+                                    <li>Keep this order ID for reference: <code class="bg-blue-100 px-1 rounded">${order.orderId}</code></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mt-4">
+                        <div class="flex items-start">
+                            <i data-lucide="zap" class="h-5 w-5 text-yellow-400 mr-2 mt-0.5"></i>
+                            <div class="text-sm text-yellow-700">
+                                <p class="font-medium">Need Testnet Tokens?</p>
+                                <div class="mt-2 space-y-1">
+                                    ${order.chain === 'BASE_SEPOLIA' ? `
+                                        <p>• <a href="https://faucet.quicknode.com/base/sepolia" target="_blank" class="underline">Base Sepolia ETH Faucet</a></p>
+                                        <p>• <a href="https://faucet.circle.com" target="_blank" class="underline">Circle USDC Faucet</a></p>
+                                    ` : `
+                                        <p>• <a href="https://sepoliafaucet.com" target="_blank" class="underline">Ethereum Sepolia ETH Faucet</a></p>
+                                        <p>• <a href="https://faucet.circle.com" target="_blank" class="underline">Circle USDC Faucet</a></p>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            lucide.createIcons();
+            orderModal.classList.remove('hidden');
+        }
+
+        closeModal.addEventListener('click', () => {
+            orderModal.classList.add('hidden');
+        });
+
+        checkOrderBtn.addEventListener('click', async () => {
+            const orderId = orderIdCheck.value.trim();
+            if (!orderId) {
+                alert('Please enter an order ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/orders/${orderId}`);
+                if (!response.ok) {
+                    throw new Error('Order not found');
+                }
+
+                const order = await response.json();
+                showOrderStatus(order);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        function showOrderStatus(order) {
+            const statusColors = {
+                PENDING: 'bg-yellow-100 text-yellow-800',
+                PAID: 'bg-blue-100 text-blue-800',
+                CONFIRMED: 'bg-green-100 text-green-800',
+                REFUNDED: 'bg-red-100 text-red-800',
+                EXPIRED: 'bg-gray-100 text-gray-800',
+                CANCELLED: 'bg-gray-100 text-gray-800',
+            };
+
+            orderStatus.innerHTML = `
+                <div class="border rounded-md p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-lg font-medium text-gray-900">Order Status</h4>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[order.status]}">
+                            ${order.status}
+                        </span>
+                    </div>
+                    
+                    <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Amount</dt>
+                            <dd class="mt-1 text-sm text-gray-900">$${order.amount.toFixed(2)} USDC</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Chain</dt>
+                            <dd class="mt-1 text-sm text-gray-900">${order.chain}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Created</dt>
+                            <dd class="mt-1 text-sm text-gray-900">${new Date(order.createdAt).toLocaleString()}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Expires</dt>
+                            <dd class="mt-1 text-sm text-gray-900">${new Date(order.expiresAt).toLocaleString()}</dd>
+                        </div>
+                    </dl>
+                    
+                    ${order.transactions.length > 0 ? `
+                        <div class="mt-6">
+                            <h5 class="text-sm font-medium text-gray-900 mb-3">Transactions (${order.transactions.length})</h5>
+                            <div class="space-y-2">
+                                ${order.transactions.map(tx => `
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                                        <div>
+                                            <p class="text-sm font-mono text-gray-900">${tx.txHash.substring(0, 20)}...</p>
+                                            <p class="text-xs text-gray-500">${tx.confirmations} confirmations</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-sm font-medium text-gray-900">$${tx.amount.toFixed(2)}</p>
+                                            <p class="text-xs text-gray-500">${tx.status}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            orderStatus.classList.remove('hidden');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Address copied to clipboard!');
+            });
+        }
+
+        // Auto-refresh order status every 30 seconds if checking an order
+        setInterval(() => {
+            if (!orderStatus.classList.contains('hidden')) {
+                const orderId = orderIdCheck.value.trim();
+                if (orderId) {
+                    checkOrderBtn.click();
+                }
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

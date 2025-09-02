@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Chain {
+  BASE_SEPOLIA
+  ETHEREUM_SEPOLIA
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CONFIRMED
+  REFUNDED
+  EXPIRED
+  CANCELLED
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PROCESSED
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  customerEmail   String?
+  customerName    String?
+  amount          Decimal     @db.Decimal(18, 6)
+  chain           Chain
+  status          OrderStatus @default(PENDING)
+  paymentAddress  String
+  expiresAt       DateTime
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  transactions    Transaction[]
+  refunds         Refund[]
+
+  @@map("orders")
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  orderId         String
+  txHash          String            @unique
+  chain           Chain
+  amount          Decimal           @db.Decimal(18, 6)
+  fromAddress     String
+  toAddress       String
+  blockNumber     BigInt?
+  blockTimestamp  DateTime?
+  status          TransactionStatus @default(PENDING)
+  confirmations   Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  order           Order             @relation(fields: [orderId], references: [id])
+
+  @@map("transactions")
+}
+
+model Refund {
+  id              String       @id @default(cuid())
+  orderId         String
+  amount          Decimal      @db.Decimal(18, 6)
+  reason          String
+  status          RefundStatus @default(PENDING)
+  approvedBy      String?
+  refundTxHash    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  order           Order        @relation(fields: [orderId], references: [id])
+
+  @@map("refunds")
+}
+
+model ChainConfig {
+  id                String @id @default(cuid())
+  chain             Chain  @unique
+  rpcUrl            String
+  usdcAddress       String
+  paymentAddress    String
+  requiredConfirms  Int    @default(12)
+  blockTimeSeconds  Int    @default(12)
+  lastScannedBlock  BigInt @default(0)
+  
+  @@map("chain_configs")
+}

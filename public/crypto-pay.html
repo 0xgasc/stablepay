@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StablePay - Crypto Payment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .testnet-badge { 
+            background: linear-gradient(90deg, #f59e0b, #ef4444);
+            animation: gradient 3s ease infinite;
+        }
+        @keyframes gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Testnet Banner -->
+    <div class="testnet-badge text-white text-center py-2 text-sm font-bold">
+        🧪 TESTNET MODE - Using Base Sepolia & Ethereum Sepolia
+    </div>
+
+    <div class="container mx-auto px-4 py-6 sm:py-8 max-w-2xl">
+        <!-- Back Button -->
+        <div class="mb-6">
+            <button id="backBtn" class="text-blue-400 hover:text-blue-300 flex items-center">
+                <span class="mr-2">←</span> Back to Store
+            </button>
+        </div>
+
+        <div class="text-center mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Complete Your Purchase</h1>
+            <p class="text-gray-400 text-sm sm:text-base">Pay with USDC on testnet</p>
+        </div>
+
+        <!-- Product Summary -->
+        <div id="productSummary" class="bg-gray-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+            <h2 class="text-xl font-bold mb-4">Order Summary</h2>
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Product</span>
+                    <span id="productName">Loading...</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Amount</span>
+                    <span id="productPrice" class="text-green-400 font-bold">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wallet Connection -->
+        <div id="walletSection" class="bg-gray-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+            <div id="connectWalletBtn" class="text-center">
+                <button id="connectBtn" class="bg-blue-600 hover:bg-blue-700 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold transition-colors text-sm sm:text-base">
+                    Connect Wallet
+                </button>
+            </div>
+            <div id="walletInfo" class="hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm text-gray-400">Connected Wallet</p>
+                        <p class="font-mono text-sm" id="walletAddress"></p>
+                    </div>
+                    <button id="disconnectBtn" class="text-red-400 hover:text-red-300 text-sm">
+                        Disconnect
+                    </button>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-700">
+                    <p class="text-sm text-gray-400">USDC Balance on All Chains</p>
+                    <div id="usdcBalances" class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-sm">Base Sepolia:</span>
+                            <span id="baseSepBalance" class="text-sm font-mono">Loading...</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm">Ethereum Sepolia:</span>
+                            <span id="ethSepBalance" class="text-sm font-mono">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chain Selection & Payment -->
+        <div id="paymentSection" class="hidden bg-gray-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+            <h2 class="text-xl font-bold mb-4">Select Payment Chain</h2>
+            
+            <div class="space-y-4 mb-6">
+                <label class="flex items-center space-x-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600">
+                    <input type="radio" name="chain" value="BASE_SEPOLIA" class="text-blue-600">
+                    <div class="flex-1">
+                        <div class="font-semibold">Base Sepolia</div>
+                        <div class="text-sm text-gray-400">Recommended - Lower fees</div>
+                    </div>
+                    <div class="text-sm font-mono" id="baseBalanceRadio">0.0 USDC</div>
+                </label>
+
+                <label class="flex items-center space-x-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600">
+                    <input type="radio" name="chain" value="ETHEREUM_SEPOLIA" class="text-blue-600">
+                    <div class="flex-1">
+                        <div class="font-semibold">Ethereum Sepolia</div>
+                        <div class="text-sm text-gray-400">Classic Ethereum testnet</div>
+                    </div>
+                    <div class="text-sm font-mono" id="ethBalanceRadio">0.0 USDC</div>
+                </label>
+            </div>
+
+            <button 
+                id="payBtn"
+                class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled
+            >
+                Pay with USDC
+            </button>
+
+            <div id="txStatus" class="hidden mt-4 p-4 bg-blue-900/30 rounded-lg">
+                <p class="text-sm font-semibold mb-2">Transaction Status</p>
+                <p id="txMessage" class="text-sm"></p>
+                <a id="txLink" href="#" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm mt-2 inline-block hidden">
+                    View on Explorer →
+                </a>
+            </div>
+        </div>
+
+        <!-- Error/Success Messages -->
+        <div id="errorMessage" class="hidden bg-red-900/30 border border-red-500 rounded-lg p-4 mb-6">
+            <p class="text-red-300"></p>
+        </div>
+
+        <div id="successMessage" class="hidden bg-green-900/30 border border-green-500 rounded-lg p-4 mb-6">
+            <p class="text-green-300"></p>
+        </div>
+    </div>
+
+    <script>
+        // Chain configurations
+        const CHAIN_CONFIG = {
+            BASE_SEPOLIA: {
+                chainId: '0x14a34', // 84532 in hex
+                chainName: 'Base Sepolia',
+                rpcUrls: ['https://sepolia.base.org'],
+                blockExplorerUrls: ['https://sepolia.basescan.org'],
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' // Base Sepolia USDC (correct address)
+            },
+            ETHEREUM_SEPOLIA: {
+                chainId: '0xaa36a7', // 11155111 in hex
+                chainName: 'Ethereum Sepolia',
+                rpcUrls: ['https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'],
+                blockExplorerUrls: ['https://sepolia.etherscan.io'],
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                usdcAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' // Ethereum Sepolia USDC (Circle)
+            }
+        };
+
+        // USDC ABI (minimal)
+        const USDC_ABI = [
+            "function balanceOf(address owner) view returns (uint256)",
+            "function decimals() view returns (uint8)",
+            "function transfer(address to, uint256 amount) returns (bool)",
+            "function approve(address spender, uint256 amount) returns (bool)",
+            "function allowance(address owner, address spender) view returns (uint256)"
+        ];
+
+        let provider = null;
+        let signer = null;
+        let connectedAddress = null;
+        let currentProduct = null;
+
+        // Parse URL parameters to get product info
+        function loadProductInfo() {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentProduct = {
+                id: urlParams.get('productId'),
+                name: urlParams.get('productName'), 
+                price: parseFloat(urlParams.get('price'))
+            };
+
+            if (!currentProduct.id || !currentProduct.name || !currentProduct.price) {
+                showError('Invalid product data. Please start from the store.');
+                setTimeout(() => goBack(), 3000);
+                return;
+            }
+
+            // Update UI with product info
+            document.getElementById('productName').textContent = currentProduct.name;
+            document.getElementById('productPrice').textContent = `$${currentProduct.price} (${currentProduct.price} USDC)`;
+            
+            console.log('Product loaded:', currentProduct);
+        }
+
+        // Go back to store
+        function goBack() {
+            window.location.href = '/public/store.html';
+        }
+
+        // Connect Wallet
+        async function connectWallet() {
+            console.log('Attempting to connect wallet...');
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showError('Please install MetaMask or another Web3 wallet');
+                    window.open('https://metamask.io/download/', '_blank');
+                    return;
+                }
+
+                // Request account access
+                console.log('Requesting accounts...');
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                console.log('Accounts received:', accounts);
+
+                if (!accounts || accounts.length === 0) {
+                    showError('No accounts found. Please unlock your wallet.');
+                    return;
+                }
+
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                connectedAddress = await signer.getAddress();
+                console.log('Connected address:', connectedAddress);
+
+                // Update UI
+                document.getElementById('connectWalletBtn').classList.add('hidden');
+                document.getElementById('walletInfo').classList.remove('hidden');
+                document.getElementById('paymentSection').classList.remove('hidden');
+                document.getElementById('walletAddress').textContent = 
+                    connectedAddress.slice(0, 6) + '...' + connectedAddress.slice(-4);
+
+                // Get USDC balance
+                await updateUSDCBalance();
+
+                showSuccess('Wallet connected successfully!');
+            } catch (error) {
+                console.error('Connection error:', error);
+                showError('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        // Disconnect wallet
+        async function disconnectWallet() {
+            console.log('Disconnecting wallet...');
+            
+            // Clear local state
+            provider = null;
+            signer = null;
+            connectedAddress = null;
+            
+            // Clear any cached permissions in MetaMask
+            try {
+                await window.ethereum.request({
+                    method: "wallet_revokePermissions",
+                    params: [{ eth_accounts: {} }]
+                });
+            } catch (err) {
+                console.log('Error revoking permissions:', err);
+            }
+            
+            // Update UI
+            document.getElementById('connectWalletBtn').classList.remove('hidden');
+            document.getElementById('walletInfo').classList.add('hidden');
+            document.getElementById('paymentSection').classList.add('hidden');
+            
+            showSuccess('Wallet disconnected. You can now connect a different wallet.');
+        }
+
+        // Update USDC balance on all chains
+        async function updateUSDCBalance() {
+            if (!connectedAddress) return;
+
+            console.log('Checking USDC balance on all chains for:', connectedAddress);
+
+            // Check Base Sepolia
+            checkBalanceOnChain('BASE_SEPOLIA', 'baseSepBalance');
+            
+            // Check Ethereum Sepolia  
+            checkBalanceOnChain('ETHEREUM_SEPOLIA', 'ethSepBalance');
+        }
+
+        async function checkBalanceOnChain(chainKey, elementId) {
+            try {
+                const config = CHAIN_CONFIG[chainKey];
+                console.log(`Checking ${config.chainName} balance...`);
+                
+                // Create provider for this specific chain
+                const chainProvider = new ethers.JsonRpcProvider(config.rpcUrls[0]);
+                const usdcContract = new ethers.Contract(config.usdcAddress, USDC_ABI, chainProvider);
+                
+                const balance = await usdcContract.balanceOf(connectedAddress);
+                const decimals = await usdcContract.decimals();
+                const formattedBalance = ethers.formatUnits(balance, decimals);
+                
+                const element = document.getElementById(elementId);
+                element.textContent = `${formattedBalance} USDC`;
+                
+                // Update radio button balance displays
+                const radioElement = document.getElementById(chainKey === 'BASE_SEPOLIA' ? 'baseBalanceRadio' : 'ethBalanceRadio');
+                if (radioElement) {
+                    radioElement.textContent = `${formattedBalance} USDC`;
+                }
+                
+                // Add color coding
+                if (parseFloat(formattedBalance) > 0) {
+                    element.classList.add('text-green-400');
+                    element.classList.remove('text-gray-400');
+                    if (radioElement) {
+                        radioElement.classList.add('text-green-400');
+                        radioElement.classList.remove('text-gray-400');
+                    }
+                } else {
+                    element.classList.add('text-gray-400');
+                    element.classList.remove('text-green-400');
+                    if (radioElement) {
+                        radioElement.classList.add('text-gray-400');
+                        radioElement.classList.remove('text-green-400');
+                    }
+                }
+                
+                console.log(`${config.chainName}: ${formattedBalance} USDC`);
+            } catch (error) {
+                console.error(`Error checking ${chainKey} balance:`, error);
+                
+                // Show 0 instead of error to be cleaner
+                const element = document.getElementById(elementId);
+                element.textContent = '0.0 USDC';
+                element.classList.add('text-gray-400');
+                element.classList.remove('text-green-400');
+                
+                console.log(`${config.chainName}: Assuming 0 USDC (RPC error)`);
+            }
+        }
+
+        // Create order and initiate payment
+        async function initiatePayment() {
+            if (!signer || !currentProduct) {
+                showError('Please connect wallet first');
+                return;
+            }
+
+            const selectedChain = document.querySelector('input[name="chain"]:checked');
+            if (!selectedChain) {
+                showError('Please select a payment chain');
+                return;
+            }
+
+            try {
+                showTxStatus('Creating order...');
+
+                // Create order via API
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount: currentProduct.price,
+                        chain: selectedChain.value,
+                        productId: currentProduct.id,
+                        productName: currentProduct.name
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create order');
+                }
+
+                const order = await response.json();
+                console.log('Order created:', order);
+
+                // Now process payment
+                await processPayment(order, selectedChain.value);
+
+            } catch (error) {
+                console.error('Payment error:', error);
+                showError('Payment failed: ' + error.message);
+                hideTxStatus();
+            }
+        }
+
+        async function processPayment(order, chainKey) {
+            const chainConfig = CHAIN_CONFIG[chainKey];
+            
+            // Switch to correct chain
+            const currentChainId = await provider.getNetwork().then(n => n.chainId);
+            const targetChainId = parseInt(chainConfig.chainId, 16);
+
+            if (currentChainId !== BigInt(targetChainId)) {
+                showTxStatus('Switching network...');
+                
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: chainConfig.chainId }],
+                    });
+                } catch (switchError) {
+                    // Chain not added, add it
+                    if (switchError.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: chainConfig.chainId,
+                                chainName: chainConfig.chainName,
+                                rpcUrls: chainConfig.rpcUrls,
+                                blockExplorerUrls: chainConfig.blockExplorerUrls,
+                                nativeCurrency: chainConfig.nativeCurrency
+                            }],
+                        });
+                    } else {
+                        throw switchError;
+                    }
+                }
+
+                // Update provider after chain switch
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+            }
+
+            // Create USDC contract
+            const usdcContract = new ethers.Contract(
+                order.usdcAddress,
+                USDC_ABI,
+                signer
+            );
+
+            // Get decimals
+            const decimals = await usdcContract.decimals();
+            const amount = ethers.parseUnits(order.amount.toString(), decimals);
+
+            showTxStatus('Preparing transaction...');
+
+            // Send USDC transfer
+            showTxStatus('Please confirm transaction in your wallet...');
+            const tx = await usdcContract.transfer(order.paymentAddress, amount);
+            
+            showTxStatus('Transaction sent! Waiting for confirmation...');
+            console.log('Transaction hash:', tx.hash);
+
+            // Show explorer link
+            const explorerUrl = `${chainConfig.blockExplorerUrls[0]}/tx/${tx.hash}`;
+            document.getElementById('txLink').href = explorerUrl;
+            document.getElementById('txLink').classList.remove('hidden');
+
+            // Update order with transaction hash
+            try {
+                await fetch(`/api/orders/${order.orderId}/transaction`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        txHash: tx.hash,
+                        fromAddress: connectedAddress
+                    })
+                });
+            } catch (err) {
+                console.error('Failed to update order with tx hash:', err);
+            }
+
+            // Wait for confirmation
+            const receipt = await tx.wait();
+            console.log('Transaction confirmed:', receipt);
+
+            showTxStatus('Payment successful! Transaction confirmed.');
+            showSuccess(`🎉 Payment completed! You purchased ${currentProduct.name} for ${currentProduct.price} USDC`);
+
+            // Update order status to confirmed
+            try {
+                await fetch(`/api/orders/${order.orderId}/confirm`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        txHash: tx.hash,
+                        blockNumber: receipt.blockNumber.toString(),
+                        confirmations: receipt.confirmations
+                    })
+                });
+            } catch (err) {
+                console.error('Failed to confirm order:', err);
+            }
+
+            // Disable pay button
+            document.getElementById('payBtn').disabled = true;
+            document.getElementById('payBtn').textContent = 'Payment Completed ✓';
+        }
+
+        // UI Helper functions
+        function showError(message) {
+            hideMessages();
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.querySelector('p').textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        function showSuccess(message) {
+            hideMessages();
+            const successDiv = document.getElementById('successMessage');
+            successDiv.querySelector('p').textContent = message;
+            successDiv.classList.remove('hidden');
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').classList.add('hidden');
+            document.getElementById('successMessage').classList.add('hidden');
+        }
+
+        function showTxStatus(message) {
+            document.getElementById('txStatus').classList.remove('hidden');
+            document.getElementById('txMessage').textContent = message;
+        }
+
+        function hideTxStatus() {
+            document.getElementById('txStatus').classList.add('hidden');
+        }
+
+        // Listen for account changes
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    disconnectWallet();
+                } else {
+                    connectWallet();
+                }
+            });
+
+            window.ethereum.on('chainChanged', () => {
+                updateUSDCBalance();
+            });
+        }
+
+        // Add event listeners when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Crypto payment page loaded');
+            
+            // Load product info first
+            loadProductInfo();
+            
+            // Connect wallet button
+            const connectBtn = document.getElementById('connectBtn');
+            if (connectBtn) {
+                connectBtn.addEventListener('click', connectWallet);
+            }
+            
+            // Disconnect wallet button
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            if (disconnectBtn) {
+                disconnectBtn.addEventListener('click', disconnectWallet);
+            }
+            
+            // Back button
+            const backBtn = document.getElementById('backBtn');
+            if (backBtn) {
+                backBtn.addEventListener('click', goBack);
+            }
+            
+            // Pay button
+            const payBtn = document.getElementById('payBtn');
+            if (payBtn) {
+                payBtn.addEventListener('click', initiatePayment);
+            }
+
+            // Chain selection
+            const chainRadios = document.querySelectorAll('input[name="chain"]');
+            chainRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    document.getElementById('payBtn').disabled = false;
+                });
+            });
+        });
+    </script>
+</body>
+</html>

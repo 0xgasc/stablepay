@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Wallet Connection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <h1 class="text-2xl mb-4">Simple Wallet Test</h1>
+    
+    <button id="testBtn" class="bg-blue-600 px-4 py-2 rounded">
+        Test Button
+    </button>
+    
+    <div id="output" class="mt-4 p-4 bg-gray-800 rounded"></div>
+
+    <script>
+        console.log('Script loaded');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM ready');
+            
+            const btn = document.getElementById('testBtn');
+            const output = document.getElementById('output');
+            
+            if (btn) {
+                console.log('Button found');
+                btn.addEventListener('click', function() {
+                    console.log('Button clicked!');
+                    output.innerHTML = '<p>Button clicked at ' + new Date().toLocaleTimeString() + '</p>';
+                    
+                    // Test if ethereum is available
+                    if (typeof window.ethereum !== 'undefined') {
+                        output.innerHTML += '<p class="text-green-400">✓ MetaMask detected</p>';
+                        
+                        // Try to connect
+                        window.ethereum.request({ method: 'eth_requestAccounts' })
+                            .then(accounts => {
+                                console.log('Accounts:', accounts);
+                                output.innerHTML += '<p class="text-green-400">Connected: ' + accounts[0] + '</p>';
+                            })
+                            .catch(err => {
+                                console.error('Error:', err);
+                                output.innerHTML += '<p class="text-red-400">Error: ' + err.message + '</p>';
+                            });
+                    } else {
+                        output.innerHTML += '<p class="text-red-400">✗ MetaMask not found</p>';
+                    }
+                });
+            } else {
+                console.log('Button not found!');
+            }
+        });
+    </script>
+</body>
+</html>
