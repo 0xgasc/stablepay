@@ -86,4 +86,10 @@ async function startServer() {
   }
 }
 
-startServer();
+// Export the Express app for Vercel
+export default app;
+
+// Only start server if running directly (not imported)
+if (require.main === module) {
+  startServer();
+}
