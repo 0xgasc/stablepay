@@ -28,12 +28,57 @@
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-mx-4">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Admin Login</h2>
+                <p class="text-gray-600">Please enter your credentials</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        required
+                        placeholder="admin@stablepay.com"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        required
+                        placeholder="Enter password"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                </div>
+                
+                <div id="loginError" class="hidden text-red-600 text-sm text-center">
+                    Invalid email or password
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md font-medium transition-colors"
+                >
+                    Login
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Testnet Banner -->
     <div class="testnet-badge text-white text-center py-2 text-sm font-bold">
         🧪 ADMIN DASHBOARD - Testnet Mode
     </div>
 
-    <div class="container mx-auto px-4 py-6">
+    <div id="adminContent" class="container mx-auto px-4 py-6 hidden">
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
             <div>
@@ -46,6 +91,12 @@
                     class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                 >
                     🔄 Refresh
+                </button>
+                <button 
+                    id="logoutBtn"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                    🚪 Logout
                 </button>
                 <button 
                     id="exportBtn"
@@ -631,7 +682,7 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            loadOrders();
+            // Don't auto-load orders - wait for authentication
             
             // Add all event listeners
             document.getElementById('refreshBtn').addEventListener('click', refreshData);
@@ -659,6 +710,73 @@
                 closeOrderModal();
             }
         });
+
+        // Authentication logic
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            // Simple authentication check
+            if (email === 'admin@stablepay.com' && password === 'admin123') {
+                // Hide login modal and show admin content
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('adminContent').classList.remove('hidden');
+                
+                // Set session flag
+                sessionStorage.setItem('isAdminAuthenticated', 'true');
+                
+                // Load the orders
+                loadOrders();
+            } else {
+                // Show error message
+                document.getElementById('loginError').classList.remove('hidden');
+                
+                // Clear the error after 3 seconds
+                setTimeout(() => {
+                    document.getElementById('loginError').classList.add('hidden');
+                }, 3000);
+            }
+        }
+        
+        // Check if already authenticated on page load
+        function checkAuthentication() {
+            const isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
+            if (isAuthenticated === 'true') {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('adminContent').classList.remove('hidden');
+                loadOrders();
+            }
+        }
+        
+        // Logout functionality
+        function handleLogout() {
+            sessionStorage.removeItem('isAdminAuthenticated');
+            document.getElementById('adminContent').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('hidden');
+            
+            // Clear form fields
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+        }
+        
+        // Add event listeners
+        document.getElementById('loginForm').addEventListener('submit', handleLogin);
+        document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+        
+        // Check authentication on page load
+        checkAuthentication();
     </script>
+    
+    </div> <!-- End adminContent -->
+    
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-4 text-center mt-8">
+        <p class="text-sm">
+            Developed by <span class="text-blue-400 font-semibold">G.S</span> | 
+            <span class="text-green-400">StablePay</span> Admin Dashboard
+        </p>
+    </footer>
 </body>
 </html>
