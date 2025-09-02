@@ -122,11 +122,11 @@ export class OrderService {
 
   async updateOrderWithTransaction(orderId: string, txHash: string, fromAddress?: string) {
     // Get order details first
-    const order = await db.order.findUnique({ 
+    const orderDetails = await db.order.findUnique({ 
       where: { id: orderId } 
     });
     
-    if (!order) {
+    if (!orderDetails) {
       throw new Error('Order not found');
     }
 
@@ -151,17 +151,17 @@ export class OrderService {
         data: {
           orderId,
           txHash,
-          chain: order.chain,
-          amount: order.amount,
+          chain: orderDetails.chain,
+          amount: orderDetails.amount,
           fromAddress: fromAddress || 'Unknown',
-          toAddress: order.paymentAddress,
+          toAddress: orderDetails.paymentAddress,
           status: 'PENDING'
         }
       });
     }
 
     // Update order status to PAID
-    const order = await db.order.update({
+    const updatedOrder = await db.order.update({
       where: { id: orderId },
       data: { status: 'PAID' },
       include: { transactions: true }
@@ -169,9 +169,9 @@ export class OrderService {
 
     // Convert BigInt values to numbers for JSON serialization
     return {
-      ...order,
-      amount: Number(order.amount),
-      transactions: order.transactions.map(tx => ({
+      ...updatedOrder,
+      amount: Number(updatedOrder.amount),
+      transactions: updatedOrder.transactions.map((tx: any) => ({
         ...tx,
         amount: Number(tx.amount),
         blockNumber: tx.blockNumber ? Number(tx.blockNumber) : null
@@ -200,7 +200,7 @@ export class OrderService {
       });
     }
 
-    const order = await db.order.update({
+    const confirmedOrder = await db.order.update({
       where: { id: orderId },
       data: { status: 'CONFIRMED' },
       include: { transactions: true }
@@ -208,9 +208,9 @@ export class OrderService {
 
     // Convert BigInt values to numbers for JSON serialization
     return {
-      ...order,
-      amount: Number(order.amount),
-      transactions: order.transactions.map(tx => ({
+      ...confirmedOrder,
+      amount: Number(confirmedOrder.amount),
+      transactions: confirmedOrder.transactions.map((tx: any) => ({
         ...tx,
         amount: Number(tx.amount),
         blockNumber: tx.blockNumber ? Number(tx.blockNumber) : null
