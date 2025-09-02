@@ -2,10 +2,6 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/[...path]"
-    },
-    {
       "source": "/",
       "destination": "/public/index.html"
     },
@@ -19,7 +15,7 @@
     }
   ],
   "functions": {
-    "api/[...path].ts": {
+    "api/*.ts": {
       "maxDuration": 30
     }
   }
