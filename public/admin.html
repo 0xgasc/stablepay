@@ -244,8 +244,44 @@
         // Load orders data
         async function loadOrders(page = 1) {
             try {
-                const response = await fetch(`/api/orders?page=${page}&limit=20`);
-                const data = await response.json();
+                // Demo mode - load from localStorage
+                const storedOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
+                
+                // Add current order if exists
+                const currentOrder = localStorage.getItem('currentOrder');
+                if (currentOrder) {
+                    const order = JSON.parse(currentOrder);
+                    const exists = storedOrders.find(o => o.id === order.orderId);
+                    if (!exists) {
+                        storedOrders.unshift({
+                            id: order.orderId,
+                            amount: order.amount,
+                            chain: order.chain,
+                            status: 'PENDING',
+                            customerEmail: null,
+                            customerName: null,
+                            createdAt: new Date().toISOString(),
+                            expiresAt: order.expiresAt,
+                            transactionCount: 0
+                        });
+                        localStorage.setItem('demoOrders', JSON.stringify(storedOrders));
+                    }
+                }
+                
+                const limit = 20;
+                const startIndex = (page - 1) * limit;
+                const endIndex = startIndex + limit;
+                const paginatedOrders = storedOrders.slice(startIndex, endIndex);
+                
+                const data = {
+                    orders: paginatedOrders,
+                    pagination: {
+                        page,
+                        limit,
+                        total: storedOrders.length,
+                        pages: Math.ceil(storedOrders.length / limit)
+                    }
+                };
                 
                 ordersData = data.orders;
                 currentPage = page;
@@ -262,7 +298,7 @@
             } catch (error) {
                 console.error('Error loading orders:', error);
                 document.getElementById('ordersTableBody').innerHTML = 
-                    '<tr><td colspan="8" class="px-6 py-12 text-center text-red-500">Error loading orders</td></tr>';
+                    '<tr><td colspan="8" class="px-6 py-12 text-center text-red-500">Error loading orders - Demo mode</td></tr>';
             }
         }
 

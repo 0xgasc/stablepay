@@ -1,25 +1,34 @@
 {
-  "version": 2,
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/db-health",
-      "destination": "/api/db_health"
+      "src": "public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/public/index.html"
     },
     {
-      "source": "/",
-      "destination": "/public/index.html"
+      "src": "/admin.html",
+      "dest": "/public/admin.html"
     },
     {
-      "source": "/public/(.*)",
-      "destination": "/public/$1"
+      "src": "/crypto-pay.html",
+      "dest": "/public/crypto-pay.html"
     },
     {
-      "source": "/(.*\\.(html|css|js|png|jpg|jpeg|gif|svg|ico))",
-      "destination": "/public/$1"
+      "src": "/store.html", 
+      "dest": "/public/store.html"
     },
     {
-      "source": "/(.*)",
-      "destination": "/public/$1"
+      "src": "/public/(.*)",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
     }
   ]
 }

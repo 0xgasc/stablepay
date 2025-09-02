@@ -356,7 +356,28 @@
             try {
                 showTxStatus('Creating order...');
 
-                // Create order via API
+                // Create mock order (since we're deploying as static)
+                const mockOrderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                console.log('Mock order created:', mockOrderId);
+                
+                // For demo purposes, simulate API call
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const response = { ok: true };
+                const orderData = {
+                    orderId: mockOrderId,
+                    amount: currentProduct.price,
+                    chain: selectedChain.value,
+                    paymentAddress: chainConfig.paymentAddress,
+                    usdcAddress: chainConfig.usdcAddress,
+                    expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+                    status: 'PENDING'
+                };
+                
+                // Store in localStorage for demo
+                localStorage.setItem('currentOrder', JSON.stringify(orderData));
+                
+                /* Original API call (for when backend is restored):
                 const response = await fetch('/api/orders', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -367,16 +388,16 @@
                         productName: currentProduct.name
                     })
                 });
+                */
 
                 if (!response.ok) {
                     throw new Error('Failed to create order');
                 }
 
-                const order = await response.json();
-                console.log('Order created:', order);
+                console.log('Order created:', orderData);
 
                 // Now process payment
-                await processPayment(order, selectedChain.value);
+                await processPayment(orderData, selectedChain.value);
 
             } catch (error) {
                 console.error('Payment error:', error);
