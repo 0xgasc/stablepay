@@ -161,11 +161,22 @@ export class OrderService {
     }
 
     // Update order status to PAID
-    return db.order.update({
+    const order = await db.order.update({
       where: { id: orderId },
       data: { status: 'PAID' },
       include: { transactions: true }
     });
+
+    // Convert BigInt values to numbers for JSON serialization
+    return {
+      ...order,
+      amount: Number(order.amount),
+      transactions: order.transactions.map(tx => ({
+        ...tx,
+        amount: Number(tx.amount),
+        blockNumber: tx.blockNumber ? Number(tx.blockNumber) : null
+      }))
+    };
   }
 
   async confirmOrder(orderId: string, txData?: { 
@@ -189,11 +200,22 @@ export class OrderService {
       });
     }
 
-    return db.order.update({
+    const order = await db.order.update({
       where: { id: orderId },
       data: { status: 'CONFIRMED' },
       include: { transactions: true }
     });
+
+    // Convert BigInt values to numbers for JSON serialization
+    return {
+      ...order,
+      amount: Number(order.amount),
+      transactions: order.transactions.map(tx => ({
+        ...tx,
+        amount: Number(tx.amount),
+        blockNumber: tx.blockNumber ? Number(tx.blockNumber) : null
+      }))
+    };
   }
 
   async expireOrder(orderId: string) {

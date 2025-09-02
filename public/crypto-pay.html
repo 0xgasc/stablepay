@@ -154,7 +154,7 @@
             ETHEREUM_SEPOLIA: {
                 chainId: '0xaa36a7', // 11155111 in hex
                 chainName: 'Ethereum Sepolia',
-                rpcUrls: ['https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'],
+                rpcUrls: ['https://eth-sepolia.g.alchemy.com/v2/alcht_YbDiff1KAqK0fNAzBgycHfz7G0iz4n'],
                 blockExplorerUrls: ['https://sepolia.etherscan.io'],
                 nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
                 usdcAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' // Ethereum Sepolia USDC (Circle)
@@ -335,7 +335,8 @@
                 element.classList.add('text-gray-400');
                 element.classList.remove('text-green-400');
                 
-                console.log(`${config.chainName}: Assuming 0 USDC (RPC error)`);
+                const configObj = CHAIN_CONFIG[chainKey];
+                console.log(`${configObj.chainName}: Assuming 0 USDC (RPC error)`);
             }
         }
 
