@@ -421,28 +421,46 @@
 
         async function viewOrderDetails(orderId) {
             try {
-                // Load from localStorage (demo mode)
-                const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
-                const order = demoOrders.find(o => o.id === orderId);
+                let order = null;
                 
-                if (!order) {
-                    throw new Error('Order not found in demo data');
+                // Try to fetch from API first
+                try {
+                    const response = await fetch(`/api/orders/${orderId}`);
+                    if (response.ok) {
+                        order = await response.json();
+                        console.log('Order from API:', order);
+                    } else if (response.status === 404) {
+                        console.log('Order not found in database');
+                    }
+                } catch (apiError) {
+                    console.log('API not available for order details:', apiError);
                 }
                 
-                // Mock complete order structure for demo
+                // Fallback to localStorage if not found in API
+                if (!order) {
+                    const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
+                    order = demoOrders.find(o => o.id === orderId);
+                }
+                
+                if (!order) {
+                    throw new Error('Order not found');
+                }
+                
+                // Build complete order structure  
                 const completeOrder = {
                     ...order,
-                    transactions: order.txHash ? [{
+                    // Use existing transactions array if available (from API)
+                    transactions: order.transactions || (order.txHash ? [{
                         id: 'tx_' + Date.now(),
                         txHash: order.txHash,
                         chain: order.chain,
                         amount: order.amount,
-                        fromAddress: order.fromAddress || 'Demo Address',
+                        fromAddress: order.fromAddress || 'Unknown',
                         status: 'CONFIRMED',
                         confirmations: 12,
-                        blockNumber: 12345678,
+                        blockNumber: null,
                         blockTimestamp: new Date().toISOString()
-                    }] : []
+                    }] : [])
                 };
                 
                 const modalContent = document.getElementById('orderModalContent');
