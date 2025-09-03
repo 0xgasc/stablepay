@@ -65,7 +65,7 @@ export default async function handler(req, res) {
 
       const order = await prisma.order.create({
         data: {
-          amount: BigInt(Math.round(amount * 100)) / 100n,
+          amount: amount,
           chain,
           status: 'PENDING',
           paymentAddress: '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF',

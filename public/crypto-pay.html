@@ -362,8 +362,15 @@
                 const chainConfig = CHAIN_CONFIG[selectedChain.value];
                 
                 // Try API first for database persistence
+                console.log('Attempting to create order via API...');
+                console.log('Product:', currentProduct);
+                console.log('Chain:', selectedChain.value);
+                
                 try {
-                    const response = await fetch('/api/orders', {
+                    const apiUrl = '/api/orders';
+                    console.log('Calling API:', apiUrl);
+                    
+                    const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -375,19 +382,21 @@
                     });
                     
                     console.log('API Response status:', response.status);
+                    console.log('API Response headers:', response.headers);
+                    
                     if (response.ok) {
                         orderData = await response.json();
                         orderData.usdcAddress = chainConfig.usdcAddress;
                         orderData.paymentAddress = chainConfig.paymentAddress;
-                        console.log('Order created via API:', orderData);
+                        console.log('✅ Order created via API:', orderData);
                     } else {
                         const errorText = await response.text();
-                        console.error('API Error:', errorText);
+                        console.error('❌ API Error Response:', errorText);
                         throw new Error('API returned error: ' + response.status);
                     }
                 } catch (apiError) {
-                    console.error('API Error details:', apiError);
-                    console.log('Using localStorage fallback');
+                    console.error('❌ API Error details:', apiError);
+                    console.log('⚠️ Using localStorage fallback');
                     // Fallback to localStorage
                     const mockOrderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                     orderData = {
@@ -532,8 +541,15 @@
             showSuccess(`🎉 Payment completed! You purchased ${currentProduct.name} for ${currentProduct.price} USDC`);
 
             // Update order status to confirmed
+            console.log('Confirming order in database...');
+            console.log('Order ID:', order.id);
+            console.log('TX Hash:', tx.hash);
+            
             try {
-                const confirmResponse = await fetch(`/api/orders/${order.id}/confirm`, {
+                const confirmUrl = `/api/orders/${order.id}/confirm`;
+                console.log('Calling confirm API:', confirmUrl);
+                
+                const confirmResponse = await fetch(confirmUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -543,11 +559,18 @@
                         confirmations: receipt.confirmations
                     })
                 });
+                
+                console.log('Confirm API Response status:', confirmResponse.status);
+                
                 if (confirmResponse.ok) {
-                    console.log('Order confirmed in database');
+                    const confirmData = await confirmResponse.json();
+                    console.log('✅ Order confirmed in database:', confirmData);
+                } else {
+                    const errorText = await confirmResponse.text();
+                    console.error('❌ Confirm API Error:', errorText);
                 }
             } catch (err) {
-                console.error('Failed to confirm order in database:', err);
+                console.error('❌ Failed to confirm order in database:', err);
             }
 
             // Disable pay button
