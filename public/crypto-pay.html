@@ -374,16 +374,20 @@
                         })
                     });
                     
+                    console.log('API Response status:', response.status);
                     if (response.ok) {
                         orderData = await response.json();
                         orderData.usdcAddress = chainConfig.usdcAddress;
                         orderData.paymentAddress = chainConfig.paymentAddress;
                         console.log('Order created via API:', orderData);
                     } else {
-                        throw new Error('API not available');
+                        const errorText = await response.text();
+                        console.error('API Error:', errorText);
+                        throw new Error('API returned error: ' + response.status);
                     }
                 } catch (apiError) {
-                    console.log('API not available, using localStorage fallback');
+                    console.error('API Error details:', apiError);
+                    console.log('Using localStorage fallback');
                     // Fallback to localStorage
                     const mockOrderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                     orderData = {

@@ -247,15 +247,21 @@
                 // Try API first for real database persistence
                 try {
                     const response = await fetch(`/api/orders?page=${page}&limit=20`);
+                    console.log('API Response status:', response.status);
                     if (response.ok) {
                         const data = await response.json();
+                        console.log('Orders from API:', data);
                         updateStats(data);
                         renderOrdersTable(data.orders);
                         updatePagination(data.pagination);
                         return;
+                    } else {
+                        const error = await response.text();
+                        console.error('API Error:', error);
                     }
                 } catch (apiError) {
-                    console.log('API not available, using localStorage fallback');
+                    console.error('API fetch error:', apiError);
+                    console.log('Using localStorage fallback');
                 }
                 
                 // Fallback to localStorage (demo mode)
