@@ -358,54 +358,57 @@
             try {
                 showTxStatus('Creating order...');
 
-                // Create mock order (since we're deploying as static)
-                const mockOrderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                console.log('Mock order created:', mockOrderId);
-                
-                // For demo purposes, simulate API call
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                const response = { ok: true };
+                let orderData;
                 const chainConfig = CHAIN_CONFIG[selectedChain.value];
-                const orderData = {
-                    id: mockOrderId,  // Use 'id' to match admin panel expectations
-                    orderId: mockOrderId,
-                    amount: currentProduct.price,
-                    chain: selectedChain.value,
-                    paymentAddress: chainConfig.paymentAddress,
-                    usdcAddress: chainConfig.usdcAddress,
-                    productId: currentProduct.id,
-                    productName: currentProduct.name,
-                    createdAt: new Date().toISOString(),
-                    expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-                    status: 'PENDING',
-                    txHash: null,
-                    fromAddress: null
-                };
                 
-                // Store in localStorage for demo
-                localStorage.setItem('currentOrder', JSON.stringify(orderData));
-                
-                // Add to demoOrders array
-                const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
-                demoOrders.push(orderData);
-                localStorage.setItem('demoOrders', JSON.stringify(demoOrders));
-                
-                /* Original API call (for when backend is restored):
-                const response = await fetch('/api/orders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+                // Try API first for database persistence
+                try {
+                    const response = await fetch('/api/orders', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            amount: currentProduct.price,
+                            chain: selectedChain.value,
+                            productId: currentProduct.id,
+                            productName: currentProduct.name
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        orderData = await response.json();
+                        orderData.usdcAddress = chainConfig.usdcAddress;
+                        orderData.paymentAddress = chainConfig.paymentAddress;
+                        console.log('Order created via API:', orderData);
+                    } else {
+                        throw new Error('API not available');
+                    }
+                } catch (apiError) {
+                    console.log('API not available, using localStorage fallback');
+                    // Fallback to localStorage
+                    const mockOrderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    orderData = {
+                        id: mockOrderId,
+                        orderId: mockOrderId,
                         amount: currentProduct.price,
                         chain: selectedChain.value,
+                        paymentAddress: chainConfig.paymentAddress,
+                        usdcAddress: chainConfig.usdcAddress,
                         productId: currentProduct.id,
-                        productName: currentProduct.name
-                    })
-                });
-                */
-
-                if (!response.ok) {
-                    throw new Error('Failed to create order');
+                        productName: currentProduct.name,
+                        createdAt: new Date().toISOString(),
+                        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+                        status: 'PENDING',
+                        txHash: null,
+                        fromAddress: null
+                    };
+                    
+                    // Store in localStorage for demo
+                    localStorage.setItem('currentOrder', JSON.stringify(orderData));
+                    
+                    // Add to demoOrders array
+                    const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
+                    demoOrders.push(orderData);
+                    localStorage.setItem('demoOrders', JSON.stringify(demoOrders));
                 }
 
                 console.log('Order created:', orderData);
@@ -526,17 +529,21 @@
 
             // Update order status to confirmed
             try {
-                await fetch(`/api/orders/${order.orderId}/confirm`, {
+                const confirmResponse = await fetch(`/api/orders/${order.id}/confirm`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         txHash: tx.hash,
+                        fromAddress: connectedAddress,
                         blockNumber: receipt.blockNumber.toString(),
                         confirmations: receipt.confirmations
                     })
                 });
+                if (confirmResponse.ok) {
+                    console.log('Order confirmed in database');
+                }
             } catch (err) {
-                console.error('Failed to confirm order:', err);
+                console.error('Failed to confirm order in database:', err);
             }
 
             // Disable pay button

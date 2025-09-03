@@ -244,7 +244,21 @@
         // Load orders data
         async function loadOrders(page = 1) {
             try {
-                // Demo mode - load from localStorage
+                // Try API first for real database persistence
+                try {
+                    const response = await fetch(`/api/orders?page=${page}&limit=20`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        updateStats(data);
+                        renderOrdersTable(data.orders);
+                        updatePagination(data.pagination);
+                        return;
+                    }
+                } catch (apiError) {
+                    console.log('API not available, using localStorage fallback');
+                }
+                
+                // Fallback to localStorage (demo mode)
                 const storedOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
                 
                 // Add current order if exists
