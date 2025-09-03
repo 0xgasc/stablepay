@@ -22,12 +22,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { id } = req.query;
-    const { txHash, fromAddress, blockNumber, confirmations } = req.body;
+    const { orderId, txHash, fromAddress, blockNumber, confirmations } = req.body;
+
+    if (!orderId || !txHash) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    console.log('Confirming order:', orderId, 'with tx:', txHash);
 
     // Update order status
     const order = await prisma.order.update({
-      where: { id },
+      where: { id: orderId },
       data: { status: 'PAID' }
     });
 
@@ -36,7 +41,7 @@ export default async function handler(req, res) {
       where: { txHash },
       create: {
         txHash,
-        orderId: id,
+        orderId: orderId,
         chain: order.chain,
         amount: order.amount,
         fromAddress,

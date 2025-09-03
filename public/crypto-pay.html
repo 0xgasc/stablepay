@@ -546,13 +546,14 @@
             console.log('TX Hash:', tx.hash);
             
             try {
-                const confirmUrl = `/api/orders/${order.id}/confirm`;
+                const confirmUrl = `/api/orders-confirm`;
                 console.log('Calling confirm API:', confirmUrl);
                 
                 const confirmResponse = await fetch(confirmUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        orderId: order.id,
                         txHash: tx.hash,
                         fromAddress: connectedAddress,
                         blockNumber: receipt.blockNumber.toString(),
