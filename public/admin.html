@@ -104,6 +104,12 @@
                 >
                     📊 Export CSV
                 </button>
+                <button 
+                    id="clearLocalBtn"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                    🗑️ Clear Local Data
+                </button>
             </div>
         </div>
 
@@ -802,6 +808,14 @@
             // Add all event listeners
             document.getElementById('refreshBtn').addEventListener('click', refreshData);
             document.getElementById('exportBtn').addEventListener('click', exportData);
+            document.getElementById('clearLocalBtn').addEventListener('click', () => {
+                if (confirm('This will clear all local demo data. Are you sure?')) {
+                    localStorage.removeItem('demoOrders');
+                    localStorage.removeItem('currentOrder');
+                    alert('Local data cleared! Refreshing...');
+                    window.location.reload();
+                }
+            });
             document.getElementById('closeModalBtn').addEventListener('click', closeOrderModal);
             document.getElementById('prevBtn').addEventListener('click', () => loadPage(currentPage - 1));
             document.getElementById('nextBtn').addEventListener('click', () => loadPage(currentPage + 1));

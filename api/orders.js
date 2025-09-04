@@ -25,7 +25,8 @@ export default async function handler(req, res) {
       const merchantId = req.query.merchantId || 'DEMO';
       const skip = (page - 1) * limit;
 
-      const where = { merchantId };
+      // Temporarily skip merchant filter until migration is applied
+      const where = {}; // { merchantId };
 
       const [orders, total] = await Promise.all([
         prisma.order.findMany({
@@ -79,9 +80,9 @@ export default async function handler(req, res) {
         data: {
           amount: amount,
           chain,
-          merchantId,
-          productId,
-          productName,
+          // merchantId, // Temporarily disabled until migration
+          // productId, // Temporarily disabled until migration
+          // productName, // Temporarily disabled until migration
           customerEmail,
           customerName,
           status: 'PENDING',
