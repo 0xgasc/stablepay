@@ -89,6 +89,37 @@
             </div>
         </div>
 
+        <!-- Customer Information -->
+        <div id="customerSection" class="hidden bg-gray-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+            <h2 class="text-xl font-bold mb-4">Customer Information</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="customerEmail" class="block text-sm font-medium text-gray-300 mb-2">
+                        Email Address *
+                    </label>
+                    <input 
+                        type="email" 
+                        id="customerEmail" 
+                        placeholder="your@email.com"
+                        class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        required
+                    />
+                    <p class="text-xs text-gray-400 mt-1">We'll send your receipt to this address</p>
+                </div>
+                <div>
+                    <label for="customerName" class="block text-sm font-medium text-gray-300 mb-2">
+                        Full Name (Optional)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="customerName" 
+                        placeholder="John Doe"
+                        class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    />
+                </div>
+            </div>
+        </div>
+
         <!-- Chain Selection & Payment -->
         <div id="paymentSection" class="hidden bg-gray-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
             <h2 class="text-xl font-bold mb-4">Select Payment Chain</h2>
@@ -234,6 +265,7 @@
                 // Update UI
                 document.getElementById('connectWalletBtn').classList.add('hidden');
                 document.getElementById('walletInfo').classList.remove('hidden');
+                document.getElementById('customerSection').classList.remove('hidden');
                 document.getElementById('paymentSection').classList.remove('hidden');
                 document.getElementById('walletAddress').textContent = 
                     connectedAddress.slice(0, 6) + '...' + connectedAddress.slice(-4);
@@ -270,6 +302,7 @@
             // Update UI
             document.getElementById('connectWalletBtn').classList.remove('hidden');
             document.getElementById('walletInfo').classList.add('hidden');
+            document.getElementById('customerSection').classList.add('hidden');
             document.getElementById('paymentSection').classList.add('hidden');
             
             showSuccess('Wallet disconnected. You can now connect a different wallet.');
@@ -349,6 +382,24 @@
                 return;
             }
 
+            // Validate customer email
+            const customerEmail = document.getElementById('customerEmail').value.trim();
+            const customerName = document.getElementById('customerName').value.trim();
+            
+            if (!customerEmail) {
+                showError('Please enter your email address');
+                document.getElementById('customerEmail').focus();
+                return;
+            }
+            
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(customerEmail)) {
+                showError('Please enter a valid email address');
+                document.getElementById('customerEmail').focus();
+                return;
+            }
+
             const selectedChain = document.querySelector('input[name="chain"]:checked');
             if (!selectedChain) {
                 showError('Please select a payment chain');
@@ -377,7 +428,10 @@
                             amount: currentProduct.price,
                             chain: selectedChain.value,
                             productId: currentProduct.id,
-                            productName: currentProduct.name
+                            productName: currentProduct.name,
+                            customerEmail: customerEmail,
+                            customerName: customerName || null,
+                            merchantId: 'DEMO' // Default to DEMO merchant
                         })
                     });
                     

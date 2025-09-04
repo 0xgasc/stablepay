@@ -19,13 +19,17 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // Fetch orders with pagination
+      // Fetch orders with pagination and optional merchant filter
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
+      const merchantId = req.query.merchantId || 'DEMO';
       const skip = (page - 1) * limit;
+
+      const where = { merchantId };
 
       const [orders, total] = await Promise.all([
         prisma.order.findMany({
+          where,
           skip,
           take: limit,
           orderBy: { createdAt: 'desc' },
@@ -33,7 +37,7 @@ export default async function handler(req, res) {
             transactions: true
           }
         }),
-        prisma.order.count()
+        prisma.order.count({ where })
       ]);
 
       // Convert BigInt to number for JSON serialization
@@ -61,12 +65,25 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       // Create new order
-      const { amount, chain, productId, productName } = req.body;
+      const { 
+        amount, 
+        chain, 
+        productId, 
+        productName,
+        customerEmail,
+        customerName,
+        merchantId = 'DEMO'
+      } = req.body;
 
       const order = await prisma.order.create({
         data: {
           amount: amount,
           chain,
+          merchantId,
+          productId,
+          productName,
+          customerEmail,
+          customerName,
           status: 'PENDING',
           paymentAddress: '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF',
           expiresAt: new Date(Date.now() + 30 * 60 * 1000)
