@@ -23,6 +23,10 @@ export default async function handler(req, res) {
   try {
     const { id } = req.query;
     
+    if (!id) {
+      return res.status(400).json({ error: 'Order ID is required' });
+    }
+    
     const order = await prisma.order.findUnique({
       where: { id },
       include: {

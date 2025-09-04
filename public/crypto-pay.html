@@ -516,7 +516,7 @@
                     storedOrder.status = 'PAID';
                     localStorage.setItem('currentOrder', JSON.stringify(storedOrder));
                     
-                    // Update demo orders list
+                    // Update demo orders list (only if using localStorage fallback)
                     const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
                     const orderIndex = demoOrders.findIndex(o => o.id === order.id);
                     if (orderIndex >= 0) {
@@ -524,10 +524,9 @@
                         demoOrders[orderIndex].txHash = tx.hash;
                         demoOrders[orderIndex].fromAddress = connectedAddress;
                         localStorage.setItem('demoOrders', JSON.stringify(demoOrders));
-                        console.log('Updated order with tx hash:', tx.hash);
-                    } else {
-                        console.error('Order not found in demoOrders:', order.id);
+                        console.log('Updated localStorage order with tx hash:', tx.hash);
                     }
+                    // No error if not found - it's probably in the database instead
                 }
             } catch (err) {
                 console.error('Failed to update order with tx hash:', err);

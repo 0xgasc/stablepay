@@ -373,8 +373,10 @@
                             ${createdAt}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            ${order.txHash ? 
-                                `<a href="${getExplorerUrl(order.chain, order.txHash)}" target="_blank" class="text-blue-600 hover:underline font-mono text-xs">${order.txHash.slice(0, 8)}...${order.txHash.slice(-6)}</a>` : 
+                            ${(order.transactions && order.transactions.length > 0 && order.transactions[0].txHash) ? 
+                                `<a href="${getExplorerUrl(order.chain, order.transactions[0].txHash)}" target="_blank" class="text-blue-600 hover:underline font-mono text-xs">${order.transactions[0].txHash.slice(0, 8)}...${order.transactions[0].txHash.slice(-6)}</a>` : 
+                                order.txHash ?
+                                `<a href="${getExplorerUrl(order.chain, order.txHash)}" target="_blank" class="text-blue-600 hover:underline font-mono text-xs">${order.txHash.slice(0, 8)}...${order.txHash.slice(-6)}</a>` :
                                 '<span class="text-gray-400 text-xs">No hash</span>'
                             }
                         </td>
@@ -425,12 +427,15 @@
                 
                 // Try to fetch from API first
                 try {
-                    const response = await fetch(`/api/orders/${orderId}`);
+                    const response = await fetch(`/api/order-details?id=${orderId}`);
                     if (response.ok) {
                         order = await response.json();
                         console.log('Order from API:', order);
                     } else if (response.status === 404) {
                         console.log('Order not found in database');
+                    } else {
+                        const errorText = await response.text();
+                        console.error('API error:', errorText);
                     }
                 } catch (apiError) {
                     console.log('API not available for order details:', apiError);
