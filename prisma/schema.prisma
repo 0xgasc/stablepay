@@ -9,7 +9,11 @@ datasource db {
 
 enum Chain {
   BASE_SEPOLIA
+  BASE_MAINNET
   ETHEREUM_SEPOLIA
+  ETHEREUM_MAINNET
+  POLYGON_MAINNET
+  ARBITRUM_MAINNET
 }
 
 enum OrderStatus {
@@ -34,8 +38,61 @@ enum RefundStatus {
   PROCESSED
 }
 
+enum UserRole {
+  ADMIN
+  MERCHANT
+}
+
+enum PlanType {
+  STARTER
+  GROWTH
+  ENTERPRISE
+}
+
+enum PaymentMode {
+  DIRECT
+  ESCROW
+}
+
+model Merchant {
+  id              String      @id @default(cuid())
+  email           String      @unique
+  companyName     String
+  contactName     String
+  role            UserRole    @default(MERCHANT)
+  plan            PlanType?   
+  paymentMode     PaymentMode @default(DIRECT)
+  isActive        Boolean     @default(false)
+  setupCompleted  Boolean     @default(false)
+  loginToken      String?     @unique
+  tokenExpiresAt  DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  wallets         MerchantWallet[]
+  orders          Order[]
+
+  @@map("merchants")
+}
+
+model MerchantWallet {
+  id          String    @id @default(cuid())
+  merchantId  String
+  chain       Chain
+  address     String
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  merchant    Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, chain])
+  @@map("merchant_wallets")
+}
+
 model Order {
   id              String      @id @default(cuid())
+  merchantId      String?     // NULL for DEMO orders
   customerEmail   String?
   customerName    String?
   amount          Decimal     @db.Decimal(18, 6)
@@ -46,9 +103,11 @@ model Order {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  merchant        Merchant?   @relation(fields: [merchantId], references: [id])
   transactions    Transaction[]
   refunds         Refund[]
 
+  @@index([merchantId])
   @@map("orders")
 }
 
