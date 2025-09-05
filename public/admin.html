@@ -334,8 +334,8 @@
             document.getElementById('totalOrders').textContent = data.pagination.total;
             
             // Calculate stats from orders
-            const confirmed = data.orders.filter(o => o.status === 'CONFIRMED').length;
-            const pending = data.orders.filter(o => o.status === 'PENDING' || o.status === 'PAID').length;
+            const confirmed = data.orders.filter(o => o.status === 'PAID' || o.status === 'CONFIRMED').length;
+            const pending = data.orders.filter(o => o.status === 'PENDING').length;
             const totalVolume = data.orders.reduce((sum, o) => sum + o.amount, 0);
             
             document.getElementById('confirmedOrders').textContent = confirmed;
