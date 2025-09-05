@@ -36,9 +36,6 @@ enum RefundStatus {
 
 model Order {
   id              String      @id @default(cuid())
-  merchantId      String      @default("DEMO")
-  productId       String?
-  productName     String?
   customerEmail   String?
   customerName    String?
   amount          Decimal     @db.Decimal(18, 6)
@@ -52,7 +49,6 @@ model Order {
   transactions    Transaction[]
   refunds         Refund[]
 
-  @@index([merchantId])
   @@map("orders")
 }
 

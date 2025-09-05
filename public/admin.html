@@ -373,7 +373,8 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-500">${order.customerEmail || 'Anonymous'}</div>
+                            <div class="text-sm text-gray-500">${order.customerEmail || 'No email'}</div>
+                            ${order.customerName ? `<div class="text-xs text-gray-400">${order.customerName}</div>` : ''}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             ${createdAt}

@@ -19,14 +19,12 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // Fetch orders with pagination and optional merchant filter
+      // Fetch orders with pagination
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
-      const merchantId = req.query.merchantId || 'DEMO';
       const skip = (page - 1) * limit;
 
-      // Temporarily skip merchant filter until migration is applied
-      const where = {}; // { merchantId };
+      const where = {};
 
       const [orders, total] = await Promise.all([
         prisma.order.findMany({
@@ -68,21 +66,15 @@ export default async function handler(req, res) {
       // Create new order
       const { 
         amount, 
-        chain, 
-        productId, 
-        productName,
+        chain,
         customerEmail,
-        customerName,
-        merchantId = 'DEMO'
+        customerName
       } = req.body;
 
       const order = await prisma.order.create({
         data: {
           amount: amount,
           chain,
-          // merchantId, // Temporarily disabled until migration
-          // productId, // Temporarily disabled until migration
-          // productName, // Temporarily disabled until migration
           customerEmail,
           customerName,
           status: 'PENDING',
