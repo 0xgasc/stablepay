@@ -246,29 +246,27 @@
 
         // Generate payment link
         async function generatePaymentLink(formData) {
-            // For demo, generate a unique ID
-            const paymentId = 'pay_' + Math.random().toString(36).substring(2, 15);
+            // Create a very short payment ID
+            const shortId = Math.random().toString(36).substring(2, 8); // 6 chars
             const baseUrl = window.location.origin;
             
-            // Build query parameters
-            const params = new URLSearchParams({
-                id: paymentId,
+            // Store payment details in sessionStorage for demo (in production, store in database)
+            const paymentData = {
+                id: shortId,
                 amount: formData.amount,
-                chains: formData.chains.join(','),
-                expires: formData.expiresAt
-            });
+                description: formData.description,
+                chains: formData.chains,
+                requireEmail: formData.requireEmail,
+                requireName: formData.requireName,
+                expiration: formData.expiration,
+                expiresAt: formData.expiresAt,
+                createdAt: new Date().toISOString()
+            };
             
-            if (formData.description) {
-                params.append('desc', formData.description);
-            }
-            if (formData.requireEmail) {
-                params.append('email', '1');
-            }
-            if (formData.requireName) {
-                params.append('name', '1');
-            }
+            sessionStorage.setItem(`payment_${shortId}`, JSON.stringify(paymentData));
             
-            return `${baseUrl}/pay.html?${params.toString()}`;
+            // Return very short URL
+            return `${baseUrl}/pay.html?id=${shortId}`;
         }
 
         // Format expiry time
@@ -331,7 +329,7 @@
                 height: 200,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.H
+                correctLevel: QRCode.CorrectLevel.L // Use lowest error correction for maximum data capacity
             });
             
             // Show the generated link section
