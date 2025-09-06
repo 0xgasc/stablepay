@@ -171,10 +171,19 @@
         const token = urlParams.get('token');
         
         if (token) {
-            // TODO: Validate token and log in user
-            console.log('Magic link token:', token);
-            // For now, redirect to admin (will implement proper merchant dashboard)
-            window.location.href = '/admin.html';
+            // Store token and redirect to setup or dashboard
+            sessionStorage.setItem('merchantToken', token);
+            sessionStorage.setItem('isAuthenticated', 'true');
+            
+            // Check if setup is complete (would normally check via API)
+            const setupComplete = localStorage.getItem('setupComplete_' + token.substring(0, 8));
+            
+            if (setupComplete) {
+                window.location.href = '/dashboard.html';
+            } else {
+                // New merchant - go to setup
+                window.location.href = '/setup.html';
+            }
         }
 
         // Magic link form

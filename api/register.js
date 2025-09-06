@@ -34,7 +34,25 @@ export default async function handler(req, res) {
     });
 
     if (existingMerchant) {
-      return res.status(400).json({ error: 'Email already registered' });
+      // If merchant exists, generate new token and return success
+      const loginToken = crypto.randomBytes(32).toString('hex');
+      const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      
+      await prisma.merchant.update({
+        where: { email },
+        data: {
+          loginToken,
+          tokenExpiresAt
+        }
+      });
+      
+      console.log(`New login link for existing user ${email}: /login.html?token=${loginToken}`);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Login link sent! Check your email.',
+        merchantId: existingMerchant.id
+      });
     }
 
     // Generate login token
@@ -58,7 +76,9 @@ export default async function handler(req, res) {
     return res.status(201).json({
       success: true,
       message: 'Registration successful! Check your email for the login link.',
-      merchantId: merchant.id
+      merchantId: merchant.id,
+      // For development, include the token
+      devToken: loginToken
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -66,5 +86,7 @@ export default async function handler(req, res) {
       error: 'Registration failed',
       details: error.message 
     });
+  } finally {
+    await prisma.$disconnect();
   }
 }

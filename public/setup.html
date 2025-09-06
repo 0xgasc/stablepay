@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Your Account - StablePay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/chain-config.js"></script>
+    <style>
+        .step-active { @apply bg-blue-600 text-white; }
+        .step-completed { @apply bg-green-600 text-white; }
+        .step-pending { @apply bg-gray-300 text-gray-600; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        StablePay
+                    </a>
+                </div>
+                <div class="text-sm text-gray-600">
+                    Setting up: <span class="font-medium" id="merchantEmail">your@email.com</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-4 py-12">
+        <!-- Progress Steps -->
+        <div class="mb-12">
+            <div class="flex items-center justify-center space-x-4">
+                <div class="flex items-center">
+                    <div id="step1" class="step-active w-10 h-10 rounded-full flex items-center justify-center font-semibold">
+                        1
+                    </div>
+                    <span class="ml-2 text-sm font-medium">Choose Plan</span>
+                </div>
+                <div class="w-16 h-0.5 bg-gray-300"></div>
+                <div class="flex items-center">
+                    <div id="step2" class="step-pending w-10 h-10 rounded-full flex items-center justify-center font-semibold">
+                        2
+                    </div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Add Wallets</span>
+                </div>
+                <div class="w-16 h-0.5 bg-gray-300"></div>
+                <div class="flex items-center">
+                    <div id="step3" class="step-pending w-10 h-10 rounded-full flex items-center justify-center font-semibold">
+                        3
+                    </div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Complete Setup</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Choose Plan -->
+        <div id="step1Content" class="bg-white rounded-xl shadow-sm p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Choose Your Plan</h2>
+            <p class="text-gray-600 mb-8">Select the plan that best fits your business needs</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Starter Plan -->
+                <div class="border rounded-xl p-6 relative hover:shadow-lg transition-shadow cursor-pointer plan-card" data-plan="STARTER">
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold text-gray-900">Starter</h3>
+                        <div class="mt-2">
+                            <span class="text-3xl font-bold">$29</span>
+                            <span class="text-gray-500">/month</span>
+                        </div>
+                    </div>
+                    <ul class="space-y-3 mb-6">
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">Up to 100 transactions/month</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">2 blockchain networks</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">Basic analytics</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">Email support</span>
+                        </li>
+                    </ul>
+                    <button class="w-full py-2 px-4 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 select-plan-btn">
+                        Select Starter
+                    </button>
+                </div>
+
+                <!-- Growth Plan -->
+                <div class="border-2 border-blue-600 rounded-xl p-6 relative hover:shadow-lg transition-shadow cursor-pointer plan-card" data-plan="GROWTH">
+                    <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                        <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">Popular</span>
+                    </div>
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold text-gray-900">Growth</h3>
+                        <div class="mt-2">
+                            <span class="text-3xl font-bold">$79</span>
+                            <span class="text-gray-500">/month</span>
+                        </div>
+                    </div>
+                    <ul class="space-y-3 mb-6">
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">Up to 1,000 transactions/month</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">All blockchain networks</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">Advanced analytics</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">Priority support</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">API access</span>
+                        </li>
+                    </ul>
+                    <button class="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 select-plan-btn">
+                        Select Growth
+                    </button>
+                </div>
+
+                <!-- Enterprise Plan -->
+                <div class="border rounded-xl p-6 relative hover:shadow-lg transition-shadow cursor-pointer plan-card" data-plan="ENTERPRISE">
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold text-gray-900">Enterprise</h3>
+                        <div class="mt-2">
+                            <span class="text-3xl font-bold">$199</span>
+                            <span class="text-gray-500">/month</span>
+                        </div>
+                    </div>
+                    <ul class="space-y-3 mb-6">
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">Unlimited transactions</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">All blockchain networks</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">Custom analytics & reports</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">24/7 phone support</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-green-500 mr-2">✓</span>
+                            <span class="text-sm">White-label options</span>
+                        </li>
+                    </ul>
+                    <button class="w-full py-2 px-4 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 select-plan-btn">
+                        Select Enterprise
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center">
+                <p class="text-sm text-gray-500">You can change your plan anytime. No setup fees, cancel anytime.</p>
+            </div>
+        </div>
+
+        <!-- Step 2: Add Wallets -->
+        <div id="step2Content" class="bg-white rounded-xl shadow-sm p-8 hidden">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Add Your Payment Wallets</h2>
+            <p class="text-gray-600 mb-8">Add wallet addresses where you want to receive USDC payments</p>
+
+            <!-- Network Mode Toggle -->
+            <div class="mb-6 flex items-center justify-between">
+                <label class="text-sm font-medium text-gray-700">Network Mode:</label>
+                <div class="flex items-center bg-gray-100 border rounded-lg p-1">
+                    <button 
+                        id="testnetModeBtn"
+                        class="px-3 py-1 rounded text-sm font-medium transition-colors bg-orange-100 text-orange-800"
+                    >
+                        🧪 Testnet
+                    </button>
+                    <button 
+                        id="mainnetModeBtn"
+                        class="px-3 py-1 rounded text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
+                    >
+                        🌐 Mainnet
+                    </button>
+                </div>
+            </div>
+
+            <div id="walletsForm" class="space-y-4">
+                <!-- Wallet inputs will be added here -->
+            </div>
+
+            <button 
+                id="addMoreWalletBtn"
+                class="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+                + Add Another Wallet
+            </button>
+
+            <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start">
+                    <span class="text-blue-500 mr-3 mt-1">ℹ️</span>
+                    <div class="text-sm">
+                        <p class="font-medium text-blue-900 mb-1">Important:</p>
+                        <ul class="text-blue-800 space-y-1">
+                            <li>• Make sure these are your own wallets</li>
+                            <li>• Double-check addresses - payments are irreversible</li>
+                            <li>• You can add more wallets later from your dashboard</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-between">
+                <button 
+                    id="backToStep1"
+                    class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                    ← Back
+                </button>
+                <button 
+                    id="continueToStep3"
+                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                    Continue →
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Complete Setup -->
+        <div id="step3Content" class="bg-white rounded-xl shadow-sm p-8 hidden">
+            <div class="text-center">
+                <div class="text-6xl mb-4">🎉</div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">You're All Set!</h2>
+                <p class="text-gray-600 mb-8">Your StablePay account is ready to accept payments</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-6 mb-8">
+                <h3 class="font-semibold text-gray-900 mb-4">Account Summary</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Plan:</span>
+                        <span class="font-medium" id="summaryPlan">Growth</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Network Mode:</span>
+                        <span class="font-medium" id="summaryNetwork">Testnet</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Wallets Configured:</span>
+                        <span class="font-medium" id="summaryWallets">3</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="font-semibold text-gray-900">Next Steps:</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start">
+                        <span class="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mr-3">1</span>
+                        <div>
+                            <p class="font-medium text-gray-900">Create your first payment link</p>
+                            <p class="text-sm text-gray-600">Generate a link to share with customers</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <span class="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mr-3">2</span>
+                        <div>
+                            <p class="font-medium text-gray-900">Test a payment</p>
+                            <p class="text-sm text-gray-600">Use testnet to verify everything works</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <span class="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium mr-3">3</span>
+                        <div>
+                            <p class="font-medium text-gray-900">Switch to mainnet</p>
+                            <p class="text-sm text-gray-600">When ready, switch to accept real payments</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-center">
+                <button 
+                    id="goToDashboard"
+                    class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                >
+                    Go to Dashboard →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let selectedPlan = null;
+        let selectedNetworkMode = 'TESTNET';
+        let wallets = [];
+
+        // Chain configurations based on network mode
+        function getAvailableChains() {
+            if (selectedNetworkMode === 'TESTNET') {
+                return [
+                    { value: 'BASE_SEPOLIA', label: 'Base Sepolia', type: 'EVM' },
+                    { value: 'ETHEREUM_SEPOLIA', label: 'Ethereum Sepolia', type: 'EVM' },
+                    { value: 'POLYGON_MUMBAI', label: 'Polygon Mumbai', type: 'EVM' },
+                    { value: 'ARBITRUM_SEPOLIA', label: 'Arbitrum Sepolia', type: 'EVM' },
+                    { value: 'SOLANA_DEVNET', label: 'Solana Devnet', type: 'SOLANA' }
+                ];
+            } else {
+                return [
+                    { value: 'BASE_MAINNET', label: 'Base', type: 'EVM' },
+                    { value: 'ETHEREUM_MAINNET', label: 'Ethereum', type: 'EVM' },
+                    { value: 'POLYGON_MAINNET', label: 'Polygon', type: 'EVM' },
+                    { value: 'ARBITRUM_MAINNET', label: 'Arbitrum', type: 'EVM' },
+                    { value: 'SOLANA_MAINNET', label: 'Solana', type: 'SOLANA' }
+                ];
+            }
+        }
+
+        // Add wallet input row
+        function addWalletInput() {
+            const container = document.getElementById('walletsForm');
+            const chains = getAvailableChains();
+            const walletIndex = container.children.length;
+            
+            const walletDiv = document.createElement('div');
+            walletDiv.className = 'border rounded-lg p-4';
+            walletDiv.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <h4 class="font-medium text-gray-900">Wallet ${walletIndex + 1}</h4>
+                    ${walletIndex > 0 ? `<button onclick="removeWallet(this)" class="text-red-600 hover:text-red-700 text-sm">Remove</button>` : ''}
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Blockchain</label>
+                        <select class="wallet-chain w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            ${chains.map(chain => `<option value="${chain.value}" data-type="${chain.type}">${chain.label}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Wallet Address</label>
+                        <input 
+                            type="text" 
+                            class="wallet-address w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter your wallet address"
+                            required
+                        >
+                        <p class="text-xs text-gray-500 mt-1 address-hint">Enter your EVM wallet address (0x...)</p>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(walletDiv);
+            
+            // Update placeholder based on chain type
+            const chainSelect = walletDiv.querySelector('.wallet-chain');
+            const addressInput = walletDiv.querySelector('.wallet-address');
+            const addressHint = walletDiv.querySelector('.address-hint');
+            
+            chainSelect.addEventListener('change', () => {
+                const selectedOption = chainSelect.options[chainSelect.selectedIndex];
+                const chainType = selectedOption.dataset.type;
+                
+                if (chainType === 'SOLANA') {
+                    addressInput.placeholder = 'Enter your Solana wallet address';
+                    addressHint.textContent = 'Enter your Solana wallet address (base58 format)';
+                } else {
+                    addressInput.placeholder = 'Enter your wallet address (0x...)';
+                    addressHint.textContent = 'Enter your EVM wallet address (0x...)';
+                }
+            });
+        }
+
+        function removeWallet(button) {
+            button.closest('.border').remove();
+        }
+
+        // Step navigation
+        function goToStep(step) {
+            // Hide all steps
+            document.getElementById('step1Content').classList.add('hidden');
+            document.getElementById('step2Content').classList.add('hidden');
+            document.getElementById('step3Content').classList.add('hidden');
+            
+            // Show current step
+            document.getElementById(`step${step}Content`).classList.remove('hidden');
+            
+            // Update progress indicators
+            for (let i = 1; i <= 3; i++) {
+                const stepEl = document.getElementById(`step${i}`);
+                if (i < step) {
+                    stepEl.className = 'step-completed w-10 h-10 rounded-full flex items-center justify-center font-semibold';
+                } else if (i === step) {
+                    stepEl.className = 'step-active w-10 h-10 rounded-full flex items-center justify-center font-semibold';
+                } else {
+                    stepEl.className = 'step-pending w-10 h-10 rounded-full flex items-center justify-center font-semibold';
+                }
+            }
+            
+            currentStep = step;
+        }
+
+        // Validate wallet address
+        function validateAddress(address, chainType) {
+            if (chainType === 'SOLANA') {
+                return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+            } else {
+                return /^0x[a-fA-F0-9]{40}$/.test(address);
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Plan selection
+            document.querySelectorAll('.plan-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    selectedPlan = this.dataset.plan;
+                    
+                    // Update UI
+                    document.querySelectorAll('.plan-card').forEach(c => {
+                        c.classList.remove('ring-2', 'ring-blue-600');
+                    });
+                    this.classList.add('ring-2', 'ring-blue-600');
+                    
+                    // Auto-continue to step 2
+                    setTimeout(() => {
+                        goToStep(2);
+                        // Add first wallet input
+                        if (document.getElementById('walletsForm').children.length === 0) {
+                            addWalletInput();
+                        }
+                    }, 500);
+                });
+            });
+
+            // Network mode toggle
+            document.getElementById('testnetModeBtn').addEventListener('click', function() {
+                selectedNetworkMode = 'TESTNET';
+                this.className = 'px-3 py-1 rounded text-sm font-medium transition-colors bg-orange-100 text-orange-800';
+                document.getElementById('mainnetModeBtn').className = 'px-3 py-1 rounded text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100';
+                
+                // Clear and re-add wallet inputs with new chains
+                document.getElementById('walletsForm').innerHTML = '';
+                addWalletInput();
+            });
+
+            document.getElementById('mainnetModeBtn').addEventListener('click', function() {
+                selectedNetworkMode = 'MAINNET';
+                this.className = 'px-3 py-1 rounded text-sm font-medium transition-colors bg-green-100 text-green-800';
+                document.getElementById('testnetModeBtn').className = 'px-3 py-1 rounded text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100';
+                
+                // Clear and re-add wallet inputs with new chains
+                document.getElementById('walletsForm').innerHTML = '';
+                addWalletInput();
+            });
+
+            // Add more wallet button
+            document.getElementById('addMoreWalletBtn').addEventListener('click', addWalletInput);
+
+            // Navigation buttons
+            document.getElementById('backToStep1').addEventListener('click', () => goToStep(1));
+            
+            document.getElementById('continueToStep3').addEventListener('click', function() {
+                // Validate wallets
+                const walletInputs = document.querySelectorAll('.wallet-address');
+                const chainSelects = document.querySelectorAll('.wallet-chain');
+                
+                wallets = [];
+                let isValid = true;
+                
+                walletInputs.forEach((input, index) => {
+                    const address = input.value.trim();
+                    const chainSelect = chainSelects[index];
+                    const selectedOption = chainSelect.options[chainSelect.selectedIndex];
+                    const chainType = selectedOption.dataset.type;
+                    const chain = chainSelect.value;
+                    
+                    if (!address) {
+                        input.classList.add('border-red-500');
+                        isValid = false;
+                    } else if (!validateAddress(address, chainType)) {
+                        input.classList.add('border-red-500');
+                        alert(`Invalid ${chainType} address format for wallet ${index + 1}`);
+                        isValid = false;
+                    } else {
+                        input.classList.remove('border-red-500');
+                        wallets.push({ chain, address });
+                    }
+                });
+                
+                if (isValid && wallets.length > 0) {
+                    // Update summary
+                    document.getElementById('summaryPlan').textContent = selectedPlan;
+                    document.getElementById('summaryNetwork').textContent = selectedNetworkMode === 'TESTNET' ? 'Testnet' : 'Mainnet';
+                    document.getElementById('summaryWallets').textContent = wallets.length;
+                    
+                    goToStep(3);
+                } else if (wallets.length === 0) {
+                    alert('Please add at least one wallet');
+                }
+            });
+
+            document.getElementById('goToDashboard').addEventListener('click', function() {
+                // Save setup data and redirect to dashboard
+                // TODO: Save to database via API
+                const token = sessionStorage.getItem('merchantToken');
+                
+                sessionStorage.setItem('setupComplete', 'true');
+                sessionStorage.setItem('merchantPlan', selectedPlan);
+                sessionStorage.setItem('networkMode', selectedNetworkMode);
+                sessionStorage.setItem('wallets', JSON.stringify(wallets));
+                
+                // Mark setup complete for this token
+                if (token) {
+                    localStorage.setItem('setupComplete_' + token.substring(0, 8), 'true');
+                }
+                
+                window.location.href = '/dashboard.html';
+            });
+        });
+    </script>
+</body>
+</html>

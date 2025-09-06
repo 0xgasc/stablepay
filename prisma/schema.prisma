@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Chain {
@@ -13,7 +14,11 @@ enum Chain {
   ETHEREUM_SEPOLIA
   ETHEREUM_MAINNET
   POLYGON_MAINNET
+  POLYGON_MUMBAI
   ARBITRUM_MAINNET
+  ARBITRUM_SEPOLIA
+  SOLANA_MAINNET
+  SOLANA_DEVNET
 }
 
 enum OrderStatus {
@@ -54,6 +59,11 @@ enum PaymentMode {
   ESCROW
 }
 
+enum NetworkMode {
+  TESTNET
+  MAINNET
+}
+
 model Merchant {
   id              String      @id @default(cuid())
   email           String      @unique
@@ -62,6 +72,7 @@ model Merchant {
   role            UserRole    @default(MERCHANT)
   plan            PlanType?   
   paymentMode     PaymentMode @default(DIRECT)
+  networkMode     NetworkMode @default(TESTNET)
   isActive        Boolean     @default(false)
   setupCompleted  Boolean     @default(false)
   loginToken      String?     @unique

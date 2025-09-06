@@ -11,6 +11,10 @@
             background: linear-gradient(90deg, #f59e0b, #ef4444);
             animation: gradient 3s ease infinite;
         }
+        .mainnet-badge {
+            background: linear-gradient(90deg, #059669, #0891b2);
+            animation: gradient 3s ease infinite;
+        }
         @keyframes gradient {
             0%, 100% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -73,8 +77,8 @@
         </div>
     </div>
 
-    <!-- Testnet Banner -->
-    <div class="testnet-badge text-white text-center py-2 text-sm font-bold">
+    <!-- Network Banner -->
+    <div id="networkBanner" class="testnet-badge text-white text-center py-2 text-sm font-bold">
         🧪 ADMIN DASHBOARD - Testnet Mode
     </div>
 
@@ -86,6 +90,21 @@
                 <p class="text-gray-600">Monitor orders and export transaction data</p>
             </div>
             <div class="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0">
+                <!-- Network Mode Toggle -->
+                <div class="flex items-center bg-white border rounded-lg p-1">
+                    <button 
+                        id="testnetBtn"
+                        class="network-btn px-3 py-1 rounded text-sm font-medium transition-colors bg-orange-100 text-orange-800"
+                    >
+                        🧪 Testnet
+                    </button>
+                    <button 
+                        id="mainnetBtn"
+                        class="network-btn px-3 py-1 rounded text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
+                    >
+                        🌐 Mainnet
+                    </button>
+                </div>
                 <button 
                     id="refreshBtn"
                     class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -103,12 +122,6 @@
                     class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                 >
                     📊 Export CSV
-                </button>
-                <button 
-                    id="clearLocalBtn"
-                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                >
-                    🗑️ Clear Local Data
                 </button>
             </div>
         </div>
@@ -246,13 +259,58 @@
     <script>
         let currentPage = 1;
         let ordersData = [];
+        let currentNetworkMode = 'TESTNET'; // Default to testnet
+
+        // Network switching functions
+        function switchToTestnet() {
+            currentNetworkMode = 'TESTNET';
+            updateNetworkUI();
+            loadOrders(1); // Reset to first page
+        }
+
+        function switchToMainnet() {
+            currentNetworkMode = 'MAINNET';
+            updateNetworkUI();
+            loadOrders(1); // Reset to first page
+        }
+
+        function updateNetworkUI() {
+            const banner = document.getElementById('networkBanner');
+            const testnetBtn = document.getElementById('testnetBtn');
+            const mainnetBtn = document.getElementById('mainnetBtn');
+
+            if (currentNetworkMode === 'TESTNET') {
+                banner.className = 'testnet-badge text-white text-center py-2 text-sm font-bold';
+                banner.textContent = '🧪 ADMIN DASHBOARD - Testnet Mode';
+                testnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors bg-orange-100 text-orange-800';
+                mainnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100';
+            } else {
+                banner.className = 'mainnet-badge text-white text-center py-2 text-sm font-bold';
+                banner.textContent = '🌐 ADMIN DASHBOARD - Mainnet Mode';
+                mainnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors bg-green-100 text-green-800';
+                testnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100';
+            }
+        }
+
+        function getTestnetChains() {
+            return ['BASE_SEPOLIA', 'ETHEREUM_SEPOLIA', 'POLYGON_MUMBAI', 'ARBITRUM_SEPOLIA', 'SOLANA_DEVNET'];
+        }
+
+        function getMainnetChains() {
+            return ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'SOLANA_MAINNET'];
+        }
+
+        function filterOrdersByNetwork(orders) {
+            const allowedChains = currentNetworkMode === 'TESTNET' ? getTestnetChains() : getMainnetChains();
+            return orders.filter(order => allowedChains.includes(order.chain));
+        }
 
         // Load orders data
         async function loadOrders(page = 1) {
             try {
                 // Try API first for real database persistence
                 try {
-                    const response = await fetch(`/api/orders?page=${page}&limit=20`);
+                    const response = await fetch(`/api/orders?page=${page}&limit=20&networkMode=${currentNetworkMode}`);
                     console.log('API Response status:', response.status);
                     if (response.ok) {
                         const data = await response.json();
@@ -270,58 +328,10 @@
                     console.log('Using localStorage fallback');
                 }
                 
-                // Fallback to localStorage (demo mode)
-                const storedOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
-                
-                // Add current order if exists
-                const currentOrder = localStorage.getItem('currentOrder');
-                if (currentOrder) {
-                    const order = JSON.parse(currentOrder);
-                    const exists = storedOrders.find(o => o.id === (order.id || order.orderId));
-                    if (!exists) {
-                        storedOrders.unshift({
-                            id: order.id || order.orderId,
-                            amount: order.amount,
-                            chain: order.chain,
-                            status: order.status || 'PENDING',
-                            customerEmail: null,
-                            customerName: null,
-                            createdAt: order.createdAt || new Date().toISOString(),
-                            expiresAt: order.expiresAt,
-                            transactionCount: order.txHash ? 1 : 0,
-                            txHash: order.txHash || null,
-                            fromAddress: order.fromAddress || null
-                        });
-                        localStorage.setItem('demoOrders', JSON.stringify(storedOrders));
-                    }
-                }
-                
-                const limit = 20;
-                const startIndex = (page - 1) * limit;
-                const endIndex = startIndex + limit;
-                const paginatedOrders = storedOrders.slice(startIndex, endIndex);
-                
-                const data = {
-                    orders: paginatedOrders,
-                    pagination: {
-                        page,
-                        limit,
-                        total: storedOrders.length,
-                        pages: Math.ceil(storedOrders.length / limit)
-                    }
-                };
-                
-                ordersData = data.orders;
-                currentPage = page;
-                
-                // Update stats
-                updateStats(data);
-                
-                // Render table
-                renderOrdersTable(data.orders);
-                
-                // Update pagination
-                updatePagination(data.pagination);
+                // No localStorage fallback - database only
+                document.getElementById('ordersTableBody').innerHTML = 
+                    '<tr><td colspan="8" class="px-6 py-12 text-center text-red-500">Unable to connect to database. Please check your connection.</td></tr>';
+                return;
                 
             } catch (error) {
                 console.error('Error loading orders:', error);
@@ -448,14 +458,8 @@
                     console.log('API not available for order details:', apiError);
                 }
                 
-                // Fallback to localStorage if not found in API
                 if (!order) {
-                    const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
-                    order = demoOrders.find(o => o.id === orderId);
-                }
-                
-                if (!order) {
-                    throw new Error('Order not found');
+                    throw new Error('Order not found in database');
                 }
                 
                 // Build complete order structure  
@@ -540,10 +544,27 @@
 
         function getExplorerUrl(chain, txHash) {
             const explorers = {
+                // Testnet explorers
                 'BASE_SEPOLIA': 'https://sepolia.basescan.org/tx/',
-                'ETHEREUM_SEPOLIA': 'https://sepolia.etherscan.io/tx/'
+                'ETHEREUM_SEPOLIA': 'https://sepolia.etherscan.io/tx/',
+                'POLYGON_MUMBAI': 'https://mumbai.polygonscan.com/tx/',
+                'ARBITRUM_SEPOLIA': 'https://sepolia.arbiscan.io/tx/',
+                'SOLANA_DEVNET': 'https://solscan.io/tx/',
+                // Mainnet explorers
+                'BASE_MAINNET': 'https://basescan.org/tx/',
+                'ETHEREUM_MAINNET': 'https://etherscan.io/tx/',
+                'POLYGON_MAINNET': 'https://polygonscan.com/tx/',
+                'ARBITRUM_MAINNET': 'https://arbiscan.io/tx/',
+                'SOLANA_MAINNET': 'https://solscan.io/tx/'
             };
-            return explorers[chain] + txHash;
+            const baseUrl = explorers[chain] || 'https://etherscan.io/tx/';
+            
+            // Add cluster parameter for Solana devnet
+            if (chain === 'SOLANA_DEVNET') {
+                return baseUrl + txHash + '?cluster=devnet';
+            }
+            
+            return baseUrl + txHash;
         }
 
         function closeOrderModal() {
@@ -577,13 +598,12 @@
 
         async function exportOrderCSV(orderId) {
             try {
-                // Load from localStorage (demo mode)
-                const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
-                const order = demoOrders.find(o => o.id === orderId);
-                
-                if (!order) {
-                    throw new Error('Order not found in demo data');
+                // Fetch from API
+                const response = await fetch(`/api/order-details?id=${orderId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch order details');
                 }
+                const order = await response.json();
                 
                 const headers = ['Order ID', 'Amount (USDC)', 'Chain', 'Status', 'Customer Email', 'Created At', 'Payment Address'];
                 const rows = [[
@@ -624,13 +644,12 @@
 
         async function generateOrderPDF(orderId) {
             try {
-                // Load from localStorage (demo mode)
-                const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
-                const order = demoOrders.find(o => o.id === orderId);
-                
-                if (!order) {
-                    throw new Error('Order not found in demo data');
+                // Fetch from API
+                const response = await fetch(`/api/order-details?id=${orderId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch order details');
                 }
+                const order = await response.json();
                 
                 // Check if jsPDF is loaded with multiple fallback checks
                 console.log('Window object keys:', Object.keys(window).filter(k => k.toLowerCase().includes('jspdf')));
@@ -807,16 +826,10 @@
             // Don't auto-load orders - wait for authentication
             
             // Add all event listeners
+            document.getElementById('testnetBtn').addEventListener('click', switchToTestnet);
+            document.getElementById('mainnetBtn').addEventListener('click', switchToMainnet);
             document.getElementById('refreshBtn').addEventListener('click', refreshData);
             document.getElementById('exportBtn').addEventListener('click', exportData);
-            document.getElementById('clearLocalBtn').addEventListener('click', () => {
-                if (confirm('This will clear all local demo data. Are you sure?')) {
-                    localStorage.removeItem('demoOrders');
-                    localStorage.removeItem('currentOrder');
-                    alert('Local data cleared! Refreshing...');
-                    window.location.reload();
-                }
-            });
             document.getElementById('closeModalBtn').addEventListener('click', closeOrderModal);
             document.getElementById('prevBtn').addEventListener('click', () => loadPage(currentPage - 1));
             document.getElementById('nextBtn').addEventListener('click', () => loadPage(currentPage + 1));
@@ -857,7 +870,8 @@
                 // Set session flag
                 sessionStorage.setItem('isAdminAuthenticated', 'true');
                 
-                // Load the orders
+                // Initialize network UI and load the orders
+                updateNetworkUI();
                 loadOrders();
             } else {
                 // Show error message
@@ -876,6 +890,7 @@
             if (isAuthenticated === 'true') {
                 document.getElementById('loginModal').classList.add('hidden');
                 document.getElementById('adminContent').classList.remove('hidden');
+                updateNetworkUI(); // Initialize network UI
                 loadOrders();
             }
         }

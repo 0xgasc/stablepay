@@ -23,8 +23,19 @@ export default async function handler(req, res) {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
       const skip = (page - 1) * limit;
+      const networkMode = req.query.networkMode || 'TESTNET';
 
-      const where = {};
+      // Define chain filters based on network mode
+      const getTestnetChains = () => ['BASE_SEPOLIA', 'ETHEREUM_SEPOLIA', 'POLYGON_MUMBAI', 'ARBITRUM_SEPOLIA', 'SOLANA_DEVNET'];
+      const getMainnetChains = () => ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'SOLANA_MAINNET'];
+
+      const allowedChains = networkMode === 'TESTNET' ? getTestnetChains() : getMainnetChains();
+
+      const where = {
+        chain: {
+          in: allowedChains
+        }
+      };
 
       const [orders, total] = await Promise.all([
         prisma.order.findMany({

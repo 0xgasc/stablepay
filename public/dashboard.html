@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merchant Dashboard - StablePay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/chain-config.js"></script>
+    <style>
+        .network-badge { 
+            background: linear-gradient(90deg, #f59e0b, #ef4444);
+            animation: gradient 3s ease infinite;
+            background-size: 400% 400%;
+        }
+        .mainnet-badge {
+            background: linear-gradient(90deg, #059669, #0891b2);
+            animation: gradient 3s ease infinite;
+            background-size: 400% 400%;
+        }
+        @keyframes gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .status-pending { @apply bg-yellow-100 text-yellow-800; }
+        .status-paid { @apply bg-blue-100 text-blue-800; }
+        .status-confirmed { @apply bg-green-100 text-green-800; }
+        .status-failed { @apply bg-red-100 text-red-800; }
+        .status-expired { @apply bg-gray-100 text-gray-800; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Network Banner -->
+    <div id="networkBanner" class="network-badge text-white text-center py-2 text-sm font-bold">
+        🧪 MERCHANT DASHBOARD - Testnet Mode
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        StablePay
+                    </a>
+                    <span class="ml-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                        Merchant Dashboard
+                    </span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- Network Mode Toggle -->
+                    <div class="flex items-center bg-gray-100 border rounded-lg p-1">
+                        <button 
+                            id="testnetBtn"
+                            class="network-btn px-3 py-1 rounded text-sm font-medium transition-colors bg-orange-100 text-orange-800"
+                        >
+                            🧪 Testnet
+                        </button>
+                        <button 
+                            id="mainnetBtn"
+                            class="network-btn px-3 py-1 rounded text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100"
+                        >
+                            🌐 Mainnet
+                        </button>
+                    </div>
+                    <div class="text-sm text-gray-600" id="merchantInfo">
+                        <span class="font-medium" id="merchantName">Loading...</span>
+                    </div>
+                    <button 
+                        id="logoutBtn"
+                        class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                    >
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Welcome Section -->
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-8 text-white mb-8">
+            <h1 class="text-3xl font-bold mb-2">Welcome back!</h1>
+            <p class="text-blue-100 mb-6">Manage your USDC payments and view your transaction history.</p>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button 
+                    id="createPaymentBtn"
+                    class="bg-white text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                >
+                    💰 Create Payment Link
+                </button>
+                <button 
+                    id="setupWalletBtn"
+                    class="bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors"
+                >
+                    👛 Setup Wallets
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl p-6 shadow-sm border">
+                <div class="flex items-center">
+                    <div class="p-2 bg-blue-100 rounded-lg">
+                        <span class="text-2xl">📋</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Total Orders</p>
+                        <p class="text-2xl font-bold text-gray-900" id="totalOrders">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-sm border">
+                <div class="flex items-center">
+                    <div class="p-2 bg-green-100 rounded-lg">
+                        <span class="text-2xl">✅</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Confirmed</p>
+                        <p class="text-2xl font-bold text-green-600" id="confirmedOrders">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-sm border">
+                <div class="flex items-center">
+                    <div class="p-2 bg-yellow-100 rounded-lg">
+                        <span class="text-2xl">⏳</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Pending</p>
+                        <p class="text-2xl font-bold text-yellow-600" id="pendingOrders">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-sm border">
+                <div class="flex items-center">
+                    <div class="p-2 bg-purple-100 rounded-lg">
+                        <span class="text-2xl">💰</span>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Total Volume</p>
+                        <p class="text-2xl font-bold text-purple-600" id="totalVolume">$0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Tabs -->
+        <div class="bg-white rounded-xl shadow-sm border">
+            <!-- Tab Navigation -->
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                    <button class="tab-btn border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="orders">
+                        Orders
+                    </button>
+                    <button class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="wallets">
+                        Wallets
+                    </button>
+                    <button class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="settings">
+                        Settings
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-6">
+                <!-- Orders Tab -->
+                <div id="ordersTab" class="tab-content">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Recent Orders</h3>
+                        <button 
+                            id="refreshOrdersBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+                        >
+                            🔄 Refresh
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chain</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                        <div class="flex flex-col items-center">
+                                            <div class="animate-pulse w-8 h-8 bg-gray-300 rounded mb-4"></div>
+                                            <p>Loading orders...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Wallets Tab -->
+                <div id="walletsTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Payment Wallets</h3>
+                        <button 
+                            id="addWalletBtn"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+                        >
+                            ➕ Add Wallet
+                        </button>
+                    </div>
+                    
+                    <div id="walletsContainer">
+                        <div class="text-center py-12 text-gray-500">
+                            <div class="flex flex-col items-center">
+                                <div class="animate-pulse w-8 h-8 bg-gray-300 rounded mb-4"></div>
+                                <p>Loading wallets...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settingsTab" class="tab-content hidden">
+                    <div class="space-y-8">
+                        <!-- Account Information -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Account Information</h3>
+                            <div class="bg-gray-50 rounded-lg p-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                                        <input type="text" id="companyName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Contact Name</label>
+                                        <input type="text" id="contactName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                        <input type="email" id="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Plan</label>
+                                        <input type="text" id="plan" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Network Preferences -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Network Preferences</h3>
+                            <div class="bg-gray-50 rounded-lg p-6">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Default Network Mode</label>
+                                        <select id="defaultNetworkMode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="TESTNET">Testnet (for development)</option>
+                                            <option value="MAINNET">Mainnet (for production)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Payment Mode</label>
+                                        <select id="paymentMode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="DIRECT">Direct (payments go directly to your wallets)</option>
+                                            <option value="ESCROW">Escrow (payments held until confirmation)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mt-6">
+                                    <button 
+                                        id="saveSettingsBtn"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                                    >
+                                        💾 Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Wallet Modal -->
+    <div id="addWalletModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold">Add Payment Wallet</h3>
+                        <button id="closeWalletModal" class="text-gray-500 hover:text-gray-700">
+                            <span class="text-2xl">&times;</span>
+                        </button>
+                    </div>
+                    
+                    <form id="addWalletForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Blockchain</label>
+                            <select id="walletChain" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <!-- Options will be populated dynamically based on network mode -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Wallet Address</label>
+                            <input 
+                                type="text" 
+                                id="walletAddress" 
+                                placeholder="Enter your wallet address"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                required
+                            >
+                            <p class="text-xs text-gray-500 mt-1">This is where USDC payments will be sent</p>
+                        </div>
+                        <div class="flex space-x-4 pt-4">
+                            <button 
+                                type="submit"
+                                class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                Add Wallet
+                            </button>
+                            <button 
+                                type="button"
+                                id="cancelWalletModal"
+                                class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentNetworkMode = 'TESTNET';
+        let currentMerchant = null;
+        let currentTab = 'orders';
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'text-blue-600');
+                btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            });
+            
+            // Highlight active tab
+            const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+            activeBtn.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            activeBtn.classList.add('border-blue-500', 'text-blue-600');
+            
+            currentTab = tabName;
+            
+            // Load tab content
+            if (tabName === 'orders') {
+                loadOrders();
+            } else if (tabName === 'wallets') {
+                loadWallets();
+            } else if (tabName === 'settings') {
+                loadSettings();
+            }
+        }
+
+        // Network switching
+        function switchToTestnet() {
+            currentNetworkMode = 'TESTNET';
+            updateNetworkUI();
+            refreshCurrentTab();
+        }
+
+        function switchToMainnet() {
+            currentNetworkMode = 'MAINNET';
+            updateNetworkUI();
+            refreshCurrentTab();
+        }
+
+        function updateNetworkUI() {
+            const banner = document.getElementById('networkBanner');
+            const testnetBtn = document.getElementById('testnetBtn');
+            const mainnetBtn = document.getElementById('mainnetBtn');
+
+            if (currentNetworkMode === 'TESTNET') {
+                banner.className = 'network-badge text-white text-center py-2 text-sm font-bold';
+                banner.textContent = '🧪 MERCHANT DASHBOARD - Testnet Mode';
+                testnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors bg-orange-100 text-orange-800';
+                mainnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100';
+            } else {
+                banner.className = 'mainnet-badge text-white text-center py-2 text-sm font-bold';
+                banner.textContent = '🌐 MERCHANT DASHBOARD - Mainnet Mode';
+                mainnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors bg-green-100 text-green-800';
+                testnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100';
+            }
+        }
+
+        function refreshCurrentTab() {
+            if (currentTab === 'orders') {
+                loadOrders();
+            } else if (currentTab === 'wallets') {
+                loadWallets();
+            }
+        }
+
+        // Load merchant data
+        async function loadMerchantData() {
+            try {
+                // For now, use demo data - this would normally come from the login token
+                currentMerchant = {
+                    id: 'demo-merchant',
+                    companyName: 'Demo Company',
+                    contactName: 'John Doe',
+                    email: 'demo@company.com',
+                    plan: 'STARTER',
+                    networkMode: 'TESTNET',
+                    paymentMode: 'DIRECT'
+                };
+
+                document.getElementById('merchantName').textContent = currentMerchant.companyName;
+                
+                // Update settings form
+                document.getElementById('companyName').value = currentMerchant.companyName;
+                document.getElementById('contactName').value = currentMerchant.contactName;
+                document.getElementById('email').value = currentMerchant.email;
+                document.getElementById('plan').value = currentMerchant.plan;
+                document.getElementById('defaultNetworkMode').value = currentMerchant.networkMode;
+                document.getElementById('paymentMode').value = currentMerchant.paymentMode;
+
+                currentNetworkMode = currentMerchant.networkMode;
+                updateNetworkUI();
+            } catch (error) {
+                console.error('Error loading merchant data:', error);
+            }
+        }
+
+        // Load orders
+        async function loadOrders() {
+            try {
+                // This would normally filter by merchant ID
+                const response = await fetch(`/api/orders?networkMode=${currentNetworkMode}&merchantId=${currentMerchant?.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStats(data);
+                    renderOrdersTable(data.orders);
+                } else {
+                    // Fallback to demo data
+                    renderOrdersTable([]);
+                    updateStats({ orders: [], pagination: { total: 0 } });
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                renderOrdersTable([]);
+                updateStats({ orders: [], pagination: { total: 0 } });
+            }
+        }
+
+        function updateStats(data) {
+            const total = data.pagination ? data.pagination.total : data.orders.length;
+            const confirmed = data.orders.filter(o => o.status === 'PAID' || o.status === 'CONFIRMED').length;
+            const pending = data.orders.filter(o => o.status === 'PENDING').length;
+            const totalVolume = data.orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+
+            document.getElementById('totalOrders').textContent = total;
+            document.getElementById('confirmedOrders').textContent = confirmed;
+            document.getElementById('pendingOrders').textContent = pending;
+            document.getElementById('totalVolume').textContent = '$' + totalVolume.toFixed(2);
+        }
+
+        function renderOrdersTable(orders) {
+            const tbody = document.getElementById('ordersTableBody');
+            
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-12 text-center text-gray-500">No orders found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = orders.map(order => {
+                const statusClass = `status-${order.status.toLowerCase()}`;
+                const shortId = order.id.slice(0, 8) + '...';
+                const createdAt = new Date(order.createdAt).toLocaleDateString();
+                
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${shortId}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-semibold text-gray-900">${order.amount} USDC</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">${order.chain.replace('_', ' ')}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                ${order.status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">${order.customerEmail || 'Anonymous'}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${createdAt}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Load wallets
+        async function loadWallets() {
+            const container = document.getElementById('walletsContainer');
+            
+            try {
+                // This would normally fetch merchant's wallets from API
+                const wallets = []; // Demo data
+                
+                if (wallets.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-12 text-gray-500">
+                            <div class="text-6xl mb-4">👛</div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No wallets configured</h3>
+                            <p class="text-gray-500 mb-6">Add your first wallet to start receiving payments</p>
+                            <button 
+                                onclick="showAddWalletModal()"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                            >
+                                ➕ Add Your First Wallet
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = wallets.map(wallet => `
+                        <div class="border rounded-lg p-6 mb-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-medium text-gray-900">${wallet.chain.replace('_', ' ')}</h4>
+                                    <p class="text-sm text-gray-600 font-mono mt-1">${wallet.address}</p>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${wallet.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} mt-2">
+                                        ${wallet.isActive ? 'Active' : 'Inactive'}
+                                    </span>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button class="text-blue-600 hover:text-blue-900 text-sm">Edit</button>
+                                    <button class="text-red-600 hover:text-red-900 text-sm">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading wallets:', error);
+                container.innerHTML = '<div class="text-center py-12 text-red-500">Error loading wallets</div>';
+            }
+        }
+
+        // Load settings
+        function loadSettings() {
+            // Settings are already loaded in loadMerchantData
+        }
+
+        // Modal functions
+        function showAddWalletModal() {
+            const modal = document.getElementById('addWalletModal');
+            const chainSelect = document.getElementById('walletChain');
+            
+            // Populate chain options based on current network mode
+            const chains = currentNetworkMode === 'TESTNET' 
+                ? [
+                    { value: 'BASE_SEPOLIA', label: 'Base Sepolia (Testnet)' },
+                    { value: 'ETHEREUM_SEPOLIA', label: 'Ethereum Sepolia (Testnet)' },
+                    { value: 'POLYGON_MUMBAI', label: 'Polygon Mumbai (Testnet)' },
+                    { value: 'ARBITRUM_SEPOLIA', label: 'Arbitrum Sepolia (Testnet)' },
+                    { value: 'SOLANA_DEVNET', label: 'Solana Devnet (Testnet)' }
+                ]
+                : [
+                    { value: 'BASE_MAINNET', label: 'Base Mainnet' },
+                    { value: 'ETHEREUM_MAINNET', label: 'Ethereum Mainnet' },
+                    { value: 'POLYGON_MAINNET', label: 'Polygon Mainnet' },
+                    { value: 'ARBITRUM_MAINNET', label: 'Arbitrum Mainnet' },
+                    { value: 'SOLANA_MAINNET', label: 'Solana Mainnet' }
+                ];
+            
+            chainSelect.innerHTML = chains.map(chain => 
+                `<option value="${chain.value}">${chain.label}</option>`
+            ).join('');
+            
+            modal.classList.remove('hidden');
+        }
+
+        function hideAddWalletModal() {
+            document.getElementById('addWalletModal').classList.add('hidden');
+            document.getElementById('addWalletForm').reset();
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+            });
+
+            // Network switching
+            document.getElementById('testnetBtn').addEventListener('click', switchToTestnet);
+            document.getElementById('mainnetBtn').addEventListener('click', switchToMainnet);
+
+            // Modal controls
+            document.getElementById('addWalletBtn').addEventListener('click', showAddWalletModal);
+            document.getElementById('closeWalletModal').addEventListener('click', hideAddWalletModal);
+            document.getElementById('cancelWalletModal').addEventListener('click', hideAddWalletModal);
+
+            // Refresh button
+            document.getElementById('refreshOrdersBtn').addEventListener('click', loadOrders);
+
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                sessionStorage.removeItem('merchantToken');
+                window.location.href = '/login.html';
+            });
+
+            // Add wallet form
+            document.getElementById('addWalletForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const chain = document.getElementById('walletChain').value;
+                const address = document.getElementById('walletAddress').value;
+                
+                // TODO: Validate address and add to database
+                console.log('Adding wallet:', { chain, address });
+                
+                hideAddWalletModal();
+                loadWallets();
+                alert('Wallet added successfully!');
+            });
+
+            // Save settings
+            document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+                // TODO: Save settings to database
+                alert('Settings saved successfully!');
+            });
+
+            // Initialize
+            loadMerchantData();
+            loadOrders(); // Load initial tab
+        });
+    </script>
+</body>
+</html>
