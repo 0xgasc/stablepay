@@ -310,7 +310,7 @@
             try {
                 // Try API first for real database persistence
                 try {
-                    const response = await fetch(`/api/orders?page=${page}&limit=20&networkMode=${currentNetworkMode}`);
+                    const response = await fetch(`/api/orders-simple?page=${page}&limit=20&networkMode=${currentNetworkMode}`);
                     console.log('API Response status:', response.status);
                     if (response.ok) {
                         const data = await response.json();
