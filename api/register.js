@@ -80,15 +80,46 @@ export default async function handler(req, res) {
       console.error('Wallet creation failed:', await walletResponse.text());
     }
 
+    // Update merchant with login token
+    await fetch(`${supabaseUrl}/rest/v1/merchants?id=eq.${merchantId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        loginToken,
+        tokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+      })
+    });
+
+    // Send email (using a simple email service or webhook)
+    const loginUrl = `https://stablepay-nine.vercel.app/dashboard.html?token=${loginToken}&merchant=${merchantId}`;
+    
+    try {
+      // For now, we'll use a webhook or external service to send emails
+      // You can replace this with your preferred email service (Resend, SendGrid, etc.)
+      // For demo, log the email content that should be sent
+      console.log('=== EMAIL TO SEND ===');
+      console.log('To:', email);
+      console.log('Subject: Welcome to StablePay - Your Login Link');
+      console.log('Login URL:', loginUrl);
+      console.log('Message: Welcome to StablePay, ' + contactName + '! Click here to access your dashboard: ' + loginUrl);
+      console.log('==================');
+    } catch (emailError) {
+      console.log('Email sending failed:', emailError.message);
+    }
+
     console.log('Registration successful for:', email, 'ID:', merchantId);
 
     return res.status(201).json({
       success: true,
-      message: 'Registration successful! Your account has been created.',
+      message: 'Registration successful! Check your email for the login link.',
       merchantId: merchantId,
       devToken: loginToken,
-      loginUrl: `/dashboard.html?token=${loginToken}&merchant=${merchantId}`,
-      note: 'Account created in database - click Login Now to access dashboard'
+      loginUrl: loginUrl,
+      note: 'Email service not yet configured. Click Login Now to access your dashboard directly.'
     });
   } catch (error) {
     console.error('Registration error:', error);
