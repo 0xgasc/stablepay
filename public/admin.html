@@ -320,17 +320,43 @@
                         updatePagination(data.pagination);
                         return;
                     } else {
-                        const error = await response.text();
-                        console.error('API Error:', error);
+                        const errorText = await response.text();
+                        console.error('API Error:', errorText);
+                        
+                        // Handle specific enum error
+                        if (errorText.includes('invalid input value for enum') || errorText.includes('Chain')) {
+                            document.getElementById('ordersTableBody').innerHTML = 
+                                `<tr><td colspan="8" class="px-6 py-12 text-center text-orange-500">
+                                    <div class="space-y-2">
+                                        <p>⚠️ Database schema needs updating</p>
+                                        <p class="text-sm">Missing Chain enum values. Please run the SQL update.</p>
+                                        <a href="https://supabase.com/dashboard/project/lxbrsiujmntrvzqdphhj/sql" target="_blank" class="text-blue-600 hover:underline text-sm">Open Supabase SQL Editor</a>
+                                    </div>
+                                </td></tr>`;
+                            
+                            // Still update stats with empty data
+                            updateStats({ orders: [], pagination: { total: 0 } });
+                            return;
+                        }
+                        
+                        // Show empty state for other errors
+                        document.getElementById('ordersTableBody').innerHTML = 
+                            '<tr><td colspan="8" class="px-6 py-12 text-center text-gray-500">No orders found or database error</td></tr>';
+                        
+                        // Still update stats with empty data
+                        updateStats({ orders: [], pagination: { total: 0 } });
+                        return;
                     }
                 } catch (apiError) {
                     console.error('API fetch error:', apiError);
-                    console.log('Using localStorage fallback');
                 }
                 
-                // No localStorage fallback - database only
+                // Show connection error
                 document.getElementById('ordersTableBody').innerHTML = 
                     '<tr><td colspan="8" class="px-6 py-12 text-center text-red-500">Unable to connect to database. Please check your connection.</td></tr>';
+                
+                // Update stats with empty data
+                updateStats({ orders: [], pagination: { total: 0 } });
                 return;
                 
             } catch (error) {
