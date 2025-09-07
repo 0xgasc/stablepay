@@ -115,11 +115,11 @@ export default async function handler(req, res) {
 
     return res.status(201).json({
       success: true,
-      message: 'Registration successful! Check your email for the login link.',
+      message: 'Registration successful! Your account has been created.',
       merchantId: merchantId,
       devToken: loginToken,
       loginUrl: loginUrl,
-      note: 'Email service not yet configured. Click Login Now to access your dashboard directly.'
+      note: 'Click Login Now to access your dashboard'
     });
   } catch (error) {
     console.error('Registration error:', error);
