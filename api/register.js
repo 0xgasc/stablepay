@@ -22,27 +22,74 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // For now, just return success since we're having database access issues
-    // In a production setup, you'd save this to the database
-    const loginToken = crypto.randomBytes(32).toString('hex');
-    const merchantId = 'demo_' + Math.random().toString(36).substring(2, 15);
+    // Use direct SQL via fetch to Supabase REST API
+    const supabaseUrl = 'https://lxbrsiujmntrvzqdphhj.supabase.co';
+    const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YnJzaXVqbW50cnZ6cWRwaGhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0OTMzNDksImV4cCI6MjA1MTA2OTM0OX0.WXJYoHgfG6BvsBU2VFJrEQZJgMSMjc9d-MhOVGLfSKo';
 
-    // Log registration for debugging
-    console.log(`Registration attempt for ${email}:`, {
-      merchantId,
+    const loginToken = crypto.randomBytes(32).toString('hex');
+    const now = new Date().toISOString();
+
+    // Create merchant
+    const merchantData = {
       companyName,
       contactName,
       email,
       loginToken,
-      createdAt: new Date().toISOString()
+      role: 'MERCHANT',
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const createResponse = await fetch(`${supabaseUrl}/rest/v1/merchants`, {
+      method: 'POST',
+      headers: {
+        'apikey': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(merchantData)
+    });
+
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      console.error('Supabase error:', errorText);
+      throw new Error(`Failed to create merchant: ${errorText}`);
+    }
+
+    const merchant = await createResponse.json();
+    const merchantId = merchant[0]?.id || merchant.id;
+
+    // Create default wallet for the merchant
+    const walletData = {
+      merchantId,
+      address: '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF',
+      chain: 'BASE_SEPOLIA',
+      isDefault: true,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await fetch(`${supabaseUrl}/rest/v1/merchant_wallets`, {
+      method: 'POST',
+      headers: {
+        'apikey': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(walletData)
+    });
+
+    console.log(`Registration successful for ${email}:`, {
+      merchantId,
+      loginToken
     });
 
     return res.status(201).json({
       success: true,
       message: 'Registration successful! Check your email for the login link.',
       merchantId: merchantId,
-      devToken: loginToken,
-      note: 'Demo mode - using temporary storage until database access is configured'
+      loginUrl: `/dashboard.html?token=${loginToken}`
     });
   } catch (error) {
     console.error('Registration error:', error);
