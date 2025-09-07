@@ -47,6 +47,8 @@ export default async function handler(req, res) {
     };
 
     console.log('Creating merchant:', merchantData);
+    console.log('Supabase URL:', supabaseUrl);
+    console.log('API Key length:', apiKey.length);
 
     const createResponse = await fetch(`${supabaseUrl}/rest/v1/merchants`, {
       method: 'POST',
@@ -139,9 +141,11 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('Registration error:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({ 
       error: 'Registration failed',
-      details: error.message 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
