@@ -15,6 +15,8 @@ export default async function handler(req, res) {
 
   try {
     const { companyName, contactName, email, password } = req.body;
+    
+    console.log('Registration body received:', { companyName, contactName, email, password: password ? '[HIDDEN]' : 'MISSING' });
 
     if (!companyName || !contactName || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
