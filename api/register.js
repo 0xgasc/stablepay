@@ -62,6 +62,12 @@ export default async function handler(req, res) {
     if (!createResponse.ok) {
       const errorText = await createResponse.text();
       console.error('Supabase create error:', createResponse.status, errorText);
+      
+      // Handle duplicate email error
+      if (createResponse.status === 409 || errorText.includes('duplicate') || errorText.includes('already exists')) {
+        return res.status(409).json({ error: 'Email already registered. Please use a different email or try logging in.' });
+      }
+      
       throw new Error(`Failed to create merchant: ${errorText}`);
     }
 
