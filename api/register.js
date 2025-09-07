@@ -1,5 +1,3 @@
-import crypto from 'crypto';
-
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -26,7 +24,8 @@ export default async function handler(req, res) {
     const supabaseUrl = 'https://lxbrsiujmntrvzqdphhj.supabase.co';
     const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YnJzaXVqbW50cnZ6cWRwaGhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0OTMzNDksImV4cCI6MjA1MTA2OTM0OX0.WXJYoHgfG6BvsBU2VFJrEQZJgMSMjc9d-MhOVGLfSKo';
 
-    const loginToken = crypto.randomBytes(32).toString('hex');
+    // Generate a simple token without crypto module
+    const loginToken = 'token_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
     const now = new Date().toISOString();
 
     // Create merchant
