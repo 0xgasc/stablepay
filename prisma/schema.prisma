@@ -75,6 +75,7 @@ model Merchant {
   networkMode     NetworkMode @default(TESTNET)
   isActive        Boolean     @default(false)
   setupCompleted  Boolean     @default(false)
+  passwordHash    String?
   loginToken      String?     @unique
   tokenExpiresAt  DateTime?
   createdAt       DateTime    @default(now())

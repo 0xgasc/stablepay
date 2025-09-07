@@ -14,25 +14,34 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { companyName, contactName, email } = req.body;
+    const { companyName, contactName, email, password } = req.body;
 
-    if (!companyName || !contactName || !email) {
+    if (!companyName || !contactName || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
     // Use direct SQL via fetch to Supabase REST API
     const supabaseUrl = 'https://lxbrsiujmntrvzqdphhj.supabase.co';
     const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YnJzaXVqbW50cnZ6cWRwaGhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTI4ODUsImV4cCI6MjA3MjA2ODg4NX0.77bxwJTUvcEzzegd7WBi_UvJkcmKgtpyS1KKxHNFBjE';
 
-    // Generate a simple token
-    const loginToken = 'token_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+    // Hash password using Web Crypto API (available in Vercel Edge runtime)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password + email); // Simple salt with email
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    // Create merchant with only the fields that exist in the schema
+    // Create merchant with password hash
     const merchantData = {
       companyName,
       contactName,
       email,
-      role: 'MERCHANT'
+      role: 'MERCHANT',
+      passwordHash
     };
 
     console.log('Creating merchant:', merchantData);
@@ -117,9 +126,8 @@ export default async function handler(req, res) {
       success: true,
       message: 'Registration successful! Your account has been created.',
       merchantId: merchantId,
-      devToken: loginToken,
-      loginUrl: loginUrl,
-      note: 'Click Login Now to access your dashboard'
+      redirect: '/login.html',
+      note: 'You can now sign in with your email and password'
     });
   } catch (error) {
     console.error('Registration error:', error);
