@@ -32,7 +32,9 @@ export default async function handler(req, res) {
       success: true,
       message: 'Registration successful! Your account has been created.',
       merchantId: merchantId,
+      devToken: loginToken,
       loginUrl: `/dashboard.html?token=${loginToken}&merchant=${merchantId}`,
+      note: 'Demo mode - click Login Now to access your dashboard',
       demo: true
     });
   } catch (error) {
