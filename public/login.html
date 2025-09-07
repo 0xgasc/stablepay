@@ -37,8 +37,8 @@
                 </div>
 
                 <!-- Magic Link Login -->
-                <div id="magicLinkForm" class="bg-white rounded-xl shadow-lg p-8">
-                    <form id="loginForm" class="space-y-6">
+                <div id="loginForm" class="bg-white rounded-xl shadow-lg p-8">
+                    <form id="passwordLoginForm" class="space-y-6">
                         <div>
                             <label for="email" class="block text-sm font-medium text-gray-700">
                                 Email address
@@ -55,11 +55,26 @@
                         </div>
 
                         <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700">
+                                Password
+                            </label>
+                            <input 
+                                id="password" 
+                                name="password" 
+                                type="password" 
+                                autocomplete="current-password" 
+                                required
+                                class="mt-1 appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Your password"
+                            />
+                        </div>
+
+                        <div>
                             <button 
                                 type="submit" 
                                 class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                             >
-                                Send Login Link
+                                Sign In
                             </button>
                         </div>
                     </form>
@@ -186,13 +201,43 @@
             }
         }
 
-        // Magic link form
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        // Password login form
+        document.getElementById('passwordLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
             
-            // TODO: Implement magic link API
-            alert(`Magic link sent to ${email}! Check your email.`);
+            try {
+                submitBtn.textContent = 'Signing in...';
+                submitBtn.disabled = true;
+                
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Store authentication data
+                    sessionStorage.setItem('merchantToken', result.token);
+                    sessionStorage.setItem('merchantId', result.merchantId);
+                    sessionStorage.setItem('isAuthenticated', 'true');
+                    
+                    // Redirect to dashboard
+                    window.location.href = '/dashboard.html';
+                } else {
+                    alert(result.error || 'Login failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Login failed. Please try again.');
+            } finally {
+                submitBtn.textContent = 'Sign In';
+                submitBtn.disabled = false;
+            }
         });
 
         // Admin login modal
