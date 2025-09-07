@@ -30,12 +30,12 @@ export default async function handler(req, res) {
     const supabaseUrl = 'https://lxbrsiujmntrvzqdphhj.supabase.co';
     const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YnJzaXVqbW50cnZ6cWRwaGhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTI4ODUsImV4cCI6MjA3MjA2ODg4NX0.77bxwJTUvcEzzegd7WBi_UvJkcmKgtpyS1KKxHNFBjE';
 
-    // Hash password using Web Crypto API (available in Vercel Edge runtime)
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password + email); // Simple salt with email
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    // Simple password hashing (for demo - use bcrypt in production)
+    let passwordHash = '';
+    for (let i = 0; i < password.length; i++) {
+      passwordHash += (password.charCodeAt(i) + email.length).toString(16);
+    }
+    passwordHash = passwordHash + '_' + email.length.toString(16);
 
     // Create merchant with password hash
     const merchantData = {
