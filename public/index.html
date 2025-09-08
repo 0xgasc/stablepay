@@ -404,7 +404,12 @@
                         </div>
                     `;
                 } else {
-                    throw new Error(result.error || 'Registration failed');
+                    // Check for duplicate email error
+                    if (response.status === 409 || result.error?.includes('already')) {
+                        alert('This email is already registered. Please login or use a different email.');
+                    } else {
+                        alert(result.error || 'Registration failed');
+                    }
                 }
             } catch (error) {
                 console.error('Registration error:', error);

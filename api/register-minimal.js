@@ -55,6 +55,15 @@ export default async function handler(req, res) {
     if (!createResponse.ok) {
       const errorText = await createResponse.text();
       console.error('Supabase error:', errorText);
+      
+      // Check for duplicate email
+      if (createResponse.status === 409 || errorText.includes('duplicate') || errorText.includes('unique')) {
+        return res.status(409).json({ 
+          error: 'Email already registered',
+          message: 'This email is already in use. Please login or use a different email.'
+        });
+      }
+      
       return res.status(500).json({ error: 'Database error', details: errorText });
     }
 
