@@ -237,20 +237,25 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
-                                        <input type="text" id="companyName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
+                                        <input type="text" id="companyName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-2">Contact Name</label>
-                                        <input type="text" id="contactName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
+                                        <input type="text" id="contactName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                                        <input type="email" id="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
+                                        <input type="email" id="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-2">Plan</label>
                                         <input type="text" id="plan" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
                                     </div>
+                                </div>
+                                <div class="mt-6">
+                                    <button id="saveProfileBtn" type="button" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                        💾 Save Profile
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -420,16 +425,29 @@
         // Load merchant data
         async function loadMerchantData() {
             try {
-                // For now, use demo data - this would normally come from the login token
-                currentMerchant = {
-                    id: 'demo-merchant',
-                    companyName: 'Demo Company',
-                    contactName: 'John Doe',
-                    email: 'demo@company.com',
-                    plan: 'STARTER',
-                    networkMode: 'TESTNET',
-                    paymentMode: 'DIRECT'
-                };
+                // Get merchant ID and token from session
+                const merchantId = sessionStorage.getItem('merchantId');
+                const merchantToken = sessionStorage.getItem('merchantToken');
+                
+                if (!merchantId && !merchantToken) {
+                    console.error('No merchant authentication found');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                // Fetch actual merchant data from API
+                const response = await fetch(`/api/merchant?${merchantId ? 'id=' + merchantId : 'token=' + merchantToken}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load merchant data');
+                }
+
+                currentMerchant = await response.json();
+                
+                // Set defaults if missing
+                currentMerchant.plan = currentMerchant.plan || 'STARTER';
+                currentMerchant.networkMode = currentMerchant.networkMode || 'TESTNET';
+                currentMerchant.paymentMode = currentMerchant.paymentMode || 'DIRECT';
 
                 document.getElementById('merchantName').textContent = currentMerchant.companyName;
                 
@@ -644,6 +662,35 @@
                 hideAddWalletModal();
                 loadWallets();
                 alert('Wallet added successfully!');
+            });
+
+            // Save profile button
+            document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`/api/merchant?id=${currentMerchant.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            companyName: document.getElementById('companyName').value,
+                            contactName: document.getElementById('contactName').value,
+                            email: document.getElementById('email').value
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        currentMerchant.companyName = document.getElementById('companyName').value;
+                        currentMerchant.contactName = document.getElementById('contactName').value;
+                        currentMerchant.email = document.getElementById('email').value;
+                        
+                        document.getElementById('merchantName').textContent = currentMerchant.companyName;
+                        alert('Profile updated successfully!');
+                    } else {
+                        alert('Failed to update profile');
+                    }
+                } catch (error) {
+                    console.error('Error saving profile:', error);
+                    alert('Failed to save profile');
+                }
             });
 
             // Save settings
