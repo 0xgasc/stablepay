@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StablePay Checkout Widget Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 py-12">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                StablePay Checkout Widget Demo
+            </h1>
+            <p class="text-xl text-gray-600">
+                Test our embedded payment widget below
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Demo 1: Basic Checkout -->
+            <div>
+                <h2 class="text-2xl font-bold mb-4">Basic Checkout</h2>
+                <div
+                    class="stablepay-checkout"
+                    data-amount="100"
+                    data-currency="USDC"
+                    data-merchant="demo_merchant"
+                    data-recipient="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb5"
+                ></div>
+            </div>
+
+            <!-- Demo 2: Custom Amount -->
+            <div>
+                <h2 class="text-2xl font-bold mb-4">Custom Amount</h2>
+                <div
+                    class="stablepay-checkout"
+                    data-amount="250"
+                    data-currency="USDC"
+                    data-merchant="demo_merchant"
+                    data-recipient="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb5"
+                    data-theme="light"
+                ></div>
+            </div>
+        </div>
+
+        <!-- Integration Code -->
+        <div class="mt-16">
+            <h2 class="text-2xl font-bold mb-4">Integration Code</h2>
+            <div class="bg-gray-900 text-gray-100 p-6 rounded-lg">
+                <pre><code>&lt;!-- Add this script to your page --&gt;
+&lt;script src="https://stablepay-nine.vercel.app/checkout-widget.js"&gt;&lt;/script&gt;
+
+&lt;!-- Add this div where you want the checkout to appear --&gt;
+&lt;div
+    class="stablepay-checkout"
+    data-amount="100"
+    data-currency="USDC"
+    data-merchant="your_merchant_id"
+    data-recipient="your_wallet_address"
+&gt;&lt;/div&gt;</code></pre>
+            </div>
+        </div>
+
+        <!-- Events Listener Demo -->
+        <div class="mt-12">
+            <h2 class="text-2xl font-bold mb-4">Events Console</h2>
+            <div id="event-log" class="bg-white border rounded-lg p-4 h-32 overflow-auto font-mono text-sm">
+                <div class="text-gray-500">Waiting for events...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the widget -->
+    <script src="/checkout-widget.js"></script>
+
+    <!-- Event listener demo -->
+    <script>
+        // Listen for widget events
+        document.querySelectorAll('.stablepay-checkout').forEach(widget => {
+            widget.addEventListener('stablepay:payment.success', (e) => {
+                console.log('Payment success:', e.detail);
+                logEvent('Payment Success', e.detail);
+            });
+
+            widget.addEventListener('stablepay:payment.failed', (e) => {
+                console.log('Payment failed:', e.detail);
+                logEvent('Payment Failed', e.detail);
+            });
+        });
+
+        function logEvent(type, data) {
+            const log = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            entry.className = 'text-green-600 mb-1';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${type}: ${JSON.stringify(data)}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+    </script>
+</body>
+</html>
