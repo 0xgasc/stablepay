@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StablePay Developer Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        pre { background: #f1f5f9; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        code { background: #e2e8f0; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        StablePay
+                    </a>
+                    <span class="ml-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                        Developer Docs
+                    </span>
+                </div>
+                <nav class="flex space-x-8">
+                    <a href="#quickstart" class="text-gray-600 hover:text-gray-900">Quick Start</a>
+                    <a href="#checkout" class="text-gray-600 hover:text-gray-900">Checkout</a>
+                    <a href="#wallets" class="text-gray-600 hover:text-gray-900">Wallets</a>
+                    <a href="#onramp" class="text-gray-600 hover:text-gray-900">Onramp</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Hero -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                Accept USDC payments in minutes
+            </h1>
+            <p class="text-xl text-gray-600 mb-8">
+                Simple APIs for crypto payments, wallet infrastructure, and fiat onramps
+            </p>
+            <div class="flex justify-center space-x-4">
+                <a href="#quickstart" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+                    Get Started
+                </a>
+                <a href="#demo" class="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50">
+                    View Demo
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Start -->
+        <section id="quickstart" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Quick Start</h2>
+
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+                <h3 class="text-xl font-semibold mb-4">1. Add the checkout widget</h3>
+                <p class="text-gray-600 mb-4">Add this to your webpage to accept USDC payments:</p>
+                <pre><code>&lt;script src="https://stablepay-nine.vercel.app/checkout-widget.js"&gt;&lt;/script&gt;
+&lt;div
+  class="stablepay-checkout"
+  data-amount="100"
+  data-currency="USDC"
+  data-merchant="your_merchant_id"
+  data-recipient="0x..."
+&gt;&lt;/div&gt;</code></pre>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+                <h3 class="text-xl font-semibold mb-4">2. Live Demo</h3>
+                <p class="text-gray-600 mb-4">See the checkout widget in action:</p>
+                <div id="demo-widget" class="max-w-md mx-auto">
+                    <div
+                        class="stablepay-checkout"
+                        data-amount="100"
+                        data-currency="USDC"
+                        data-merchant="demo_merchant"
+                        data-recipient="0x1234567890abcdef1234567890abcdef12345678"
+                    ></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- API Documentation -->
+        <section id="checkout" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Checkout API</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-xl shadow-lg p-8">
+                    <h3 class="text-xl font-semibold mb-4">Create Checkout Session</h3>
+                    <p class="text-gray-600 mb-4">Create a payment session programmatically</p>
+                    <pre><code>POST /api/v1/checkout/sessions
+
+{
+  "amount": 100,
+  "currency": "USDC",
+  "merchantId": "merchant_123",
+  "recipient": "0x...",
+  "successUrl": "https://yoursite.com/success"
+}</code></pre>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-8">
+                    <h3 class="text-xl font-semibold mb-4">Response</h3>
+                    <pre><code>{
+  "id": "cs_1234567890",
+  "status": "pending",
+  "amount": 100,
+  "currency": "USDC",
+  "paymentUrl": "https://stablepay.com/pay/cs_123",
+  "expiresAt": "2024-01-01T12:00:00Z"
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="wallets" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Wallet API</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-xl shadow-lg p-8">
+                    <h3 class="text-xl font-semibold mb-4">Create Customer Wallet</h3>
+                    <p class="text-gray-600 mb-4">Generate invisible wallets for your users</p>
+                    <pre><code>POST /api/v1/wallets
+
+{
+  "email": "user@example.com",
+  "name": "John Doe",
+  "chain": "base",
+  "merchantId": "merchant_123"
+}</code></pre>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-8">
+                    <h3 class="text-xl font-semibold mb-4">Get Wallet Balance</h3>
+                    <pre><code>{
+  "id": "wallet_1234567890",
+  "address": "0x...",
+  "chain": "base",
+  "email": "user@example.com",
+  "balance": {
+    "USDC": "100.00",
+    "native": "0.01"
+  }
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="onramp" class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Onramp API</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-xl shadow-lg p-8">
+                    <h3 class="text-xl font-semibold mb-4">Get Quote</h3>
+                    <p class="text-gray-600 mb-4">Get real-time conversion rates</p>
+                    <pre><code>POST /api/v1/onramp/quote
+
+{
+  "amount": 100,
+  "sourceCurrency": "USD",
+  "destinationCurrency": "USDC"
+}</code></pre>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-8">
+                    <h3 class="text-xl font-semibold mb-4">Create Onramp</h3>
+                    <pre><code>POST /api/v1/onramp/create
+
+{
+  "amount": 100,
+  "destinationAddress": "0x...",
+  "email": "user@example.com",
+  "paymentMethod": "card"
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Grid -->
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8">Platform Features</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="text-4xl mb-4">💳</div>
+                    <h3 class="text-xl font-semibold mb-2">Embedded Checkout</h3>
+                    <p class="text-gray-600">Accept crypto and card payments with a single widget</p>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="text-4xl mb-4">👛</div>
+                    <h3 class="text-xl font-semibold mb-2">Invisible Wallets</h3>
+                    <p class="text-gray-600">Create wallets for users without them knowing it's crypto</p>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="text-4xl mb-4">🔄</div>
+                    <h3 class="text-xl font-semibold mb-2">Fiat On/Off Ramps</h3>
+                    <p class="text-gray-600">Convert between traditional money and USDC seamlessly</p>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="text-4xl mb-4">🌐</div>
+                    <h3 class="text-xl font-semibant mb-2">Multi-Chain</h3>
+                    <p class="text-gray-600">Support Ethereum, Base, Polygon, Arbitrum, Solana</p>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="text-4xl mb-4">⚡</div>
+                    <h3 class="text-xl font-semibold mb-2">Instant Settlement</h3>
+                    <p class="text-gray-600">Receive USDC payments in seconds, not days</p>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="text-4xl mb-4">🔧</div>
+                    <h3 class="text-xl font-semibold mb-2">Developer APIs</h3>
+                    <p class="text-gray-600">Full REST API with webhooks and real-time events</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="text-center">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-12 text-white">
+                <h2 class="text-3xl font-bold mb-4">Ready to get started?</h2>
+                <p class="text-xl mb-8">Join hundreds of businesses accepting USDC payments with StablePay</p>
+                <a href="/register" class="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                    Create Free Account
+                </a>
+            </div>
+        </section>
+    </div>
+
+    <!-- Load the checkout widget -->
+    <script src="/checkout-widget.js"></script>
+</body>
+</html>
