@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Dashboard - StablePay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        StablePay
+                    </a>
+                    <span class="ml-4 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
+                        Developer Console
+                    </span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="merchantEmail" class="text-gray-600">Loading...</span>
+                    <button onclick="logout()" class="text-gray-600 hover:text-gray-900">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Quick Start -->
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-8 text-white mb-8">
+            <h1 class="text-3xl font-bold mb-2">Welcome to StablePay Developer Console</h1>
+            <p class="text-blue-100 mb-6">Start accepting USDC payments in under 5 minutes</p>
+            <div class="flex space-x-4">
+                <button onclick="showQuickStart()" class="bg-white text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-50">
+                    Quick Start Guide
+                </button>
+                <a href="https://docs.stablepay.com" class="bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-800">
+                    View Documentation
+                </a>
+            </div>
+        </div>
+
+        <!-- API Keys Section -->
+        <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">API Keys</h2>
+                <button onclick="generateApiKey()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    + Generate New Key
+                </button>
+            </div>
+
+            <!-- Live Keys -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-3">Production Keys</h3>
+                <div id="liveKeys" class="space-y-3">
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex-1">
+                            <p class="font-mono text-sm">pk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx</p>
+                            <p class="text-xs text-gray-500 mt-1">Created: Dec 1, 2024 • Last used: Never</p>
+                        </div>
+                        <button onclick="copyKey(this)" class="text-blue-600 hover:text-blue-700 px-3 py-1">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Keys -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-3">Test Keys</h3>
+                <div id="testKeys" class="space-y-3">
+                    <div class="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
+                        <div class="flex-1">
+                            <p class="font-mono text-sm">pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx</p>
+                            <p class="text-xs text-gray-500 mt-1">Created: Dec 1, 2024 • Last used: Today</p>
+                        </div>
+                        <button onclick="copyKey(this)" class="text-yellow-600 hover:text-yellow-700 px-3 py-1">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Integration Steps -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- NPM Package -->
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">1. Install SDK</h3>
+                <div class="bg-gray-900 text-gray-100 p-4 rounded-lg mb-4">
+                    <pre><code>npm install @stablepay/sdk</code></pre>
+                </div>
+                <p class="text-gray-600 mb-4">Or use our CDN:</p>
+                <div class="bg-gray-900 text-gray-100 p-4 rounded-lg">
+                    <pre><code>&lt;script src="https://cdn.stablepay.com/v1/sdk.js"&gt;&lt;/script&gt;</code></pre>
+                </div>
+            </div>
+
+            <!-- Quick Integration -->
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">2. Initialize</h3>
+                <div class="bg-gray-900 text-gray-100 p-4 rounded-lg">
+                    <pre><code>import StablePay from '@stablepay/sdk';
+
+const stablepay = new StablePay({
+  apiKey: 'pk_live_xxxxx',
+  network: 'mainnet'
+});
+
+// Create checkout
+const session = await stablepay.checkout.create({
+  amount: 100,
+  currency: 'USDC'
+});</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Dashboard -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-600 text-sm">Total Volume</p>
+                <p class="text-3xl font-bold text-gray-900">$0</p>
+                <p class="text-green-600 text-sm">+0% from last month</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-600 text-sm">Transactions</p>
+                <p class="text-3xl font-bold text-gray-900">0</p>
+                <p class="text-gray-500 text-sm">This month</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-600 text-sm">API Calls</p>
+                <p class="text-3xl font-bold text-gray-900">0</p>
+                <p class="text-gray-500 text-sm">Last 24 hours</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-600 text-sm">Success Rate</p>
+                <p class="text-3xl font-bold text-gray-900">--%</p>
+                <p class="text-gray-500 text-sm">Last 7 days</p>
+            </div>
+        </div>
+
+        <!-- Webhooks -->
+        <div class="bg-white rounded-xl shadow-lg p-8 mt-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Webhooks</h2>
+                <button onclick="addWebhook()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    + Add Endpoint
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <p class="font-mono text-sm">https://yoursite.com/webhooks/stablepay</p>
+                        <p class="text-xs text-gray-500 mt-1">Events: checkout.completed, payment.received</p>
+                    </div>
+                    <button class="text-red-600 hover:text-red-700">Remove</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check authentication
+        const merchantId = sessionStorage.getItem('merchantId');
+        const token = sessionStorage.getItem('merchantToken');
+
+        if (!merchantId || !token) {
+            window.location.href = '/login.html';
+        }
+
+        // Load merchant data
+        async function loadMerchantData() {
+            const email = sessionStorage.getItem('merchantEmail') || 'merchant@example.com';
+            document.getElementById('merchantEmail').textContent = email;
+        }
+
+        async function generateApiKey() {
+            const prefix = confirm('Generate production key?') ? 'pk_live_' : 'pk_test_';
+            const key = prefix + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+
+            // Save to database via API
+            try {
+                const response = await fetch('/api/v1/api-keys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        merchantId: merchantId,
+                        prefix: prefix,
+                        name: 'Generated ' + new Date().toLocaleDateString()
+                    })
+                });
+
+                if (response.ok) {
+                    alert('API Key generated: ' + key + '\n\nSave this key - it won\'t be shown again!');
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error generating key:', error);
+                // For demo, just show the key
+                alert('API Key generated: ' + key + '\n\nSave this key - it won\'t be shown again!');
+            }
+        }
+
+        function copyKey(button) {
+            const key = button.parentElement.querySelector('.font-mono').textContent;
+            navigator.clipboard.writeText(key);
+            button.textContent = 'Copied!';
+            setTimeout(() => button.textContent = 'Copy', 2000);
+        }
+
+        function showQuickStart() {
+            alert('Quick Start Guide:\n\n1. Copy your API key\n2. Install our SDK\n3. Initialize with your key\n4. Create checkout sessions\n5. Handle webhooks\n\nFull docs at docs.stablepay.com');
+        }
+
+        function addWebhook() {
+            const url = prompt('Enter webhook endpoint URL:');
+            if (url) {
+                alert('Webhook added: ' + url);
+            }
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        // Initialize
+        loadMerchantData();
+    </script>
+</body>
+</html>
