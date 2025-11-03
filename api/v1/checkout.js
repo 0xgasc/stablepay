@@ -14,8 +14,8 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const supabaseUrl = 'https://lxbrsiujmntrvzqdphhj.supabase.co';
-  const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YnJzaXVqbW50cnZ6cWRwaGhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTI4ODUsImV4cCI6MjA3MjA2ODg4NX0.77bxwJTUvcEzzegd7WBi_UvJkcmKgtpyS1KKxHNFBjE';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const apiKey = process.env.SUPABASE_ANON_KEY;
 
   // Parse the path to determine the endpoint
   const path = req.url.split('?')[0];
@@ -34,6 +34,35 @@ export default async function handler(req, res) {
         });
       }
 
+      // Validate amount
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ error: 'Amount must be a positive number' });
+      }
+
+      // Validate redirect URLs if provided
+      if (successUrl) {
+        try {
+          const url = new URL(successUrl);
+          if (!['http:', 'https:'].includes(url.protocol)) {
+            return res.status(400).json({ error: 'Invalid successUrl protocol' });
+          }
+        } catch {
+          return res.status(400).json({ error: 'Invalid successUrl format' });
+        }
+      }
+
+      if (cancelUrl) {
+        try {
+          const url = new URL(cancelUrl);
+          if (!['http:', 'https:'].includes(url.protocol)) {
+            return res.status(400).json({ error: 'Invalid cancelUrl protocol' });
+          }
+        } catch {
+          return res.status(400).json({ error: 'Invalid cancelUrl format' });
+        }
+      }
+
       // Generate session ID
       const sessionId = 'cs_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
 
@@ -41,7 +70,7 @@ export default async function handler(req, res) {
       const sessionData = {
         id: sessionId,
         merchantId,
-        amount,
+        amount: parsedAmount,
         currency: currency || 'USDC',
         status: 'pending',
         recipient: recipient || null,
@@ -57,7 +86,7 @@ export default async function handler(req, res) {
       return res.status(201).json({
         id: sessionId,
         status: 'pending',
-        amount: amount,
+        amount: parsedAmount,
         currency: currency || 'USDC',
         paymentUrl: `https://stablepay-nine.vercel.app/pay/${sessionId}`,
         expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 minutes
@@ -102,8 +131,7 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Checkout API error:', error);
     return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message
+      error: 'Internal server error'
     });
   }
 }

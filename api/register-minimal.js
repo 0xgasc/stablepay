@@ -1,7 +1,34 @@
+import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
+
+// Rate limiter: 3 registrations per hour
+const limiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 requests per window
+  message: { error: 'Too many registration attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 export default async function handler(req, res) {
-  // Enable CORS
+  // Apply rate limiting
+  await new Promise((resolve, reject) => {
+    limiter(req, res, (result) => {
+      if (result instanceof Error) {
+        return reject(result);
+      }
+      resolve(result);
+    });
+  });
+  // Enable CORS - restrict to your domain in production
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'https://stablepay-nine.vercel.app'];
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+
   res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -15,23 +42,31 @@ export default async function handler(req, res) {
 
   try {
     const { companyName, contactName, email, password } = req.body;
-    
+
     console.log('Minimal registration attempt:', { companyName, contactName, email, password: password ? 'EXISTS' : 'MISSING' });
 
+    // Validate required fields
     if (!companyName || !contactName || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // Use direct SQL via fetch to Supabase REST API
-    const supabaseUrl = 'https://lxbrsiujmntrvzqdphhj.supabase.co';
-    const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YnJzaXVqbW50cnZ6cWRwaGhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTI4ODUsImV4cCI6MjA3MjA2ODg4NX0.77bxwJTUvcEzzegd7WBi_UvJkcmKgtpyS1KKxHNFBjE';
-
-    // Simple password hash (same as login.js)
-    let passwordHash = '';
-    for (let i = 0; i < password.length; i++) {
-      passwordHash += (password.charCodeAt(i) + email.length).toString(16);
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
     }
-    passwordHash = passwordHash + '_' + email.length.toString(16);
+
+    // Validate password strength (min 8 chars)
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    // Use direct SQL via fetch to Supabase REST API
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const apiKey = process.env.SUPABASE_ANON_KEY;
+
+    // Hash password with bcrypt (10 rounds)
+    const passwordHash = await bcrypt.hash(password, 10);
 
     // Minimal merchant data WITH PASSWORD HASH
     const merchantData = {
@@ -84,10 +119,8 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Registration error:', error);
-    return res.status(500).json({ 
-      error: 'Registration failed',
-      details: error.message,
-      type: error.constructor.name
+    return res.status(500).json({
+      error: 'Registration failed'
     });
   }
 }

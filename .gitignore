@@ -53,4 +53,4 @@ dashboard/out/
 *.log
 .cache/
 temp/
-tmp/
+tmp/bfg.jar

@@ -12,8 +12,8 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       // Use direct SQL via fetch to Supabase REST API
-      const supabaseUrl = 'https://lxbrsiujmntrvzqdphhj.supabase.co';
-      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YnJzaXVqbW50cnZ6cWRwaGhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTI4ODUsImV4cCI6MjA3MjA2ODg4NX0.77bxwJTUvcEzzegd7WBi_UvJkcmKgtpyS1KKxHNFBjE';
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const apiKey = process.env.SUPABASE_ANON_KEY;
 
       // Fetch orders with pagination
       const page = parseInt(req.query.page) || 1;
@@ -98,19 +98,44 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       // Create new order
-      const supabaseUrl = 'https://lxbrsiujmntrvzqdphhj.supabase.co';
-      const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YnJzaXVqbW50cnZ6cWRwaGhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTI4ODUsImV4cCI6MjA3MjA2ODg4NX0.77bxwJTUvcEzzegd7WBi_UvJkcmKgtpyS1KKxHNFBjE';
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const apiKey = process.env.SUPABASE_ANON_KEY;
 
-      const { 
-        amount, 
+      const {
+        amount,
         chain,
         customerEmail,
         customerName,
         description
       } = req.body;
 
+      // Validate required fields
+      if (!amount || !chain) {
+        return res.status(400).json({ error: 'Amount and chain are required' });
+      }
+
+      // Validate amount is positive number
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ error: 'Amount must be a positive number' });
+      }
+
+      // Validate chain value
+      const validChains = ['BASE_SEPOLIA', 'ETHEREUM_SEPOLIA', 'POLYGON_MUMBAI', 'ARBITRUM_SEPOLIA', 'SOLANA_DEVNET', 'BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'SOLANA_MAINNET'];
+      if (!validChains.includes(chain)) {
+        return res.status(400).json({ error: 'Invalid chain' });
+      }
+
+      // Validate email if provided
+      if (customerEmail) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(customerEmail)) {
+          return res.status(400).json({ error: 'Invalid email format' });
+        }
+      }
+
       const orderData = {
-        amount: parseFloat(amount),
+        amount: parsedAmount,
         chain,
         customerEmail,
         customerName,
@@ -145,9 +170,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('API Error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message 
+    return res.status(500).json({
+      error: 'Internal server error'
     });
   }
 }

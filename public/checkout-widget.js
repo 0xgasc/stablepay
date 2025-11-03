@@ -269,15 +269,30 @@
 
     showSuccess() {
       const widget = this.container.querySelector('.stablepay-widget');
-      widget.innerHTML = `
-        <div style="text-align: center; padding: 40px;">
-          <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
-          <h3 style="margin: 0 0 8px 0; font-size: 20px; color: #111827;">Payment Successful!</h3>
-          <p style="margin: 0; color: #6b7280; font-size: 14px;">
-            Transaction ID: ${this.sessionId}
-          </p>
-        </div>
-      `;
+
+      // Clear existing content
+      widget.innerHTML = '';
+
+      // Create elements safely without innerHTML
+      const successDiv = document.createElement('div');
+      successDiv.style.cssText = 'text-align: center; padding: 40px;';
+
+      const emoji = document.createElement('div');
+      emoji.style.cssText = 'font-size: 48px; margin-bottom: 16px;';
+      emoji.textContent = '✅';
+
+      const heading = document.createElement('h3');
+      heading.style.cssText = 'margin: 0 0 8px 0; font-size: 20px; color: #111827;';
+      heading.textContent = 'Payment Successful!';
+
+      const paragraph = document.createElement('p');
+      paragraph.style.cssText = 'margin: 0; color: #6b7280; font-size: 14px;';
+      paragraph.textContent = `Transaction ID: ${this.sessionId}`;
+
+      successDiv.appendChild(emoji);
+      successDiv.appendChild(heading);
+      successDiv.appendChild(paragraph);
+      widget.appendChild(successDiv);
     }
 
     showError(message) {

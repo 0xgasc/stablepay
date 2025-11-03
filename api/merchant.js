@@ -1,19 +1,24 @@
+import { validateMerchantToken } from './middleware/auth.js';
+
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  const supabaseUrl = 'https://lxbrsiujmntrvzqdphhj.supabase.co';
-  const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4YnJzaXVqbW50cnZ6cWRwaGhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTI4ODUsImV4cCI6MjA3MjA2ODg4NX0.77bxwJTUvcEzzegd7WBi_UvJkcmKgtpyS1KKxHNFBjE';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const apiKey = process.env.SUPABASE_ANON_KEY;
 
   try {
     if (req.method === 'GET') {
+      // Validate authentication
+      const isValid = await validateMerchantToken(req, res);
+      if (!isValid) return;
       // Get merchant by ID or token
       const { id, token } = req.query;
       
@@ -51,12 +56,21 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PATCH') {
+      // Validate authentication
+      const isValid = await validateMerchantToken(req, res);
+      if (!isValid) return;
+
       // Update merchant details
       const { id } = req.query;
       const updates = req.body;
-      
+
       if (!id) {
         return res.status(400).json({ error: 'Merchant ID required' });
+      }
+
+      // Ensure merchant can only update their own data
+      if (id !== req.merchantId) {
+        return res.status(403).json({ error: 'Forbidden: Cannot update other merchants' });
       }
 
       // Only allow certain fields to be updated
@@ -91,9 +105,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('Merchant API error:', error);
-    return res.status(500).json({ 
-      error: 'Request failed',
-      details: error.message 
+    return res.status(500).json({
+      error: 'Request failed'
     });
   }
 }

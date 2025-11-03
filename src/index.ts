@@ -12,15 +12,15 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Configure helmet with relaxed CSP for development
+// Configure helmet with secure CSP
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
+      scriptSrc: ["'self'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "https://cdn.tailwindcss.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https:"],
+      connectSrc: ["'self'", "https://lxbrsiujmntrvzqdphhj.supabase.co", "https://stablepay-nine.vercel.app"],
     },
   },
 }));
