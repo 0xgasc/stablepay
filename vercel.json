@@ -14,7 +14,7 @@
       "destination": "/public/index.html"
     },
     {
-      "source": "/(admin|crypto-pay|demo-store|login).html", 
+      "source": "/(admin|crypto-pay|demo-store|login|enterprise-admin|onboard-merchant).html",
       "destination": "/public/$1.html"
     },
     {

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Admin - StablePay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .status-active { @apply bg-green-100 text-green-800; }
+        .status-inactive { @apply bg-gray-100 text-gray-800; }
+        .plan-starter { @apply bg-blue-100 text-blue-800; }
+        .plan-growth { @apply bg-purple-100 text-purple-800; }
+        .plan-enterprise { @apply bg-yellow-100 text-yellow-800; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Enterprise Admin Login</h2>
+                <p class="text-gray-600">Super admin access only</p>
+            </div>
+
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                        type="email"
+                        id="adminEmail"
+                        required
+                        placeholder="admin@stablepay.com"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input
+                        type="password"
+                        id="adminPassword"
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                </div>
+
+                <div id="loginError" class="hidden text-red-600 text-sm text-center">
+                    Invalid credentials
+                </div>
+
+                <button
+                    type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md font-medium"
+                >
+                    Login
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="adminContent" class="hidden">
+        <!-- Header -->
+        <nav class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            StablePay Enterprise
+                        </h1>
+                        <span class="ml-4 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                            Super Admin
+                        </span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button id="refreshBtn" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                            🔄 Refresh
+                        </button>
+                        <button id="logoutBtn" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                            🚪 Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Tabs -->
+            <div class="mb-6 border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8">
+                    <button class="tab-btn border-b-2 border-blue-500 text-blue-600 py-4 px-1 text-sm font-medium" data-tab="merchants">
+                        👥 Merchants
+                    </button>
+                    <button class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium" data-tab="orders">
+                        📦 All Orders
+                    </button>
+                    <button class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium" data-tab="analytics">
+                        📊 Platform Analytics
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl p-6 shadow-sm border">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-blue-100 rounded-lg">
+                            <span class="text-2xl">👥</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Total Merchants</p>
+                            <p class="text-2xl font-bold text-gray-900" id="totalMerchants">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-6 shadow-sm border">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-green-100 rounded-lg">
+                            <span class="text-2xl">✅</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Active Merchants</p>
+                            <p class="text-2xl font-bold text-green-600" id="activeMerchants">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-6 shadow-sm border">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-purple-100 rounded-lg">
+                            <span class="text-2xl">📦</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Total Orders</p>
+                            <p class="text-2xl font-bold text-purple-600" id="totalOrders">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-6 shadow-sm border">
+                    <div class="flex items-center">
+                        <div class="p-2 bg-yellow-100 rounded-lg">
+                            <span class="text-2xl">💰</span>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Total Volume</p>
+                            <p class="text-2xl font-bold text-yellow-600" id="totalVolume">$0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Merchants Tab -->
+            <div id="merchantsTab" class="tab-content">
+                <div class="bg-white rounded-xl shadow-sm border">
+                    <div class="p-6 border-b flex justify-between items-center">
+                        <h2 class="text-xl font-bold text-gray-900">Merchant Accounts</h2>
+                        <button id="addMerchantBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">
+                            ➕ Add Merchant
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orders</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Volume</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="merchantsTableBody" class="divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                                        Loading merchants...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Tab -->
+            <div id="ordersTab" class="tab-content hidden">
+                <div class="bg-white rounded-xl shadow-sm border">
+                    <div class="p-6 border-b">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-gray-900">All Platform Orders</h2>
+                            <select id="merchantFilter" class="border border-gray-300 rounded-lg px-4 py-2">
+                                <option value="">All Merchants</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Merchant</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Chain</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody" class="divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                        Loading orders...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="analyticsTab" class="tab-content hidden">
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6">Platform Analytics</h2>
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-lg font-semibold mb-4">Revenue by Merchant</h3>
+                            <div id="revenueByMerchant" class="space-y-3">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Merchant Modal -->
+    <div id="addMerchantModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Add New Merchant</h2>
+
+            <form id="addMerchantForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
+                        <input type="text" id="companyName" required class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Contact Name *</label>
+                        <input type="text" id="contactName" required class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                        <input type="email" id="merchantEmail" required class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                        <input type="url" id="website" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+                        <select id="plan" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="STARTER">Starter</option>
+                            <option value="GROWTH">Growth</option>
+                            <option value="ENTERPRISE">Enterprise</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Network Mode</label>
+                        <select id="networkMode" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="TESTNET">Testnet</option>
+                            <option value="MAINNET">Mainnet</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                    <input type="text" id="industry" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea id="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="cancelAddMerchant" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        Create Merchant
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Merchant Details Modal -->
+    <div id="merchantDetailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-6">
+                <h2 class="text-2xl font-bold text-gray-900" id="detailMerchantName">Merchant Details</h2>
+                <button id="closeMerchantDetails" class="text-gray-400 hover:text-gray-600">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+
+            <div id="merchantDetailsContent">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let merchants = [];
+        let orders = [];
+
+        // Authentication check
+        function checkAuth() {
+            const isAdmin = sessionStorage.getItem('isAdminAuthenticated');
+            if (isAdmin === 'true') {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('adminContent').classList.remove('hidden');
+                loadDashboard();
+            }
+        }
+
+        // Login
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+
+            if (email === 'admin@stablepay.com' && password === 'admin123') {
+                sessionStorage.setItem('isAdminAuthenticated', 'true');
+                checkAuth();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.removeItem('isAdminAuthenticated');
+            window.location.reload();
+        });
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+
+                // Update buttons
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('border-blue-500', 'text-blue-600');
+                    b.classList.add('border-transparent', 'text-gray-500');
+                });
+                btn.classList.add('border-blue-500', 'text-blue-600');
+                btn.classList.remove('border-transparent', 'text-gray-500');
+
+                // Update content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(tab + 'Tab').classList.remove('hidden');
+            });
+        });
+
+        // Load dashboard data
+        async function loadDashboard() {
+            await Promise.all([
+                loadMerchants(),
+                loadOrders()
+            ]);
+            updateStats();
+        }
+
+        // Load merchants
+        async function loadMerchants() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/merchants`, {
+                    headers: { 'Authorization': 'Bearer admin-token' }
+                });
+
+                if (response.ok) {
+                    merchants = await response.json();
+                    renderMerchants();
+                    populateMerchantFilter();
+                } else {
+                    // Fallback - show mock data if API not ready
+                    merchants = [];
+                    renderMerchants();
+                }
+            } catch (error) {
+                console.error('Error loading merchants:', error);
+                merchants = [];
+                renderMerchants();
+            }
+        }
+
+        // Load orders
+        async function loadOrders() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/orders`);
+
+                if (response.ok) {
+                    orders = await response.json();
+                    renderOrders();
+                } else {
+                    orders = [];
+                    renderOrders();
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                orders = [];
+                renderOrders();
+            }
+        }
+
+        // Render merchants table
+        function renderMerchants() {
+            const tbody = document.getElementById('merchantsTableBody');
+
+            if (merchants.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                            No merchants yet. Click "Add Merchant" to create your first customer account.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = merchants.map(m => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="font-medium text-gray-900">${m.companyName}</div>
+                        <div class="text-sm text-gray-500">${m.email}</div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${m.contactName}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs rounded-full font-medium plan-${(m.plan || 'starter').toLowerCase()}">
+                            ${m.plan || 'Starter'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs rounded-full font-medium status-${m.isActive ? 'active' : 'inactive'}">
+                            ${m.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${m.orderCount || 0}</td>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">$${(m.totalVolume || 0).toFixed(2)}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${new Date(m.createdAt).toLocaleDateString()}</td>
+                    <td class="px-6 py-4 text-right text-sm">
+                        <button onclick="viewMerchant('${m.id}')" class="text-blue-600 hover:text-blue-900 mr-3">View</button>
+                        <button onclick="viewMerchantOrders('${m.id}')" class="text-purple-600 hover:text-purple-900 mr-3">Orders</button>
+                        <button onclick="toggleMerchantStatus('${m.id}')" class="text-gray-600 hover:text-gray-900">
+                            ${m.isActive ? 'Disable' : 'Enable'}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Render orders table
+        function renderOrders(filteredOrders = null) {
+            const tbody = document.getElementById('ordersTableBody');
+            const data = filteredOrders || orders;
+
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                            No orders found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = data.map(o => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 font-mono text-sm text-gray-900">${o.id.substring(0, 8)}...</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">
+                        ${o.merchant?.companyName || 'Demo/Unassigned'}
+                    </td>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${o.amount} USDC</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${o.chain}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs rounded-full font-medium status-${o.status.toLowerCase()}">
+                            ${o.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${new Date(o.createdAt).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Update stats
+        function updateStats() {
+            document.getElementById('totalMerchants').textContent = merchants.length;
+            document.getElementById('activeMerchants').textContent = merchants.filter(m => m.isActive).length;
+            document.getElementById('totalOrders').textContent = orders.length;
+
+            const totalVolume = orders
+                .filter(o => o.status === 'CONFIRMED')
+                .reduce((sum, o) => sum + parseFloat(o.amount), 0);
+            document.getElementById('totalVolume').textContent = `$${totalVolume.toFixed(2)}`;
+        }
+
+        // Populate merchant filter
+        function populateMerchantFilter() {
+            const select = document.getElementById('merchantFilter');
+            select.innerHTML = '<option value="">All Merchants</option>' +
+                merchants.map(m => `<option value="${m.id}">${m.companyName}</option>`).join('');
+
+            select.addEventListener('change', (e) => {
+                const merchantId = e.target.value;
+                if (merchantId) {
+                    const filtered = orders.filter(o => o.merchantId === merchantId);
+                    renderOrders(filtered);
+                } else {
+                    renderOrders();
+                }
+            });
+        }
+
+        // Add merchant modal
+        document.getElementById('addMerchantBtn').addEventListener('click', () => {
+            document.getElementById('addMerchantModal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancelAddMerchant').addEventListener('click', () => {
+            document.getElementById('addMerchantModal').classList.add('hidden');
+        });
+
+        document.getElementById('addMerchantForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const merchantData = {
+                companyName: document.getElementById('companyName').value,
+                contactName: document.getElementById('contactName').value,
+                email: document.getElementById('merchantEmail').value,
+                website: document.getElementById('website').value,
+                plan: document.getElementById('plan').value,
+                networkMode: document.getElementById('networkMode').value,
+                industry: document.getElementById('industry').value,
+                notes: document.getElementById('notes').value,
+                isActive: true
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/merchants`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer admin-token'
+                    },
+                    body: JSON.stringify(merchantData)
+                });
+
+                if (response.ok) {
+                    alert('Merchant created successfully!');
+                    document.getElementById('addMerchantModal').classList.add('hidden');
+                    document.getElementById('addMerchantForm').reset();
+                    loadDashboard();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to create merchant'));
+                }
+            } catch (error) {
+                console.error('Error creating merchant:', error);
+                alert('Error: Failed to create merchant. API endpoint may not be available yet.');
+            }
+        });
+
+        // View merchant details
+        window.viewMerchant = function(merchantId) {
+            const merchant = merchants.find(m => m.id === merchantId);
+            if (!merchant) return;
+
+            const merchantOrders = orders.filter(o => o.merchantId === merchantId);
+            const totalRevenue = merchantOrders
+                .filter(o => o.status === 'CONFIRMED')
+                .reduce((sum, o) => sum + parseFloat(o.amount), 0);
+
+            const content = `
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-1">Company</h3>
+                        <p class="text-lg font-semibold">${merchant.companyName}</p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-1">Contact</h3>
+                        <p class="text-lg">${merchant.contactName}</p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-1">Email</h3>
+                        <p class="text-lg">${merchant.email}</p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-1">Plan</h3>
+                        <p class="text-lg">${merchant.plan || 'Starter'}</p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-1">Total Orders</h3>
+                        <p class="text-lg font-semibold">${merchantOrders.length}</p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-1">Total Revenue</h3>
+                        <p class="text-lg font-semibold text-green-600">$${totalRevenue.toFixed(2)}</p>
+                    </div>
+                </div>
+                <div class="border-t pt-4">
+                    <button onclick="window.location.href='/dashboard.html?merchantId=${merchant.id}'" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                        View Merchant Dashboard
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('detailMerchantName').textContent = merchant.companyName;
+            document.getElementById('merchantDetailsContent').innerHTML = content;
+            document.getElementById('merchantDetailsModal').classList.remove('hidden');
+        };
+
+        document.getElementById('closeMerchantDetails').addEventListener('click', () => {
+            document.getElementById('merchantDetailsModal').classList.add('hidden');
+        });
+
+        window.viewMerchantOrders = function(merchantId) {
+            document.querySelector('[data-tab="orders"]').click();
+            document.getElementById('merchantFilter').value = merchantId;
+            document.getElementById('merchantFilter').dispatchEvent(new Event('change'));
+        };
+
+        window.toggleMerchantStatus = async function(merchantId) {
+            const merchant = merchants.find(m => m.id === merchantId);
+            if (!merchant) return;
+
+            if (confirm(`Are you sure you want to ${merchant.isActive ? 'disable' : 'enable'} this merchant?`)) {
+                // TODO: Call API to toggle status
+                merchant.isActive = !merchant.isActive;
+                renderMerchants();
+            }
+        };
+
+        // Refresh
+        document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+
+        // Initialize
+        checkAuth();
+    </script>
+</body>
+</html>
