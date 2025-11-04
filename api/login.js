@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 
-// Rate limiter: 5 attempts per 15 minutes
+// Rate limiter: 20 attempts per 15 minutes (increased for testing)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per window
+  max: 20, // 20 requests per window
   message: { error: 'Too many login attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
