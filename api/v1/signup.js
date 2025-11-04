@@ -41,7 +41,6 @@ module.exports = async function handler(req, res) {
       password,
       companyName,
       contactName,
-      website,
       plan
     } = req.body;
 
@@ -87,7 +86,7 @@ module.exports = async function handler(req, res) {
 
     // Add optional fields if they exist in the schema
     if (plan) merchantData.plan = plan;
-    if (networkMode) merchantData.networkMode = networkMode;
+    merchantData.networkMode = 'TESTNET'; // Default to testnet
 
     const merchant = await db.merchant.create({
       data: merchantData
