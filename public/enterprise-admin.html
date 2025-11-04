@@ -413,7 +413,7 @@
         // Load orders
         async function loadOrders() {
             try {
-                const response = await fetch(`${API_BASE}/api/v1/admin?resource=orders`);
+                const response = await fetch(`${API_BASE}/api/v1/admin?resource=orders`, { headers: { "Authorization": "Bearer admin-token" } });
 
                 if (response.ok) {
                     orders = await response.json();

@@ -1,7 +1,14 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 
-const prisma = new PrismaClient();
+let prisma;
+
+function getPrisma() {
+  if (!prisma) {
+    prisma = new PrismaClient();
+  }
+  return prisma;
+}
 
 // Admin authentication
 function checkAdminAuth(req) {
@@ -26,7 +33,7 @@ function setupCORS(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   setupCORS(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -40,13 +47,15 @@ export default async function handler(req, res) {
   const { resource, action } = req.query;
 
   try {
+    const db = getPrisma();
+
     // Route to appropriate handler
     if (resource === 'merchants') {
-      return await handleMerchants(req, res, action);
+      return await handleMerchants(req, res, action, db);
     } else if (resource === 'orders') {
-      return await handleOrders(req, res);
+      return await handleOrders(req, res, db);
     } else if (resource === 'analytics') {
-      return await handleAnalytics(req, res);
+      return await handleAnalytics(req, res, db);
     }
 
     return res.status(404).json({ error: 'Resource not found' });
@@ -56,13 +65,11 @@ export default async function handler(req, res) {
       error: 'Internal server error',
       details: error.message
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 // Merchants handlers
-async function handleMerchants(req, res, action) {
+async function handleMerchants(req, res, action, prisma) {
   if (req.method === 'GET') {
     const merchants = await prisma.merchant.findMany({
       include: {
@@ -194,7 +201,7 @@ async function handleMerchants(req, res, action) {
 }
 
 // Orders handler
-async function handleOrders(req, res) {
+async function handleOrders(req, res, prisma) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -232,7 +239,7 @@ async function handleOrders(req, res) {
 }
 
 // Analytics handler
-async function handleAnalytics(req, res) {
+async function handleAnalytics(req, res, prisma) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
