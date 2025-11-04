@@ -1,0 +1,318 @@
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
+
+// Admin authentication
+function checkAdminAuth(req) {
+  const auth = req.headers.authorization;
+  return auth === 'Bearer admin-token';
+}
+
+// CORS setup
+function setupCORS(req, res) {
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+    'http://localhost:3000',
+    'https://stablepay-nine.vercel.app'
+  ];
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+}
+
+export default async function handler(req, res) {
+  setupCORS(req, res);
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (!checkAdminAuth(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { resource, action } = req.query;
+
+  try {
+    // Route to appropriate handler
+    if (resource === 'merchants') {
+      return await handleMerchants(req, res, action);
+    } else if (resource === 'orders') {
+      return await handleOrders(req, res);
+    } else if (resource === 'analytics') {
+      return await handleAnalytics(req, res);
+    }
+
+    return res.status(404).json({ error: 'Resource not found' });
+  } catch (error) {
+    console.error('Admin API error:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      details: error.message
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// Merchants handlers
+async function handleMerchants(req, res, action) {
+  if (req.method === 'GET') {
+    const merchants = await prisma.merchant.findMany({
+      include: {
+        _count: { select: { orders: true } },
+        orders: {
+          where: { status: 'CONFIRMED' },
+          select: { amount: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const merchantsWithStats = merchants.map(merchant => ({
+      id: merchant.id,
+      email: merchant.email,
+      companyName: merchant.companyName,
+      contactName: merchant.contactName,
+      role: merchant.role,
+      plan: merchant.plan,
+      paymentMode: merchant.paymentMode,
+      networkMode: merchant.networkMode,
+      isActive: merchant.isActive,
+      setupCompleted: merchant.setupCompleted,
+      website: merchant.website,
+      industry: merchant.industry,
+      notes: merchant.notes,
+      createdAt: merchant.createdAt,
+      updatedAt: merchant.updatedAt,
+      orderCount: merchant._count.orders,
+      totalVolume: merchant.orders.reduce(
+        (sum, order) => sum + parseFloat(order.amount.toString()),
+        0
+      )
+    }));
+
+    return res.status(200).json(merchantsWithStats);
+  }
+
+  if (req.method === 'POST') {
+    const {
+      email,
+      companyName,
+      contactName,
+      plan,
+      networkMode,
+      website,
+      industry,
+      notes,
+      isActive
+    } = req.body;
+
+    if (!email || !companyName || !contactName) {
+      return res.status(400).json({
+        error: 'Email, company name, and contact name are required'
+      });
+    }
+
+    const existing = await prisma.merchant.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(400).json({
+        error: 'A merchant with this email already exists'
+      });
+    }
+
+    const tempPassword = Math.random().toString(36).slice(-12);
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    const merchant = await prisma.merchant.create({
+      data: {
+        email,
+        companyName,
+        contactName,
+        passwordHash,
+        plan: plan || 'STARTER',
+        networkMode: networkMode || 'TESTNET',
+        isActive: isActive !== undefined ? isActive : true,
+        website,
+        industry,
+        notes,
+        role: 'MERCHANT'
+      }
+    });
+
+    return res.status(201).json({
+      success: true,
+      merchant: {
+        id: merchant.id,
+        email: merchant.email,
+        companyName: merchant.companyName,
+        contactName: merchant.contactName
+      },
+      temporaryPassword: tempPassword,
+      message: 'Merchant created successfully. Send them the temporary password.'
+    });
+  }
+
+  if (req.method === 'PUT') {
+    const { merchantId, ...updateData } = req.body;
+    if (!merchantId) {
+      return res.status(400).json({ error: 'Merchant ID is required' });
+    }
+
+    const merchant = await prisma.merchant.update({
+      where: { id: merchantId },
+      data: updateData
+    });
+
+    return res.status(200).json({ success: true, merchant });
+  }
+
+  if (req.method === 'DELETE') {
+    const { merchantId } = req.body;
+    if (!merchantId) {
+      return res.status(400).json({ error: 'Merchant ID is required' });
+    }
+
+    await prisma.merchant.update({
+      where: { id: merchantId },
+      data: { isActive: false }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Merchant deactivated successfully'
+    });
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' });
+}
+
+// Orders handler
+async function handleOrders(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { merchantId, status, chain, limit = 100 } = req.query;
+
+  const where = {};
+  if (merchantId) where.merchantId = merchantId;
+  if (status) where.status = status;
+  if (chain) where.chain = chain;
+
+  const orders = await prisma.order.findMany({
+    where,
+    include: {
+      merchant: {
+        select: {
+          id: true,
+          companyName: true,
+          email: true
+        }
+      },
+      transactions: {
+        select: {
+          txHash: true,
+          amount: true,
+          status: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: parseInt(limit)
+  });
+
+  return res.status(200).json(orders);
+}
+
+// Analytics handler
+async function handleAnalytics(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const [
+    totalMerchants,
+    activeMerchants,
+    totalOrders,
+    confirmedOrders,
+    revenueByMerchant
+  ] = await Promise.all([
+    prisma.merchant.count(),
+    prisma.merchant.count({ where: { isActive: true } }),
+    prisma.order.count(),
+    prisma.order.findMany({
+      where: { status: 'CONFIRMED' },
+      select: { amount: true, merchantId: true, createdAt: true }
+    }),
+    prisma.order.groupBy({
+      by: ['merchantId'],
+      where: {
+        status: 'CONFIRMED',
+        merchantId: { not: null }
+      },
+      _sum: { amount: true },
+      _count: true
+    })
+  ]);
+
+  const totalRevenue = confirmedOrders.reduce(
+    (sum, order) => sum + parseFloat(order.amount.toString()),
+    0
+  );
+
+  const merchantIds = revenueByMerchant.map(r => r.merchantId).filter(id => id);
+  const merchants = await prisma.merchant.findMany({
+    where: { id: { in: merchantIds } },
+    select: { id: true, companyName: true }
+  });
+
+  const merchantMap = Object.fromEntries(
+    merchants.map(m => [m.id, m.companyName])
+  );
+
+  const revenueBreakdown = revenueByMerchant.map(r => ({
+    merchantId: r.merchantId,
+    merchantName: r.merchantId ? merchantMap[r.merchantId] : 'Unknown',
+    orderCount: r._count,
+    totalRevenue: parseFloat(r._sum.amount?.toString() || '0')
+  })).sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const recentOrders = confirmedOrders.filter(
+    o => new Date(o.createdAt) >= thirtyDaysAgo
+  );
+
+  const dailyRevenue = {};
+  recentOrders.forEach(order => {
+    const date = new Date(order.createdAt).toISOString().split('T')[0];
+    if (!dailyRevenue[date]) dailyRevenue[date] = 0;
+    dailyRevenue[date] += parseFloat(order.amount.toString());
+  });
+
+  return res.status(200).json({
+    summary: {
+      totalMerchants,
+      activeMerchants,
+      totalOrders,
+      confirmedOrders: confirmedOrders.length,
+      totalRevenue,
+      averageOrderValue: confirmedOrders.length > 0
+        ? totalRevenue / confirmedOrders.length
+        : 0
+    },
+    revenueByMerchant: revenueBreakdown,
+    dailyRevenue: Object.entries(dailyRevenue).map(([date, revenue]) => ({
+      date,
+      revenue
+    })).sort((a, b) => a.date.localeCompare(b.date))
+  });
+}

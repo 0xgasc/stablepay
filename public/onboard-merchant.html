@@ -314,7 +314,7 @@
             submitBtn.textContent = 'Creating account...';
 
             try {
-                const response = await fetch(`${API_BASE}/api/v1/admin/merchants`, {
+                const response = await fetch(`${API_BASE}/api/v1/admin?resource=merchants`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

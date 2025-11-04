@@ -390,7 +390,7 @@
         // Load merchants
         async function loadMerchants() {
             try {
-                const response = await fetch(`${API_BASE}/api/v1/admin/merchants`, {
+                const response = await fetch(`${API_BASE}/api/v1/admin?resource=merchants`, {
                     headers: { 'Authorization': 'Bearer admin-token' }
                 });
 
@@ -413,7 +413,7 @@
         // Load orders
         async function loadOrders() {
             try {
-                const response = await fetch(`${API_BASE}/api/v1/admin/orders`);
+                const response = await fetch(`${API_BASE}/api/v1/admin?resource=orders`);
 
                 if (response.ok) {
                     orders = await response.json();
@@ -563,7 +563,7 @@
             };
 
             try {
-                const response = await fetch(`${API_BASE}/api/v1/admin/merchants`, {
+                const response = await fetch(`${API_BASE}/api/v1/admin?resource=merchants`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
