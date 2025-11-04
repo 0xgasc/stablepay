@@ -350,20 +350,60 @@ async function handleAnalytics(req, res, prisma) {
 
 // Wallets handler
 async function handleWallets(req, res, prisma) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  // GET: Fetch wallets for a merchant
+  if (req.method === 'GET') {
+    const { merchantId } = req.query;
+
+    if (!merchantId) {
+      return res.status(400).json({ error: 'merchantId is required' });
+    }
+
+    const wallets = await prisma.merchantWallet.findMany({
+      where: { merchantId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return res.status(200).json(wallets);
   }
 
-  const { merchantId } = req.query;
+  // POST: Update/create wallets for a merchant
+  if (req.method === 'POST') {
+    const { merchantId, wallets } = req.body;
 
-  if (!merchantId) {
-    return res.status(400).json({ error: 'merchantId is required' });
+    if (!merchantId || !Array.isArray(wallets)) {
+      return res.status(400).json({ error: 'merchantId and wallets array required' });
+    }
+
+    try {
+      // Delete existing wallets for this merchant
+      await prisma.merchantWallet.deleteMany({
+        where: { merchantId }
+      });
+
+      // Create new wallets
+      if (wallets.length > 0) {
+        await prisma.merchantWallet.createMany({
+          data: wallets.map(w => ({
+            merchantId,
+            chain: w.chain,
+            address: w.address,
+            isActive: true
+          }))
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Updated ${wallets.length} wallet(s)`
+      });
+    } catch (error) {
+      console.error('Error updating wallets:', error);
+      return res.status(500).json({
+        error: 'Failed to update wallets',
+        details: error.message
+      });
+    }
   }
 
-  const wallets = await prisma.merchantWallet.findMany({
-    where: { merchantId },
-    orderBy: { createdAt: 'desc' }
-  });
-
-  return res.status(200).json(wallets);
+  return res.status(405).json({ error: 'Method not allowed' });
 }

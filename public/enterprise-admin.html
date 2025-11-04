@@ -375,7 +375,17 @@
                     <textarea id="editNotes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
                 </div>
 
-                <div class="flex justify-end space-x-3 pt-4">
+                <!-- Chain Configuration -->
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">💰 Payment Chains & Wallets</h3>
+                    <p class="text-sm text-gray-600 mb-4">Enable chains and configure wallet addresses to receive payments</p>
+
+                    <div id="editChainToggles" class="space-y-3">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t">
                     <button type="button" id="cancelEditMerchant" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
                         Cancel
                     </button>
@@ -469,6 +479,21 @@
         const API_BASE = window.location.origin;
         let merchants = [];
         let orders = [];
+        let merchantWallets = {}; // Store wallets by merchantId
+
+        // Chain configuration
+        const CHAINS = [
+            { id: 'BASE_SEPOLIA', name: 'Base Sepolia', network: 'testnet', icon: '🔵' },
+            { id: 'BASE_MAINNET', name: 'Base Mainnet', network: 'mainnet', icon: '🔵' },
+            { id: 'ETHEREUM_SEPOLIA', name: 'Ethereum Sepolia', network: 'testnet', icon: '⟠' },
+            { id: 'ETHEREUM_MAINNET', name: 'Ethereum Mainnet', network: 'mainnet', icon: '⟠' },
+            { id: 'POLYGON_MAINNET', name: 'Polygon Mainnet', network: 'mainnet', icon: '🟣' },
+            { id: 'POLYGON_MUMBAI', name: 'Polygon Mumbai', network: 'testnet', icon: '🟣' },
+            { id: 'ARBITRUM_MAINNET', name: 'Arbitrum Mainnet', network: 'mainnet', icon: '🔷' },
+            { id: 'ARBITRUM_SEPOLIA', name: 'Arbitrum Sepolia', network: 'testnet', icon: '🔷' },
+            { id: 'SOLANA_MAINNET', name: 'Solana Mainnet', network: 'mainnet', icon: '🌞' },
+            { id: 'SOLANA_DEVNET', name: 'Solana Devnet', network: 'testnet', icon: '🌞' }
+        ];
 
         // Authentication check
         function checkAuth() {
@@ -791,7 +816,7 @@
         };
 
         // Edit merchant
-        window.editMerchant = function(merchantId) {
+        window.editMerchant = async function(merchantId) {
             const merchant = merchants.find(m => m.id === merchantId);
             if (!merchant) return;
 
@@ -806,7 +831,83 @@
             document.getElementById('editIsActive').value = merchant.isActive.toString();
             document.getElementById('editNotes').value = merchant.notes || '';
 
+            // Load wallets and render chain toggles
+            await loadMerchantWallets(merchantId);
+            renderChainToggles(merchantId);
+
             document.getElementById('editMerchantModal').classList.remove('hidden');
+        };
+
+        // Load merchant wallets
+        async function loadMerchantWallets(merchantId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin?resource=wallets&merchantId=${merchantId}`, {
+                    headers: { 'Authorization': 'Bearer admin-token' }
+                });
+                if (response.ok) {
+                    merchantWallets[merchantId] = await response.json();
+                } else {
+                    merchantWallets[merchantId] = [];
+                }
+            } catch (error) {
+                merchantWallets[merchantId] = [];
+            }
+        }
+
+        // Render chain toggles with wallet inputs
+        function renderChainToggles(merchantId) {
+            const wallets = merchantWallets[merchantId] || [];
+            const container = document.getElementById('editChainToggles');
+
+            container.innerHTML = CHAINS.map(chain => {
+                const wallet = wallets.find(w => w.chain === chain.id);
+                const isEnabled = !!wallet;
+                const address = wallet?.address || '';
+
+                return `
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-gray-300 transition">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-2xl">${chain.icon}</span>
+                                <div>
+                                    <div class="font-medium text-gray-900">${chain.name}</div>
+                                    <div class="text-xs text-gray-500">${chain.network}</div>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox"
+                                       class="sr-only peer chain-toggle"
+                                       data-chain="${chain.id}"
+                                       ${isEnabled ? 'checked' : ''}
+                                       onchange="toggleChainInput('${chain.id}')">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div id="wallet-input-${chain.id}" class="${isEnabled ? '' : 'hidden'} mt-2">
+                            <input type="text"
+                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md font-mono"
+                                   placeholder="0x... or wallet address"
+                                   data-wallet-chain="${chain.id}"
+                                   value="${address}">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle chain wallet input visibility
+        window.toggleChainInput = function(chainId) {
+            const input = document.getElementById(`wallet-input-${chainId}`);
+            const checkbox = document.querySelector(`input[data-chain="${chainId}"]`);
+
+            if (checkbox.checked) {
+                input.classList.remove('hidden');
+            } else {
+                input.classList.add('hidden');
+                // Clear the input when disabled
+                const walletInput = input.querySelector('input');
+                if (walletInput) walletInput.value = '';
+            }
         };
 
         document.getElementById('editMerchantForm').addEventListener('submit', async (e) => {
@@ -826,7 +927,22 @@
                 notes: document.getElementById('editNotes').value || null
             };
 
+            // Collect wallet configurations
+            const wallets = [];
+            document.querySelectorAll('.chain-toggle').forEach(toggle => {
+                if (toggle.checked) {
+                    const chain = toggle.dataset.chain;
+                    const addressInput = document.querySelector(`input[data-wallet-chain="${chain}"]`);
+                    const address = addressInput?.value.trim();
+
+                    if (address) {
+                        wallets.push({ chain, address });
+                    }
+                }
+            });
+
             try {
+                // Update merchant info
                 const response = await fetch(`${API_BASE}/api/v1/admin?resource=merchants`, {
                     method: 'PUT',
                     headers: {
@@ -836,16 +952,31 @@
                     body: JSON.stringify(updateData)
                 });
 
-                if (response.ok) {
-                    alert('Merchant updated successfully!');
-                    document.getElementById('editMerchantModal').classList.add('hidden');
-                    loadDashboard();
-                } else {
+                if (!response.ok) {
                     const error = await response.json();
-                    alert('Error: ' + (error.error || 'Failed to update merchant'));
+                    throw new Error(error.error || 'Failed to update merchant');
                 }
+
+                // Update wallets
+                const walletsResponse = await fetch(`${API_BASE}/api/v1/admin?resource=wallets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer admin-token'
+                    },
+                    body: JSON.stringify({ merchantId, wallets })
+                });
+
+                if (!walletsResponse.ok) {
+                    const error = await walletsResponse.json();
+                    throw new Error(error.error || 'Failed to update wallets');
+                }
+
+                alert('Merchant and wallets updated successfully!');
+                document.getElementById('editMerchantModal').classList.add('hidden');
+                loadDashboard();
             } catch (error) {
-                alert('Error updating merchant: ' + error.message);
+                alert('Error: ' + error.message);
             }
         });
 
