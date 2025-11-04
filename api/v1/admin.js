@@ -56,6 +56,8 @@ module.exports = async function handler(req, res) {
       return await handleOrders(req, res, db);
     } else if (resource === 'analytics') {
       return await handleAnalytics(req, res, db);
+    } else if (resource === 'wallets') {
+      return await handleWallets(req, res, db);
     }
 
     return res.status(404).json({ error: 'Resource not found' });
@@ -207,14 +209,15 @@ async function handleMerchants(req, res, action, prisma) {
       return res.status(400).json({ error: 'Merchant ID is required' });
     }
 
-    await prisma.merchant.update({
-      where: { id: merchantId },
-      data: { isActive: false }
+    // Delete merchant and all associated data (cascade will handle wallets)
+    // Orders will have merchantId set to NULL due to foreign key constraint
+    await prisma.merchant.delete({
+      where: { id: merchantId }
     });
 
     return res.status(200).json({
       success: true,
-      message: 'Merchant deactivated successfully'
+      message: 'Merchant deleted permanently'
     });
   }
 
@@ -343,4 +346,24 @@ async function handleAnalytics(req, res, prisma) {
       revenue
     })).sort((a, b) => a.date.localeCompare(b.date))
   });
+}
+
+// Wallets handler
+async function handleWallets(req, res, prisma) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { merchantId } = req.query;
+
+  if (!merchantId) {
+    return res.status(400).json({ error: 'merchantId is required' });
+  }
+
+  const wallets = await prisma.merchantWallet.findMany({
+    where: { merchantId },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  return res.status(200).json(wallets);
 }

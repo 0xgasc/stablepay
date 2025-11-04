@@ -307,18 +307,160 @@
         </div>
     </div>
 
+    <!-- Edit Merchant Modal -->
+    <div id="editMerchantModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Edit Merchant</h2>
+
+            <form id="editMerchantForm" class="space-y-4">
+                <input type="hidden" id="editMerchantId">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
+                        <input type="text" id="editCompanyName" required class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Contact Name *</label>
+                        <input type="text" id="editContactName" required class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                        <input type="email" id="editEmail" required class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                        <input type="url" id="editWebsite" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+                        <select id="editPlan" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="">None</option>
+                            <option value="STARTER">Starter</option>
+                            <option value="GROWTH">Growth</option>
+                            <option value="ENTERPRISE">Enterprise</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Network Mode</label>
+                        <select id="editNetworkMode" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="TESTNET">Testnet</option>
+                            <option value="MAINNET">Mainnet</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                        <input type="text" id="editIndustry" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select id="editIsActive" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea id="editNotes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="cancelEditMerchant" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Confirm Deletion</h2>
+            <p class="text-gray-600 mb-6">Are you sure you want to delete <strong id="deleteMerchantName"></strong>? This action cannot be undone.</p>
+
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                <p class="text-sm text-yellow-700">⚠️ This will permanently delete the merchant and all associated data including orders, wallets, and transactions.</p>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button id="cancelDelete" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button id="confirmDelete" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                    Delete Permanently
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Merchant Details Modal -->
     <div id="merchantDetailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-start mb-6">
-                <h2 class="text-2xl font-bold text-gray-900" id="detailMerchantName">Merchant Details</h2>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900" id="detailMerchantName">Merchant Details</h2>
+                    <p class="text-gray-500 text-sm mt-1" id="detailMerchantEmail"></p>
+                </div>
                 <button id="closeMerchantDetails" class="text-gray-400 hover:text-gray-600">
                     <span class="text-2xl">&times;</span>
                 </button>
             </div>
 
-            <div id="merchantDetailsContent">
-                <!-- Populated dynamically -->
+            <div id="merchantDetailsContent" class="space-y-6">
+                <!-- Profile Section -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4">Profile Information</h3>
+                    <div class="grid grid-cols-2 gap-4" id="detailProfile">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Wallets Section -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4">Payment Wallets</h3>
+                    <div id="detailWallets" class="space-y-2">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Orders Section -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4">Recent Orders</h3>
+                    <div id="detailOrders">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Analytics Section -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <div class="text-sm text-blue-600 font-medium">Total Orders</div>
+                        <div class="text-2xl font-bold text-blue-900" id="detailTotalOrders">0</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="text-sm text-green-600 font-medium">Total Volume</div>
+                        <div class="text-2xl font-bold text-green-900" id="detailTotalVolume">$0.00</div>
+                    </div>
+                    <div class="bg-purple-50 rounded-lg p-4">
+                        <div class="text-sm text-purple-600 font-medium">Avg Order Value</div>
+                        <div class="text-2xl font-bold text-purple-900" id="detailAvgOrder">$0.00</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -466,11 +608,12 @@
                     <td class="px-6 py-4 text-sm font-medium text-gray-900">$${(m.totalVolume || 0).toFixed(2)}</td>
                     <td class="px-6 py-4 text-sm text-gray-500">${new Date(m.createdAt).toLocaleDateString()}</td>
                     <td class="px-6 py-4 text-right text-sm">
-                        <button onclick="viewMerchant('${m.id}')" class="text-blue-600 hover:text-blue-900 mr-3">View</button>
-                        <button onclick="viewMerchantOrders('${m.id}')" class="text-purple-600 hover:text-purple-900 mr-3">Orders</button>
-                        <button onclick="toggleMerchantStatus('${m.id}')" class="text-gray-600 hover:text-gray-900">
-                            ${m.isActive ? 'Disable' : 'Enable'}
+                        <button onclick="viewMerchantDetail('${m.id}')" class="text-blue-600 hover:text-blue-900 mr-3">👁️ View</button>
+                        <button onclick="editMerchant('${m.id}')" class="text-green-600 hover:text-green-900 mr-3">✏️ Edit</button>
+                        <button onclick="toggleMerchantStatus('${m.id}')" class="text-orange-600 hover:text-orange-900 mr-3">
+                            ${m.isActive ? '⏸️ Disable' : '▶️ Activate'}
                         </button>
+                        <button onclick="deleteMerchant('${m.id}')" class="text-red-600 hover:text-red-900">🗑️ Delete</button>
                     </td>
                 </tr>
             `).join('');
@@ -647,14 +790,286 @@
             document.getElementById('merchantFilter').dispatchEvent(new Event('change'));
         };
 
+        // Edit merchant
+        window.editMerchant = function(merchantId) {
+            const merchant = merchants.find(m => m.id === merchantId);
+            if (!merchant) return;
+
+            document.getElementById('editMerchantId').value = merchant.id;
+            document.getElementById('editCompanyName').value = merchant.companyName;
+            document.getElementById('editContactName').value = merchant.contactName;
+            document.getElementById('editEmail').value = merchant.email;
+            document.getElementById('editWebsite').value = merchant.website || '';
+            document.getElementById('editPlan').value = merchant.plan || '';
+            document.getElementById('editNetworkMode').value = merchant.networkMode || 'TESTNET';
+            document.getElementById('editIndustry').value = merchant.industry || '';
+            document.getElementById('editIsActive').value = merchant.isActive.toString();
+            document.getElementById('editNotes').value = merchant.notes || '';
+
+            document.getElementById('editMerchantModal').classList.remove('hidden');
+        };
+
+        document.getElementById('editMerchantForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const merchantId = document.getElementById('editMerchantId').value;
+            const updateData = {
+                merchantId,
+                companyName: document.getElementById('editCompanyName').value,
+                contactName: document.getElementById('editContactName').value,
+                email: document.getElementById('editEmail').value,
+                website: document.getElementById('editWebsite').value || null,
+                plan: document.getElementById('editPlan').value || null,
+                networkMode: document.getElementById('editNetworkMode').value,
+                industry: document.getElementById('editIndustry').value || null,
+                isActive: document.getElementById('editIsActive').value === 'true',
+                notes: document.getElementById('editNotes').value || null
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin?resource=merchants`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer admin-token'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                if (response.ok) {
+                    alert('Merchant updated successfully!');
+                    document.getElementById('editMerchantModal').classList.add('hidden');
+                    loadDashboard();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to update merchant'));
+                }
+            } catch (error) {
+                alert('Error updating merchant: ' + error.message);
+            }
+        });
+
+        document.getElementById('cancelEditMerchant').addEventListener('click', () => {
+            document.getElementById('editMerchantModal').classList.add('hidden');
+        });
+
+        // Delete merchant
+        let merchantToDelete = null;
+
+        window.deleteMerchant = function(merchantId) {
+            const merchant = merchants.find(m => m.id === merchantId);
+            if (!merchant) return;
+
+            merchantToDelete = merchantId;
+            document.getElementById('deleteMerchantName').textContent = merchant.companyName;
+            document.getElementById('deleteConfirmModal').classList.remove('hidden');
+        };
+
+        document.getElementById('confirmDelete').addEventListener('click', async () => {
+            if (!merchantToDelete) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin?resource=merchants`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer admin-token'
+                    },
+                    body: JSON.stringify({ merchantId: merchantToDelete })
+                });
+
+                if (response.ok) {
+                    alert('Merchant deleted successfully');
+                    document.getElementById('deleteConfirmModal').classList.add('hidden');
+                    merchantToDelete = null;
+                    loadDashboard();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to delete merchant'));
+                }
+            } catch (error) {
+                alert('Error deleting merchant: ' + error.message);
+            }
+        });
+
+        document.getElementById('cancelDelete').addEventListener('click', () => {
+            document.getElementById('deleteConfirmModal').classList.add('hidden');
+            merchantToDelete = null;
+        });
+
+        // View merchant details
+        window.viewMerchantDetail = async function(merchantId) {
+            const merchant = merchants.find(m => m.id === merchantId);
+            if (!merchant) return;
+
+            // Set basic info
+            document.getElementById('detailMerchantName').textContent = merchant.companyName;
+            document.getElementById('detailMerchantEmail').textContent = merchant.email;
+
+            // Profile info
+            document.getElementById('detailProfile').innerHTML = `
+                <div>
+                    <div class="text-sm text-gray-500">Contact Name</div>
+                    <div class="font-medium">${merchant.contactName}</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500">Email</div>
+                    <div class="font-medium">${merchant.email}</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500">Plan</div>
+                    <div class="font-medium">${merchant.plan || 'None'}</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500">Network Mode</div>
+                    <div class="font-medium">${merchant.networkMode || 'Testnet'}</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500">Status</div>
+                    <div class="font-medium">
+                        <span class="px-2 py-1 text-xs rounded-full ${merchant.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                            ${merchant.isActive ? '✅ Active' : '⏸️ Inactive'}
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500">Setup Completed</div>
+                    <div class="font-medium">${merchant.setupCompleted ? 'Yes' : 'No'}</div>
+                </div>
+                ${merchant.website ? `
+                <div>
+                    <div class="text-sm text-gray-500">Website</div>
+                    <div class="font-medium"><a href="${merchant.website}" target="_blank" class="text-blue-600 hover:underline">${merchant.website}</a></div>
+                </div>
+                ` : ''}
+                ${merchant.industry ? `
+                <div>
+                    <div class="text-sm text-gray-500">Industry</div>
+                    <div class="font-medium">${merchant.industry}</div>
+                </div>
+                ` : ''}
+                ${merchant.notes ? `
+                <div class="col-span-2">
+                    <div class="text-sm text-gray-500">Notes</div>
+                    <div class="font-medium">${merchant.notes}</div>
+                </div>
+                ` : ''}
+            `;
+
+            // Fetch and display wallets
+            try {
+                const walletsResponse = await fetch(`${API_BASE}/api/v1/admin?resource=wallets&merchantId=${merchantId}`, {
+                    headers: { 'Authorization': 'Bearer admin-token' }
+                });
+
+                if (walletsResponse.ok) {
+                    const wallets = await walletsResponse.json();
+                    if (wallets.length > 0) {
+                        document.getElementById('detailWallets').innerHTML = wallets.map(w => `
+                            <div class="flex justify-between items-center p-3 bg-white rounded border">
+                                <div>
+                                    <div class="font-mono text-sm font-medium">${w.address}</div>
+                                    <div class="text-xs text-gray-500">${w.chain}</div>
+                                </div>
+                                <span class="px-2 py-1 text-xs rounded ${w.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                    ${w.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                            </div>
+                        `).join('');
+                    } else {
+                        document.getElementById('detailWallets').innerHTML = '<p class="text-gray-500 text-sm">No wallets configured yet</p>';
+                    }
+                } else {
+                    document.getElementById('detailWallets').innerHTML = '<p class="text-gray-500 text-sm">Failed to load wallets</p>';
+                }
+            } catch (error) {
+                document.getElementById('detailWallets').innerHTML = '<p class="text-gray-500 text-sm">No wallets configured yet</p>';
+            }
+
+            // Display orders
+            const merchantOrders = orders.filter(o => o.merchantId === merchantId);
+            if (merchantOrders.length > 0) {
+                document.getElementById('detailOrders').innerHTML = `
+                    <table class="w-full text-sm">
+                        <thead class="bg-white border-b">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Order ID</th>
+                                <th class="px-3 py-2 text-left">Amount</th>
+                                <th class="px-3 py-2 text-left">Chain</th>
+                                <th class="px-3 py-2 text-left">Status</th>
+                                <th class="px-3 py-2 text-left">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${merchantOrders.slice(0, 10).map(o => `
+                                <tr class="border-b">
+                                    <td class="px-3 py-2 font-mono">${o.id.substring(0, 8)}...</td>
+                                    <td class="px-3 py-2 font-medium">${o.amount} USDC</td>
+                                    <td class="px-3 py-2">${o.chain}</td>
+                                    <td class="px-3 py-2">
+                                        <span class="px-2 py-1 text-xs rounded-full ${o.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                            ${o.status}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-2 text-gray-500">${new Date(o.createdAt).toLocaleDateString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                document.getElementById('detailOrders').innerHTML = '<p class="text-gray-500 text-sm">No orders yet</p>';
+            }
+
+            // Analytics
+            const totalOrders = merchantOrders.length;
+            const totalVolume = merchantOrders
+                .filter(o => o.status === 'CONFIRMED')
+                .reduce((sum, o) => sum + parseFloat(o.amount), 0);
+            const avgOrder = totalOrders > 0 ? totalVolume / totalOrders : 0;
+
+            document.getElementById('detailTotalOrders').textContent = totalOrders;
+            document.getElementById('detailTotalVolume').textContent = `$${totalVolume.toFixed(2)}`;
+            document.getElementById('detailAvgOrder').textContent = `$${avgOrder.toFixed(2)}`;
+
+            // Show modal
+            document.getElementById('merchantDetailsModal').classList.remove('hidden');
+        };
+
+        document.getElementById('closeMerchantDetails').addEventListener('click', () => {
+            document.getElementById('merchantDetailsModal').classList.add('hidden');
+        });
+
+        // Toggle merchant status
         window.toggleMerchantStatus = async function(merchantId) {
             const merchant = merchants.find(m => m.id === merchantId);
             if (!merchant) return;
 
-            if (confirm(`Are you sure you want to ${merchant.isActive ? 'disable' : 'enable'} this merchant?`)) {
-                // TODO: Call API to toggle status
-                merchant.isActive = !merchant.isActive;
-                renderMerchants();
+            const action = merchant.isActive ? 'disable' : 'activate';
+            if (!confirm(`Are you sure you want to ${action} ${merchant.companyName}?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin?resource=merchants`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer admin-token'
+                    },
+                    body: JSON.stringify({
+                        merchantId,
+                        isActive: !merchant.isActive
+                    })
+                });
+
+                if (response.ok) {
+                    alert(`Merchant ${action}d successfully!`);
+                    loadDashboard();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to update status'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
             }
         };
 
