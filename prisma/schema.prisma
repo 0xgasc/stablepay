@@ -78,16 +78,11 @@ model Merchant {
   passwordHash    String?
   loginToken      String?     @unique
   tokenExpiresAt  DateTime?
-  website         String?
-  industry        String?
-  monthlyVolume   Decimal?    @db.Decimal(18, 2)
-  notes           String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
   wallets         MerchantWallet[]
   orders          Order[]
-  apiKeys         ApiKey[]
 
   @@map("merchants")
 }
@@ -177,19 +172,3 @@ model ChainConfig {
   @@map("chain_configs")
 }
 
-model ApiKey {
-  id          String   @id @default(cuid())
-  merchantId  String
-  name        String   // e.g. "Production API", "Dev Environment"
-  keyPrefix   String   @unique // First 8 chars for display (e.g. "sp_live_")
-  keyHash     String   @unique // Hashed full key
-  isActive    Boolean  @default(true)
-  lastUsedAt  DateTime?
-  expiresAt   DateTime?
-  createdAt   DateTime @default(now())
-
-  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-
-  @@index([merchantId])
-  @@map("api_keys")
-}
