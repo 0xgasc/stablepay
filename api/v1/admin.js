@@ -61,9 +61,11 @@ module.exports = async function handler(req, res) {
     return res.status(404).json({ error: 'Resource not found' });
   } catch (error) {
     console.error('Admin API error:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({
       error: 'Internal server error',
-      details: error.message
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
@@ -88,14 +90,14 @@ async function handleMerchants(req, res, action, prisma) {
       companyName: merchant.companyName,
       contactName: merchant.contactName,
       role: merchant.role,
-      plan: merchant.plan,
-      paymentMode: merchant.paymentMode,
-      networkMode: merchant.networkMode,
+      plan: merchant.plan || 'STARTER',
+      paymentMode: merchant.paymentMode || 'DIRECT',
+      networkMode: merchant.networkMode || 'TESTNET',
       isActive: merchant.isActive,
       setupCompleted: merchant.setupCompleted,
-      website: merchant.website,
-      industry: merchant.industry,
-      notes: merchant.notes,
+      website: merchant.website || null,
+      industry: merchant.industry || null,
+      notes: merchant.notes || null,
       createdAt: merchant.createdAt,
       updatedAt: merchant.updatedAt,
       orderCount: merchant._count.orders,
@@ -137,20 +139,31 @@ async function handleMerchants(req, res, action, prisma) {
     const tempPassword = Math.random().toString(36).slice(-12);
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
+    // Only include fields that exist in the database
+    const merchantData = {
+      email,
+      companyName,
+      contactName,
+      passwordHash,
+      isActive: isActive !== undefined ? isActive : true,
+      role: 'MERCHANT'
+    };
+
+    // Add optional fields if they exist in schema
+    if (plan) merchantData.plan = plan;
+    if (networkMode) merchantData.networkMode = networkMode;
+
+    // These fields might not exist yet in prod DB
+    try {
+      if (website) merchantData.website = website;
+      if (industry) merchantData.industry = industry;
+      if (notes) merchantData.notes = notes;
+    } catch (e) {
+      console.log('Optional fields not available:', e.message);
+    }
+
     const merchant = await prisma.merchant.create({
-      data: {
-        email,
-        companyName,
-        contactName,
-        passwordHash,
-        plan: plan || 'STARTER',
-        networkMode: networkMode || 'TESTNET',
-        isActive: isActive !== undefined ? isActive : true,
-        website,
-        industry,
-        notes,
-        role: 'MERCHANT'
-      }
+      data: merchantData
     });
 
     return res.status(201).json({
