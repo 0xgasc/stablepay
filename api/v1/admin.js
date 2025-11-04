@@ -111,72 +111,80 @@ async function handleMerchants(req, res, action, prisma) {
   }
 
   if (req.method === 'POST') {
-    const {
-      email,
-      companyName,
-      contactName,
-      plan,
-      networkMode,
-      website,
-      industry,
-      notes,
-      isActive
-    } = req.body;
-
-    if (!email || !companyName || !contactName) {
-      return res.status(400).json({
-        error: 'Email, company name, and contact name are required'
-      });
-    }
-
-    const existing = await prisma.merchant.findUnique({ where: { email } });
-    if (existing) {
-      return res.status(400).json({
-        error: 'A merchant with this email already exists'
-      });
-    }
-
-    const tempPassword = Math.random().toString(36).slice(-12);
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
-
-    // Only include fields that exist in the database
-    const merchantData = {
-      email,
-      companyName,
-      contactName,
-      passwordHash,
-      isActive: isActive !== undefined ? isActive : true,
-      role: 'MERCHANT'
-    };
-
-    // Add optional fields if they exist in schema
-    if (plan) merchantData.plan = plan;
-    if (networkMode) merchantData.networkMode = networkMode;
-
-    // These fields might not exist yet in prod DB
     try {
+      const {
+        email,
+        companyName,
+        contactName,
+        plan,
+        networkMode,
+        website,
+        industry,
+        notes,
+        isActive
+      } = req.body;
+
+      console.log('Creating merchant with data:', { email, companyName, contactName, plan });
+
+      if (!email || !companyName || !contactName) {
+        return res.status(400).json({
+          error: 'Email, company name, and contact name are required'
+        });
+      }
+
+      const existing = await prisma.merchant.findUnique({ where: { email } });
+      if (existing) {
+        return res.status(400).json({
+          error: 'A merchant with this email already exists'
+        });
+      }
+
+      const tempPassword = Math.random().toString(36).slice(-12);
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+      // Only include fields that exist in the database
+      const merchantData = {
+        email,
+        companyName,
+        contactName,
+        passwordHash,
+        isActive: isActive !== undefined ? isActive : true,
+        role: 'MERCHANT'
+      };
+
+      // Add optional fields if they exist in schema
+      if (plan) merchantData.plan = plan;
+      if (networkMode) merchantData.networkMode = networkMode;
       if (website) merchantData.website = website;
       if (industry) merchantData.industry = industry;
       if (notes) merchantData.notes = notes;
-    } catch (e) {
-      console.log('Optional fields not available:', e.message);
+
+      console.log('Creating merchant with fields:', Object.keys(merchantData));
+
+      const merchant = await prisma.merchant.create({
+        data: merchantData
+      });
+
+      console.log('Merchant created successfully:', merchant.id);
+
+      return res.status(201).json({
+        success: true,
+        merchant: {
+          id: merchant.id,
+          email: merchant.email,
+          companyName: merchant.companyName,
+          contactName: merchant.contactName
+        },
+        temporaryPassword: tempPassword,
+        message: 'Merchant created successfully. Send them the temporary password.'
+      });
+    } catch (error) {
+      console.error('Error creating merchant:', error);
+      return res.status(500).json({
+        error: 'Failed to create merchant',
+        details: error.message
+      });
     }
-
-    const merchant = await prisma.merchant.create({
-      data: merchantData
-    });
-
-    return res.status(201).json({
-      success: true,
-      merchant: {
-        id: merchant.id,
-        email: merchant.email,
-        companyName: merchant.companyName,
-        contactName: merchant.contactName
-      },
-      temporaryPassword: tempPassword,
-      message: 'Merchant created successfully. Send them the temporary password.'
-    });
   }
 
   if (req.method === 'PUT') {
