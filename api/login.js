@@ -108,14 +108,16 @@ export default async function handler(req, res) {
       })
     });
 
-    console.log('Login successful for:', email, 'ID:', merchant.id);
+    console.log('Login successful for:', email, 'ID:', merchant.id, 'Active:', merchant.isActive);
 
     return res.status(200).json({
       success: true,
       token: loginToken,
       merchantId: merchant.id,
       companyName: merchant.companyName,
-      contactName: merchant.contactName
+      contactName: merchant.contactName,
+      isActive: merchant.isActive,
+      isPending: !merchant.isActive
     });
   } catch (error) {
     console.error('Login error:', error);

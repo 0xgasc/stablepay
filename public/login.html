@@ -225,7 +225,14 @@
                     sessionStorage.setItem('merchantToken', result.token);
                     sessionStorage.setItem('merchantId', result.merchantId);
                     sessionStorage.setItem('isAuthenticated', 'true');
-                    
+                    sessionStorage.setItem('isActive', result.isActive);
+                    sessionStorage.setItem('isPending', result.isPending);
+
+                    // Check if account is pending
+                    if (result.isPending) {
+                        alert('Your account is pending approval.\n\nYou can view your dashboard, but full features will be enabled once an administrator activates your account. You will receive an email notification when activated.');
+                    }
+
                     // Redirect to dashboard
                     window.location.href = '/dashboard.html';
                 } else {
