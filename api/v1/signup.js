@@ -74,20 +74,23 @@ module.exports = async function handler(req, res) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create merchant with PENDING status
+    // Create merchant with PENDING status (only use fields that exist in DB)
+    const merchantData = {
+      email,
+      companyName,
+      contactName,
+      passwordHash,
+      isActive: false, // PENDING approval
+      setupCompleted: false,
+      role: 'MERCHANT'
+    };
+
+    // Add optional fields if they exist in the schema
+    if (plan) merchantData.plan = plan;
+    if (networkMode) merchantData.networkMode = networkMode;
+
     const merchant = await db.merchant.create({
-      data: {
-        email,
-        companyName,
-        contactName,
-        passwordHash,
-        plan: plan || 'STARTER',
-        networkMode: 'TESTNET',
-        isActive: false, // PENDING approval
-        setupCompleted: false,
-        website: website || null,
-        role: 'MERCHANT'
-      }
+      data: merchantData
     });
 
     console.log('New merchant signup:', merchant.id, merchant.email);
