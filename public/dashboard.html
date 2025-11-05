@@ -92,10 +92,51 @@
     </nav>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Welcome Section -->
-        <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-8 text-white mb-8">
-            <h1 class="text-3xl font-bold mb-2">Welcome back!</h1>
-            <p class="text-blue-100 mb-6">Manage your USDC payments and view your transaction history.</p>
+        <!-- Merchant Profile Card -->
+        <div class="bg-white rounded-xl shadow-sm border mb-8 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl">
+                            🏢
+                        </div>
+                        <div class="text-white">
+                            <h1 class="text-2xl font-bold" id="profileCompanyName">Loading...</h1>
+                            <p class="text-blue-100" id="profileEmail">...</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-2" id="profileStatusBadge">
+                            <span class="mr-2">⏳</span>
+                            <span>Pending Approval</span>
+                        </div>
+                        <div class="text-white text-sm">
+                            <span class="opacity-75">Plan:</span>
+                            <span class="font-semibold ml-1" id="profilePlan">Starter</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 bg-gray-50">
+                <div class="grid grid-cols-4 gap-6">
+                    <div>
+                        <div class="text-sm text-gray-600 mb-1">Contact</div>
+                        <div class="font-medium text-gray-900" id="profileContact">-</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-600 mb-1">Network Mode</div>
+                        <div class="font-medium text-gray-900" id="profileNetworkMode">Testnet</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-600 mb-1">Total Orders</div>
+                        <div class="font-medium text-gray-900" id="profileOrderCount">0</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-600 mb-1">Member Since</div>
+                        <div class="font-medium text-gray-900" id="profileCreatedAt">-</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Quick Stats -->
@@ -215,22 +256,20 @@
                 <!-- Wallets Tab -->
                 <div id="walletsTab" class="tab-content hidden">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-semibold text-gray-900">Payment Wallets</h3>
-                        <button 
-                            id="addWalletBtn"
-                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">💰 Payment Chains & Wallets</h3>
+                            <p class="text-sm text-gray-600 mt-1">Configure which blockchains to accept payments on and set your wallet addresses</p>
+                        </div>
+                        <button
+                            id="saveWalletsBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
                         >
-                            ➕ Add Wallet
+                            💾 Save Configuration
                         </button>
                     </div>
-                    
-                    <div id="walletsContainer">
-                        <div class="text-center py-12 text-gray-500">
-                            <div class="flex flex-col items-center">
-                                <div class="animate-pulse w-8 h-8 bg-gray-300 rounded mb-4"></div>
-                                <p>Loading wallets...</p>
-                            </div>
-                        </div>
+
+                    <div id="walletsContainer" class="space-y-3">
+                        <!-- Populated dynamically with chain toggles -->
                     </div>
                 </div>
 
@@ -358,6 +397,21 @@
         let currentNetworkMode = 'TESTNET';
         let currentMerchant = null;
         let currentTab = 'orders';
+        let merchantWallets = [];
+
+        // Chain configuration
+        const CHAINS = [
+            { id: 'BASE_SEPOLIA', name: 'Base Sepolia', network: 'testnet', icon: '🔵' },
+            { id: 'BASE_MAINNET', name: 'Base Mainnet', network: 'mainnet', icon: '🔵' },
+            { id: 'ETHEREUM_SEPOLIA', name: 'Ethereum Sepolia', network: 'testnet', icon: '⟠' },
+            { id: 'ETHEREUM_MAINNET', name: 'Ethereum Mainnet', network: 'mainnet', icon: '⟠' },
+            { id: 'POLYGON_MAINNET', name: 'Polygon Mainnet', network: 'mainnet', icon: '🟣' },
+            { id: 'POLYGON_MUMBAI', name: 'Polygon Mumbai', network: 'testnet', icon: '🟣' },
+            { id: 'ARBITRUM_MAINNET', name: 'Arbitrum Mainnet', network: 'mainnet', icon: '🔷' },
+            { id: 'ARBITRUM_SEPOLIA', name: 'Arbitrum Sepolia', network: 'testnet', icon: '🔷' },
+            { id: 'SOLANA_MAINNET', name: 'Solana Mainnet', network: 'mainnet', icon: '🌞' },
+            { id: 'SOLANA_DEVNET', name: 'Solana Devnet', network: 'testnet', icon: '🌞' }
+        ];
 
         // Tab switching
         function switchTab(tabName) {
@@ -457,7 +511,33 @@
                 currentMerchant.paymentMode = currentMerchant.paymentMode || 'DIRECT';
 
                 document.getElementById('merchantName').textContent = currentMerchant.companyName;
-                
+
+                // Update profile card
+                document.getElementById('profileCompanyName').textContent = currentMerchant.companyName;
+                document.getElementById('profileEmail').textContent = currentMerchant.email;
+                document.getElementById('profileContact').textContent = currentMerchant.contactName;
+                document.getElementById('profileNetworkMode').textContent = currentMerchant.networkMode === 'MAINNET' ? '🌐 Mainnet' : '🧪 Testnet';
+                document.getElementById('profilePlan').textContent = currentMerchant.plan || 'None';
+                document.getElementById('profileOrderCount').textContent = currentMerchant.orderCount || 0;
+
+                // Format created date
+                if (currentMerchant.createdAt) {
+                    const created = new Date(currentMerchant.createdAt);
+                    document.getElementById('profileCreatedAt').textContent = created.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                }
+
+                // Update status badge
+                const statusBadge = document.getElementById('profileStatusBadge');
+                if (currentMerchant.isActive) {
+                    statusBadge.className = 'inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-2 bg-green-100 text-green-800';
+                    statusBadge.innerHTML = '<span class="mr-2">✅</span><span>Active</span>';
+                    document.getElementById('pendingBanner').classList.add('hidden');
+                } else {
+                    statusBadge.className = 'inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-2 bg-yellow-100 text-yellow-800';
+                    statusBadge.innerHTML = '<span class="mr-2">⏳</span><span>Pending Approval</span>';
+                    document.getElementById('pendingBanner').classList.remove('hidden');
+                }
+
                 // Update settings form
                 document.getElementById('companyName').value = currentMerchant.companyName;
                 document.getElementById('contactName').value = currentMerchant.contactName;
@@ -557,50 +637,126 @@
 
         // Load wallets
         async function loadWallets() {
-            const container = document.getElementById('walletsContainer');
-            
+            if (!currentMerchant) return;
+
             try {
-                // This would normally fetch merchant's wallets from API
-                const wallets = []; // Demo data
-                
-                if (wallets.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center py-12 text-gray-500">
-                            <div class="text-6xl mb-4">👛</div>
-                            <h3 class="text-lg font-medium text-gray-900 mb-2">No wallets configured</h3>
-                            <p class="text-gray-500 mb-6">Add your first wallet to start receiving payments</p>
-                            <button 
-                                onclick="showAddWalletModal()"
-                                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                            >
-                                ➕ Add Your First Wallet
-                            </button>
-                        </div>
-                    `;
+                // Fetch merchant wallets
+                const merchantToken = sessionStorage.getItem('merchantToken');
+                const response = await fetch(`/api/v1/admin?resource=wallets&merchantId=${currentMerchant.id}`, {
+                    headers: { 'Authorization': `Bearer ${merchantToken}` }
+                });
+
+                if (response.ok) {
+                    merchantWallets = await response.json();
                 } else {
-                    container.innerHTML = wallets.map(wallet => `
-                        <div class="border rounded-lg p-6 mb-4">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="font-medium text-gray-900">${wallet.chain.replace('_', ' ')}</h4>
-                                    <p class="text-sm text-gray-600 font-mono mt-1">${wallet.address}</p>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${wallet.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} mt-2">
-                                        ${wallet.isActive ? 'Active' : 'Inactive'}
-                                    </span>
-                                </div>
-                                <div class="flex space-x-2">
-                                    <button class="text-blue-600 hover:text-blue-900 text-sm">Edit</button>
-                                    <button class="text-red-600 hover:text-red-900 text-sm">Delete</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
+                    merchantWallets = [];
                 }
+
+                renderChainToggles();
             } catch (error) {
                 console.error('Error loading wallets:', error);
-                container.innerHTML = '<div class="text-center py-12 text-red-500">Error loading wallets</div>';
+                merchantWallets = [];
+                renderChainToggles();
             }
         }
+
+        // Render chain toggles
+        function renderChainToggles() {
+            const container = document.getElementById('walletsContainer');
+
+            container.innerHTML = CHAINS.map(chain => {
+                const wallet = merchantWallets.find(w => w.chain === chain.id);
+                const isEnabled = !!wallet;
+                const address = wallet?.address || '';
+
+                return `
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-gray-300 transition">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-2xl">${chain.icon}</span>
+                                <div>
+                                    <div class="font-medium text-gray-900">${chain.name}</div>
+                                    <div class="text-xs text-gray-500">${chain.network}</div>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox"
+                                       class="sr-only peer chain-toggle"
+                                       data-chain="${chain.id}"
+                                       ${isEnabled ? 'checked' : ''}
+                                       onchange="toggleChainInput('${chain.id}')">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div id="wallet-input-${chain.id}" class="${isEnabled ? '' : 'hidden'} mt-2">
+                            <input type="text"
+                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md font-mono"
+                                   placeholder="0x... or wallet address"
+                                   data-wallet-chain="${chain.id}"
+                                   value="${address}">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle chain input visibility
+        window.toggleChainInput = function(chainId) {
+            const input = document.getElementById(`wallet-input-${chainId}`);
+            const checkbox = document.querySelector(`input[data-chain="${chainId}"]`);
+
+            if (checkbox.checked) {
+                input.classList.remove('hidden');
+            } else {
+                input.classList.add('hidden');
+                const walletInput = input.querySelector('input');
+                if (walletInput) walletInput.value = '';
+            }
+        };
+
+        // Save wallets
+        document.getElementById('saveWalletsBtn').addEventListener('click', async () => {
+            if (!currentMerchant) return;
+
+            // Collect wallet configurations
+            const wallets = [];
+            document.querySelectorAll('.chain-toggle').forEach(toggle => {
+                if (toggle.checked) {
+                    const chain = toggle.dataset.chain;
+                    const addressInput = document.querySelector(`input[data-wallet-chain="${chain}"]`);
+                    const address = addressInput?.value.trim();
+
+                    if (address) {
+                        wallets.push({ chain, address });
+                    }
+                }
+            });
+
+            try {
+                const merchantToken = sessionStorage.getItem('merchantToken');
+                const response = await fetch(`/api/v1/admin?resource=wallets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${merchantToken}`
+                    },
+                    body: JSON.stringify({
+                        merchantId: currentMerchant.id,
+                        wallets
+                    })
+                });
+
+                if (response.ok) {
+                    alert('✅ Wallet configuration saved successfully!');
+                    loadWallets(); // Reload
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to save wallets'));
+                }
+            } catch (error) {
+                alert('Error saving wallets: ' + error.message);
+            }
+        });
 
         // Load settings
         function loadSettings() {
