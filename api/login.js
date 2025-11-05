@@ -1,5 +1,14 @@
 import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
+import { PrismaClient } from '@prisma/client';
+
+let prisma;
+function getPrisma() {
+  if (!prisma) {
+    prisma = new PrismaClient();
+  }
+  return prisma;
+}
 
 // Rate limiter: 20 attempts per 15 minutes (increased for testing)
 const limiter = rateLimit({
@@ -54,32 +63,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Use direct SQL via fetch to Supabase REST API
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const apiKey = process.env.SUPABASE_ANON_KEY;
+    // Use Prisma to query database
+    const db = getPrisma();
 
     // Find merchant with matching email
-    const response = await fetch(`${supabaseUrl}/rest/v1/merchants?email=eq.${encodeURIComponent(email)}&select=*`, {
-      headers: {
-        'apikey': apiKey,
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
+    const merchant = await db.merchant.findUnique({
+      where: { email }
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Supabase login error:', errorText);
-      throw new Error('Database error');
-    }
-
-    const merchants = await response.json();
-
-    if (merchants.length === 0) {
+    if (!merchant) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
-
-    const merchant = merchants[0];
 
     // Verify password with bcrypt
     if (!merchant.passwordHash) {
@@ -93,19 +87,15 @@ export default async function handler(req, res) {
 
     // Generate a new login token
     const loginToken = 'token_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+    const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // Update merchant with new login token
-    await fetch(`${supabaseUrl}/rest/v1/merchants?id=eq.${merchant.id}`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': apiKey,
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+    await db.merchant.update({
+      where: { id: merchant.id },
+      data: {
         loginToken,
-        tokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
-      })
+        tokenExpiresAt
+      }
     });
 
     console.log('Login successful for:', email, 'ID:', merchant.id, 'Active:', merchant.isActive);
