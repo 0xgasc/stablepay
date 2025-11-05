@@ -748,6 +748,13 @@ print(f"Order created: {order['id']}")</pre>
 
                 // Update API developer section
                 document.getElementById('apiMerchantId').textContent = currentMerchant.id;
+
+                // Load current tab content after merchant data is ready
+                if (currentTab === 'orders') {
+                    loadOrders();
+                } else if (currentTab === 'wallets') {
+                    loadWallets();
+                }
             } catch (error) {
                 console.error('Error loading merchant data:', error);
             }
@@ -876,7 +883,12 @@ print(f"Order created: {order['id']}")</pre>
 
         // Load wallets
         async function loadWallets() {
-            if (!currentMerchant) return;
+            if (!currentMerchant) {
+                console.log('loadWallets: currentMerchant not loaded yet');
+                return;
+            }
+
+            console.log('loadWallets: Loading wallets for merchant', currentMerchant.id);
 
             try {
                 // Fetch merchant wallets
@@ -887,7 +899,9 @@ print(f"Order created: {order['id']}")</pre>
 
                 if (response.ok) {
                     merchantWallets = await response.json();
+                    console.log('loadWallets: Loaded', merchantWallets.length, 'wallets');
                 } else {
+                    console.log('loadWallets: API returned error', response.status);
                     merchantWallets = [];
                 }
 
@@ -902,6 +916,7 @@ print(f"Order created: {order['id']}")</pre>
         // Render chain toggles
         function renderChainToggles() {
             const container = document.getElementById('walletsContainer');
+            console.log('renderChainToggles: Rendering', CHAINS.length, 'chains with', merchantWallets.length, 'existing wallets');
 
             container.innerHTML = CHAINS.map(chain => {
                 const wallet = merchantWallets.find(w => w.chain === chain.id);
@@ -1236,8 +1251,9 @@ print(f"Order created: {order['id']}")</pre>
             if (isPending) {
                 document.getElementById("pendingBanner").classList.remove("hidden");
             }
+
+            // Load merchant data first, it will trigger loading the current tab
             loadMerchantData();
-            loadOrders(); // Load initial tab
         });
     </script>
 </body>
