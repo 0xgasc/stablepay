@@ -443,7 +443,7 @@
                 }
 
                 // Fetch actual merchant data from API
-                const response = await fetch(`/api/merchant?${merchantId ? 'id=' + merchantId : 'token=' + merchantToken}`);
+                const response = await fetch(`/api/merchant-profile?${merchantId ? 'id=' + merchantId : 'token=' + merchantToken}`);
                 
                 if (!response.ok) {
                     throw new Error('Failed to load merchant data');
@@ -476,14 +476,23 @@
         // Load orders
         async function loadOrders() {
             try {
-                // This would normally filter by merchant ID
-                const response = await fetch(`/api/orders?networkMode=${currentNetworkMode}&merchantId=${currentMerchant?.id}`);
+                if (!currentMerchant?.id) {
+                    renderOrdersTable([]);
+                    updateStats({ orders: [], pagination: { total: 0 } });
+                    return;
+                }
+
+                // Fetch orders for this merchant
+                const response = await fetch(`/api/v1/admin?resource=orders&merchantId=${currentMerchant.id}`, {
+                    headers: { 'Authorization': `Bearer ${merchantToken}` }
+                });
+
                 if (response.ok) {
-                    const data = await response.json();
-                    updateStats(data);
-                    renderOrdersTable(data.orders);
+                    const orders = await response.json();
+                    updateStats({ orders, pagination: { total: orders.length } });
+                    renderOrdersTable(orders);
                 } else {
-                    // Fallback to demo data
+                    // No orders yet
                     renderOrdersTable([]);
                     updateStats({ orders: [], pagination: { total: 0 } });
                 }
@@ -674,7 +683,7 @@
             // Save profile button
             document.getElementById('saveProfileBtn').addEventListener('click', async () => {
                 try {
-                    const response = await fetch(`/api/merchant?id=${currentMerchant.id}`, {
+                    const response = await fetch(`/api/merchant-profile?id=${currentMerchant.id}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
