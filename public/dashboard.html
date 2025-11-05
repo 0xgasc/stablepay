@@ -271,6 +271,28 @@
                     <div id="walletsContainer" class="space-y-3">
                         <!-- Populated dynamically with chain toggles -->
                     </div>
+
+                    <!-- Quick Actions -->
+                    <div class="mt-8 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 border border-purple-200">
+                        <h4 class="text-lg font-semibold text-gray-900 mb-4">🚀 Quick Actions</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button
+                                id="createDemoStoreBtn"
+                                class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-lg hover:shadow-xl"
+                            >
+                                🏪 Create Demo Store
+                            </button>
+                            <button
+                                id="testPaymentBtn"
+                                class="bg-white border-2 border-purple-300 hover:border-purple-500 text-purple-700 px-6 py-3 rounded-lg font-medium transition-all"
+                            >
+                                ⚡ Test Payment
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-3">
+                            💡 Create a demo store with your configured wallets or test a payment flow
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Settings Tab -->
@@ -756,6 +778,90 @@
             } catch (error) {
                 alert('Error saving wallets: ' + error.message);
             }
+        });
+
+        // Create Demo Store
+        document.getElementById('createDemoStoreBtn').addEventListener('click', async () => {
+            if (!currentMerchant) {
+                alert('Please wait for merchant data to load');
+                return;
+            }
+
+            if (merchantWallets.length === 0) {
+                alert('⚠️ Please configure at least one wallet before creating a demo store');
+                return;
+            }
+
+            // Generate a unique store URL for this merchant
+            const storeUrl = `${window.location.origin}/store.html?merchant=${currentMerchant.id}`;
+
+            // Show modal with store URL and preview
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full mx-4">
+                    <div class="text-center mb-6">
+                        <div class="text-6xl mb-4">🎉</div>
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Demo Store Created!</h2>
+                        <p class="text-gray-600">Your custom payment store is ready with your configured wallets</p>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 mb-6 border border-purple-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-gray-700">Your Store URL:</span>
+                            <button onclick="navigator.clipboard.writeText('${storeUrl}'); alert('✅ Copied!')"
+                                    class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                📋 Copy
+                            </button>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 border border-gray-300">
+                            <code class="text-sm text-purple-700 break-all">${storeUrl}</code>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-200">
+                        <h4 class="font-semibold text-blue-900 mb-2">📝 Store Features:</h4>
+                        <ul class="text-sm text-blue-800 space-y-1">
+                            <li>✅ ${merchantWallets.length} blockchain${merchantWallets.length > 1 ? 's' : ''} enabled</li>
+                            <li>✅ Accepts USDC payments</li>
+                            <li>✅ Real-time order tracking</li>
+                            <li>✅ Automatic wallet selection</li>
+                        </ul>
+                    </div>
+
+                    <div class="flex space-x-3">
+                        <button onclick="window.open('${storeUrl}', '_blank')"
+                                class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all">
+                            🚀 Open Store
+                        </button>
+                        <button onclick="this.closest('.fixed').remove()"
+                                class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Close on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        });
+
+        // Test Payment
+        document.getElementById('testPaymentBtn').addEventListener('click', () => {
+            if (merchantWallets.length === 0) {
+                alert('⚠️ Please configure at least one wallet first');
+                return;
+            }
+
+            // Open the store with a test mode parameter
+            const storeUrl = `${window.location.origin}/store.html?merchant=${currentMerchant.id}&test=true`;
+            window.open(storeUrl, '_blank');
         });
 
         // Load settings
