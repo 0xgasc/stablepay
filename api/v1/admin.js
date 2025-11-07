@@ -202,7 +202,7 @@ async function handleMerchants(req, res, action, prisma) {
   }
 
   if (req.method === 'PUT') {
-    const { merchantId, isActive, ...otherData } = req.body;
+    const { merchantId, isActive, regenerateToken, ...otherData } = req.body;
     if (!merchantId) {
       return res.status(400).json({ error: 'Merchant ID is required' });
     }
@@ -210,20 +210,19 @@ async function handleMerchants(req, res, action, prisma) {
     let updateData = { ...otherData };
     let loginToken;
 
-    // Generate token when activating a merchant
+    const existing = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+    });
+
+    // Generate token when activating a merchant OR when explicitly requested
+    if ((isActive === true && existing && !existing.isActive) || regenerateToken === true) {
+      loginToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      updateData.loginToken = loginToken;
+      updateData.tokenExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+      console.log(`🔑 Generated login token for ${existing.email}: ${loginToken}`);
+    }
+
     if (isActive === true) {
-      const existing = await prisma.merchant.findUnique({
-        where: { id: merchantId },
-      });
-
-      // Only generate token if merchant doesn't have one or wasn't active
-      if (existing && !existing.isActive) {
-        loginToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        updateData.loginToken = loginToken;
-        updateData.tokenExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
-        console.log(`🔑 Generated login token for ${existing.email}: ${loginToken}`);
-      }
-
       updateData.isActive = true;
     } else if (isActive === false) {
       updateData.isActive = false;
