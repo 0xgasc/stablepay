@@ -150,9 +150,18 @@ async function handleMerchants(req, res, action, prisma) {
         companyName,
         contactName,
         passwordHash,
-        isActive: isActive !== undefined ? isActive : true,
+        isActive: isActive !== undefined ? isActive : false,
         role: 'MERCHANT'
       };
+
+      // Generate login token if creating as active
+      let loginToken;
+      if (isActive === true) {
+        loginToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        merchantData.loginToken = loginToken;
+        merchantData.tokenExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+        console.log(`🔑 Generated login token for ${email}: ${loginToken}`);
+      }
 
       // Add optional fields if they exist in schema
       if (plan) merchantData.plan = plan;
@@ -177,8 +186,9 @@ async function handleMerchants(req, res, action, prisma) {
           companyName: merchant.companyName,
           contactName: merchant.contactName
         },
+        loginToken,
         temporaryPassword: tempPassword,
-        message: 'Merchant created successfully. Send them the temporary password.'
+        message: loginToken ? 'Merchant created and activated. Share the login token.' : 'Merchant created as pending. Activate to generate login token.'
       });
     } catch (error) {
       console.error('Error creating merchant:', error);
@@ -190,9 +200,31 @@ async function handleMerchants(req, res, action, prisma) {
   }
 
   if (req.method === 'PUT') {
-    const { merchantId, ...updateData } = req.body;
+    const { merchantId, isActive, ...otherData } = req.body;
     if (!merchantId) {
       return res.status(400).json({ error: 'Merchant ID is required' });
+    }
+
+    let updateData = { ...otherData };
+    let loginToken;
+
+    // Generate token when activating a merchant
+    if (isActive === true) {
+      const existing = await prisma.merchant.findUnique({
+        where: { id: merchantId },
+      });
+
+      // Only generate token if merchant doesn't have one or wasn't active
+      if (existing && !existing.isActive) {
+        loginToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        updateData.loginToken = loginToken;
+        updateData.tokenExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+        console.log(`🔑 Generated login token for ${existing.email}: ${loginToken}`);
+      }
+
+      updateData.isActive = true;
+    } else if (isActive === false) {
+      updateData.isActive = false;
     }
 
     const merchant = await prisma.merchant.update({
@@ -200,7 +232,11 @@ async function handleMerchants(req, res, action, prisma) {
       data: updateData
     });
 
-    return res.status(200).json({ success: true, merchant });
+    return res.status(200).json({
+      success: true,
+      merchant,
+      loginToken // Return token so admin can share it
+    });
   }
 
   if (req.method === 'DELETE') {
