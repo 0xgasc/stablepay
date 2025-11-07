@@ -1076,36 +1076,25 @@ print(f"Order created: {order['id']}")</pre>
             });
 
 
-            // Modal controls
-            document.getElementById('addWalletBtn').addEventListener('click', showAddWalletModal);
-            document.getElementById('closeWalletModal').addEventListener('click', hideAddWalletModal);
-            document.getElementById('cancelWalletModal').addEventListener('click', hideAddWalletModal);
-
             // Refresh button
-            document.getElementById('refreshOrdersBtn').addEventListener('click', loadOrders);
+            const refreshBtn = document.getElementById('refreshOrdersBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', loadOrders);
+            }
 
             // Logout
-            document.getElementById('logoutBtn').addEventListener('click', () => {
-                sessionStorage.removeItem('merchantToken');
-                window.location.href = '/login.html';
-            });
-
-            // Add wallet form
-            document.getElementById('addWalletForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const chain = document.getElementById('walletChain').value;
-                const address = document.getElementById('walletAddress').value;
-                
-                // TODO: Validate address and add to database
-                console.log('Adding wallet:', { chain, address });
-                
-                hideAddWalletModal();
-                loadWallets();
-                alert('Wallet added successfully!');
-            });
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    sessionStorage.removeItem('merchantToken');
+                    window.location.href = '/login.html';
+                });
+            }
 
             // Save profile button
-            document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+            const saveProfileBtn = document.getElementById('saveProfileBtn');
+            if (saveProfileBtn) {
+                saveProfileBtn.addEventListener('click', async () => {
                 try {
                     const response = await fetch(`/api/merchant-profile`, {
                         method: 'PUT',
@@ -1137,10 +1126,13 @@ print(f"Order created: {order['id']}")</pre>
                     console.error('Error saving profile:', error);
                     alert('❌ Failed to save profile');
                 }
-            });
+                });
+            }
 
             // Save settings
-            document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+            const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+            if (saveSettingsBtn) {
+                saveSettingsBtn.addEventListener('click', async () => {
                 try {
                     const response = await fetch(`/api/merchant-profile`, {
                         method: 'PUT',
@@ -1170,7 +1162,8 @@ print(f"Order created: {order['id']}")</pre>
                     console.error('Error saving settings:', error);
                     alert('❌ Failed to save settings');
                 }
-            });
+                });
+            }
 
             // Initialize
             // Check for pending status
