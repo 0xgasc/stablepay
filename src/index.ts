@@ -10,7 +10,7 @@ import { refundsRouter } from './routes/refunds';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 3000;
 
 // Configure helmet with secure CSP
 app.use(helmet({
