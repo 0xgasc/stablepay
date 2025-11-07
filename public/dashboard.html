@@ -37,10 +37,6 @@
     </style>
 </head>
 <body class="bg-slate-950">
-    <!-- Network Banner -->
-    <div id="networkBanner" class="network-badge text-white text-center py-2 text-sm font-bold">
-        🧪 MERCHANT DASHBOARD - Testnet Mode
-    </div>
 
     <!-- Navigation -->
 
@@ -70,29 +66,14 @@
                     </span>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <!-- Network Mode Toggle -->
-                    <div class="flex items-center bg-slate-900/20 border border p-1">
-                        <button 
-                            id="testnetBtn"
-                            class="network-btn px-3 py-1 rounded text-sm font-medium transition-colors bg-orange-100 text-orange-800"
-                        >
-                            🧪 Testnet
-                        </button>
-                        <button 
-                            id="mainnetBtn"
-                            class="network-btn px-3 py-1 rounded text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900/20"
-                        >
-                            🌐 Mainnet
-                        </button>
-                    </div>
                     <div class="text-sm text-slate-400" id="merchantInfo">
                         <span class="font-medium text-white" id="merchantName">Loading...</span>
                     </div>
-                    <button 
+                    <button
                         id="logoutBtn"
-                        class="text-slate-400 hover:text-white px-3 py-2  text-sm font-medium"
+                        class="text-slate-400 hover:text-white px-3 py-2 text-sm font-medium"
                     >
-                        🚪 Logout
+                        Logout
                     </button>
                 </div>
             </div>
@@ -599,7 +580,6 @@ print(f"Order created: {order['id']}")</pre>
     </div>
 
     <script>
-        let currentNetworkMode = 'TESTNET';
         let currentMerchant = null;
         let currentTab = 'orders';
         let merchantWallets = [];
@@ -649,44 +629,6 @@ print(f"Order created: {order['id']}")</pre>
             }
         }
 
-        // Network switching
-        function switchToTestnet() {
-            currentNetworkMode = 'TESTNET';
-            updateNetworkUI();
-            refreshCurrentTab();
-        }
-
-        function switchToMainnet() {
-            currentNetworkMode = 'MAINNET';
-            updateNetworkUI();
-            refreshCurrentTab();
-        }
-
-        function updateNetworkUI() {
-            const banner = document.getElementById('networkBanner');
-            const testnetBtn = document.getElementById('testnetBtn');
-            const mainnetBtn = document.getElementById('mainnetBtn');
-
-            if (currentNetworkMode === 'TESTNET') {
-                banner.className = 'network-badge text-white text-center py-2 text-sm font-bold';
-                banner.textContent = '🧪 MERCHANT DASHBOARD - Testnet Mode';
-                testnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors bg-orange-100 text-orange-800';
-                mainnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900/20';
-            } else {
-                banner.className = 'mainnet-badge text-white text-center py-2 text-sm font-bold';
-                banner.textContent = '🌐 MERCHANT DASHBOARD - Mainnet Mode';
-                mainnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors bg-green-900/20 text-green-800';
-                testnetBtn.className = 'network-btn px-3 py-1 rounded text-sm font-medium transition-colors text-slate-400 hover:bg-slate-900/20';
-            }
-        }
-
-        function refreshCurrentTab() {
-            if (currentTab === 'orders') {
-                loadOrders();
-            } else if (currentTab === 'wallets') {
-                loadWallets();
-            }
-        }
 
         // Load merchant data
         async function loadMerchantData() {
@@ -750,9 +692,6 @@ print(f"Order created: {order['id']}")</pre>
                 document.getElementById('plan').value = currentMerchant.plan;
                 document.getElementById('defaultNetworkMode').value = currentMerchant.networkMode;
                 document.getElementById('paymentMode').value = currentMerchant.paymentMode;
-
-                currentNetworkMode = currentMerchant.networkMode;
-                updateNetworkUI();
 
                 // Update API developer section
                 document.getElementById('apiMerchantId').textContent = currentMerchant.id;
@@ -1109,32 +1048,9 @@ print(f"Order created: {order['id']}")</pre>
             // Settings are already loaded in loadMerchantData
         }
 
-        // Modal functions
+        // Modal functions (unused, wallet modal was replaced with inline form)
         function showAddWalletModal() {
             const modal = document.getElementById('addWalletModal');
-            const chainSelect = document.getElementById('walletChain');
-            
-            // Populate chain options based on current network mode
-            const chains = currentNetworkMode === 'TESTNET' 
-                ? [
-                    { value: 'BASE_SEPOLIA', label: 'Base Sepolia (Testnet)' },
-                    { value: 'ETHEREUM_SEPOLIA', label: 'Ethereum Sepolia (Testnet)' },
-                    { value: 'POLYGON_MUMBAI', label: 'Polygon Mumbai (Testnet)' },
-                    { value: 'ARBITRUM_SEPOLIA', label: 'Arbitrum Sepolia (Testnet)' },
-                    { value: 'SOLANA_DEVNET', label: 'Solana Devnet (Testnet)' }
-                ]
-                : [
-                    { value: 'BASE_MAINNET', label: 'Base Mainnet' },
-                    { value: 'ETHEREUM_MAINNET', label: 'Ethereum Mainnet' },
-                    { value: 'POLYGON_MAINNET', label: 'Polygon Mainnet' },
-                    { value: 'ARBITRUM_MAINNET', label: 'Arbitrum Mainnet' },
-                    { value: 'SOLANA_MAINNET', label: 'Solana Mainnet' }
-                ];
-            
-            chainSelect.innerHTML = chains.map(chain => 
-                `<option value="${chain.value}">${chain.label}</option>`
-            ).join('');
-            
             modal.classList.remove('hidden');
         }
 
@@ -1150,9 +1066,6 @@ print(f"Order created: {order['id']}")</pre>
                 btn.addEventListener('click', () => switchTab(btn.dataset.tab));
             });
 
-            // Network switching
-            document.getElementById('testnetBtn').addEventListener('click', switchToTestnet);
-            document.getElementById('mainnetBtn').addEventListener('click', switchToMainnet);
 
             // Modal controls
             document.getElementById('addWalletBtn').addEventListener('click', showAddWalletModal);
@@ -1238,12 +1151,9 @@ print(f"Order created: {order['id']}")</pre>
 
                         // Update profile card
                         document.getElementById('profilePlan').textContent = currentMerchant.plan || 'None';
-                        document.getElementById('profileNetworkMode').textContent = currentMerchant.networkMode === 'MAINNET' ? '🌐 Mainnet' : '🧪 Testnet';
+                        document.getElementById('profileNetworkMode').textContent = currentMerchant.networkMode === 'MAINNET' ? 'Mainnet' : 'Testnet';
 
-                        currentNetworkMode = currentMerchant.networkMode;
-                        updateNetworkUI();
-
-                        alert('✅ Settings saved successfully!');
+                        alert('Settings saved successfully!');
                     } else {
                         alert('❌ Failed to save settings');
                     }
