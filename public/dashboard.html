@@ -562,17 +562,17 @@ print(f"Order created: {order['id']}")</pre>
                     <form id="addWalletForm" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-2">Blockchain</label>
-                            <select id="walletChain" class="w-full px-3 py-2 border border-slate-800 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <select id="walletChain" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <!-- Options will be populated dynamically based on network mode -->
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-2">Wallet Address</label>
-                            <input 
-                                type="text" 
-                                id="walletAddress" 
+                            <input
+                                type="text"
+                                id="walletAddress"
                                 placeholder="Enter your wallet address"
-                                class="w-full px-3 py-2 border border-slate-800 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
                             >
                             <p class="text-xs text-slate-400 mt-1">This is where USDC payments will be sent</p>
