@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { ordersRouter } from './routes/orders';
 import { refundsRouter } from './routes/refunds';
+import { adminRouter } from './routes/admin';
 // import { BlockchainService } from './services/blockchainService';
 
 dotenv.config();
@@ -32,6 +33,7 @@ app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
 app.use('/api/orders', ordersRouter);
 app.use('/api/refunds', refundsRouter);
+app.use('/api/v1/admin', adminRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
