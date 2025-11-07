@@ -107,14 +107,10 @@
                 </div>
             </div>
             <div class="p-6 bg-slate-950">
-                <div class="grid grid-cols-4 gap-6">
+                <div class="grid grid-cols-3 gap-6">
                     <div>
                         <div class="text-sm text-slate-400 mb-1">Contact</div>
                         <div class="font-medium text-white" id="profileContact">-</div>
-                    </div>
-                    <div>
-                        <div class="text-sm text-slate-400 mb-1">Network Mode</div>
-                        <div class="font-medium text-white" id="profileNetworkMode">Testnet</div>
                     </div>
                     <div>
                         <div class="text-sm text-slate-400 mb-1">Total Orders</div>
@@ -469,19 +465,19 @@ print(f"Order created: {order['id']}")</pre>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Company Name</label>
-                                        <input type="text" id="companyName" class="w-full px-3 py-2 border border-slate-800 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <input type="text" id="companyName" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Contact Name</label>
-                                        <input type="text" id="contactName" class="w-full px-3 py-2 border border-slate-800 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <input type="text" id="contactName" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Email</label>
-                                        <input type="email" id="email" class="w-full px-3 py-2 border border-slate-800 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <input type="email" id="email" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Plan</label>
-                                        <input type="text" id="plan" class="w-full px-3 py-2 border border-slate-800 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
+                                        <input type="text" id="plan" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" readonly>
                                     </div>
                                 </div>
                                 <div class="mt-6">
@@ -499,14 +495,14 @@ print(f"Order created: {order['id']}")</pre>
                                 <div class="space-y-4">
                                     <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Default Network Mode</label>
-                                        <select id="defaultNetworkMode" class="w-full px-3 py-2 border border-slate-800 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <select id="defaultNetworkMode" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                             <option value="TESTNET">Testnet (for development)</option>
                                             <option value="MAINNET">Mainnet (for production)</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Payment Mode</label>
-                                        <select id="paymentMode" class="w-full px-3 py-2 border border-slate-800 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <select id="paymentMode" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                             <option value="DIRECT">Direct (payments go directly to your wallets)</option>
                                             <option value="ESCROW">Escrow (payments held until confirmation)</option>
                                         </select>
@@ -669,7 +665,6 @@ print(f"Order created: {order['id']}")</pre>
                 document.getElementById('profileCompanyName').textContent = currentMerchant.companyName;
                 document.getElementById('profileEmail').textContent = currentMerchant.email;
                 document.getElementById('profileContact').textContent = currentMerchant.contactName;
-                document.getElementById('profileNetworkMode').textContent = currentMerchant.networkMode === 'MAINNET' ? '🌐 Mainnet' : '🧪 Testnet';
                 document.getElementById('profilePlan').textContent = currentMerchant.plan || 'None';
                 document.getElementById('profileOrderCount').textContent = currentMerchant.orderCount || 0;
 
@@ -765,6 +760,7 @@ print(f"Order created: {order['id']}")</pre>
                 }
 
                 // Fetch orders for this merchant
+                const merchantToken = sessionStorage.getItem('merchantToken');
                 const response = await fetch(`/api/v1/admin?resource=orders&merchantId=${currentMerchant.id}`, {
                     headers: { 'Authorization': `Bearer ${merchantToken}` }
                 });
@@ -847,18 +843,13 @@ print(f"Order created: {order['id']}")</pre>
             console.log('loadWallets: Loading wallets for merchant', currentMerchant.id);
 
             try {
-                // Fetch merchant wallets
-                const merchantToken = sessionStorage.getItem('merchantToken');
-                const response = await fetch(`/api/v1/admin?resource=wallets&merchantId=${currentMerchant.id}`, {
-                    headers: { 'Authorization': `Bearer ${merchantToken}` }
-                });
-
-                if (response.ok) {
-                    merchantWallets = await response.json();
-                    console.log('loadWallets: Loaded', merchantWallets.length, 'wallets');
+                // Use wallets from currentMerchant (already loaded from merchant-profile API)
+                if (currentMerchant.wallets) {
+                    merchantWallets = currentMerchant.wallets;
+                    console.log('loadWallets: Using cached wallets', merchantWallets.length, 'wallets');
                 } else {
-                    console.log('loadWallets: API returned error', response.status);
                     merchantWallets = [];
+                    console.log('loadWallets: No wallets found for merchant');
                 }
 
                 renderChainToggles();
@@ -1152,7 +1143,6 @@ print(f"Order created: {order['id']}")</pre>
 
                         // Update profile card
                         document.getElementById('profilePlan').textContent = currentMerchant.plan || 'None';
-                        document.getElementById('profileNetworkMode').textContent = currentMerchant.networkMode === 'MAINNET' ? 'Mainnet' : 'Testnet';
 
                         alert('Settings saved successfully!');
                     } else {
