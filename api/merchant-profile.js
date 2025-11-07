@@ -39,8 +39,11 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { id, token } = req.query;
 
+      console.log('merchant-profile GET request:', { id, hasToken: !!token });
+
       let merchant;
       if (id) {
+        console.log('Fetching by ID:', id);
         merchant = await db.merchant.findUnique({
           where: { id },
           include: {
@@ -49,6 +52,7 @@ export default async function handler(req, res) {
           }
         });
       } else if (token) {
+        console.log('Fetching by token (length:', token.length, ')');
         merchant = await db.merchant.findFirst({
           where: {
             loginToken: token,
@@ -59,13 +63,30 @@ export default async function handler(req, res) {
             _count: { select: { orders: true } }
           }
         });
+
+        if (!merchant) {
+          // Try without expiry check to see if token exists
+          const merchantWithoutExpiry = await db.merchant.findFirst({
+            where: { loginToken: token }
+          });
+
+          if (merchantWithoutExpiry) {
+            console.log('Token exists but expired for:', merchantWithoutExpiry.email);
+            return res.status(401).json({ error: 'Token expired. Please contact admin for new login link.' });
+          } else {
+            console.log('Token not found in database');
+          }
+        }
       } else {
         return res.status(400).json({ error: 'ID or token required' });
       }
 
       if (!merchant) {
+        console.log('Merchant not found');
         return res.status(404).json({ error: 'Merchant not found' });
       }
+
+      console.log('Merchant found:', merchant.email, 'ID:', merchant.id);
 
       // Return merchant data without password hash
       const { passwordHash, loginToken, tokenExpiresAt, ...safeData } = merchant;
