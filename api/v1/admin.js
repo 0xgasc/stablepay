@@ -97,6 +97,8 @@ async function handleMerchants(req, res, action, prisma) {
       networkMode: merchant.networkMode || 'TESTNET',
       isActive: merchant.isActive,
       setupCompleted: merchant.setupCompleted,
+      loginToken: merchant.loginToken || null,
+      tokenExpiresAt: merchant.tokenExpiresAt || null,
       website: merchant.website || null,
       industry: merchant.industry || null,
       notes: merchant.notes || null,
