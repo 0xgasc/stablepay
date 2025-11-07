@@ -50,11 +50,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, password } = req.body;
+    const { email, token } = req.body;
 
     // Validate required fields
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+    if (!email || !token) {
+      return res.status(400).json({ error: 'Email and token are required' });
     }
 
     // Validate email format
@@ -66,43 +66,28 @@ export default async function handler(req, res) {
     // Use Prisma to query database
     const db = getPrisma();
 
-    // Find merchant with matching email
-    const merchant = await db.merchant.findUnique({
-      where: { email }
+    // Find merchant with matching email and token
+    const merchant = await db.merchant.findFirst({
+      where: {
+        email,
+        loginToken: token,
+      }
     });
 
     if (!merchant) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid email or token' });
     }
 
-    // Verify password with bcrypt
-    if (!merchant.passwordHash) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+    // Check if token is expired
+    if (merchant.tokenExpiresAt && new Date() > merchant.tokenExpiresAt) {
+      return res.status(401).json({ error: 'Token expired. Please contact admin for a new login link.' });
     }
-
-    const passwordValid = await bcrypt.compare(password, merchant.passwordHash);
-    if (!passwordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    // Generate a new login token
-    const loginToken = 'token_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
-    const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    // Update merchant with new login token
-    await db.merchant.update({
-      where: { id: merchant.id },
-      data: {
-        loginToken,
-        tokenExpiresAt
-      }
-    });
 
     console.log('Login successful for:', email, 'ID:', merchant.id, 'Active:', merchant.isActive);
 
     return res.status(200).json({
       success: true,
-      token: loginToken,
+      token: merchant.loginToken,
       merchantId: merchant.id,
       companyName: merchant.companyName,
       contactName: merchant.contactName,
