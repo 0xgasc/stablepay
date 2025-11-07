@@ -89,8 +89,24 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'Email, company name, and contact name are required' });
       }
 
-      // Generate login token
-      const loginToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      // Check if merchant already exists
+      const existing = await db.merchant.findUnique({
+        where: { email },
+      });
+
+      if (existing) {
+        return res.status(400).json({ error: 'Merchant with this email already exists' });
+      }
+
+      // Create merchant - if admin creates and sets active immediately, generate token
+      let loginToken = undefined;
+      let tokenExpiresAt = undefined;
+
+      if (isActive === true) {
+        loginToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        tokenExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+        console.log(`🔑 Generated login token for ${email}: ${loginToken}`);
+      }
 
       const merchant = await db.merchant.create({
         data: {
@@ -101,8 +117,8 @@ router.post('/', async (req, res) => {
           networkMode: networkMode || 'TESTNET',
           paymentMode: paymentMode || 'DIRECT',
           isActive: isActive || false,
-          loginToken,
-          tokenExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+          ...(loginToken && { loginToken }),
+          ...(tokenExpiresAt && { tokenExpiresAt }),
         },
       });
 
@@ -169,17 +185,40 @@ router.put('/', async (req, res) => {
         return res.status(400).json({ error: 'merchantId is required' });
       }
 
-      const merchant = await db.merchant.update({
+      // If activating merchant, generate login token
+      let updateData: any = {
+        ...(typeof isActive !== 'undefined' && { isActive }),
+        ...(plan && { plan }),
+        ...(networkMode && { networkMode }),
+        ...(paymentMode && { paymentMode }),
+      };
+
+      // Generate token when activating a merchant
+      if (isActive === true) {
+        const merchant = await db.merchant.findUnique({
+          where: { id: merchantId },
+        });
+
+        // Only generate token if merchant doesn't have one or wasn't active
+        if (merchant && !merchant.isActive) {
+          const loginToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          updateData.loginToken = loginToken;
+          updateData.tokenExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+
+          console.log(`🔑 Generated login token for ${merchant.email}: ${loginToken}`);
+        }
+      }
+
+      const updatedMerchant = await db.merchant.update({
         where: { id: merchantId },
-        data: {
-          ...(typeof isActive !== 'undefined' && { isActive }),
-          ...(plan && { plan }),
-          ...(networkMode && { networkMode }),
-          ...(paymentMode && { paymentMode }),
-        },
+        data: updateData,
       });
 
-      return res.json({ success: true, merchant });
+      return res.json({
+        success: true,
+        merchant: updatedMerchant,
+        loginToken: updateData.loginToken // Return token so admin can share it
+      });
     }
 
     return res.status(400).json({ error: 'Invalid resource for PUT' });

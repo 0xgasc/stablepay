@@ -1201,8 +1201,46 @@
                 });
 
                 if (response.ok) {
-                    alert(`Merchant ${action}d successfully!`);
-                    loadDashboard();
+                    const result = await response.json();
+
+                    // If activating and a login token was generated, show it to the admin
+                    if (action === 'activate' && result.loginToken) {
+                        const loginUrl = `${window.location.origin}/login.html?email=${encodeURIComponent(merchant.email)}&token=${result.loginToken}`;
+
+                        const modal = document.createElement('div');
+                        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                        modal.innerHTML = `
+                            <div class="bg-slate-950 border shadow-2xl p-8 max-w-2xl w-full mx-4">
+                                <h2 class="text-2xl font-bold text-white mb-4">✅ Merchant Activated!</h2>
+                                <p class="text-slate-300 mb-6">Send this login link to ${merchant.email}:</p>
+
+                                <div class="bg-black border border-slate-800 p-4 mb-4">
+                                    <div class="text-xs text-slate-400 mb-2">Login URL:</div>
+                                    <code class="text-sm text-green-400 break-all">${loginUrl}</code>
+                                </div>
+
+                                <div class="bg-black border border-slate-800 p-4 mb-6">
+                                    <div class="text-xs text-slate-400 mb-2">Login Token:</div>
+                                    <code class="text-sm text-blue-400 font-mono">${result.loginToken}</code>
+                                </div>
+
+                                <div class="flex space-x-3">
+                                    <button onclick="navigator.clipboard.writeText('${loginUrl}'); alert('Login URL copied!');"
+                                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 transition-colors">
+                                        Copy Login URL
+                                    </button>
+                                    <button onclick="this.closest('.fixed').remove(); loadDashboard();"
+                                            class="flex-1 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 transition-colors">
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(modal);
+                    } else {
+                        alert(`Merchant ${action}d successfully!`);
+                        loadDashboard();
+                    }
                 } else {
                     const error = await response.json();
                     alert('Error: ' + (error.error || 'Failed to update status'));

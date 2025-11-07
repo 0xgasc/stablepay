@@ -114,4 +114,48 @@ router.put('/merchant-profile', async (req, res) => {
   }
 });
 
+// Merchant signup endpoint
+router.post('/v1/signup', async (req, res) => {
+  try {
+    const { email, companyName, contactName, password, plan } = req.body;
+
+    if (!email || !companyName || !contactName) {
+      return res.status(400).json({ error: 'Email, company name, and contact name are required' });
+    }
+
+    // Check if merchant already exists
+    const existing = await db.merchant.findUnique({
+      where: { email },
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
+    }
+
+    // Create merchant in pending state (no login token yet)
+    const merchant = await db.merchant.create({
+      data: {
+        email,
+        companyName,
+        contactName,
+        plan: plan || 'STARTER',
+        networkMode: 'TESTNET',
+        paymentMode: 'DIRECT',
+        isActive: false, // Pending admin approval
+        setupCompleted: false,
+        passwordHash: password, // In production, hash this!
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Account created successfully! Please wait for admin approval.',
+      merchantId: merchant.id,
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export const authRouter = router;
