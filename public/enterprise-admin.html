@@ -1075,6 +1075,23 @@
                     <div class="text-sm text-slate-400">Setup Completed</div>
                     <div class="font-medium">${merchant.setupCompleted ? 'Yes' : 'No'}</div>
                 </div>
+                ${merchant.loginToken ? `
+                <div class="col-span-2">
+                    <div class="text-sm text-slate-400 mb-2">Login Token</div>
+                    <div class="bg-black border border-slate-800 p-3 rounded">
+                        <code class="text-sm text-blue-400 font-mono break-all">${merchant.loginToken}</code>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('${window.location.origin}/login.html?email=${encodeURIComponent(merchant.email)}&token=${merchant.loginToken}'); alert('Login URL copied!');"
+                            class="mt-2 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">
+                        Copy Login URL
+                    </button>
+                </div>
+                ` : `
+                <div class="col-span-2">
+                    <div class="text-sm text-slate-400">Login Token</div>
+                    <div class="text-slate-500">Not generated yet (activate merchant to generate)</div>
+                </div>
+                `}
                 ${merchant.website ? `
                 <div>
                     <div class="text-sm text-slate-400">Website</div>
