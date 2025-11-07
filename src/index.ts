@@ -10,15 +10,15 @@ import { refundsRouter } from './routes/refunds';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
 // Configure helmet with secure CSP
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
-      styleSrc: ["'self'", "https://cdn.tailwindcss.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'", "https://lxbrsiujmntrvzqdphhj.supabase.co", "https://stablepay-nine.vercel.app"],
     },

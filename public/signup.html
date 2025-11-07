@@ -5,85 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up - StablePay</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #000000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <nav class="bg-white shadow-sm border-b">
+<body class="min-h-screen">
+    <nav class="bg-black border-b border-gray-900">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <a href="/" class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    StablePay
+                <a href="/" class="text-2xl font-bold tracking-tight text-white">
+                    STABLEPAY
                 </a>
-                <a href="/login.html" class="text-gray-600 hover:text-gray-900 text-sm font-medium">
-                    Already have an account? <span class="text-blue-600">Sign in</span>
+                <a href="/login.html" class="text-gray-400 hover:text-white text-sm font-medium tracking-wide transition-colors">
+                    SIGN IN
                 </a>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-md mx-auto px-4 py-12">
-        <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-900 mb-2">Get Started in 30 Seconds</h1>
-            <p class="text-gray-600">Sign up now, set up your wallet and plan after you log in</p>
+    <div class="max-w-md mx-auto px-4 py-20">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-white mb-3 tracking-tight">Create Account</h1>
+            <p class="text-gray-400">Enterprise payment infrastructure in 30 seconds</p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-lg p-8">
-            <form id="signupForm" class="space-y-5">
+        <div class="bg-gradient-to-b from-gray-900 to-black border border-gray-800 p-8">
+            <form id="signupForm" class="space-y-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
-                    <input type="text" id="companyName" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Acme Corp">
+                    <label class="block text-sm font-medium text-gray-400 mb-2 tracking-wide">COMPANY NAME</label>
+                    <input type="text" id="companyName" required class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors" placeholder="Acme Corp">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Your Name *</label>
-                    <input type="text" id="contactName" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="John Doe">
+                    <label class="block text-sm font-medium text-gray-400 mb-2 tracking-wide">YOUR NAME</label>
+                    <input type="text" id="contactName" required class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors" placeholder="John Doe">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Business Email *</label>
-                    <input type="email" id="email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="john@acmecorp.com">
+                    <label class="block text-sm font-medium text-gray-400 mb-2 tracking-wide">EMAIL</label>
+                    <input type="email" id="email" required class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors" placeholder="john@acme.com">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                    <input type="password" id="password" required minlength="8" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Choose a secure password">
+                    <label class="block text-sm font-medium text-gray-400 mb-2 tracking-wide">PASSWORD</label>
+                    <input type="password" id="password" required minlength="8" class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors" placeholder="Minimum 8 characters">
                 </div>
 
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p class="text-sm font-semibold text-blue-900 mb-2">ℹ️ What happens next:</p>
-                    <ul class="text-sm text-blue-800 space-y-1">
-                        <li>• Access your dashboard immediately</li>
-                        <li>• Set up your wallet addresses</li>
-                        <li>• Choose your plan & chains</li>
-                        <li>• Start accepting payments!</li>
+                <div class="bg-blue-950/30 border border-blue-900/50 p-4">
+                    <p class="text-sm font-medium text-blue-400 mb-3 tracking-wide">NEXT STEPS</p>
+                    <ul class="text-sm text-gray-400 space-y-2">
+                        <li>— Access dashboard immediately</li>
+                        <li>— Configure wallet addresses</li>
+                        <li>— Select plan and chains</li>
+                        <li>— Begin accepting payments</li>
                     </ul>
                 </div>
 
                 <label class="flex items-start">
-                    <input type="checkbox" required class="mt-1 mr-2">
-                    <span class="text-sm text-gray-600">I agree to the Terms of Service</span>
+                    <input type="checkbox" required class="mt-1 mr-3 bg-black border-gray-800">
+                    <span class="text-sm text-gray-400">I agree to the Terms of Service</span>
                 </label>
 
-                <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium text-lg">
-                    Get Started →
+                <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 font-medium text-base tracking-wide transition-colors">
+                    CREATE ACCOUNT
                 </button>
 
-                <p class="text-center text-sm text-gray-600">
-                    Already have an account? <a href="/login.html" class="text-blue-600 hover:text-blue-700 font-medium">Sign in</a>
+                <p class="text-center text-sm text-gray-500">
+                    Already have an account? <a href="/login.html" class="text-blue-500 hover:text-blue-400 font-medium">Sign in</a>
                 </p>
             </form>
         </div>
     </div>
 
-    <div id="successModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+    <div id="successModal" class="hidden fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+        <div class="bg-gradient-to-b from-gray-900 to-black border border-gray-800 p-10 max-w-md w-full mx-4">
             <div class="text-center">
-                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span class="text-3xl">✓</span>
+                <div class="w-16 h-16 bg-blue-600/20 border border-blue-600/50 flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">Account Created!</h2>
-                <p class="text-gray-600 mb-6">Welcome to StablePay! Let's set up your account.</p>
-                <a href="/login.html" class="block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium">
-                    Continue to Dashboard
+                <h2 class="text-2xl font-bold text-white mb-3 tracking-tight">ACCOUNT CREATED</h2>
+                <p class="text-gray-400 mb-8">Welcome to StablePay enterprise infrastructure</p>
+                <a href="/login.html" class="block w-full bg-blue-600 hover:bg-blue-700 text-white py-4 font-medium tracking-wide transition-colors">
+                    CONTINUE TO DASHBOARD
                 </a>
             </div>
         </div>
@@ -94,7 +102,7 @@
             e.preventDefault();
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Creating account...';
+            submitBtn.textContent = 'CREATING ACCOUNT...';
 
             try {
                 const response = await fetch(window.location.origin + '/api/v1/signup', {
@@ -116,12 +124,12 @@
                 } else {
                     alert('Error: ' + (result.error || 'Failed to create account'));
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Get Started →';
+                    submitBtn.textContent = 'CREATE ACCOUNT';
                 }
             } catch (error) {
                 alert('Failed to create account. Please try again.');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Get Started →';
+                submitBtn.textContent = 'CREATE ACCOUNT';
             }
         });
     </script>
