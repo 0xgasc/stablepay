@@ -644,13 +644,19 @@ print(f"Order created: {order['id']}")</pre>
                 }
 
                 // Fetch actual merchant data from API
+                console.log('Loading merchant data with:', { merchantId, hasToken: !!merchantToken });
                 const response = await fetch(`/api/merchant-profile?${merchantId ? 'id=' + merchantId : 'token=' + merchantToken}`);
-                
+
+                console.log('API response status:', response.status);
+
                 if (!response.ok) {
-                    throw new Error('Failed to load merchant data');
+                    const errorText = await response.text();
+                    console.error('API error:', errorText);
+                    throw new Error('Failed to load merchant data: ' + errorText);
                 }
 
                 currentMerchant = await response.json();
+                console.log('Loaded merchant:', currentMerchant);
                 
                 // Set defaults if missing
                 currentMerchant.plan = currentMerchant.plan || 'STARTER';
@@ -704,6 +710,9 @@ print(f"Order created: {order['id']}")</pre>
                 }
             } catch (error) {
                 console.error('Error loading merchant data:', error);
+                // Show error to user
+                document.getElementById('merchantName').textContent = 'Error Loading Data';
+                alert('Failed to load merchant data. Please check console for details.');
             }
         }
 
