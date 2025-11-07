@@ -269,7 +269,7 @@
                             </button>
                             <button
                                 id="testPaymentBtn"
-                                class="bg-slate-950 border-2 border-purple-300 hover:border-purple-500 text-purple-700 px-6 py-3 border font-medium transition-all"
+                                class="bg-black border-2 border-blue-600 hover:border-blue-500 text-blue-400 px-6 py-3 font-medium transition-all"
                             >
                                 ⚡ Test Payment
                             </button>
@@ -488,36 +488,6 @@ print(f"Order created: {order['id']}")</pre>
                             </div>
                         </div>
 
-                        <!-- Network Preferences -->
-                        <div>
-                            <h3 class="text-lg font-semibold text-white mb-4">Network Preferences</h3>
-                            <div class="bg-slate-950 border p-6">
-                                <div class="space-y-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-300 mb-2">Default Network Mode</label>
-                                        <select id="defaultNetworkMode" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="TESTNET">Testnet (for development)</option>
-                                            <option value="MAINNET">Mainnet (for production)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-300 mb-2">Payment Mode</label>
-                                        <select id="paymentMode" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="DIRECT">Direct (payments go directly to your wallets)</option>
-                                            <option value="ESCROW">Escrow (payments held until confirmation)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="mt-6">
-                                    <button 
-                                        id="saveSettingsBtn"
-                                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 border font-medium transition-colors"
-                                    >
-                                        💾 Save Settings
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -691,8 +661,6 @@ print(f"Order created: {order['id']}")</pre>
                 document.getElementById('contactName').value = currentMerchant.contactName;
                 document.getElementById('email').value = currentMerchant.email;
                 document.getElementById('plan').value = currentMerchant.plan;
-                document.getElementById('defaultNetworkMode').value = currentMerchant.networkMode;
-                document.getElementById('paymentMode').value = currentMerchant.paymentMode;
 
                 // Update API developer section
                 document.getElementById('apiMerchantId').textContent = currentMerchant.id;
@@ -1116,41 +1084,6 @@ print(f"Order created: {order['id']}")</pre>
                 } catch (error) {
                     console.error('Error saving profile:', error);
                     alert('❌ Failed to save profile');
-                }
-                });
-            }
-
-            // Save settings
-            const saveSettingsBtn = document.getElementById('saveSettingsBtn');
-            if (saveSettingsBtn) {
-                saveSettingsBtn.addEventListener('click', async () => {
-                try {
-                    const response = await fetch(`/api/merchant-profile`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            id: currentMerchant.id,
-                            plan: document.getElementById('plan').value,
-                            networkMode: document.getElementById('defaultNetworkMode').value,
-                            paymentMode: document.getElementById('paymentMode').value
-                        })
-                    });
-
-                    if (response.ok) {
-                        currentMerchant.plan = document.getElementById('plan').value;
-                        currentMerchant.networkMode = document.getElementById('defaultNetworkMode').value;
-                        currentMerchant.paymentMode = document.getElementById('paymentMode').value;
-
-                        // Update profile card
-                        document.getElementById('profilePlan').textContent = currentMerchant.plan || 'None';
-
-                        alert('Settings saved successfully!');
-                    } else {
-                        alert('❌ Failed to save settings');
-                    }
-                } catch (error) {
-                    console.error('Error saving settings:', error);
-                    alert('❌ Failed to save settings');
                 }
                 });
             }
