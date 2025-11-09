@@ -801,10 +801,7 @@ print(f"Order created: {order['id']}")</pre>
                 }
 
                 // Fetch orders for this merchant
-                const merchantToken = sessionStorage.getItem('merchantToken');
-                const response = await fetch(`/api/v1/admin?resource=orders&merchantId=${currentMerchant.id}`, {
-                    headers: { 'Authorization': `Bearer ${merchantToken}` }
-                });
+                const response = await fetch(`/api/v1/orders?merchantId=${currentMerchant.id}`);
 
                 if (response.ok) {
                     const orders = await response.json();

@@ -84,6 +84,48 @@ app.post('/api/v1/orders', async (req, res) => {
   }
 });
 
+// GET orders endpoint
+app.get('/api/v1/orders', async (req, res) => {
+  try {
+    const { db } = await import('./config/database');
+    const { merchantId, orderId } = req.query;
+
+    if (orderId && typeof orderId === 'string') {
+      const order = await db.order.findUnique({
+        where: { id: orderId },
+        include: {
+          transactions: true,
+          refunds: true
+        }
+      });
+
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      return res.json(order);
+    }
+
+    if (merchantId && typeof merchantId === 'string') {
+      const orders = await db.order.findMany({
+        where: { merchantId },
+        include: {
+          transactions: true
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100
+      });
+
+      return res.json(orders);
+    }
+
+    return res.status(400).json({ error: 'merchantId or orderId required' });
+  } catch (error) {
+    console.error('Get orders error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
