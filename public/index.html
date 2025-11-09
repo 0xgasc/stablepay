@@ -112,7 +112,7 @@
     </div>
 
     <!-- Pricing Section -->
-    <div class="py-24 bg-black" id="pricing">
+    <div class="py-24 bg-black payment-plan-ref" id="pricing">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-20">
                 <h2 class="text-4xl sm:text-5xl font-bold text-white mb-6">
@@ -244,6 +244,18 @@
     </footer>
 
     <script>
+        // Apply system settings visibility
+        function applySystemSettings() {
+            const showPaymentPlans = localStorage.getItem('showPaymentPlans') !== 'false';
+            const planElements = document.querySelectorAll('.payment-plan-ref');
+            planElements.forEach(el => {
+                el.style.display = showPaymentPlans ? '' : 'none';
+            });
+        }
+
+        // Apply on page load
+        applySystemSettings();
+
         // Registration form handler
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
