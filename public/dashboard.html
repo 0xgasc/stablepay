@@ -880,12 +880,10 @@ print(f"Order created: {order['id']}")</pre>
                 const amount = typeof order.amount === 'object' ? order.amount.toString() : order.amount;
 
                 // Get transaction hash from transactions array
-                console.log('Order:', order.id, 'Status:', order.status, 'Transactions:', order.transactions);
                 const txHash = order.transactions && order.transactions.length > 0
                     ? order.transactions[0].txHash
                     : null;
                 const explorerUrl = txHash ? getExplorerUrl(order.chain, txHash) : null;
-                if (txHash) console.log('TxHash found:', txHash, 'URL:', explorerUrl);
 
                 return `
                     <tr class="hover:bg-slate-950">
