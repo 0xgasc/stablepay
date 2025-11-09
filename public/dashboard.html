@@ -183,6 +183,9 @@
                     <button class="tab-btn border-blue-500 text-blue-400 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="orders">
                         Orders
                     </button>
+                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="invoices">
+                        Invoices
+                    </button>
                     <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="wallets">
                         Wallets
                     </button>
@@ -252,6 +255,42 @@
                                             <div class="animate-pulse w-8 h-8 bg-gray-300 rounded mb-4"></div>
                                             <p>Loading orders...</p>
                                         </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Invoices Tab -->
+                <div id="invoicesTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-white">Invoices</h3>
+                        <button
+                            id="createInvoiceBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 border font-medium transition-colors text-sm"
+                        >
+                            ➕ Create Invoice
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-950">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Invoice #</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Customer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Due Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Created</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoicesTableBody" class="bg-slate-950 divide-y divide-slate-800">
+                                <tr>
+                                    <td colspan="7" class="px-6 py-12 text-center text-slate-400">
+                                        No invoices yet. Create your first invoice to get started!
                                     </td>
                                 </tr>
                             </tbody>
