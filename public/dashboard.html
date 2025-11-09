@@ -633,6 +633,7 @@ print(f"Order created: {order['id']}")</pre>
 
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.min.js"></script>
     <script>
         let currentMerchant = null;
         let currentTab = 'orders';
@@ -1558,6 +1559,11 @@ print(f"Order created: {order['id']}")</pre>
             try {
                 const phantom = window.solana;
 
+                if (!phantom || !phantom.isPhantom) {
+                    alert('⚠️ Please install Phantom wallet to make Solana payments');
+                    return;
+                }
+
                 // Get token mint address
                 const tokenMints = {
                     'SOLANA_DEVNET': {
@@ -1601,20 +1607,108 @@ print(f"Order created: {order['id']}")</pre>
                 const orderData = await orderResponse.json();
                 console.log('Order created:', orderData);
 
-                alert(`✅ Order created! Now approve the ${token} transfer in Phantom.`);
-
-                // For Solana SPL token transfer, we need to use @solana/spl-token
-                // Simplified: ask user to send manually for now
+                // Setup Solana connection
                 const rpcUrl = chainId === 'SOLANA_MAINNET'
                     ? 'https://api.mainnet-beta.solana.com'
                     : 'https://api.devnet.solana.com';
 
-                const connection = new solanaWeb3.Connection(rpcUrl);
-                const fromPubkey = new solanaWeb3.PublicKey(testConnectedWalletAddress);
-                const toPubkey = new solanaWeb3.PublicKey(merchantWallet);
+                const connection = new solanaWeb3.Connection(rpcUrl, 'confirmed');
 
-                // Note: This is simplified - full SPL token transfer requires token accounts
-                alert(`⚠️ Solana SPL token transfers require additional setup. Please send ${amount} ${token} to ${merchantWallet} manually for now.`);
+                // Connect to Phantom
+                const resp = await phantom.connect();
+                const fromPubkey = resp.publicKey;
+                const toPubkey = new solanaWeb3.PublicKey(merchantWallet);
+                const mintPubkey = new solanaWeb3.PublicKey(mintAddress);
+
+                console.log('From wallet:', fromPubkey.toString());
+                console.log('To wallet:', toPubkey.toString());
+                console.log('Token mint:', mintPubkey.toString());
+
+                // Convert amount to token decimals (USDC/EURC use 6 decimals)
+                const decimals = 6;
+                const transferAmount = Math.floor(parseFloat(amount) * Math.pow(10, decimals));
+
+                console.log('Transfer amount (in smallest units):', transferAmount);
+
+                // Get or create associated token accounts
+                const fromTokenAccount = await splToken.getAssociatedTokenAddress(
+                    mintPubkey,
+                    fromPubkey
+                );
+
+                const toTokenAccount = await splToken.getAssociatedTokenAddress(
+                    mintPubkey,
+                    toPubkey
+                );
+
+                console.log('From token account:', fromTokenAccount.toString());
+                console.log('To token account:', toTokenAccount.toString());
+
+                // Check if destination token account exists
+                const toAccountInfo = await connection.getAccountInfo(toTokenAccount);
+
+                const transaction = new solanaWeb3.Transaction();
+
+                // Create destination token account if it doesn't exist
+                if (!toAccountInfo) {
+                    console.log('Creating destination token account...');
+                    transaction.add(
+                        splToken.createAssociatedTokenAccountInstruction(
+                            fromPubkey, // payer
+                            toTokenAccount, // associated token account
+                            toPubkey, // owner
+                            mintPubkey // mint
+                        )
+                    );
+                }
+
+                // Add SPL token transfer instruction
+                transaction.add(
+                    splToken.createTransferInstruction(
+                        fromTokenAccount,
+                        toTokenAccount,
+                        fromPubkey,
+                        transferAmount
+                    )
+                );
+
+                // Get latest blockhash
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = fromPubkey;
+
+                console.log('Transaction created, requesting signature from Phantom...');
+
+                // Sign and send transaction via Phantom
+                const { signature } = await phantom.signAndSendTransaction(transaction);
+
+                console.log('Transaction sent! Signature:', signature);
+                alert(`✅ Transaction submitted! Confirming...`);
+
+                // Wait for confirmation
+                const confirmation = await connection.confirmTransaction({
+                    signature,
+                    blockhash,
+                    lastValidBlockHeight
+                });
+
+                if (confirmation.value.err) {
+                    throw new Error('Transaction failed: ' + JSON.stringify(confirmation.value.err));
+                }
+
+                console.log('Transaction confirmed!', signature);
+
+                // Update order with transaction hash
+                await fetch(`/api/v1/orders/${orderData.order.id}/confirm`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        txHash: signature,
+                        status: 'CONFIRMED'
+                    })
+                });
+
+                alert(`✅ Payment successful!\n\nTx: ${signature}`);
 
                 // Close modal and refresh orders
                 document.getElementById('testPaymentModal').classList.add('hidden');
