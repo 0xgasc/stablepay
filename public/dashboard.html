@@ -1762,6 +1762,11 @@ print(f"Order created: {order['id']}")</pre>
 
                 console.log('Transfer transaction created, requesting signature from Phantom...');
                 console.log('Transfer amount:', transferAmount);
+                console.log('Transfer tx instructions:', transferTx.instructions);
+                console.log('Transfer instruction 0:', transferTx.instructions[0]);
+                console.log('Transfer instruction keys:', transferTx.instructions[0].keys);
+                console.log('Transfer instruction data:', transferTx.instructions[0].data);
+                console.log('Transfer program ID:', transferTx.instructions[0].programId.toString());
 
                 // Sign and send transaction via Phantom
                 const { signature } = await phantom.signAndSendTransaction(transferTx);
