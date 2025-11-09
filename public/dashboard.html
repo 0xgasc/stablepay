@@ -1264,6 +1264,12 @@ print(f"Order created: {order['id']}")</pre>
 
         async function initiateEVMPayment(amount, chainId, merchantWallet, token) {
             try {
+                // Check if MetaMask is connected
+                if (!window.ethereum || !window.ethereum.isConnected()) {
+                    alert('⚠️ MetaMask disconnected. Please refresh the page and try again.');
+                    return;
+                }
+
                 console.log('Connected wallet:', testConnectedWalletAddress);
 
                 // Get chain config
@@ -1404,6 +1410,19 @@ The transaction will show the token transfer details.
 
             } catch (error) {
                 console.error('EVM payment error:', error);
+
+                // Check if MetaMask disconnected
+                if (error.message && error.message.includes('Disconnected from MetaMask')) {
+                    alert('⚠️ MetaMask disconnected. Please refresh this page and try again.');
+                    return;
+                }
+
+                // User rejected transaction
+                if (error.code === 4001 || error.message.includes('User rejected')) {
+                    alert('❌ Transaction cancelled');
+                    return;
+                }
+
                 alert('❌ Payment failed: ' + error.message);
             }
         }
