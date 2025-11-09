@@ -552,7 +552,16 @@ print(f"Order created: {order['id']}")</pre>
 
             <div class="space-y-4 mb-6">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Amount (USDC)</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Stablecoin</label>
+                    <select id="testToken" class="w-full px-4 py-3 bg-black text-white border border-slate-800 focus:border-blue-600 focus:outline-none">
+                        <option value="USDC">💵 USDC</option>
+                        <option value="USDT">💵 USDT</option>
+                        <option value="EURC">💶 EURC</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Amount</label>
                     <input type="number" id="testAmount" step="0.01" min="0.01" placeholder="0.1"
                            class="w-full px-4 py-3 bg-black text-white border border-slate-800 focus:border-blue-600 focus:outline-none">
                 </div>
@@ -1081,6 +1090,7 @@ print(f"Order created: {order['id']}")</pre>
         document.getElementById('testPayBtn').addEventListener('click', async () => {
             const amount = document.getElementById('testAmount').value;
             const chainId = document.getElementById('testChain').value;
+            const token = document.getElementById('testToken').value;
 
             if (!amount || parseFloat(amount) <= 0) {
                 alert('⚠️ Please enter a valid amount');
@@ -1093,10 +1103,10 @@ print(f"Order created: {order['id']}")</pre>
                 return;
             }
 
-            await initiateTestPayment(amount, chainId, wallet.address);
+            await initiateTestPayment(amount, chainId, wallet.address, token);
         });
 
-        async function initiateTestPayment(amount, chainId, merchantWallet) {
+        async function initiateTestPayment(amount, chainId, merchantWallet, token) {
             try {
                 // Check for MetaMask
                 if (typeof window.ethereum === 'undefined') {
@@ -1122,7 +1132,7 @@ print(f"Order created: {order['id']}")</pre>
                 console.log('Connected wallet:', connectedAddress);
 
                 // Get chain config
-                const chainConfig = getChainConfig(chainId);
+                const chainConfig = getChainConfig(chainId, token);
                 if (!chainConfig) {
                     alert('⚠️ Chain configuration not found');
                     return;
@@ -1181,18 +1191,18 @@ print(f"Order created: {order['id']}")</pre>
                 const orderData = await orderResponse.json();
                 console.log('Order created:', orderData);
 
-                // Initiate USDC transfer
-                const usdcContract = new ethers.Contract(
-                    chainConfig.usdcAddress,
+                // Initiate token transfer
+                const tokenContract = new ethers.Contract(
+                    chainConfig.tokenAddress,
                     ['function transfer(address to, uint256 amount) returns (bool)'],
                     testPaymentSigner
                 );
 
-                const amountWei = ethers.parseUnits(amount, 6); // USDC has 6 decimals
+                const amountWei = ethers.parseUnits(amount, 6); // Stablecoins have 6 decimals
 
-                alert('✅ Order created! Now approve the USDC transfer in your wallet.');
+                alert(`✅ Order created! Now approve the ${token} transfer in your wallet.`);
 
-                const tx = await usdcContract.transfer(merchantWallet, amountWei);
+                const tx = await tokenContract.transfer(merchantWallet, amountWei);
                 console.log('Transaction sent:', tx.hash);
 
                 alert(`⏳ Payment sent! Transaction: ${tx.hash}`);
@@ -1212,74 +1222,116 @@ print(f"Order created: {order['id']}")</pre>
             }
         }
 
-        function getChainConfig(chainId) {
+        function getChainConfig(chainId, token = 'USDC') {
+            const tokenAddresses = {
+                'BASE_SEPOLIA': {
+                    USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+                    USDT: '0x', // Add if available
+                    EURC: '0x'  // Add if available
+                },
+                'BASE_MAINNET': {
+                    USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+                    USDT: '0x', // Add USDT address
+                    EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42'
+                },
+                'ETHEREUM_SEPOLIA': {
+                    USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+                    USDT: '0x', // Add if available
+                    EURC: '0x'  // Add if available
+                },
+                'ETHEREUM_MAINNET': {
+                    USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+                    USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+                    EURC: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c'
+                },
+                'POLYGON_MAINNET': {
+                    USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+                    USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+                    EURC: '0x'  // Add if available
+                },
+                'POLYGON_MUMBAI': {
+                    USDC: '0x0FA8781a83E46826621b3BC094Ea2A0212e71B23',
+                    USDT: '0x', // Add if available
+                    EURC: '0x'  // Add if available
+                },
+                'ARBITRUM_MAINNET': {
+                    USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                    USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+                    EURC: '0x'  // Add if available
+                },
+                'ARBITRUM_SEPOLIA': {
+                    USDC: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+                    USDT: '0x', // Add if available
+                    EURC: '0x'  // Add if available
+                }
+            };
+
             const configs = {
                 'BASE_SEPOLIA': {
                     chainId: '0x14a34',
                     chainName: 'Base Sepolia',
                     rpcUrls: ['https://sepolia.base.org'],
                     nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                    blockExplorerUrls: ['https://sepolia.basescan.org'],
-                    usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+                    blockExplorerUrls: ['https://sepolia.basescan.org']
                 },
                 'BASE_MAINNET': {
                     chainId: '0x2105',
                     chainName: 'Base',
                     rpcUrls: ['https://mainnet.base.org'],
                     nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                    blockExplorerUrls: ['https://basescan.org'],
-                    usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+                    blockExplorerUrls: ['https://basescan.org']
                 },
                 'ETHEREUM_SEPOLIA': {
                     chainId: '0xaa36a7',
                     chainName: 'Ethereum Sepolia',
                     rpcUrls: ['https://rpc.sepolia.org'],
                     nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                    blockExplorerUrls: ['https://sepolia.etherscan.io'],
-                    usdcAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238'
+                    blockExplorerUrls: ['https://sepolia.etherscan.io']
                 },
                 'ETHEREUM_MAINNET': {
                     chainId: '0x1',
                     chainName: 'Ethereum',
                     rpcUrls: ['https://eth.llamarpc.com'],
                     nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                    blockExplorerUrls: ['https://etherscan.io'],
-                    usdcAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+                    blockExplorerUrls: ['https://etherscan.io']
                 },
                 'POLYGON_MAINNET': {
                     chainId: '0x89',
                     chainName: 'Polygon',
                     rpcUrls: ['https://polygon-rpc.com'],
                     nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-                    blockExplorerUrls: ['https://polygonscan.com'],
-                    usdcAddress: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'
+                    blockExplorerUrls: ['https://polygonscan.com']
                 },
                 'POLYGON_MUMBAI': {
                     chainId: '0x13881',
                     chainName: 'Polygon Mumbai',
                     rpcUrls: ['https://rpc-mumbai.maticvigil.com'],
                     nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-                    blockExplorerUrls: ['https://mumbai.polygonscan.com'],
-                    usdcAddress: '0x0FA8781a83E46826621b3BC094Ea2A0212e71B23'
+                    blockExplorerUrls: ['https://mumbai.polygonscan.com']
                 },
                 'ARBITRUM_MAINNET': {
                     chainId: '0xa4b1',
                     chainName: 'Arbitrum One',
                     rpcUrls: ['https://arb1.arbitrum.io/rpc'],
                     nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                    blockExplorerUrls: ['https://arbiscan.io'],
-                    usdcAddress: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'
+                    blockExplorerUrls: ['https://arbiscan.io']
                 },
                 'ARBITRUM_SEPOLIA': {
                     chainId: '0x66eee',
                     chainName: 'Arbitrum Sepolia',
                     rpcUrls: ['https://sepolia-rollup.arbitrum.io/rpc'],
                     nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                    blockExplorerUrls: ['https://sepolia.arbiscan.io'],
-                    usdcAddress: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d'
+                    blockExplorerUrls: ['https://sepolia.arbiscan.io']
                 }
             };
-            return configs[chainId];
+
+            const config = configs[chainId];
+            if (!config) return null;
+
+            // Add token address
+            config.tokenAddress = tokenAddresses[chainId]?.[token];
+
+            return config;
         }
 
         // Load settings
