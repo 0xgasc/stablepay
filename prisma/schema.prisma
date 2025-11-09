@@ -75,7 +75,6 @@ model Merchant {
   networkMode     NetworkMode @default(TESTNET)
   isActive        Boolean     @default(false)
   setupCompleted  Boolean     @default(false)
-  invoiceEnabled  Boolean     @default(false)
   passwordHash    String?
   loginToken      String?     @unique
   tokenExpiresAt  DateTime?
@@ -88,7 +87,6 @@ model Merchant {
 
   wallets         MerchantWallet[]
   orders          Order[]
-  invoices        Invoice[]
 
   @@map("merchants")
 }
@@ -165,49 +163,6 @@ model Refund {
   @@map("refunds")
 }
 
-enum InvoiceStatus {
-  DRAFT
-  SENT
-  PAID
-  OVERDUE
-  CANCELLED
-}
-
-model Invoice {
-  id              String        @id @default(cuid())
-  merchantId      String
-  invoiceNumber   String        // Auto-generated: INV-001, INV-002, etc.
-  customerName    String
-  customerEmail   String
-
-  // Line items stored as JSON
-  items           Json          // [{description, quantity, price, total}]
-
-  subtotal        Decimal       @db.Decimal(18, 6)
-  taxRate         Decimal?      @db.Decimal(5, 2)  // e.g., 7.5 for 7.5%
-  taxAmount       Decimal?      @db.Decimal(18, 6)
-  discount        Decimal?      @db.Decimal(18, 6)
-  total           Decimal       @db.Decimal(18, 6)
-
-  currency        String        @default("USDC")  // USDC, USDT, EURC
-  chain           Chain?        // Selected payment chain (null = customer chooses)
-
-  status          InvoiceStatus @default(DRAFT)
-  notes           String?       // Additional notes for customer
-  dueDate         DateTime?
-  paidAt          DateTime?
-  sentAt          DateTime?
-
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  merchant        Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-
-  @@unique([merchantId, invoiceNumber])
-  @@index([merchantId])
-  @@index([status])
-  @@map("invoices")
-}
 
 model ChainConfig {
   id                String @id @default(cuid())
