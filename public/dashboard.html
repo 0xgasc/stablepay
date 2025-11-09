@@ -1710,8 +1710,16 @@ print(f"Order created: {order['id']}")</pre>
                 console.log('From token account:', fromTokenAccount.toString());
                 console.log('To token account:', toTokenAccount.toString());
 
-                // Check if destination token account exists
+                // Check if BOTH token accounts exist
+                const fromAccountInfo = await connection.getAccountInfo(fromTokenAccount);
                 const toAccountInfo = await connection.getAccountInfo(toTokenAccount);
+
+                if (!fromAccountInfo) {
+                    throw new Error('Source token account does not exist! You need USDC in your Phantom wallet first.');
+                }
+
+                console.log('Source account exists:', !!fromAccountInfo);
+                console.log('Destination account exists:', !!toAccountInfo);
 
                 // Create destination token account if it doesn't exist
                 if (!toAccountInfo) {
