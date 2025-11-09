@@ -138,7 +138,12 @@ module.exports = async function handler(req, res) {
           return res.status(404).json({ error: 'Order not found' });
         }
 
-        return res.json(order);
+        // Convert BigInt to string for JSON serialization
+        const orderJSON = JSON.parse(JSON.stringify(order, (key, value) =>
+          typeof value === 'bigint' ? value.toString() : value
+        ));
+
+        return res.json(orderJSON);
       }
 
       if (merchantId) {
@@ -152,7 +157,12 @@ module.exports = async function handler(req, res) {
           take: 100
         });
 
-        return res.json(orders);
+        // Convert BigInt to string for JSON serialization
+        const ordersJSON = JSON.parse(JSON.stringify(orders, (key, value) =>
+          typeof value === 'bigint' ? value.toString() : value
+        ));
+
+        return res.json(ordersJSON);
       }
 
       return res.status(400).json({ error: 'merchantId or orderId required' });
