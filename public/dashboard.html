@@ -45,7 +45,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div class="flex items-center justify-between">
                 <div class="flex items-center">
-                    <span class="text-2xl mr-3">⏳</span>
+                    
                     <div>
                         <p class="font-semibold text-yellow-800">Account Pending Approval</p>
                         <p class="text-sm text-yellow-700">Your account is being reviewed. Full features will be enabled once activated by our team.</p>
@@ -87,7 +87,7 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-4">
                         <div class="w-16 h-16 bg-slate-950 rounded-full flex items-center justify-center text-3xl">
-                            🏢
+                            Company
                         </div>
                         <div class="text-white">
                             <h1 class="text-2xl font-bold" id="profileCompanyName">Loading...</h1>
@@ -96,7 +96,7 @@
                     </div>
                     <div class="text-right">
                         <div class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-2" id="profileStatusBadge">
-                            <span class="mr-2">⏳</span>
+                            
                             <span>Pending Approval</span>
                         </div>
                         <div class="text-white text-sm payment-plan-ref">
@@ -129,7 +129,7 @@
             <div class="bg-slate-950 border p-6 shadow-sm border">
                 <div class="flex items-center">
                     <div class="p-2 bg-blue-900/20 border">
-                        <span class="text-2xl">📋</span>
+                        
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-slate-400">Total Orders</p>
@@ -141,7 +141,7 @@
             <div class="bg-slate-950 border p-6 shadow-sm border">
                 <div class="flex items-center">
                     <div class="p-2 bg-green-900/20 border">
-                        <span class="text-2xl">✅</span>
+                        
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-slate-400">Confirmed</p>
@@ -153,7 +153,7 @@
             <div class="bg-slate-950 border p-6 shadow-sm border">
                 <div class="flex items-center">
                     <div class="p-2 bg-yellow-900/20 border">
-                        <span class="text-2xl">⏳</span>
+                        
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-slate-400">Pending</p>
@@ -165,7 +165,7 @@
             <div class="bg-slate-950 border p-6 shadow-sm border">
                 <div class="flex items-center">
                     <div class="p-2 bg-purple-900/20 border">
-                        <span class="text-2xl">💰</span>
+                        
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-slate-400">Total Volume</p>
@@ -215,7 +215,7 @@
                                 id="refreshOrdersBtn"
                                 class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 border font-medium transition-colors text-sm"
                             >
-                                🔄 Refresh
+                                Refresh
                             </button>
                         </div>
                     </div>
@@ -264,7 +264,7 @@
                 <div id="walletsTab" class="tab-content hidden">
                     <div class="flex justify-between items-center mb-6">
                         <div>
-                            <h3 class="text-lg font-semibold text-white">💰 Payment Chains & Wallets</h3>
+                            <h3 class="text-lg font-semibold text-white">Payment Chains &amp; Wallets</h3>
                             <p class="text-sm text-slate-400 mt-1">Configure which blockchains to accept payments on and set your wallet addresses</p>
                         </div>
                         <button
@@ -291,7 +291,7 @@
                                     <p class="text-sm text-slate-400 mt-1">Use these keys to integrate StablePay into your application</p>
                                 </div>
                                 <button id="generateApiKeyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 border font-medium transition-colors text-sm">
-                                    ➕ Generate New Key
+                                    Generate New Key
                                 </button>
                             </div>
 
@@ -302,15 +302,15 @@
                                             <div class="text-sm font-medium text-slate-300 mb-1">Merchant ID</div>
                                             <code class="text-sm bg-slate-950 px-3 py-2 rounded border border-slate-800 inline-block font-mono" id="apiMerchantId">Loading...</code>
                                         </div>
-                                        <button onclick="navigator.clipboard.writeText(document.getElementById('apiMerchantId').textContent); alert('✅ Copied!')" class="text-blue-400 hover:text-blue-700 text-sm font-medium ml-4">
-                                            📋 Copy
+                                        <button onclick="navigator.clipboard.writeText(document.getElementById('apiMerchantId').textContent); alert('Copied!')" class="text-blue-400 hover:text-blue-700 text-sm font-medium ml-4">
+                                            Copy
                                         </button>
                                     </div>
                                 </div>
 
                                 <div class="bg-yellow-50 border p-4 border border-yellow-300">
                                     <div class="flex items-start">
-                                        <span class="text-2xl mr-3">⚠️</span>
+                                        
                                         <div>
                                             <div class="text-sm font-medium text-yellow-800 mb-1">Keep your API keys secure</div>
                                             <p class="text-xs text-yellow-700">Never share your API keys publicly or commit them to version control</p>
@@ -378,7 +378,7 @@
 
                         <!-- Code Examples -->
                         <div class="bg-slate-950 border shadow-sm border p-6">
-                            <h3 class="text-lg font-semibold text-white mb-6">💻 Code Examples</h3>
+                            <h3 class="text-lg font-semibold text-white mb-6">Code Examples</h3>
 
                             <div class="space-y-4">
                                 <!-- JavaScript -->
@@ -434,7 +434,7 @@ print(f"Order created: {order['id']}")</pre>
                         <div class="bg-slate-950 border shadow-sm border p-6">
                             <div class="flex justify-between items-center mb-6">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-white">🔔 Webhooks</h3>
+                                    <h3 class="text-lg font-semibold text-white">Webhooks</h3>
                                     <p class="text-sm text-slate-400 mt-1">Get notified when payment status changes</p>
                                 </div>
                                 <span class="px-3 py-1 bg-purple-900/20 text-purple-800 rounded-full text-xs font-medium">
@@ -449,13 +449,13 @@ print(f"Order created: {order['id']}")</pre>
                 <!-- Payment Links Tab -->
                 <div id="paymentsTab" class="tab-content hidden">
                     <div class="bg-slate-950 border border-slate-800 p-6">
-                        <h3 class="text-lg font-semibold text-white mb-4">💳 Payment Links</h3>
+                        <h3 class="text-lg font-semibold text-white mb-4">Payment Links</h3>
                         <div class="grid grid-cols-2 gap-4">
                             <button
                                 id="createDemoStoreBtn"
                                 class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 border font-medium transition-all shadow-lg hover:shadow-xl"
                             >
-                                🏪 Create Demo Store
+                                Create Demo Store
                             </button>
                             <button
                                 id="testPaymentBtn"
@@ -465,7 +465,7 @@ print(f"Order created: {order['id']}")</pre>
                             </button>
                         </div>
                         <p class="text-sm text-slate-400 mt-3">
-                            💡 Create a demo store with your configured wallets or test a payment flow
+                            Create a demo store with your configured wallets or test a payment flow
                         </p>
                     </div>
                 </div>
@@ -569,9 +569,9 @@ print(f"Order created: {order['id']}")</pre>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Stablecoin</label>
                     <select id="testToken" class="w-full px-4 py-3 bg-black text-white border border-slate-800 focus:border-blue-600 focus:outline-none">
-                        <option value="USDC">💵 USDC</option>
-                        <option value="USDT">💵 USDT</option>
-                        <option value="EURC">💶 EURC</option>
+                        <option value="USDC">USDC</option>
+                        <option value="USDT">USDT</option>
+                        <option value="EURC">EURC</option>
                     </select>
                 </div>
 
@@ -818,11 +818,11 @@ print(f"Order created: {order['id']}")</pre>
                 const statusBadge = document.getElementById('profileStatusBadge');
                 if (currentMerchant.isActive) {
                     statusBadge.className = 'inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-2 bg-green-900/20 text-green-800';
-                    statusBadge.innerHTML = '<span class="mr-2">✅</span><span>Active</span>';
+                    statusBadge.innerHTML = '<span>Active</span>';
                     document.getElementById('pendingBanner').classList.add('hidden');
                 } else {
                     statusBadge.className = 'inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mb-2 bg-yellow-900/20 text-yellow-800';
-                    statusBadge.innerHTML = '<span class="mr-2">⏳</span><span>Pending Approval</span>';
+                    statusBadge.innerHTML = '<span>Pending Approval</span>';
                     document.getElementById('pendingBanner').classList.remove('hidden');
                 }
 
@@ -857,7 +857,7 @@ print(f"Order created: {order['id']}")</pre>
             }
 
             if (merchantWallets.length === 0) {
-                alert('⚠️ Please configure at least one wallet first');
+                alert('Please configure at least one wallet first');
                 return;
             }
 
@@ -879,12 +879,12 @@ print(f"Order created: {order['id']}")</pre>
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert(`✅ Test order created successfully!\n\nOrder ID: ${result.id}\nChain: ${firstChain}\nAmount: 10.00 USDC`);
+                    alert(`Test order created successfully!\n\nOrder ID: ${result.id}\nChain: ${firstChain}\nAmount: 10.00 USDC`);
                 } else {
-                    alert(`❌ Test failed: ${result.error || 'Unknown error'}`);
+                    alert(`Test failed: ${result.error || 'Unknown error'}`);
                 }
             } catch (error) {
-                alert(`❌ Test failed: ${error.message}`);
+                alert(`Test failed: ${error.message}`);
             }
         };
 
@@ -922,10 +922,12 @@ print(f"Order created: {order['id']}")</pre>
             const total = data.pagination ? data.pagination.total : data.orders.length;
             const confirmed = data.orders.filter(o => o.status === 'PAID' || o.status === 'CONFIRMED').length;
             const pending = data.orders.filter(o => o.status === 'PENDING').length;
-            const totalVolume = data.orders.reduce((sum, o) => {
-                const amount = typeof o.amount === 'object' ? parseFloat(o.amount.toString()) : parseFloat(o.amount || 0);
-                return sum + amount;
-            }, 0);
+            const totalVolume = data.orders
+                .filter(o => o.status === 'CONFIRMED' || o.status === 'PAID')
+                .reduce((sum, o) => {
+                    const amount = typeof o.amount === 'object' ? parseFloat(o.amount.toString()) : parseFloat(o.amount || 0);
+                    return sum + amount;
+                }, 0);
 
             document.getElementById('totalOrders').textContent = total;
             document.getElementById('confirmedOrders').textContent = confirmed;
@@ -980,7 +982,7 @@ print(f"Order created: {order['id']}")</pre>
                         <td class="px-6 py-4 whitespace-nowrap">
                             ${(order.status === 'CONFIRMED' || order.status === 'PAID') ? `
                                 <button onclick="viewReceipt('${order.id}')" class="text-blue-400 hover:text-blue-300 text-xs">
-                                    📄 View Receipt
+                                    View Receipt
                                 </button>
                             ` : '<span class="text-slate-500 text-xs">-</span>'}
                         </td>
@@ -1175,7 +1177,7 @@ print(f"Order created: {order['id']}")</pre>
                 });
 
                 if (response.ok) {
-                    alert('✅ Wallet configuration saved successfully!');
+                    alert('Wallet configuration saved successfully!');
                     loadWallets(); // Reload
                 } else {
                     const error = await response.json();
@@ -1194,7 +1196,7 @@ print(f"Order created: {order['id']}")</pre>
             }
 
             if (merchantWallets.length === 0) {
-                alert('⚠️ Please configure at least one wallet before creating a demo store');
+                alert('Please configure at least one wallet before creating a demo store');
                 return;
             }
 
@@ -1207,7 +1209,7 @@ print(f"Order created: {order['id']}")</pre>
             modal.innerHTML = `
                 <div class="bg-slate-950 border shadow-2xl p-8 max-w-2xl w-full mx-4">
                     <div class="text-center mb-6">
-                        <div class="text-6xl mb-4">🎉</div>
+                        <div class="text-6xl mb-4"></div>
                         <h2 class="text-3xl font-bold text-white mb-2">Demo Store Created!</h2>
                         <p class="text-slate-400">Your custom payment store is ready with your configured wallets</p>
                     </div>
@@ -1215,9 +1217,9 @@ print(f"Order created: {order['id']}")</pre>
                     <div class="bg-gradient-to-r from-purple-50 to-blue-50 border p-6 mb-6 border border-purple-200">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-sm font-medium text-slate-300">Your Store URL:</span>
-                            <button onclick="navigator.clipboard.writeText('${storeUrl}'); alert('✅ Copied!')"
+                            <button onclick="navigator.clipboard.writeText('${storeUrl}'); alert('Copied!')"
                                     class="text-blue-400 hover:text-blue-700 text-sm font-medium">
-                                📋 Copy
+                                Copy
                             </button>
                         </div>
                         <div class="bg-slate-950 border p-3 border border-slate-800">
@@ -1226,19 +1228,19 @@ print(f"Order created: {order['id']}")</pre>
                     </div>
 
                     <div class="bg-blue-50 border p-4 mb-6 border border-blue-200">
-                        <h4 class="font-semibold text-blue-900 mb-2">📝 Store Features:</h4>
+                        <h4 class="font-semibold text-blue-900 mb-2">Store Features:</h4>
                         <ul class="text-sm text-blue-800 space-y-1">
-                            <li>✅ ${merchantWallets.length} blockchain${merchantWallets.length > 1 ? 's' : ''} enabled</li>
-                            <li>✅ Accepts USDC payments</li>
-                            <li>✅ Real-time order tracking</li>
-                            <li>✅ Automatic wallet selection</li>
+                            <li>${merchantWallets.length} blockchain${merchantWallets.length > 1 ? 's' : ''} enabled</li>
+                            <li>Accepts USDC payments</li>
+                            <li>Real-time order tracking</li>
+                            <li>Automatic wallet selection</li>
                         </ul>
                     </div>
 
                     <div class="flex space-x-3">
                         <button onclick="window.open('${storeUrl}', '_blank')"
                                 class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 border font-medium transition-all">
-                            🚀 Open Store
+                            Open Store
                         </button>
                         <button onclick="this.closest('.fixed').remove()"
                                 class="px-6 py-3 border border-slate-800 border text-slate-300 hover:bg-slate-950 transition-colors">
@@ -1266,7 +1268,7 @@ print(f"Order created: {order['id']}")</pre>
 
         document.getElementById('testPaymentBtn').addEventListener('click', () => {
             if (merchantWallets.length === 0) {
-                alert('⚠️ Please configure at least one wallet first');
+                alert('Please configure at least one wallet first');
                 return;
             }
 
@@ -1336,7 +1338,7 @@ print(f"Order created: {order['id']}")</pre>
         document.getElementById('connectMetaMask').addEventListener('click', async () => {
             try {
                 if (typeof window.ethereum === 'undefined') {
-                    alert('⚠️ Please install MetaMask');
+                    alert('Please install MetaMask');
                     window.open('https://metamask.io/download/', '_blank');
                     return;
                 }
@@ -1346,7 +1348,7 @@ print(f"Order created: {order['id']}")</pre>
                 });
 
                 if (!accounts || accounts.length === 0) {
-                    alert('⚠️ No accounts found');
+                    alert('No accounts found');
                     return;
                 }
 
@@ -1362,7 +1364,7 @@ print(f"Order created: {order['id']}")</pre>
 
             } catch (error) {
                 console.error('MetaMask connection error:', error);
-                alert('❌ Failed to connect MetaMask: ' + error.message);
+                alert('Failed to connect MetaMask: ' + error.message);
             }
         });
 
@@ -1371,7 +1373,7 @@ print(f"Order created: {order['id']}")</pre>
             try {
                 const phantom = window.solana;
                 if (!phantom?.isPhantom) {
-                    alert('⚠️ Please install Phantom wallet');
+                    alert('Please install Phantom wallet');
                     window.open('https://phantom.app/', '_blank');
                     return;
                 }
@@ -1387,7 +1389,7 @@ print(f"Order created: {order['id']}")</pre>
 
             } catch (error) {
                 console.error('Phantom connection error:', error);
-                alert('❌ Failed to connect Phantom: ' + error.message);
+                alert('Failed to connect Phantom: ' + error.message);
             }
         });
 
@@ -1402,29 +1404,29 @@ print(f"Order created: {order['id']}")</pre>
             const token = document.getElementById('testToken').value;
 
             if (!amount || parseFloat(amount) <= 0) {
-                alert('⚠️ Please enter a valid amount');
+                alert('Please enter a valid amount');
                 return;
             }
 
             if (!testConnectedWalletAddress) {
-                alert('⚠️ Please connect your wallet first');
+                alert('Please connect your wallet first');
                 return;
             }
 
             const wallet = merchantWallets.find(w => w.chain === chainId);
             if (!wallet) {
-                alert('⚠️ Wallet not found for selected chain');
+                alert('Wallet not found for selected chain');
                 return;
             }
 
             // Check if correct wallet type for chain
             const isSolana = chainId.includes('SOLANA');
             if (isSolana && testWalletType !== 'phantom') {
-                alert('⚠️ Please connect Phantom wallet for Solana');
+                alert('Please connect Phantom wallet for Solana');
                 return;
             }
             if (!isSolana && testWalletType !== 'metamask') {
-                alert('⚠️ Please connect MetaMask for EVM chains');
+                alert('Please connect MetaMask for EVM chains');
                 return;
             }
 
@@ -1443,7 +1445,7 @@ print(f"Order created: {order['id']}")</pre>
 
             } catch (error) {
                 console.error('Test payment error:', error);
-                alert('❌ Payment failed: ' + error.message);
+                alert('Payment failed: ' + error.message);
             }
         }
 
@@ -1451,7 +1453,7 @@ print(f"Order created: {order['id']}")</pre>
             try {
                 // Check if MetaMask is connected
                 if (!window.ethereum || !window.ethereum.isConnected()) {
-                    alert('⚠️ MetaMask disconnected. Please refresh the page and try again.');
+                    alert('MetaMask disconnected. Please refresh the page and try again.');
                     return;
                 }
 
@@ -1460,7 +1462,7 @@ print(f"Order created: {order['id']}")</pre>
                 // Get chain config
                 const chainConfig = getChainConfig(chainId, token);
                 if (!chainConfig) {
-                    alert('⚠️ Chain configuration not found');
+                    alert('Chain configuration not found');
                     return;
                 }
 
@@ -1561,7 +1563,7 @@ print(f"Order created: {order['id']}")</pre>
                 // Get explorer URL
                 const explorerUrl = getExplorerUrl(chainId, tx.hash);
 
-                alert(`⏳ Payment sent!\n\nTransaction: ${tx.hash}\n\nWaiting for confirmation...`);
+                alert(`Payment sent!\n\nTransaction: ${tx.hash}\n\nWaiting for confirmation...`);
 
                 // Wait for confirmation
                 const receipt = await tx.wait();
@@ -1590,7 +1592,7 @@ print(f"Order created: {order['id']}")</pre>
                 }
 
                 // Show success with explorer link
-                const viewTxMessage = `✅ Payment confirmed!\n\nTransaction: ${tx.hash}\n\nView on explorer:\n${explorerUrl}`;
+                const viewTxMessage = `Payment confirmed!\n\nTransaction: ${tx.hash}\n\nView on explorer:\n${explorerUrl}`;
                 alert(viewTxMessage);
 
                 // Open explorer link
@@ -1607,17 +1609,17 @@ print(f"Order created: {order['id']}")</pre>
 
                 // Check if MetaMask disconnected
                 if (error.message && error.message.includes('Disconnected from MetaMask')) {
-                    alert('⚠️ MetaMask disconnected. Please refresh this page and try again.');
+                    alert('MetaMask disconnected. Please refresh this page and try again.');
                     return;
                 }
 
                 // User rejected transaction
                 if (error.code === 4001 || error.message.includes('User rejected')) {
-                    alert('❌ Transaction cancelled');
+                    alert('Transaction cancelled');
                     return;
                 }
 
-                alert('❌ Payment failed: ' + error.message);
+                alert('Payment failed: ' + error.message);
             }
         }
 
@@ -1626,7 +1628,7 @@ print(f"Order created: {order['id']}")</pre>
                 const phantom = window.solana;
 
                 if (!phantom || !phantom.isPhantom) {
-                    alert('⚠️ Please install Phantom wallet to make Solana payments');
+                    alert('Please install Phantom wallet to make Solana payments');
                     return;
                 }
 
@@ -1646,7 +1648,7 @@ print(f"Order created: {order['id']}")</pre>
 
                 const mintAddress = tokenMints[chainId]?.[token];
                 if (!mintAddress) {
-                    alert(`⚠️ ${token} not available on this Solana network`);
+                    alert(`${token} not available on this Solana network`);
                     return;
                 }
 
@@ -1795,7 +1797,7 @@ print(f"Order created: {order['id']}")</pre>
                     });
 
                     console.log('Transaction sent! Signature:', signature);
-                    alert(`✅ Transaction submitted! Confirming...`);
+                    alert(`Transaction submitted! Confirming...`);
                 } catch (signError) {
                     console.error('Sign/Send error:', signError);
                     throw signError;
@@ -1835,7 +1837,7 @@ print(f"Order created: {order['id']}")</pre>
                 const confirmData = await confirmResponse.json();
                 console.log('Order confirmed:', confirmData);
 
-                alert(`✅ Payment successful!\n\nTx: ${signature}`);
+                alert(`Payment successful!\n\nTx: ${signature}`);
 
                 // Close modal and refresh orders
                 document.getElementById('testPaymentModal').classList.add('hidden');
@@ -1843,7 +1845,7 @@ print(f"Order created: {order['id']}")</pre>
 
             } catch (error) {
                 console.error('Solana payment error:', error);
-                alert('❌ Payment failed: ' + error.message);
+                alert('Payment failed: ' + error.message);
             }
         }
 
@@ -1961,7 +1963,7 @@ print(f"Order created: {order['id']}")</pre>
                     ${receiptHTML}
                     <div class="p-6 bg-gray-50 flex justify-between border-t">
                         <button onclick="printReceipt('${orderId}')" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
-                            🖨️ Print Receipt
+                            Print Receipt
                         </button>
                         <button onclick="this.closest('.fixed').remove()" class="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700">
                             Close
@@ -2157,13 +2159,13 @@ print(f"Order created: {order['id']}")</pre>
                         document.getElementById('profileEmail').textContent = currentMerchant.email;
                         document.getElementById('profileContact').textContent = currentMerchant.contactName;
 
-                        alert('✅ Profile updated successfully!');
+                        alert('Profile updated successfully!');
                     } else {
-                        alert('❌ Failed to update profile');
+                        alert('Failed to update profile');
                     }
                 } catch (error) {
                     console.error('Error saving profile:', error);
-                    alert('❌ Failed to save profile');
+                    alert('Failed to save profile');
                 }
                 });
             }
