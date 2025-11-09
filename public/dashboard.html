@@ -1779,6 +1779,7 @@ print(f"Order created: {order['id']}")</pre>
                 console.log('Transfer instruction data:', transferTx.instructions[0].data);
 
                 // Try using separate sign and send
+                let signature;
                 try {
                     // First, sign the transaction
                     const signedTx = await phantom.signTransaction(transferTx);
@@ -1788,7 +1789,7 @@ print(f"Order created: {order['id']}")</pre>
                     const rawTransaction = signedTx.serialize();
                     console.log('Transaction serialized, sending to network...');
 
-                    const signature = await connection.sendRawTransaction(rawTransaction, {
+                    signature = await connection.sendRawTransaction(rawTransaction, {
                         skipPreflight: false,
                         preflightCommitment: 'confirmed'
                     });
