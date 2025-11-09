@@ -1377,15 +1377,49 @@ The transaction will show the token transfer details.
                     throw new Error('Payment cancelled by user');
                 }
 
+                // Ask user to sign a message for verification (adds context in MetaMask)
+                try {
+                    const signatureMessage = `StablePay Payment Authorization\n\nMerchant: ${currentMerchant.companyName}\nAmount: ${amount} ${tokenSymbol}\nChain: ${chainConfig.chainName}\nRecipient: ${merchantWallet}\n\nBy signing, you authorize this payment.`;
+                    await testPaymentSigner.signMessage(signatureMessage);
+                } catch (signError) {
+                    console.log('Signature skipped or rejected');
+                }
+
                 const tx = await tokenContract.transfer(merchantWallet, amountWei);
                 console.log('Transaction sent:', tx.hash);
+
+                // Get explorer URL
+                const explorerUrl = getExplorerUrl(chainId, tx.hash);
 
                 alert(`⏳ Payment sent!\n\nTransaction: ${tx.hash}\n\nWaiting for confirmation...`);
 
                 // Wait for confirmation
-                await tx.wait();
+                const receipt = await tx.wait();
+                console.log('Transaction confirmed:', receipt);
 
-                alert('✅ Payment confirmed! Check your Orders tab.');
+                // Update order status to CONFIRMED
+                try {
+                    await fetch(`/api/v1/orders/${orderData.order.id}/confirm`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            txHash: tx.hash,
+                            blockNumber: receipt.blockNumber.toString(),
+                            status: 'CONFIRMED'
+                        })
+                    });
+                } catch (e) {
+                    console.error('Failed to update order status:', e);
+                }
+
+                // Show success with explorer link
+                const viewTxMessage = `✅ Payment confirmed!\n\nTransaction: ${tx.hash}\n\nView on explorer:\n${explorerUrl}`;
+                alert(viewTxMessage);
+
+                // Open explorer link
+                if (confirm('Would you like to view the transaction on the block explorer?')) {
+                    window.open(explorerUrl, '_blank');
+                }
 
                 // Close modal and refresh orders
                 document.getElementById('testPaymentModal').classList.add('hidden');
@@ -1480,6 +1514,22 @@ The transaction will show the token transfer details.
                 console.error('Solana payment error:', error);
                 alert('❌ Payment failed: ' + error.message);
             }
+        }
+
+        function getExplorerUrl(chainId, txHash) {
+            const explorers = {
+                'BASE_SEPOLIA': `https://sepolia.basescan.org/tx/${txHash}`,
+                'BASE_MAINNET': `https://basescan.org/tx/${txHash}`,
+                'ETHEREUM_SEPOLIA': `https://sepolia.etherscan.io/tx/${txHash}`,
+                'ETHEREUM_MAINNET': `https://etherscan.io/tx/${txHash}`,
+                'POLYGON_MAINNET': `https://polygonscan.com/tx/${txHash}`,
+                'POLYGON_MUMBAI': `https://mumbai.polygonscan.com/tx/${txHash}`,
+                'ARBITRUM_MAINNET': `https://arbiscan.io/tx/${txHash}`,
+                'ARBITRUM_SEPOLIA': `https://sepolia.arbiscan.io/tx/${txHash}`,
+                'SOLANA_MAINNET': `https://solscan.io/tx/${txHash}`,
+                'SOLANA_DEVNET': `https://solscan.io/tx/${txHash}?cluster=devnet`
+            };
+            return explorers[chainId] || `https://etherscan.io/tx/${txHash}`;
         }
 
         function getChainConfig(chainId, token = 'USDC') {
