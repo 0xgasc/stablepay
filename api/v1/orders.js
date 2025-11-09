@@ -159,6 +159,42 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'merchantId or orderId required' });
     }
 
+    // PUT - Update order status (for confirmations)
+    if (req.method === 'PUT') {
+      const { orderId, txHash, blockNumber, status } = req.body;
+
+      if (!orderId) {
+        return res.status(400).json({ error: 'orderId is required' });
+      }
+
+      const order = await db.order.update({
+        where: { id: orderId },
+        data: {
+          status: status || 'CONFIRMED',
+          updatedAt: new Date()
+        }
+      });
+
+      // Create transaction record
+      if (txHash) {
+        await db.transaction.create({
+          data: {
+            orderId: orderId,
+            txHash: txHash,
+            chain: order.chain,
+            amount: order.amount,
+            fromAddress: order.customerEmail,
+            toAddress: order.paymentAddress,
+            blockNumber: blockNumber ? BigInt(blockNumber) : null,
+            status: 'CONFIRMED',
+            confirmedAt: new Date()
+          }
+        });
+      }
+
+      return res.json({ success: true, order });
+    }
+
     return res.status(405).json({ error: 'Method not allowed' });
 
   } catch (error) {

@@ -1414,15 +1414,22 @@ The transaction will show the token transfer details.
 
                 // Update order status to CONFIRMED
                 try {
-                    await fetch(`/api/v1/orders/${orderData.order.id}/confirm`, {
-                        method: 'POST',
+                    const confirmResponse = await fetch(`/api/v1/orders`, {
+                        method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
+                            orderId: orderData.order.id,
                             txHash: tx.hash,
                             blockNumber: receipt.blockNumber.toString(),
                             status: 'CONFIRMED'
                         })
                     });
+
+                    if (!confirmResponse.ok) {
+                        console.error('Failed to confirm order:', await confirmResponse.text());
+                    } else {
+                        console.log('Order confirmed successfully');
+                    }
                 } catch (e) {
                     console.error('Failed to update order status:', e);
                 }
