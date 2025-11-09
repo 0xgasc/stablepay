@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
             where: { merchantId },
             orderBy: { createdAt: 'desc' },
           });
-          return res.json({ wallets });
+          return res.json(wallets);
         } else {
           // Get all wallets (admin view)
           const wallets = await db.merchantWallet.findMany({
@@ -50,7 +50,7 @@ router.get('/', async (req, res) => {
             },
             orderBy: { createdAt: 'desc' },
           });
-          return res.json({ wallets });
+          return res.json(wallets);
         }
 
       case 'merchants':
@@ -123,6 +123,35 @@ router.post('/', async (req, res) => {
       });
 
       return res.json({ success: true, merchant, loginToken });
+    }
+
+    if (resource === 'wallets') {
+      const { merchantId, wallets } = req.body;
+
+      if (!merchantId || !Array.isArray(wallets)) {
+        return res.status(400).json({ error: 'merchantId and wallets array are required' });
+      }
+
+      // Delete existing wallets for this merchant
+      await db.merchantWallet.deleteMany({
+        where: { merchantId },
+      });
+
+      // Create new wallets
+      const created = await Promise.all(
+        wallets.map(wallet =>
+          db.merchantWallet.create({
+            data: {
+              merchantId,
+              chain: wallet.chain,
+              address: wallet.address,
+              isActive: true,
+            },
+          })
+        )
+      );
+
+      return res.json({ success: true, wallets: created });
     }
 
     return res.status(400).json({ error: 'Invalid resource for POST' });
