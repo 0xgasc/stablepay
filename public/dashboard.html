@@ -220,13 +220,14 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Amount</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Chain</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Transaction</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Customer</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Created</th>
                                 </tr>
                             </thead>
                             <tbody id="ordersTableBody" class="bg-slate-950 divide-y divide-slate-800">
                                 <tr>
-                                    <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                                    <td colspan="7" class="px-6 py-12 text-center text-slate-400">
                                         <div class="flex flex-col items-center">
                                             <div class="animate-pulse w-8 h-8 bg-gray-300 rounded mb-4"></div>
                                             <p>Loading orders...</p>
@@ -838,7 +839,7 @@ print(f"Order created: {order['id']}")</pre>
             const tbody = document.getElementById('ordersTableBody');
             
             if (orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-12 text-center text-slate-400">No orders found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-12 text-center text-slate-400">No orders found</td></tr>';
                 return;
             }
             
@@ -847,6 +848,12 @@ print(f"Order created: {order['id']}")</pre>
                 const shortId = order.id.slice(0, 8) + '...';
                 const createdAt = new Date(order.createdAt).toLocaleDateString();
                 const amount = typeof order.amount === 'object' ? order.amount.toString() : order.amount;
+
+                // Get transaction hash from transactions array
+                const txHash = order.transactions && order.transactions.length > 0
+                    ? order.transactions[0].txHash
+                    : null;
+                const explorerUrl = txHash ? getExplorerUrl(order.chain, txHash) : null;
 
                 return `
                     <tr class="hover:bg-slate-950">
@@ -863,6 +870,14 @@ print(f"Order created: {order['id']}")</pre>
                             <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
                                 ${order.status}
                             </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${txHash ? `
+                                <a href="${explorerUrl}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs font-mono">
+                                    ${txHash.slice(0, 6)}...${txHash.slice(-4)}
+                                    <span class="ml-1">↗</span>
+                                </a>
+                            ` : '<span class="text-slate-500 text-xs">Pending</span>'}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-slate-400">${order.customerEmail || 'Anonymous'}</div>
