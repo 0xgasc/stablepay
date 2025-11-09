@@ -429,6 +429,14 @@
                     </div>
                 </div>
 
+                <div class="mb-4">
+                    <label class="flex items-center space-x-3">
+                        <input type="checkbox" id="editInvoiceEnabled" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded">
+                        <span class="text-sm font-medium text-slate-300">Enable Invoice System for this merchant</span>
+                    </label>
+                    <p class="text-xs text-slate-400 mt-1 ml-7">Allow this merchant to create and send invoices</p>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-1">Notes</label>
                     <textarea id="editNotes" rows="3" class="w-full px-3 py-2 bg-black border border-slate-800 text-white "></textarea>
@@ -888,6 +896,7 @@
             document.getElementById('editNetworkMode').value = merchant.networkMode || 'TESTNET';
             document.getElementById('editIndustry').value = merchant.industry || '';
             document.getElementById('editIsActive').value = merchant.isActive.toString();
+            document.getElementById('editInvoiceEnabled').checked = merchant.invoiceEnabled || false;
             document.getElementById('editNotes').value = merchant.notes || '';
 
             // Load wallets and render chain toggles
@@ -983,6 +992,7 @@
                 networkMode: document.getElementById('editNetworkMode').value,
                 industry: document.getElementById('editIndustry').value || null,
                 isActive: document.getElementById('editIsActive').value === 'true',
+                invoiceEnabled: document.getElementById('editInvoiceEnabled').checked,
                 notes: document.getElementById('editNotes').value || null
             };
 

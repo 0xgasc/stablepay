@@ -208,7 +208,7 @@ router.put('/', async (req, res) => {
     const { resource } = req.query;
 
     if (resource === 'merchants') {
-      const { merchantId, isActive, plan, networkMode, paymentMode } = req.body;
+      const { merchantId, isActive, plan, networkMode, paymentMode, invoiceEnabled } = req.body;
 
       if (!merchantId) {
         return res.status(400).json({ error: 'merchantId is required' });
@@ -217,6 +217,7 @@ router.put('/', async (req, res) => {
       // If activating merchant, generate login token
       let updateData: any = {
         ...(typeof isActive !== 'undefined' && { isActive }),
+        ...(typeof invoiceEnabled !== 'undefined' && { invoiceEnabled }),
         ...(plan && { plan }),
         ...(networkMode && { networkMode }),
         ...(paymentMode && { paymentMode }),
