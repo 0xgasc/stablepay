@@ -61,8 +61,7 @@ module.exports = async function handler(req, res) {
             fromAddress: order.customerEmail, // Using email field as wallet address
             toAddress: order.paymentAddress,
             blockNumber: blockNumber ? BigInt(blockNumber) : null,
-            status: 'CONFIRMED',
-            confirmedAt: new Date()
+            status: 'CONFIRMED'
           }
         });
       }
@@ -186,8 +185,7 @@ module.exports = async function handler(req, res) {
             fromAddress: order.customerEmail,
             toAddress: order.paymentAddress,
             blockNumber: blockNumber ? BigInt(blockNumber) : null,
-            status: 'CONFIRMED',
-            confirmedAt: new Date()
+            status: 'CONFIRMED'
           }
         });
       }

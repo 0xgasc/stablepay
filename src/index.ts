@@ -157,8 +157,7 @@ app.put('/api/v1/orders', async (req, res) => {
           fromAddress: order.customerEmail,
           toAddress: order.paymentAddress,
           blockNumber: blockNumber ? BigInt(blockNumber) : null,
-          status: 'CONFIRMED',
-          confirmedAt: new Date()
+          status: 'CONFIRMED'
         }
       });
       console.log('Transaction record created:', transaction.id);
@@ -197,8 +196,7 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
           fromAddress: order.customerEmail,
           toAddress: order.paymentAddress,
           blockNumber: blockNumber ? BigInt(blockNumber) : undefined,
-          status: 'CONFIRMED',
-          confirmedAt: new Date()
+          status: 'CONFIRMED'
         }
       });
     }
