@@ -680,7 +680,7 @@ print(f"Order created: {order['id']}")</pre>
         // Apply system settings visibility
         function applySystemSettings() {
             const showPaymentPlans = localStorage.getItem('showPaymentPlans') !== 'false';
-            const enableInvoices = localStorage.getItem('enableInvoices') === 'true';
+            const enableInvoices = currentMerchant?.invoiceEnabled || false;
 
             const planElements = document.querySelectorAll('.payment-plan-ref');
             planElements.forEach(el => {
@@ -766,11 +766,14 @@ print(f"Order created: {order['id']}")</pre>
 
                 currentMerchant = await response.json();
                 console.log('Loaded merchant:', currentMerchant);
-                
+
                 // Set defaults if missing
                 currentMerchant.plan = currentMerchant.plan || 'STARTER';
                 currentMerchant.networkMode = currentMerchant.networkMode || 'TESTNET';
                 currentMerchant.paymentMode = currentMerchant.paymentMode || 'DIRECT';
+
+                // Apply visibility settings based on merchant config
+                applySystemSettings();
 
                 document.getElementById('merchantName').textContent = currentMerchant.companyName;
 
