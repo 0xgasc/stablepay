@@ -106,6 +106,9 @@
                     <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="analytics">
                         Platform Analytics
                     </button>
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="settings">
+                        System Settings
+                    </button>
                 </nav>
             </div>
 
@@ -240,6 +243,42 @@
                             <div id="revenueByMerchant" class="space-y-3">
                                 <!-- Populated dynamically -->
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Settings Tab -->
+            <div id="settingsTab" class="tab-content hidden">
+                <div class="bg-slate-950 border shadow-sm border p-6">
+                    <h2 class="text-xl font-bold text-white mb-6">⚙️ System Settings</h2>
+
+                    <div class="space-y-8">
+                        <!-- UI Visibility Settings -->
+                        <div class="border-b border-slate-800 pb-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">User Interface Visibility</h3>
+                            <p class="text-sm text-slate-400 mb-4">Control which features are visible to merchants in their dashboards</p>
+
+                            <div class="space-y-4">
+                                <!-- Payment Plan Visibility -->
+                                <div class="flex items-center justify-between p-4 bg-black border border-slate-800">
+                                    <div>
+                                        <label class="text-sm font-medium text-white">Payment Plan References</label>
+                                        <p class="text-xs text-slate-400 mt-1">Show/hide plan fields and pricing tiers across all merchant views</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="showPaymentPlans" class="sr-only peer" checked>
+                                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="flex justify-end">
+                            <button id="saveSystemSettings" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 font-medium transition-colors">
+                                💾 Save Settings
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1352,11 +1391,24 @@
             }
         };
 
+        // System Settings
+        function loadSystemSettings() {
+            const showPaymentPlans = localStorage.getItem('showPaymentPlans') !== 'false';
+            document.getElementById('showPaymentPlans').checked = showPaymentPlans;
+        }
+
+        document.getElementById('saveSystemSettings')?.addEventListener('click', () => {
+            const showPaymentPlans = document.getElementById('showPaymentPlans').checked;
+            localStorage.setItem('showPaymentPlans', showPaymentPlans.toString());
+            alert('✅ System settings saved! Changes will apply when merchants reload their dashboards.');
+        });
+
         // Refresh
         document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
 
         // Initialize
         checkAuth();
+        loadSystemSettings();
     </script>
 </body>
 </html>
