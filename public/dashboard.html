@@ -1373,31 +1373,16 @@ print(f"Order created: {order['id']}")</pre>
 
                 const amountWei = ethers.parseUnits(amount, tokenDecimals);
 
-                // Create a confirmation message with all details
-                const confirmMessage = `
-📋 Payment Details:
-━━━━━━━━━━━━━━━━━━━━━
-Merchant: ${currentMerchant.companyName}
-Amount: ${amount} ${tokenSymbol}
-Chain: ${chainConfig.chainName}
-To: ${merchantWallet.slice(0, 6)}...${merchantWallet.slice(-4)}
-━━━━━━━━━━━━━━━━━━━━━
-
-You will now be asked to approve this ${tokenSymbol} transfer in MetaMask.
-
-The transaction will show the token transfer details.
-                `.trim();
-
-                if (!confirm(confirmMessage)) {
-                    throw new Error('Payment cancelled by user');
-                }
-
                 // Ask user to sign a message for verification (adds context in MetaMask)
                 try {
                     const signatureMessage = `StablePay Payment Authorization\n\nMerchant: ${currentMerchant.companyName}\nAmount: ${amount} ${tokenSymbol}\nChain: ${chainConfig.chainName}\nRecipient: ${merchantWallet}\n\nBy signing, you authorize this payment.`;
                     await testPaymentSigner.signMessage(signatureMessage);
                 } catch (signError) {
                     console.log('Signature skipped or rejected');
+                    // If they reject the signature, don't proceed with payment
+                    if (signError.code === 4001) {
+                        throw new Error('Payment authorization cancelled');
+                    }
                 }
 
                 const tx = await tokenContract.transfer(merchantWallet, amountWei);
