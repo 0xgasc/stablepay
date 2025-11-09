@@ -126,6 +126,51 @@ app.get('/api/v1/orders', async (req, res) => {
   }
 });
 
+// PUT - Update order (for confirmations)
+app.put('/api/v1/orders', async (req, res) => {
+  try {
+    const { db } = await import('./config/database');
+    const { orderId, txHash, blockNumber, status } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ error: 'orderId is required' });
+    }
+
+    console.log('Confirming order:', orderId, 'with txHash:', txHash);
+
+    const order = await db.order.update({
+      where: { id: orderId },
+      data: {
+        status: status || 'CONFIRMED',
+        updatedAt: new Date()
+      }
+    });
+
+    // Create transaction record
+    if (txHash) {
+      const transaction = await db.transaction.create({
+        data: {
+          orderId: orderId,
+          txHash: txHash,
+          chain: order.chain,
+          amount: order.amount,
+          fromAddress: order.customerEmail,
+          toAddress: order.paymentAddress,
+          blockNumber: blockNumber ? BigInt(blockNumber) : null,
+          status: 'CONFIRMED',
+          confirmedAt: new Date()
+        }
+      });
+      console.log('Transaction record created:', transaction.id);
+    }
+
+    return res.json({ success: true, order });
+  } catch (error) {
+    console.error('Update order error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 // POST - Confirm order
 app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
   try {
