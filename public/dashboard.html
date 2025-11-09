@@ -573,15 +573,41 @@ print(f"Order created: {order['id']}")</pre>
                     </select>
                 </div>
 
+                <div id="testWalletSelector" class="hidden">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Select Wallet</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="connectMetaMask" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 px-4 py-3 rounded transition-colors">
+                            <div class="text-2xl mb-1">🦊</div>
+                            <div class="text-sm">MetaMask</div>
+                        </button>
+                        <button id="connectPhantom" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 px-4 py-3 rounded transition-colors">
+                            <div class="text-2xl mb-1">👻</div>
+                            <div class="text-sm">Phantom</div>
+                        </button>
+                    </div>
+                </div>
+
                 <div id="testWalletInfo" class="hidden bg-black border border-slate-800 p-4 rounded">
                     <div class="text-xs text-slate-400 mb-1">Payment will be sent to:</div>
                     <div id="testWalletAddress" class="text-sm text-blue-400 font-mono break-all"></div>
+                </div>
+
+                <div id="testConnectedWallet" class="hidden bg-green-900/20 border border-green-800 p-4 rounded">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-xs text-green-400 mb-1">Connected Wallet</div>
+                            <div id="testConnectedAddress" class="text-sm text-white font-mono break-all"></div>
+                        </div>
+                        <button id="testDisconnectWallet" class="text-red-400 hover:text-red-300 text-sm">
+                            Disconnect
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <div class="flex space-x-3">
                 <button id="testPayBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-medium transition-colors">
-                    Connect & Pay
+                    Pay
                 </button>
                 <button id="closeTestPaymentModal" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 font-medium transition-colors">
                     Cancel
@@ -591,6 +617,7 @@ print(f"Order created: {order['id']}")</pre>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         let currentMerchant = null;
         let currentTab = 'orders';
@@ -1048,6 +1075,8 @@ print(f"Order created: {order['id']}")</pre>
         // Test Payment Modal
         let testPaymentProvider = null;
         let testPaymentSigner = null;
+        let testConnectedWalletAddress = null;
+        let testWalletType = null; // 'metamask' or 'phantom'
 
         document.getElementById('testPaymentBtn').addEventListener('click', () => {
             if (merchantWallets.length === 0) {
@@ -1073,10 +1102,23 @@ print(f"Order created: {order['id']}")</pre>
 
         document.getElementById('closeTestPaymentModal').addEventListener('click', () => {
             document.getElementById('testPaymentModal').classList.add('hidden');
+            resetTestPaymentModal();
         });
 
         document.getElementById('testChain').addEventListener('change', (e) => {
-            updateTestWalletDisplay(e.target.value);
+            const chainId = e.target.value;
+            updateTestWalletDisplay(chainId);
+
+            // Reset wallet connection when chain changes
+            resetWalletConnection();
+
+            // Show wallet selector based on chain type
+            const isSolana = chainId.includes('SOLANA');
+            if (isSolana) {
+                document.getElementById('testWalletSelector').classList.remove('hidden');
+            } else {
+                document.getElementById('testWalletSelector').classList.remove('hidden');
+            }
         });
 
         function updateTestWalletDisplay(chainId) {
@@ -1086,6 +1128,84 @@ print(f"Order created: {order['id']}")</pre>
                 document.getElementById('testWalletInfo').classList.remove('hidden');
             }
         }
+
+        function resetWalletConnection() {
+            testConnectedWalletAddress = null;
+            testWalletType = null;
+            document.getElementById('testConnectedWallet').classList.add('hidden');
+            document.getElementById('testWalletSelector').classList.remove('hidden');
+        }
+
+        function resetTestPaymentModal() {
+            resetWalletConnection();
+            testPaymentProvider = null;
+            testPaymentSigner = null;
+            document.getElementById('testWalletSelector').classList.add('hidden');
+        }
+
+        // MetaMask connection
+        document.getElementById('connectMetaMask').addEventListener('click', async () => {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    alert('⚠️ Please install MetaMask');
+                    window.open('https://metamask.io/download/', '_blank');
+                    return;
+                }
+
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                if (!accounts || accounts.length === 0) {
+                    alert('⚠️ No accounts found');
+                    return;
+                }
+
+                testPaymentProvider = new ethers.BrowserProvider(window.ethereum);
+                testPaymentSigner = await testPaymentProvider.getSigner();
+                testConnectedWalletAddress = await testPaymentSigner.getAddress();
+                testWalletType = 'metamask';
+
+                document.getElementById('testConnectedAddress').textContent =
+                    testConnectedWalletAddress.slice(0, 6) + '...' + testConnectedWalletAddress.slice(-4);
+                document.getElementById('testConnectedWallet').classList.remove('hidden');
+                document.getElementById('testWalletSelector').classList.add('hidden');
+
+            } catch (error) {
+                console.error('MetaMask connection error:', error);
+                alert('❌ Failed to connect MetaMask: ' + error.message);
+            }
+        });
+
+        // Phantom connection
+        document.getElementById('connectPhantom').addEventListener('click', async () => {
+            try {
+                const phantom = window.solana;
+                if (!phantom?.isPhantom) {
+                    alert('⚠️ Please install Phantom wallet');
+                    window.open('https://phantom.app/', '_blank');
+                    return;
+                }
+
+                const resp = await phantom.connect();
+                testConnectedWalletAddress = resp.publicKey.toString();
+                testWalletType = 'phantom';
+
+                document.getElementById('testConnectedAddress').textContent =
+                    testConnectedWalletAddress.slice(0, 6) + '...' + testConnectedWalletAddress.slice(-4);
+                document.getElementById('testConnectedWallet').classList.remove('hidden');
+                document.getElementById('testWalletSelector').classList.add('hidden');
+
+            } catch (error) {
+                console.error('Phantom connection error:', error);
+                alert('❌ Failed to connect Phantom: ' + error.message);
+            }
+        });
+
+        // Disconnect wallet
+        document.getElementById('testDisconnectWallet').addEventListener('click', () => {
+            resetWalletConnection();
+        });
 
         document.getElementById('testPayBtn').addEventListener('click', async () => {
             const amount = document.getElementById('testAmount').value;
@@ -1097,9 +1217,25 @@ print(f"Order created: {order['id']}")</pre>
                 return;
             }
 
+            if (!testConnectedWalletAddress) {
+                alert('⚠️ Please connect your wallet first');
+                return;
+            }
+
             const wallet = merchantWallets.find(w => w.chain === chainId);
             if (!wallet) {
                 alert('⚠️ Wallet not found for selected chain');
+                return;
+            }
+
+            // Check if correct wallet type for chain
+            const isSolana = chainId.includes('SOLANA');
+            if (isSolana && testWalletType !== 'phantom') {
+                alert('⚠️ Please connect Phantom wallet for Solana');
+                return;
+            }
+            if (!isSolana && testWalletType !== 'metamask') {
+                alert('⚠️ Please connect MetaMask for EVM chains');
                 return;
             }
 
@@ -1108,28 +1244,23 @@ print(f"Order created: {order['id']}")</pre>
 
         async function initiateTestPayment(amount, chainId, merchantWallet, token) {
             try {
-                // Check for MetaMask
-                if (typeof window.ethereum === 'undefined') {
-                    alert('⚠️ Please install MetaMask to make a test payment');
-                    window.open('https://metamask.io/download/', '_blank');
-                    return;
+                const isSolana = chainId.includes('SOLANA');
+
+                if (isSolana) {
+                    await initiateSolanaPayment(amount, chainId, merchantWallet, token);
+                } else {
+                    await initiateEVMPayment(amount, chainId, merchantWallet, token);
                 }
 
-                // Connect wallet
-                const accounts = await window.ethereum.request({
-                    method: 'eth_requestAccounts'
-                });
+            } catch (error) {
+                console.error('Test payment error:', error);
+                alert('❌ Payment failed: ' + error.message);
+            }
+        }
 
-                if (!accounts || accounts.length === 0) {
-                    alert('⚠️ No accounts found. Please unlock your wallet.');
-                    return;
-                }
-
-                testPaymentProvider = new ethers.BrowserProvider(window.ethereum);
-                testPaymentSigner = await testPaymentProvider.getSigner();
-                const connectedAddress = await testPaymentSigner.getAddress();
-
-                console.log('Connected wallet:', connectedAddress);
+        async function initiateEVMPayment(amount, chainId, merchantWallet, token) {
+            try {
+                console.log('Connected wallet:', testConnectedWalletAddress);
 
                 // Get chain config
                 const chainConfig = getChainConfig(chainId, token);
@@ -1179,7 +1310,7 @@ print(f"Order created: {order['id']}")</pre>
                         productName: 'Test Payment',
                         amount: parseFloat(amount),
                         chain: chainId,
-                        customerEmail: connectedAddress,
+                        customerEmail: testConnectedWalletAddress,
                         paymentAddress: merchantWallet
                     })
                 });
@@ -1217,7 +1348,77 @@ print(f"Order created: {order['id']}")</pre>
                 loadOrders();
 
             } catch (error) {
-                console.error('Test payment error:', error);
+                console.error('EVM payment error:', error);
+                alert('❌ Payment failed: ' + error.message);
+            }
+        }
+
+        async function initiateSolanaPayment(amount, chainId, merchantWallet, token) {
+            try {
+                const phantom = window.solana;
+
+                // Get token mint address
+                const tokenMints = {
+                    'SOLANA_DEVNET': {
+                        USDC: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', // Devnet USDC
+                        USDT: '',
+                        EURC: ''
+                    },
+                    'SOLANA_MAINNET': {
+                        USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // Mainnet USDC
+                        USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // Mainnet USDT
+                        EURC: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr' // Mainnet EURC
+                    }
+                };
+
+                const mintAddress = tokenMints[chainId]?.[token];
+                if (!mintAddress) {
+                    alert(`⚠️ ${token} not available on this Solana network`);
+                    return;
+                }
+
+                // Create order first
+                const orderResponse = await fetch('/api/v1/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        merchantId: currentMerchant.id,
+                        productName: 'Test Payment',
+                        amount: parseFloat(amount),
+                        chain: chainId,
+                        customerEmail: testConnectedWalletAddress,
+                        paymentAddress: merchantWallet
+                    })
+                });
+
+                if (!orderResponse.ok) {
+                    throw new Error('Failed to create order');
+                }
+
+                const orderData = await orderResponse.json();
+                console.log('Order created:', orderData);
+
+                alert(`✅ Order created! Now approve the ${token} transfer in Phantom.`);
+
+                // For Solana SPL token transfer, we need to use @solana/spl-token
+                // Simplified: ask user to send manually for now
+                const rpcUrl = chainId === 'SOLANA_MAINNET'
+                    ? 'https://api.mainnet-beta.solana.com'
+                    : 'https://api.devnet.solana.com';
+
+                const connection = new solanaWeb3.Connection(rpcUrl);
+                const fromPubkey = new solanaWeb3.PublicKey(testConnectedWalletAddress);
+                const toPubkey = new solanaWeb3.PublicKey(merchantWallet);
+
+                // Note: This is simplified - full SPL token transfer requires token accounts
+                alert(`⚠️ Solana SPL token transfers require additional setup. Please send ${amount} ${token} to ${merchantWallet} manually for now.`);
+
+                // Close modal and refresh orders
+                document.getElementById('testPaymentModal').classList.add('hidden');
+                loadOrders();
+
+            } catch (error) {
+                console.error('Solana payment error:', error);
                 alert('❌ Payment failed: ' + error.message);
             }
         }
