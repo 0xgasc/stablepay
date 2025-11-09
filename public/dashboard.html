@@ -1706,12 +1706,11 @@ print(f"Order created: {order['id']}")</pre>
                 // Check if destination token account exists
                 const toAccountInfo = await connection.getAccountInfo(toTokenAccount);
 
-                const transaction = new solanaWeb3.Transaction();
-
                 // Create destination token account if it doesn't exist
                 if (!toAccountInfo) {
-                    console.log('Creating destination token account...');
-                    transaction.add(
+                    console.log('Destination token account does not exist. Creating it first...');
+
+                    const createAccountTx = new solanaWeb3.Transaction().add(
                         splToken.createAssociatedTokenAccountInstruction(
                             fromPubkey, // payer
                             toTokenAccount, // associated token account
@@ -1719,10 +1718,28 @@ print(f"Order created: {order['id']}")</pre>
                             mintPubkey // mint
                         )
                     );
+
+                    const createBlockhash = await connection.getLatestBlockhash();
+                    createAccountTx.recentBlockhash = createBlockhash.blockhash;
+                    createAccountTx.feePayer = fromPubkey;
+
+                    console.log('Requesting approval to create token account...');
+                    const { signature: createSig } = await phantom.signAndSendTransaction(createAccountTx);
+                    console.log('Token account creation tx:', createSig);
+
+                    // Wait for account creation to confirm
+                    await connection.confirmTransaction({
+                        signature: createSig,
+                        blockhash: createBlockhash.blockhash,
+                        lastValidBlockHeight: createBlockhash.lastValidBlockHeight
+                    });
+                    console.log('Token account created successfully');
+                } else {
+                    console.log('Destination token account already exists');
                 }
 
-                // Add SPL token transfer instruction
-                transaction.add(
+                // Now create transfer transaction
+                const transferTx = new solanaWeb3.Transaction().add(
                     splToken.createTransferInstruction(
                         fromTokenAccount,
                         toTokenAccount,
@@ -1733,15 +1750,14 @@ print(f"Order created: {order['id']}")</pre>
 
                 // Get latest blockhash
                 const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-                transaction.recentBlockhash = blockhash;
-                transaction.feePayer = fromPubkey;
+                transferTx.recentBlockhash = blockhash;
+                transferTx.feePayer = fromPubkey;
 
-                console.log('Transaction created, requesting signature from Phantom...');
-                console.log('Transaction:', transaction);
-                console.log('Instructions:', transaction.instructions.length);
+                console.log('Transfer transaction created, requesting signature from Phantom...');
+                console.log('Transfer amount:', transferAmount);
 
                 // Sign and send transaction via Phantom
-                const { signature } = await phantom.signAndSendTransaction(transaction);
+                const { signature } = await phantom.signAndSendTransaction(transferTx);
 
                 console.log('Transaction sent! Signature:', signature);
                 alert(`✅ Transaction submitted! Confirming...`);
