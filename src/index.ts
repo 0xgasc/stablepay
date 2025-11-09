@@ -53,7 +53,7 @@ app.post('/api/v1/orders', async (req, res) => {
     const order = await db.order.create({
       data: {
         merchantId,
-        productName: productName || 'Payment',
+        customerName: productName || 'Test Payment',
         amount: parseFloat(amount),
         chain,
         customerEmail: customerEmail || 'anonymous',
@@ -68,7 +68,7 @@ app.post('/api/v1/orders', async (req, res) => {
       order: {
         id: order.id,
         merchantId: order.merchantId,
-        productName: order.productName,
+        customerName: order.customerName,
         amount: order.amount.toString(),
         chain: order.chain,
         status: order.status,

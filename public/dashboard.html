@@ -1319,7 +1319,9 @@ print(f"Order created: {order['id']}")</pre>
                 });
 
                 if (!orderResponse.ok) {
-                    throw new Error('Failed to create order');
+                    const errorData = await orderResponse.json();
+                    console.error('Order creation failed:', errorData);
+                    throw new Error(errorData.error || errorData.details || 'Failed to create order');
                 }
 
                 const orderData = await orderResponse.json();
@@ -1395,7 +1397,9 @@ print(f"Order created: {order['id']}")</pre>
                 });
 
                 if (!orderResponse.ok) {
-                    throw new Error('Failed to create order');
+                    const errorData = await orderResponse.json();
+                    console.error('Order creation failed:', errorData);
+                    throw new Error(errorData.error || errorData.details || 'Failed to create order');
                 }
 
                 const orderData = await orderResponse.json();

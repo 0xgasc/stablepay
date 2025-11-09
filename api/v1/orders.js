@@ -60,10 +60,10 @@ module.exports = async function handler(req, res) {
       const order = await db.order.create({
         data: {
           merchantId,
-          productName: productName || 'Payment',
           amount: parseFloat(amount),
           chain,
           customerEmail: customerEmail || 'anonymous',
+          customerName: productName || 'Test Payment', // Use customerName field for product name
           paymentAddress,
           status: 'PENDING',
           expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
@@ -75,7 +75,7 @@ module.exports = async function handler(req, res) {
         order: {
           id: order.id,
           merchantId: order.merchantId,
-          productName: order.productName,
+          customerName: order.customerName,
           amount: order.amount.toString(),
           chain: order.chain,
           status: order.status,
