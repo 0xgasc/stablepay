@@ -37,6 +37,53 @@ app.use('/api/refunds', refundsRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api', authRouter);
 
+// Simple orders endpoint for test payments
+app.post('/api/v1/orders', async (req, res) => {
+  try {
+    const { db } = await import('./config/database');
+    const { merchantId, productName, amount, chain, customerEmail, paymentAddress } = req.body;
+
+    if (!merchantId || !amount || !chain || !paymentAddress) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['merchantId', 'amount', 'chain', 'paymentAddress']
+      });
+    }
+
+    const order = await db.order.create({
+      data: {
+        merchantId,
+        productName: productName || 'Payment',
+        amount: parseFloat(amount),
+        chain,
+        customerEmail: customerEmail || 'anonymous',
+        paymentAddress,
+        status: 'PENDING',
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000)
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      order: {
+        id: order.id,
+        merchantId: order.merchantId,
+        productName: order.productName,
+        amount: order.amount.toString(),
+        chain: order.chain,
+        status: order.status,
+        paymentAddress: order.paymentAddress,
+        customerEmail: order.customerEmail,
+        expiresAt: order.expiresAt,
+        createdAt: order.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Create order error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
