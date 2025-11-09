@@ -179,25 +179,54 @@ export class OrderService {
     };
   }
 
-  async confirmOrder(orderId: string, txData?: { 
-    txHash?: string, 
-    blockNumber?: number, 
-    confirmations?: number 
+  async confirmOrder(orderId: string, txData?: {
+    txHash?: string,
+    blockNumber?: number,
+    confirmations?: number
   }) {
-    // If transaction data provided, update transaction
+    // Get order details
+    const orderDetails = await db.order.findUnique({
+      where: { id: orderId }
+    });
+
+    if (!orderDetails) {
+      throw new Error('Order not found');
+    }
+
+    // If transaction data provided, create or update transaction
     if (txData?.txHash) {
-      await db.transaction.updateMany({
-        where: { 
-          orderId,
-          txHash: txData.txHash 
-        },
-        data: { 
-          status: 'CONFIRMED',
-          blockNumber: txData.blockNumber ? BigInt(txData.blockNumber) : undefined,
-          confirmations: txData.confirmations,
-          blockTimestamp: new Date()
-        }
+      const existingTx = await db.transaction.findUnique({
+        where: { txHash: txData.txHash }
       });
+
+      if (existingTx) {
+        // Update existing transaction
+        await db.transaction.update({
+          where: { txHash: txData.txHash },
+          data: {
+            status: 'CONFIRMED',
+            blockNumber: txData.blockNumber ? BigInt(txData.blockNumber) : undefined,
+            confirmations: txData.confirmations,
+            blockTimestamp: new Date()
+          }
+        });
+      } else {
+        // Create new transaction
+        await db.transaction.create({
+          data: {
+            orderId,
+            txHash: txData.txHash,
+            chain: orderDetails.chain,
+            amount: orderDetails.amount,
+            fromAddress: orderDetails.customerName || 'Unknown', // Use customer name as placeholder
+            toAddress: orderDetails.paymentAddress,
+            status: 'CONFIRMED',
+            blockNumber: txData.blockNumber ? BigInt(txData.blockNumber) : undefined,
+            confirmations: txData.confirmations || 1,
+            blockTimestamp: new Date()
+          }
+        });
+      }
     }
 
     const confirmedOrder = await db.order.update({
