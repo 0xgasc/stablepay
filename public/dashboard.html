@@ -545,6 +545,43 @@ print(f"Order created: {order['id']}")</pre>
         </div>
     </div>
 
+    <!-- Test Payment Modal -->
+    <div id="testPaymentModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-slate-950 border border-slate-800 shadow-2xl p-8 max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold text-white mb-6">⚡ Test Payment</h2>
+
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Amount (USDC)</label>
+                    <input type="number" id="testAmount" step="0.01" min="0.01" placeholder="0.1"
+                           class="w-full px-4 py-3 bg-black text-white border border-slate-800 focus:border-blue-600 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Select Chain</label>
+                    <select id="testChain" class="w-full px-4 py-3 bg-black text-white border border-slate-800 focus:border-blue-600 focus:outline-none">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div id="testWalletInfo" class="hidden bg-black border border-slate-800 p-4 rounded">
+                    <div class="text-xs text-slate-400 mb-1">Payment will be sent to:</div>
+                    <div id="testWalletAddress" class="text-sm text-blue-400 font-mono break-all"></div>
+                </div>
+            </div>
+
+            <div class="flex space-x-3">
+                <button id="testPayBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-medium transition-colors">
+                    Connect & Pay
+                </button>
+                <button id="closeTestPaymentModal" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 font-medium transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
     <script>
         let currentMerchant = null;
         let currentTab = 'orders';
@@ -999,17 +1036,251 @@ print(f"Order created: {order['id']}")</pre>
             });
         });
 
-        // Test Payment
+        // Test Payment Modal
+        let testPaymentProvider = null;
+        let testPaymentSigner = null;
+
         document.getElementById('testPaymentBtn').addEventListener('click', () => {
             if (merchantWallets.length === 0) {
                 alert('⚠️ Please configure at least one wallet first');
                 return;
             }
 
-            // Open the store with a test mode parameter
-            const storeUrl = `${window.location.origin}/store.html?merchant=${currentMerchant.id}&test=true`;
-            window.open(storeUrl, '_blank');
+            // Populate chain selector with only chains that have wallets
+            const testChain = document.getElementById('testChain');
+            testChain.innerHTML = merchantWallets.map(w => {
+                const chain = CHAINS.find(c => c.id === w.chain);
+                return `<option value="${w.chain}">${chain ? chain.icon + ' ' + chain.name : w.chain}</option>`;
+            }).join('');
+
+            // Show wallet address for first chain
+            if (merchantWallets.length > 0) {
+                updateTestWalletDisplay(merchantWallets[0].chain);
+            }
+
+            // Show modal
+            document.getElementById('testPaymentModal').classList.remove('hidden');
         });
+
+        document.getElementById('closeTestPaymentModal').addEventListener('click', () => {
+            document.getElementById('testPaymentModal').classList.add('hidden');
+        });
+
+        document.getElementById('testChain').addEventListener('change', (e) => {
+            updateTestWalletDisplay(e.target.value);
+        });
+
+        function updateTestWalletDisplay(chainId) {
+            const wallet = merchantWallets.find(w => w.chain === chainId);
+            if (wallet) {
+                document.getElementById('testWalletAddress').textContent = wallet.address;
+                document.getElementById('testWalletInfo').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('testPayBtn').addEventListener('click', async () => {
+            const amount = document.getElementById('testAmount').value;
+            const chainId = document.getElementById('testChain').value;
+
+            if (!amount || parseFloat(amount) <= 0) {
+                alert('⚠️ Please enter a valid amount');
+                return;
+            }
+
+            const wallet = merchantWallets.find(w => w.chain === chainId);
+            if (!wallet) {
+                alert('⚠️ Wallet not found for selected chain');
+                return;
+            }
+
+            await initiateTestPayment(amount, chainId, wallet.address);
+        });
+
+        async function initiateTestPayment(amount, chainId, merchantWallet) {
+            try {
+                // Check for MetaMask
+                if (typeof window.ethereum === 'undefined') {
+                    alert('⚠️ Please install MetaMask to make a test payment');
+                    window.open('https://metamask.io/download/', '_blank');
+                    return;
+                }
+
+                // Connect wallet
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                if (!accounts || accounts.length === 0) {
+                    alert('⚠️ No accounts found. Please unlock your wallet.');
+                    return;
+                }
+
+                testPaymentProvider = new ethers.BrowserProvider(window.ethereum);
+                testPaymentSigner = await testPaymentProvider.getSigner();
+                const connectedAddress = await testPaymentSigner.getAddress();
+
+                console.log('Connected wallet:', connectedAddress);
+
+                // Get chain config
+                const chainConfig = getChainConfig(chainId);
+                if (!chainConfig) {
+                    alert('⚠️ Chain configuration not found');
+                    return;
+                }
+
+                // Switch to correct network
+                const network = await testPaymentProvider.getNetwork();
+                const currentChainId = network.chainId;
+                const targetChainId = parseInt(chainConfig.chainId, 16);
+
+                if (currentChainId !== BigInt(targetChainId)) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: chainConfig.chainId }],
+                        });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: chainConfig.chainId,
+                                    chainName: chainConfig.chainName,
+                                    rpcUrls: chainConfig.rpcUrls,
+                                    nativeCurrency: chainConfig.nativeCurrency,
+                                    blockExplorerUrls: chainConfig.blockExplorerUrls
+                                }]
+                            });
+                        } else {
+                            throw switchError;
+                        }
+                    }
+
+                    testPaymentProvider = new ethers.BrowserProvider(window.ethereum);
+                    testPaymentSigner = await testPaymentProvider.getSigner();
+                }
+
+                // Create order first
+                const orderResponse = await fetch('/api/v1/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        merchantId: currentMerchant.id,
+                        productName: 'Test Payment',
+                        amount: parseFloat(amount),
+                        chain: chainId,
+                        customerEmail: connectedAddress,
+                        paymentAddress: merchantWallet
+                    })
+                });
+
+                if (!orderResponse.ok) {
+                    throw new Error('Failed to create order');
+                }
+
+                const orderData = await orderResponse.json();
+                console.log('Order created:', orderData);
+
+                // Initiate USDC transfer
+                const usdcContract = new ethers.Contract(
+                    chainConfig.usdcAddress,
+                    ['function transfer(address to, uint256 amount) returns (bool)'],
+                    testPaymentSigner
+                );
+
+                const amountWei = ethers.parseUnits(amount, 6); // USDC has 6 decimals
+
+                alert('✅ Order created! Now approve the USDC transfer in your wallet.');
+
+                const tx = await usdcContract.transfer(merchantWallet, amountWei);
+                console.log('Transaction sent:', tx.hash);
+
+                alert(`⏳ Payment sent! Transaction: ${tx.hash}`);
+
+                // Wait for confirmation
+                await tx.wait();
+
+                alert('✅ Payment confirmed! Check your Orders tab.');
+
+                // Close modal and refresh orders
+                document.getElementById('testPaymentModal').classList.add('hidden');
+                loadOrders();
+
+            } catch (error) {
+                console.error('Test payment error:', error);
+                alert('❌ Payment failed: ' + error.message);
+            }
+        }
+
+        function getChainConfig(chainId) {
+            const configs = {
+                'BASE_SEPOLIA': {
+                    chainId: '0x14a34',
+                    chainName: 'Base Sepolia',
+                    rpcUrls: ['https://sepolia.base.org'],
+                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                    blockExplorerUrls: ['https://sepolia.basescan.org'],
+                    usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+                },
+                'BASE_MAINNET': {
+                    chainId: '0x2105',
+                    chainName: 'Base',
+                    rpcUrls: ['https://mainnet.base.org'],
+                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                    blockExplorerUrls: ['https://basescan.org'],
+                    usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+                },
+                'ETHEREUM_SEPOLIA': {
+                    chainId: '0xaa36a7',
+                    chainName: 'Ethereum Sepolia',
+                    rpcUrls: ['https://rpc.sepolia.org'],
+                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                    blockExplorerUrls: ['https://sepolia.etherscan.io'],
+                    usdcAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238'
+                },
+                'ETHEREUM_MAINNET': {
+                    chainId: '0x1',
+                    chainName: 'Ethereum',
+                    rpcUrls: ['https://eth.llamarpc.com'],
+                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                    blockExplorerUrls: ['https://etherscan.io'],
+                    usdcAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+                },
+                'POLYGON_MAINNET': {
+                    chainId: '0x89',
+                    chainName: 'Polygon',
+                    rpcUrls: ['https://polygon-rpc.com'],
+                    nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+                    blockExplorerUrls: ['https://polygonscan.com'],
+                    usdcAddress: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'
+                },
+                'POLYGON_MUMBAI': {
+                    chainId: '0x13881',
+                    chainName: 'Polygon Mumbai',
+                    rpcUrls: ['https://rpc-mumbai.maticvigil.com'],
+                    nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+                    blockExplorerUrls: ['https://mumbai.polygonscan.com'],
+                    usdcAddress: '0x0FA8781a83E46826621b3BC094Ea2A0212e71B23'
+                },
+                'ARBITRUM_MAINNET': {
+                    chainId: '0xa4b1',
+                    chainName: 'Arbitrum One',
+                    rpcUrls: ['https://arb1.arbitrum.io/rpc'],
+                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                    blockExplorerUrls: ['https://arbiscan.io'],
+                    usdcAddress: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'
+                },
+                'ARBITRUM_SEPOLIA': {
+                    chainId: '0x66eee',
+                    chainName: 'Arbitrum Sepolia',
+                    rpcUrls: ['https://sepolia-rollup.arbitrum.io/rpc'],
+                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                    blockExplorerUrls: ['https://sepolia.arbiscan.io'],
+                    usdcAddress: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d'
+                }
+            };
+            return configs[chainId];
+        }
 
         // Load settings
         function loadSettings() {
