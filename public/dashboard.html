@@ -204,25 +204,45 @@
                 <div id="ordersTab" class="tab-content">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-lg font-semibold text-white">Recent Orders</h3>
-                        <button 
-                            id="refreshOrdersBtn"
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 border font-medium transition-colors text-sm"
-                        >
-                            🔄 Refresh
-                        </button>
+                        <div class="flex gap-3">
+                            <input
+                                type="text"
+                                id="orderSearchInput"
+                                placeholder="Search orders..."
+                                class="bg-black text-white border border-slate-800 px-4 py-2 text-sm focus:border-blue-600 focus:outline-none"
+                            />
+                            <button
+                                id="refreshOrdersBtn"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 border font-medium transition-colors text-sm"
+                            >
+                                🔄 Refresh
+                            </button>
+                        </div>
                     </div>
-                    
+
                     <div class="overflow-x-auto">
                         <table class="w-full">
                             <thead class="bg-slate-950">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Order ID</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Amount</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Chain</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('id')">
+                                        Order ID <span class="ml-1">⇅</span>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('amount')">
+                                        Amount <span class="ml-1">⇅</span>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('chain')">
+                                        Chain <span class="ml-1">⇅</span>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('status')">
+                                        Status <span class="ml-1">⇅</span>
+                                    </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Transaction</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Customer</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Created</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('customer')">
+                                        Customer <span class="ml-1">⇅</span>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('created')">
+                                        Created <span class="ml-1">⇅</span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody id="ordersTableBody" class="bg-slate-950 divide-y divide-slate-800">
@@ -258,9 +278,9 @@
                         <!-- Populated dynamically with chain toggles -->
                     </div>
 
-                    <!-- Quick Actions -->
+                    <!-- Payment Links -->
                     <div class="mt-8 bg-slate-950 border border-slate-800 p-6">
-                        <h4 class="text-lg font-semibold text-white mb-4">🚀 Quick Actions</h4>
+                        <h4 class="text-lg font-semibold text-white mb-4">💳 Payment Links</h4>
                         <div class="grid grid-cols-2 gap-4">
                             <button
                                 id="createDemoStoreBtn"
@@ -806,10 +826,12 @@ print(f"Order created: {order['id']}")</pre>
 
                 if (response.ok) {
                     const orders = await response.json();
+                    allOrders = orders;
                     updateStats({ orders, pagination: { total: orders.length } });
                     renderOrdersTable(orders);
                 } else {
                     // No orders yet
+                    allOrders = [];
                     renderOrdersTable([]);
                     updateStats({ orders: [], pagination: { total: 0 } });
                 }
@@ -889,6 +911,71 @@ print(f"Order created: {order['id']}")</pre>
                 `;
             }).join('');
         }
+
+        // Orders sorting and filtering
+        let allOrders = [];
+        let currentSortField = 'created';
+        let currentSortDirection = 'desc';
+
+        function sortOrders(field) {
+            if (currentSortField === field) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortField = field;
+                currentSortDirection = 'asc';
+            }
+
+            const sorted = [...allOrders].sort((a, b) => {
+                let aVal, bVal;
+
+                switch(field) {
+                    case 'amount':
+                        aVal = typeof a.amount === 'object' ? parseFloat(a.amount.toString()) : parseFloat(a.amount);
+                        bVal = typeof b.amount === 'object' ? parseFloat(b.amount.toString()) : parseFloat(b.amount);
+                        break;
+                    case 'created':
+                        aVal = new Date(a.createdAt);
+                        bVal = new Date(b.createdAt);
+                        break;
+                    case 'status':
+                        aVal = a.status;
+                        bVal = b.status;
+                        break;
+                    case 'chain':
+                        aVal = a.chain;
+                        bVal = b.chain;
+                        break;
+                    case 'customer':
+                        aVal = a.customerEmail || '';
+                        bVal = b.customerEmail || '';
+                        break;
+                    default:
+                        aVal = a.id;
+                        bVal = b.id;
+                }
+
+                if (aVal < bVal) return currentSortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return currentSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            renderOrdersTable(sorted);
+        }
+
+        // Search/filter orders
+        document.getElementById('orderSearchInput')?.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = allOrders.filter(order => {
+                return (
+                    order.id.toLowerCase().includes(searchTerm) ||
+                    order.chain.toLowerCase().includes(searchTerm) ||
+                    order.status.toLowerCase().includes(searchTerm) ||
+                    (order.customerEmail && order.customerEmail.toLowerCase().includes(searchTerm)) ||
+                    (order.amount && order.amount.toString().includes(searchTerm))
+                );
+            });
+            renderOrdersTable(filtered);
+        });
 
         // Load wallets
         async function loadWallets() {
