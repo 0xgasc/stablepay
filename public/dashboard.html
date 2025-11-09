@@ -658,22 +658,19 @@ print(f"Order created: {order['id']}")</pre>
             return new solanaWeb3.TransactionInstruction({
                 keys,
                 programId: ASSOCIATED_TOKEN_PROGRAM_ID,
-                data: Buffer.from([])
+                data: new Uint8Array([])
             });
         }
 
         function createTransferInstruction(source, destination, owner, amount) {
-            const dataLayout = {
-                index: 3,
-                layout: {
-                    instruction: 3,
-                    amount: BigInt(amount)
-                }
-            };
+            // Create data buffer for SPL token transfer instruction
+            const data = new Uint8Array(9);
+            data[0] = 3; // Transfer instruction index
 
-            const data = Buffer.alloc(9);
-            data.writeUInt8(3, 0); // Transfer instruction
-            data.writeBigUInt64LE(BigInt(amount), 1);
+            // Write amount as little-endian u64
+            const amountBigInt = BigInt(amount);
+            const view = new DataView(data.buffer);
+            view.setBigUint64(1, amountBigInt, true); // true = little-endian
 
             const keys = [
                 { pubkey: source, isSigner: false, isWritable: true },
