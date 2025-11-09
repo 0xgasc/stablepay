@@ -1310,7 +1310,7 @@ print(f"Order created: {order['id']}")</pre>
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         merchantId: currentMerchant.id,
-                        productName: 'Test Payment',
+                        productName: `Test Payment - ${currentMerchant.companyName}`,
                         amount: parseFloat(amount),
                         chain: chainId,
                         customerEmail: testConnectedWalletAddress,
@@ -1327,21 +1327,70 @@ print(f"Order created: {order['id']}")</pre>
                 const orderData = await orderResponse.json();
                 console.log('Order created:', orderData);
 
-                // Initiate token transfer
+                // Get token info for better display
                 const tokenContract = new ethers.Contract(
                     chainConfig.tokenAddress,
-                    ['function transfer(address to, uint256 amount) returns (bool)'],
+                    [
+                        'function transfer(address to, uint256 amount) returns (bool)',
+                        'function name() view returns (string)',
+                        'function symbol() view returns (string)',
+                        'function decimals() view returns (uint8)'
+                    ],
                     testPaymentSigner
                 );
 
-                const amountWei = ethers.parseUnits(amount, 6); // Stablecoins have 6 decimals
+                // Fetch token details
+                let tokenSymbol = token;
+                let tokenDecimals = 6;
+                try {
+                    tokenSymbol = await tokenContract.symbol();
+                    tokenDecimals = await tokenContract.decimals();
+                } catch (e) {
+                    console.log('Could not fetch token details, using defaults');
+                }
 
-                alert(`✅ Order created! Now approve the ${token} transfer in your wallet.`);
+                const amountWei = ethers.parseUnits(amount, tokenDecimals);
+
+                // Try to add token to MetaMask for better display
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_watchAsset',
+                        params: {
+                            type: 'ERC20',
+                            options: {
+                                address: chainConfig.tokenAddress,
+                                symbol: tokenSymbol,
+                                decimals: tokenDecimals,
+                            },
+                        },
+                    });
+                } catch (e) {
+                    console.log('Token not added to wallet, continuing anyway');
+                }
+
+                // Create a confirmation message with all details
+                const confirmMessage = `
+📋 Payment Details:
+━━━━━━━━━━━━━━━━━━━━━
+Merchant: ${currentMerchant.companyName}
+Amount: ${amount} ${tokenSymbol}
+Chain: ${chainConfig.chainName}
+To: ${merchantWallet.slice(0, 6)}...${merchantWallet.slice(-4)}
+━━━━━━━━━━━━━━━━━━━━━
+
+You will now be asked to approve this ${tokenSymbol} transfer in MetaMask.
+
+The transaction will show the token transfer details.
+                `.trim();
+
+                if (!confirm(confirmMessage)) {
+                    throw new Error('Payment cancelled by user');
+                }
 
                 const tx = await tokenContract.transfer(merchantWallet, amountWei);
                 console.log('Transaction sent:', tx.hash);
 
-                alert(`⏳ Payment sent! Transaction: ${tx.hash}`);
+                alert(`⏳ Payment sent!\n\nTransaction: ${tx.hash}\n\nWaiting for confirmation...`);
 
                 // Wait for confirmation
                 await tx.wait();
@@ -1388,7 +1437,7 @@ print(f"Order created: {order['id']}")</pre>
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         merchantId: currentMerchant.id,
-                        productName: 'Test Payment',
+                        productName: `Test Payment - ${currentMerchant.companyName}`,
                         amount: parseFloat(amount),
                         chain: chainId,
                         customerEmail: testConnectedWalletAddress,
