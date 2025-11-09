@@ -823,7 +823,10 @@ print(f"Order created: {order['id']}")</pre>
             const total = data.pagination ? data.pagination.total : data.orders.length;
             const confirmed = data.orders.filter(o => o.status === 'PAID' || o.status === 'CONFIRMED').length;
             const pending = data.orders.filter(o => o.status === 'PENDING').length;
-            const totalVolume = data.orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+            const totalVolume = data.orders.reduce((sum, o) => {
+                const amount = typeof o.amount === 'object' ? parseFloat(o.amount.toString()) : parseFloat(o.amount || 0);
+                return sum + amount;
+            }, 0);
 
             document.getElementById('totalOrders').textContent = total;
             document.getElementById('confirmedOrders').textContent = confirmed;
@@ -843,14 +846,15 @@ print(f"Order created: {order['id']}")</pre>
                 const statusClass = `status-${order.status.toLowerCase()}`;
                 const shortId = order.id.slice(0, 8) + '...';
                 const createdAt = new Date(order.createdAt).toLocaleDateString();
-                
+                const amount = typeof order.amount === 'object' ? order.amount.toString() : order.amount;
+
                 return `
                     <tr class="hover:bg-slate-950">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-white">${shortId}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-semibold text-white">${order.amount} USDC</div>
+                            <div class="text-sm font-semibold text-white">${amount} USDC</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-slate-400">${order.chain.replace('_', ' ')}</div>
