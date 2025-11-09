@@ -117,17 +117,14 @@ model Order {
   status          OrderStatus @default(PENDING)
   paymentAddress  String
   expiresAt       DateTime
-  invoiceId       String?     // Link to invoice if created from invoice
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
   merchant        Merchant?   @relation(fields: [merchantId], references: [id])
-  invoice         Invoice?    @relation(fields: [invoiceId], references: [id])
   transactions    Transaction[]
   refunds         Refund[]
 
   @@index([merchantId])
-  @@index([invoiceId])
   @@map("orders")
 }
 
@@ -204,7 +201,6 @@ model Invoice {
   updatedAt       DateTime      @updatedAt
 
   merchant        Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  orders          Order[]       // Payment(s) associated with this invoice
 
   @@unique([merchantId, invoiceNumber])
   @@index([merchantId])
