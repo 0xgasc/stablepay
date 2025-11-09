@@ -36,6 +36,40 @@ module.exports = async function handler(req, res) {
   const db = getPrisma();
 
   try {
+    // POST - Confirm order (update status with transaction details)
+    if (req.method === 'POST' && req.url && req.url.includes('/confirm')) {
+      const urlParts = req.url.split('/');
+      const orderId = urlParts[urlParts.length - 2]; // Get orderId before /confirm
+      const { txHash, blockNumber, status } = req.body;
+
+      const order = await db.order.update({
+        where: { id: orderId },
+        data: {
+          status: status || 'CONFIRMED',
+          updatedAt: new Date()
+        }
+      });
+
+      // Create transaction record
+      if (txHash) {
+        await db.transaction.create({
+          data: {
+            orderId: orderId,
+            txHash: txHash,
+            chain: order.chain,
+            amount: order.amount,
+            fromAddress: order.customerEmail, // Using email field as wallet address
+            toAddress: order.paymentAddress,
+            blockNumber: blockNumber ? BigInt(blockNumber) : null,
+            status: 'CONFIRMED',
+            confirmedAt: new Date()
+          }
+        });
+      }
+
+      return res.json({ success: true, order });
+    }
+
     // POST - Create new order
     if (req.method === 'POST') {
       const { merchantId, productName, amount, chain, customerEmail, paymentAddress } = req.body;
@@ -123,39 +157,6 @@ module.exports = async function handler(req, res) {
       }
 
       return res.status(400).json({ error: 'merchantId or orderId required' });
-    }
-
-    // POST - Confirm order (update status with transaction details)
-    if (req.method === 'POST' && req.url.includes('/confirm')) {
-      const orderId = req.url.split('/')[3]; // Extract orderId from URL path
-      const { txHash, blockNumber, status } = req.body;
-
-      const order = await db.order.update({
-        where: { id: orderId },
-        data: {
-          status: status || 'CONFIRMED',
-          updatedAt: new Date()
-        }
-      });
-
-      // Create transaction record
-      if (txHash) {
-        await db.transaction.create({
-          data: {
-            orderId: orderId,
-            txHash: txHash,
-            chain: order.chain,
-            amount: order.amount,
-            fromAddress: order.customerEmail, // Using email field as wallet address
-            toAddress: order.paymentAddress,
-            blockNumber: blockNumber ? BigInt(blockNumber) : null,
-            status: 'CONFIRMED',
-            confirmedAt: new Date()
-          }
-        });
-      }
-
-      return res.json({ success: true, order });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
