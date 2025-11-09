@@ -66,8 +66,9 @@ module.exports = async function handler(req, res) {
           fromAddress: order.customerEmail,
           toAddress: order.paymentAddress,
           blockNumber: blockNumber ? BigInt(blockNumber) : null,
+          blockTimestamp: new Date(),
           status: 'CONFIRMED',
-          confirmedAt: new Date()
+          confirmations: 1
         }
       });
     }
