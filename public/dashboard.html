@@ -1768,17 +1768,29 @@ print(f"Order created: {order['id']}")</pre>
 
                 console.log('Transfer transaction created, requesting signature from Phantom...');
                 console.log('Transfer amount:', transferAmount);
-                console.log('Transfer tx instructions:', transferTx.instructions);
-                console.log('Transfer instruction 0:', transferTx.instructions[0]);
-                console.log('Transfer instruction keys:', transferTx.instructions[0].keys);
                 console.log('Transfer instruction data:', transferTx.instructions[0].data);
-                console.log('Transfer program ID:', transferTx.instructions[0].programId.toString());
 
-                // Sign and send transaction via Phantom
-                const { signature } = await phantom.signAndSendTransaction(transferTx);
+                // Try using separate sign and send
+                try {
+                    // First, sign the transaction
+                    const signedTx = await phantom.signTransaction(transferTx);
+                    console.log('Transaction signed successfully');
 
-                console.log('Transaction sent! Signature:', signature);
-                alert(`✅ Transaction submitted! Confirming...`);
+                    // Serialize and send the signed transaction
+                    const rawTransaction = signedTx.serialize();
+                    console.log('Transaction serialized, sending to network...');
+
+                    const signature = await connection.sendRawTransaction(rawTransaction, {
+                        skipPreflight: false,
+                        preflightCommitment: 'confirmed'
+                    });
+
+                    console.log('Transaction sent! Signature:', signature);
+                    alert(`✅ Transaction submitted! Confirming...`);
+                } catch (signError) {
+                    console.error('Sign/Send error:', signError);
+                    throw signError;
+                }
 
                 // Wait for confirmation
                 const confirmation = await connection.confirmTransaction({
