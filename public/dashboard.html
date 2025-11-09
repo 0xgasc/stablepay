@@ -1096,6 +1096,9 @@ print(f"Order created: {order['id']}")</pre>
                 updateTestWalletDisplay(merchantWallets[0].chain);
             }
 
+            // Show wallet selector initially
+            document.getElementById('testWalletSelector').classList.remove('hidden');
+
             // Show modal
             document.getElementById('testPaymentModal').classList.remove('hidden');
         });
