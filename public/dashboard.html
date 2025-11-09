@@ -1816,7 +1816,7 @@ print(f"Order created: {order['id']}")</pre>
 
                 // Update order with transaction hash
                 await fetch(`/api/v1/orders/${orderData.order.id}/confirm`, {
-                    method: 'PUT',
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         txHash: signature,
