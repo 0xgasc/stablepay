@@ -668,13 +668,19 @@ print(f"Order created: {order['id']}")</pre>
 
         function createTransferInstruction(source, destination, owner, amount) {
             // Create data buffer for SPL token transfer instruction
-            const data = new Uint8Array(9);
-            data[0] = 3; // Transfer instruction index
+            const dataArr = new Uint8Array(9);
+            dataArr[0] = 3; // Transfer instruction index
 
             // Write amount as little-endian u64
             const amountBigInt = BigInt(amount);
-            const view = new DataView(data.buffer);
-            view.setBigUint64(1, amountBigInt, true); // true = little-endian
+
+            // Manual little-endian encoding for u64
+            for (let i = 0; i < 8; i++) {
+                dataArr[1 + i] = Number((amountBigInt >> BigInt(i * 8)) & BigInt(0xFF));
+            }
+
+            console.log('Transfer instruction data created:', Array.from(dataArr));
+            console.log('Amount to encode:', amount, 'as BigInt:', amountBigInt.toString());
 
             const keys = [
                 { pubkey: source, isSigner: false, isWritable: true },
@@ -685,7 +691,7 @@ print(f"Order created: {order['id']}")</pre>
             return new solanaWeb3.TransactionInstruction({
                 keys,
                 programId: TOKEN_PROGRAM_ID,
-                data
+                data: dataArr
             });
         }
 
