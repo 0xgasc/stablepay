@@ -1337,13 +1337,27 @@ print(f"Order created: {order['id']}")</pre>
         // MetaMask connection
         document.getElementById('connectMetaMask').addEventListener('click', async () => {
             try {
-                if (typeof window.ethereum === 'undefined') {
+                // Check for MetaMask specifically, not just window.ethereum
+                // Phantom also injects window.ethereum, so we need to distinguish
+                let ethereum = window.ethereum;
+
+                // If multiple providers exist, find MetaMask
+                if (window.ethereum?.providers) {
+                    ethereum = window.ethereum.providers.find(p => p.isMetaMask);
+                } else if (!window.ethereum?.isMetaMask && window.ethereum?.isPhantom) {
+                    // If only Phantom is installed
+                    alert('Please install MetaMask. Phantom is detected but MetaMask is required for EVM chains.');
+                    window.open('https://metamask.io/download/', '_blank');
+                    return;
+                }
+
+                if (!ethereum) {
                     alert('Please install MetaMask');
                     window.open('https://metamask.io/download/', '_blank');
                     return;
                 }
 
-                const accounts = await window.ethereum.request({
+                const accounts = await ethereum.request({
                     method: 'eth_requestAccounts'
                 });
 
@@ -1352,7 +1366,7 @@ print(f"Order created: {order['id']}")</pre>
                     return;
                 }
 
-                testPaymentProvider = new ethers.BrowserProvider(window.ethereum);
+                testPaymentProvider = new ethers.BrowserProvider(ethereum);
                 testPaymentSigner = await testPaymentProvider.getSigner();
                 testConnectedWalletAddress = await testPaymentSigner.getAddress();
                 testWalletType = 'metamask';
@@ -1451,8 +1465,14 @@ print(f"Order created: {order['id']}")</pre>
 
         async function initiateEVMPayment(amount, chainId, merchantWallet, token) {
             try {
+                // Get the correct Ethereum provider (MetaMask)
+                let ethereum = window.ethereum;
+                if (window.ethereum?.providers) {
+                    ethereum = window.ethereum.providers.find(p => p.isMetaMask);
+                }
+
                 // Check if MetaMask is connected
-                if (!window.ethereum || !window.ethereum.isConnected()) {
+                if (!ethereum || !ethereum.isConnected()) {
                     alert('MetaMask disconnected. Please refresh the page and try again.');
                     return;
                 }
@@ -1473,13 +1493,13 @@ print(f"Order created: {order['id']}")</pre>
 
                 if (currentChainId !== BigInt(targetChainId)) {
                     try {
-                        await window.ethereum.request({
+                        await ethereum.request({
                             method: 'wallet_switchEthereumChain',
                             params: [{ chainId: chainConfig.chainId }],
                         });
                     } catch (switchError) {
                         if (switchError.code === 4902) {
-                            await window.ethereum.request({
+                            await ethereum.request({
                                 method: 'wallet_addEthereumChain',
                                 params: [{
                                     chainId: chainConfig.chainId,
@@ -1494,7 +1514,7 @@ print(f"Order created: {order['id']}")</pre>
                         }
                     }
 
-                    testPaymentProvider = new ethers.BrowserProvider(window.ethereum);
+                    testPaymentProvider = new ethers.BrowserProvider(ethereum);
                     testPaymentSigner = await testPaymentProvider.getSigner();
                 }
 
