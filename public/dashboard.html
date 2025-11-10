@@ -329,18 +329,20 @@
                             <div class="mb-8">
                                 <div class="flex items-center mb-3">
                                     <span class="px-3 py-1 bg-green-900/20 text-green-800 rounded-full text-xs font-bold mr-3">POST</span>
-                                    <code class="text-sm font-mono text-slate-300">/api/orders-simple</code>
+                                    <code class="text-sm font-mono text-slate-300">/api/v1/orders</code>
                                 </div>
                                 <p class="text-sm text-slate-400 mb-4">Create a new payment order</p>
 
                                 <div class="bg-gray-900 border p-4 overflow-x-auto">
-                                    <pre class="text-xs text-green-400 font-mono">curl -X POST https://stablepay-nine.vercel.app/api/orders-simple \\
+                                    <pre class="text-xs text-green-400 font-mono" id="createOrderExample">curl -X POST https://stablepay-nine.vercel.app/api/v1/orders \\
   -H "Content-Type: application/json" \\
   -d '{
-    "merchantId": "YOUR_MERCHANT_ID",
+    "merchantId": "<span id="exampleMerchantId">YOUR_MERCHANT_ID</span>",
     "amount": "10.00",
     "chain": "BASE_SEPOLIA",
-    "customerEmail": "customer@example.com"
+    "customerEmail": "customer@example.com",
+    "customerName": "Product Purchase",
+    "paymentAddress": "YOUR_WALLET_ADDRESS"
   }'</pre>
                                 </div>
 
@@ -941,6 +943,12 @@ print(f"Order created: {order['id']}")</pre>
                 // Update API developer section
                 document.getElementById('apiMerchantId').textContent = currentMerchant.id;
 
+                // Update merchant ID in code example
+                const exampleMerchantId = document.getElementById('exampleMerchantId');
+                if (exampleMerchantId) {
+                    exampleMerchantId.textContent = currentMerchant.id;
+                }
+
                 // Load current tab content after merchant data is ready
                 if (currentTab === 'orders') {
                     loadOrders();
@@ -971,26 +979,31 @@ print(f"Order created: {order['id']}")</pre>
             const firstChain = merchantWallets[0].chain;
 
             try {
-                const response = await fetch('/api/orders-simple', {
+                const response = await fetch('/api/v1/orders', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('merchantToken')}`
+                    },
                     body: JSON.stringify({
                         merchantId: currentMerchant.id,
                         amount: '10.00',
                         chain: firstChain,
-                        customerEmail: 'test@example.com'
+                        customerEmail: 'test@example.com',
+                        customerName: 'API Test Order',
+                        paymentAddress: merchantWallets[0].address
                     })
                 });
 
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert(`Test order created successfully!\n\nOrder ID: ${result.id}\nChain: ${firstChain}\nAmount: 10.00 USDC`);
+                    alert(`✅ Test order created successfully!\n\nOrder ID: ${result.order.id}\nChain: ${firstChain}\nAmount: 10.00 USDC\nStatus: ${result.order.status}\n\nCheck the Orders tab to see it!`);
                 } else {
-                    alert(`Test failed: ${result.error || 'Unknown error'}`);
+                    alert(`❌ Test failed: ${result.error || 'Unknown error'}`);
                 }
             } catch (error) {
-                alert(`Test failed: ${error.message}`);
+                alert(`❌ Test failed: ${error.message}`);
             }
         };
 
