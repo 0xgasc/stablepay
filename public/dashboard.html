@@ -244,6 +244,7 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('created')">
                                         Created <span class="ml-1">⇅</span>
                                     </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="ordersTableBody" class="bg-slate-950 divide-y divide-slate-800">
@@ -631,6 +632,71 @@ print(f"Order created: {order['id']}")</pre>
         </div>
     </div>
 
+    <!-- Refund Modal (Skeleton - Feature Toggle Required) -->
+    <div id="refundModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-slate-950 border border-slate-800 shadow-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-white">Request Refund</h3>
+                <button id="closeRefundModal" class="text-slate-400 hover:text-slate-300 text-2xl">&times;</button>
+            </div>
+
+            <div class="bg-yellow-900/20 border border-yellow-800 rounded p-4 mb-6">
+                <div class="text-sm text-yellow-300 font-medium">Feature In Development</div>
+                <div class="text-xs text-yellow-400 mt-1">
+                    Refund functionality requires admin approval. Contact support to enable this feature.
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Order ID</label>
+                    <input type="text" id="refundOrderId" readonly
+                           class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Original Amount</label>
+                    <input type="text" id="refundOriginalAmount" readonly
+                           class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Refund Amount (USDC)</label>
+                    <input type="number" id="refundAmount" step="0.01" min="0.01"
+                           placeholder="Enter amount to refund"
+                           class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    <div class="text-xs text-slate-500 mt-1">Partial refunds are allowed</div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Reason for Refund</label>
+                    <textarea id="refundReason" rows="3"
+                              placeholder="Explain why you're issuing this refund..."
+                              class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Customer Wallet Address</label>
+                    <input type="text" id="refundCustomerWallet"
+                           placeholder="0x... or Solana address"
+                           class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white font-mono text-sm rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    <div class="text-xs text-slate-500 mt-1">Address where refund will be sent</div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-8">
+                <button id="submitRefundBtn"
+                        class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 font-medium transition-colors rounded">
+                    Submit Refund Request
+                </button>
+                <button id="cancelRefundBtn"
+                        class="flex-1 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 font-medium transition-colors rounded">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
@@ -979,7 +1045,7 @@ print(f"Order created: {order['id']}")</pre>
             const tbody = document.getElementById('ordersTableBody');
             
             if (orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-12 text-center text-slate-400">No orders found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-12 text-center text-slate-400">No orders found</td></tr>';
                 return;
             }
             
@@ -1031,6 +1097,14 @@ print(f"Order created: {order['id']}")</pre>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
                             ${createdAt}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${(order.status === 'CONFIRMED' || order.status === 'PAID') ? `
+                                <button onclick="openRefundModal('${order.id}', '${amount}', '${order.chain}')"
+                                        class="text-orange-400 hover:text-orange-300 text-xs font-medium">
+                                    Refund
+                                </button>
+                            ` : '<span class="text-slate-600 text-xs">-</span>'}
                         </td>
                     </tr>
                 `;
@@ -2054,6 +2128,104 @@ print(f"Order created: {order['id']}")</pre>
         function printReceipt(orderId) {
             window.print();
         }
+
+        // Refund Functions (Skeleton - Requires Admin Toggle)
+        window.openRefundModal = function(orderId, amount, chain) {
+            // TODO: Check if refunds are enabled via system settings
+            const refundsEnabled = localStorage.getItem('refundsEnabled') === 'true';
+
+            if (!refundsEnabled) {
+                alert('Refunds feature is not enabled. Contact admin to enable this feature.');
+                return;
+            }
+
+            // Populate modal
+            document.getElementById('refundOrderId').value = orderId;
+            document.getElementById('refundOriginalAmount').value = amount + ' USDC';
+            document.getElementById('refundAmount').value = amount;
+            document.getElementById('refundAmount').max = amount;
+
+            // Try to get customer wallet from order transaction
+            const order = allOrders.find(o => o.id === orderId);
+            if (order && order.transactions && order.transactions.length > 0) {
+                const fromAddress = order.transactions[0].fromAddress;
+                if (fromAddress) {
+                    document.getElementById('refundCustomerWallet').value = fromAddress;
+                }
+            }
+
+            // Show modal
+            document.getElementById('refundModal').classList.remove('hidden');
+        };
+
+        // Close refund modal
+        document.getElementById('closeRefundModal').addEventListener('click', () => {
+            document.getElementById('refundModal').classList.add('hidden');
+        });
+
+        document.getElementById('cancelRefundBtn').addEventListener('click', () => {
+            document.getElementById('refundModal').classList.add('hidden');
+        });
+
+        // Submit refund request
+        document.getElementById('submitRefundBtn').addEventListener('click', async () => {
+            const orderId = document.getElementById('refundOrderId').value;
+            const amount = document.getElementById('refundAmount').value;
+            const reason = document.getElementById('refundReason').value;
+            const customerWallet = document.getElementById('refundCustomerWallet').value;
+
+            if (!amount || parseFloat(amount) <= 0) {
+                alert('Please enter a valid refund amount');
+                return;
+            }
+
+            if (!reason.trim()) {
+                alert('Please provide a reason for the refund');
+                return;
+            }
+
+            if (!customerWallet.trim()) {
+                alert('Please provide a customer wallet address');
+                return;
+            }
+
+            try {
+                const btn = document.getElementById('submitRefundBtn');
+                btn.disabled = true;
+                btn.textContent = 'Submitting...';
+
+                // TODO: API call to create refund request
+                const response = await fetch(`/api/v1/orders/${orderId}/refund`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('merchantToken')}`
+                    },
+                    body: JSON.stringify({
+                        amount: amount,
+                        reason: reason,
+                        customerWallet: customerWallet
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert('Refund request submitted successfully!\n\nRefund ID: ' + result.refund.id + '\nStatus: Pending Admin Approval');
+                    document.getElementById('refundModal').classList.add('hidden');
+                    loadOrders(); // Refresh orders
+                } else {
+                    const error = await response.json();
+                    alert('Failed to submit refund request: ' + (error.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Refund request error:', error);
+                alert('Error submitting refund request: ' + error.message);
+            } finally {
+                const btn = document.getElementById('submitRefundBtn');
+                btn.disabled = false;
+                btn.textContent = 'Submit Refund Request';
+            }
+        });
 
         function getChainConfig(chainId, token = 'USDC') {
             const tokenAddresses = {
