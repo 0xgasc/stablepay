@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StablePay Integration Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .demo-card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .demo-card h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #1f2937;
+        }
+
+        .demo-card .subtitle {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .code-block {
+            background: #1f2937;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            color: #10b981;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .widget-demo {
+            margin-top: 24px;
+            padding: 24px;
+            background: #f9fafb;
+            border-radius: 12px;
+            border: 2px dashed #d1d5db;
+        }
+
+        .widget-demo-label {
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: white;
+            color: #3b82f6;
+            border: 2px solid #3b82f6;
+        }
+
+        .btn-outline:hover {
+            background: #eff6ff;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 16px;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            margin-right: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .integration-types {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .integration-type {
+            text-align: center;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .integration-type:hover {
+            border-color: #3b82f6;
+            background: white;
+        }
+
+        .integration-type.active {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .integration-type-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .integration-type-title {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: #3b82f6;
+        }
+
+        .tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .info-banner {
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-banner-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 4px;
+        }
+
+        .info-banner-text {
+            color: #78350f;
+            font-size: 14px;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>StablePay Integration Demo</h1>
+            <p>See how easy it is to accept USDC payments on any chain</p>
+        </div>
+
+        <div class="demo-grid">
+            <!-- Left: Integration Options -->
+            <div class="demo-card">
+                <h2>Choose Your Integration</h2>
+                <p class="subtitle">Three ways to integrate StablePay checkout</p>
+
+                <div class="integration-types">
+                    <div class="integration-type active" data-type="widget">
+                        <div class="integration-type-icon">🔌</div>
+                        <div class="integration-type-title">Widget</div>
+                    </div>
+                    <div class="integration-type" data-type="hosted">
+                        <div class="integration-type-icon">🌐</div>
+                        <div class="integration-type-title">Hosted</div>
+                    </div>
+                    <div class="integration-type" data-type="api">
+                        <div class="integration-type-icon">⚡</div>
+                        <div class="integration-type-title">API</div>
+                    </div>
+                </div>
+
+                <div id="widget-content" class="tab-content active">
+                    <h3 style="margin-bottom: 12px; color: #1f2937;">Embedded Widget</h3>
+                    <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">
+                        Add checkout directly to your website with one script tag.
+                    </p>
+
+                    <div class="tabs">
+                        <button class="tab active" data-tab="html">HTML</button>
+                        <button class="tab" data-tab="react">React</button>
+                        <button class="tab" data-tab="vue">Vue</button>
+                    </div>
+
+                    <div id="html-tab" class="tab-content active">
+                        <div class="code-block">
+                            <pre>&lt;!-- 1. Include the script --&gt;
+&lt;script src="https://stablepay-nine.vercel.app/checkout-widget.js"&gt;&lt;/script&gt;
+
+&lt;!-- 2. Add the widget --&gt;
+&lt;div class="stablepay-checkout"
+     data-merchant="YOUR_MERCHANT_ID"
+     data-amount="10.00"
+     data-chain="BASE_SEPOLIA"
+     data-theme="light"&gt;
+&lt;/div&gt;</pre>
+                        </div>
+                    </div>
+
+                    <div id="react-tab" class="tab-content">
+                        <div class="code-block">
+                            <pre>import { useEffect } from 'react';
+
+function Checkout() {
+  useEffect(() => {
+    // Load widget script
+    const script = document.createElement('script');
+    script.src = 'https://stablepay-nine.vercel.app/checkout-widget.js';
+    document.body.appendChild(script);
+  }, []);
+
+  return (
+    &lt;div className="stablepay-checkout"
+         data-merchant="YOUR_MERCHANT_ID"
+         data-amount="10.00"
+         data-chain="BASE_SEPOLIA" /&gt;
+  );
+}</pre>
+                        </div>
+                    </div>
+
+                    <div id="vue-tab" class="tab-content">
+                        <div class="code-block">
+                            <pre>&lt;template&gt;
+  &lt;div class="stablepay-checkout"
+       :data-merchant="merchantId"
+       :data-amount="amount"
+       data-chain="BASE_SEPOLIA" /&gt;
+&lt;/template&gt;
+
+&lt;script&gt;
+export default {
+  data() {
+    return {
+      merchantId: 'YOUR_MERCHANT_ID',
+      amount: '10.00'
+    }
+  },
+  mounted() {
+    const script = document.createElement('script');
+    script.src = 'https://stablepay-nine.vercel.app/checkout-widget.js';
+    document.body.appendChild(script);
+  }
+}
+&lt;/script&gt;</pre>
+                        </div>
+                    </div>
+
+                    <ul class="feature-list">
+                        <li>Works on any website</li>
+                        <li>Auto-detects MetaMask & Phantom</li>
+                        <li>Mobile responsive</li>
+                        <li>Customizable theme</li>
+                    </ul>
+                </div>
+
+                <div id="hosted-content" class="tab-content">
+                    <h3 style="margin-bottom: 12px; color: #1f2937;">Hosted Checkout</h3>
+                    <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">
+                        Redirect customers to a StablePay-hosted checkout page.
+                    </p>
+
+                    <div class="code-block">
+                        <pre>// 1. Create order
+const order = await fetch('/api/v1/orders', {
+  method: 'POST',
+  body: JSON.stringify({
+    merchantId: 'YOUR_MERCHANT_ID',
+    amount: '10.00',
+    chain: 'BASE_SEPOLIA',
+    paymentAddress: 'YOUR_WALLET'
+  })
+});
+
+const { order: { id } } = await order.json();
+
+// 2. Redirect to checkout
+window.location.href =
+  `https://stablepay-nine.vercel.app/checkout?orderId=${id}`;
+
+// 3. Customer pays and returns
+// 4. Check order status
+const status = await fetch(`/api/v1/orders/${id}`);</pre>
+                    </div>
+
+                    <ul class="feature-list">
+                        <li>No frontend code needed</li>
+                        <li>PCI compliant</li>
+                        <li>Built-in security</li>
+                        <li>Returns to your site</li>
+                    </ul>
+                </div>
+
+                <div id="api-content" class="tab-content">
+                    <h3 style="margin-bottom: 12px; color: #1f2937;">Custom API Integration</h3>
+                    <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">
+                        Build your own checkout UI using our REST API.
+                    </p>
+
+                    <div class="code-block">
+                        <pre>// Create order
+POST /api/v1/orders
+{
+  "merchantId": "xxx",
+  "amount": "10.00",
+  "chain": "BASE_SEPOLIA",
+  "paymentAddress": "0x..."
+}
+
+// Get order status
+GET /api/v1/orders/:orderId
+
+// Confirm payment
+POST /api/v1/orders/:orderId/confirm
+{
+  "txHash": "0xabc..."
+}</pre>
+                    </div>
+
+                    <ul class="feature-list">
+                        <li>Full control over UX</li>
+                        <li>Custom branding</li>
+                        <li>Advanced features</li>
+                        <li>Backend integration</li>
+                    </ul>
+
+                    <a href="https://stablepay-nine.vercel.app/dashboard.html" target="_blank" class="btn btn-outline" style="margin-top: 16px;">
+                        View API Documentation
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right: Live Demo -->
+            <div class="demo-card">
+                <h2>Live Demo</h2>
+                <p class="subtitle">Try it yourself on Base Sepolia testnet</p>
+
+                <div class="info-banner">
+                    <div class="info-banner-title">Need testnet USDC?</div>
+                    <div class="info-banner-text">
+                        Get free testnet USDC from the Base Sepolia faucet to test payments.
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500;">Amount (USDC)</label>
+                    <input type="number" id="demo-amount" value="10.00" step="0.01" min="0.01"
+                           style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500;">Chain</label>
+                    <select id="demo-chain" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px;">
+                        <option value="BASE_SEPOLIA">Base Sepolia (Testnet)</option>
+                        <option value="ETHEREUM_SEPOLIA">Ethereum Sepolia (Testnet)</option>
+                        <option value="SOLANA_DEVNET">Solana Devnet (Testnet)</option>
+                        <option value="BASE_MAINNET">Base Mainnet</option>
+                        <option value="ETHEREUM_MAINNET">Ethereum Mainnet</option>
+                        <option value="SOLANA_MAINNET">Solana Mainnet</option>
+                    </select>
+                </div>
+
+                <div class="widget-demo">
+                    <div class="widget-demo-label">Widget renders here</div>
+
+                    <!-- This is where the widget would be embedded -->
+                    <div id="checkout-widget-container" class="stablepay-checkout"
+                         data-merchant="cmhkjckgi0000qut5wxmtsw1f"
+                         data-amount="10.00"
+                         data-chain="BASE_SEPOLIA"
+                         data-theme="light">
+
+                        <!-- Placeholder UI showing what the widget will look like -->
+                        <div style="text-align: center; padding: 40px 20px; border: 2px dashed #d1d5db; border-radius: 8px; background: white;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">💳</div>
+                            <div style="font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">
+                                Pay with USDC
+                            </div>
+                            <div style="font-size: 32px; font-weight: bold; color: #3b82f6; margin-bottom: 20px;">
+                                $<span id="display-amount">10.00</span>
+                            </div>
+                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
+                                Chain: <span id="display-chain" style="font-weight: 600;">Base Sepolia</span>
+                            </div>
+                            <button class="btn" onclick="connectWallet()" style="width: 100%;">
+                                Connect Wallet
+                            </button>
+                            <div style="margin-top: 16px; color: #9ca3af; font-size: 12px;">
+                                Powered by StablePay
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 24px; display: flex; gap: 12px;">
+                    <button class="btn" onclick="updateWidget()" style="flex: 1;">
+                        Update Widget
+                    </button>
+                    <button class="btn btn-outline" onclick="resetWidget()" style="flex: 1;">
+                        Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>
+                Need help? Check out the
+                <a href="https://stablepay-nine.vercel.app/dashboard.html" target="_blank">Developer Dashboard</a>
+                for complete documentation and API reference.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const parent = tab.closest('.demo-card');
+                const tabName = tab.dataset.tab;
+
+                parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                parent.querySelectorAll('.tab-content').forEach(content => {
+                    if (content.id === `${tabName}-tab`) {
+                        content.classList.add('active');
+                    } else {
+                        content.classList.remove('active');
+                    }
+                });
+            });
+        });
+
+        // Integration type switching
+        document.querySelectorAll('.integration-type').forEach(type => {
+            type.addEventListener('click', () => {
+                const typeName = type.dataset.type;
+
+                document.querySelectorAll('.integration-type').forEach(t => t.classList.remove('active'));
+                type.classList.add('active');
+
+                document.querySelectorAll('#widget-content, #hosted-content, #api-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+
+                document.getElementById(`${typeName}-content`).style.display = 'block';
+            });
+        });
+
+        // Widget demo controls
+        function updateWidget() {
+            const amount = document.getElementById('demo-amount').value;
+            const chain = document.getElementById('demo-chain').value;
+
+            document.getElementById('display-amount').textContent = amount;
+            document.getElementById('display-chain').textContent = chain.replace('_', ' ');
+
+            // Update widget attributes
+            const widget = document.getElementById('checkout-widget-container');
+            widget.setAttribute('data-amount', amount);
+            widget.setAttribute('data-chain', chain);
+        }
+
+        function resetWidget() {
+            document.getElementById('demo-amount').value = '10.00';
+            document.getElementById('demo-chain').value = 'BASE_SEPOLIA';
+            updateWidget();
+        }
+
+        function connectWallet() {
+            alert('This is a demo placeholder!\n\nThe real widget will:\n1. Detect MetaMask or Phantom\n2. Connect your wallet\n3. Prompt you to sign the transaction\n4. Confirm payment on-chain\n\nCheck the Developer Dashboard for implementation details.');
+        }
+
+        // Update display on input change
+        document.getElementById('demo-amount').addEventListener('input', (e) => {
+            document.getElementById('display-amount').textContent = e.target.value;
+        });
+
+        document.getElementById('demo-chain').addEventListener('change', (e) => {
+            document.getElementById('display-chain').textContent = e.target.value.replace('_', ' ');
+        });
+    </script>
+</body>
+</html>
