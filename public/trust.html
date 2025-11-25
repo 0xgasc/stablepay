@@ -7,89 +7,172 @@
     <meta name="description" content="StablePay security practices, compliance certifications, and trust center. Learn how we protect your payments and data.">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+
+        * {
+            font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+        }
+
         body {
-            background: linear-gradient(to bottom, #0f172a, #1e293b);
+            background: #f8f8f8;
             min-height: 100vh;
         }
+
+        /* Neo-brutalism elements */
+        .brutal-border {
+            border: 4px solid #000;
+            box-shadow: 8px 8px 0px #000;
+        }
+
+        .brutal-border-thin {
+            border: 3px solid #000;
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .brutal-shadow {
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .brutal-shadow-sm {
+            box-shadow: 4px 4px 0px #000;
+        }
+
         .trust-card {
-            backdrop-filter: blur(10px);
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            background: #fff;
+            border: 4px solid #000;
+            box-shadow: 8px 8px 0px #000;
+            transition: all 0.2s ease;
         }
+
+        .trust-card:hover {
+            transform: translate(-4px, -4px);
+            box-shadow: 12px 12px 0px #000;
+        }
+
         .trust-badge {
-            transition: transform 0.2s;
+            background: #fff;
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0px #000;
+            transition: all 0.15s ease;
         }
+
         .trust-badge:hover {
-            transform: translateY(-4px);
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px #000;
         }
+
         .accordion-content {
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease-out;
         }
+
         .accordion-content.active {
             max-height: 2000px;
             transition: max-height 0.5s ease-in;
         }
+
+        .btn-brutal {
+            background: #000;
+            color: #fff;
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0px #000;
+            transition: all 0.15s ease;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-brutal:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px #000;
+        }
+
+        .btn-brutal:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        .accent-yellow {
+            background: #FFD93D;
+        }
+
+        .accent-blue {
+            background: #6BCF7F;
+        }
+
+        .accent-pink {
+            background: #FF6B9D;
+        }
+
+        .accent-purple {
+            background: #C69EFF;
+        }
+
+        h1, h2, h3 {
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
     </style>
 </head>
-<body class="text-slate-100">
+<body class="bg-gray-100 text-black">
     <!-- Header -->
-    <header class="border-b border-slate-800 bg-slate-950/50 backdrop-blur-sm sticky top-0 z-50">
+    <header class="border-b-4 border-black bg-white sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div class="flex items-center justify-between">
-                <a href="/" class="text-2xl font-bold text-white">
-                    <span class="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">StablePay</span>
+                <a href="/" class="text-2xl font-bold text-black">
+                    StablePay<span class="text-2xl">💰</span>
                 </a>
                 <nav class="flex gap-6">
-                    <a href="/" class="text-slate-300 hover:text-white transition-colors">Home</a>
-                    <a href="/dashboard.html" class="text-slate-300 hover:text-white transition-colors">Dashboard</a>
-                    <a href="/trust.html" class="text-white font-medium">Trust Center</a>
+                    <a href="/" class="text-black hover:underline decoration-4 decoration-black font-medium transition-all">Home</a>
+                    <a href="/dashboard.html" class="text-black hover:underline decoration-4 decoration-black font-medium transition-all">Dashboard</a>
+                    <a href="/trust.html" class="underline decoration-4 decoration-black font-bold">Trust Center</a>
                 </nav>
             </div>
         </div>
     </header>
 
     <!-- Hero Section -->
-    <section class="py-20 px-4">
-        <div class="max-w-4xl mx-auto text-center">
-            <div class="text-6xl mb-6">🔒</div>
-            <h1 class="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                Your Security is Our Priority
-            </h1>
-            <p class="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
-                StablePay is built on enterprise-grade security infrastructure to protect your payments and data.
-                Non-custodial, transparent, and compliant.
-            </p>
-            <a href="#security" class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded font-medium transition-colors">
-                View Security Practices →
-            </a>
+    <section class="py-16 px-4 bg-white border-b-4 border-black">
+        <div class="max-w-5xl mx-auto">
+            <div class="bg-yellow-300 brutal-border p-12 text-center">
+                <div class="text-7xl mb-6">🔒</div>
+                <h1 class="text-5xl md:text-6xl font-black mb-6 text-black uppercase">
+                    SECURITY FIRST
+                </h1>
+                <p class="text-xl md:text-2xl text-black font-medium mb-8 max-w-2xl mx-auto">
+                    Non-custodial crypto payments. Your keys, your coins. We never touch your money.
+                </p>
+                <a href="#security" class="btn-brutal inline-block px-10 py-4 text-lg">
+                    See How We Protect You →
+                </a>
+            </div>
         </div>
     </section>
 
     <!-- Trust Badges -->
-    <section class="py-16 px-4 border-y border-slate-800 bg-slate-950/30">
+    <section class="py-16 px-4 bg-gray-100">
         <div class="max-w-6xl mx-auto">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                <div class="trust-badge text-center">
-                    <div class="text-5xl mb-4">🛡️</div>
-                    <div class="text-2xl font-bold text-white mb-2">Non-Custodial</div>
-                    <div class="text-slate-400 text-sm">We never hold your funds</div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="trust-badge p-8 text-center accent-yellow">
+                    <div class="text-6xl mb-4">🛡️</div>
+                    <div class="text-xl font-black text-black mb-2 uppercase">Non-Custodial</div>
+                    <div class="text-black font-medium text-sm">We never hold your funds</div>
                 </div>
-                <div class="trust-badge text-center">
-                    <div class="text-5xl mb-4">🔐</div>
-                    <div class="text-2xl font-bold text-white mb-2">Encrypted</div>
-                    <div class="text-slate-400 text-sm">AES-256 & TLS 1.3</div>
+                <div class="trust-badge p-8 text-center accent-blue">
+                    <div class="text-6xl mb-4">🔐</div>
+                    <div class="text-xl font-black text-black mb-2 uppercase">Encrypted</div>
+                    <div class="text-black font-medium text-sm">AES-256 & TLS 1.3</div>
                 </div>
-                <div class="trust-badge text-center">
-                    <div class="text-5xl mb-4">⚡</div>
-                    <div class="text-2xl font-bold text-white mb-2">99.9% Uptime</div>
-                    <div class="text-slate-400 text-sm">Reliable infrastructure</div>
+                <div class="trust-badge p-8 text-center accent-pink">
+                    <div class="text-6xl mb-4">⚡</div>
+                    <div class="text-xl font-black text-black mb-2 uppercase">99.9% Uptime</div>
+                    <div class="text-black font-medium text-sm">Reliable infrastructure</div>
                 </div>
-                <div class="trust-badge text-center">
-                    <div class="text-5xl mb-4">📊</div>
-                    <div class="text-2xl font-bold text-white mb-2">GDPR Ready</div>
-                    <div class="text-slate-400 text-sm">Privacy compliant</div>
+                <div class="trust-badge p-8 text-center accent-purple">
+                    <div class="text-6xl mb-4">📊</div>
+                    <div class="text-xl font-black text-black mb-2 uppercase">GDPR Ready</div>
+                    <div class="text-black font-medium text-sm">Privacy compliant</div>
                 </div>
             </div>
         </div>
@@ -100,19 +183,19 @@
         <div class="max-w-4xl mx-auto space-y-6">
 
             <!-- Security & Compliance -->
-            <div id="security" class="trust-card rounded-lg">
-                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+            <div id="security" class="trust-card">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between bg-white" onclick="toggleAccordion(this)">
                     <div>
-                        <h2 class="text-2xl font-bold text-white mb-2">🔒 Security & Compliance</h2>
-                        <p class="text-slate-400">Enterprise-grade security infrastructure</p>
+                        <h2 class="text-2xl font-black text-black mb-2 uppercase">🔒 Security & Compliance</h2>
+                        <p class="text-gray-700 font-medium">Enterprise-grade security infrastructure</p>
                     </div>
-                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                    <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
-                <div class="accordion-content px-6 pb-6">
-                    <div class="space-y-6 pt-4 border-t border-slate-800">
-                        <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Data Encryption</h3>
-                            <ul class="space-y-2 text-slate-300">
+                <div class="accordion-content px-6 pb-6 bg-white">
+                    <div class="space-y-6 pt-4 border-t-4 border-black">
+                        <div class="bg-yellow-100 border-4 border-black brutal-shadow-sm p-4">
+                            <h3 class="text-lg font-black text-black mb-3 uppercase">Data Encryption</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ AES-256 encryption at rest</li>
                                 <li>✓ TLS 1.3 for data in transit</li>
                                 <li>✓ End-to-end encrypted API calls</li>
@@ -120,9 +203,9 @@
                             </ul>
                         </div>
 
-                        <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Infrastructure Security</h3>
-                            <ul class="space-y-2 text-slate-300">
+                        <div class="bg-green-100 border-4 border-black brutal-shadow-sm p-4">
+                            <h3 class="text-lg font-black text-black mb-3 uppercase">Infrastructure Security</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ Hosted on Vercel (SOC 2, ISO 27001 certified)</li>
                                 <li>✓ Database on Supabase (SOC 2, GDPR compliant)</li>
                                 <li>✓ DDoS protection via Cloudflare</li>
@@ -131,9 +214,9 @@
                             </ul>
                         </div>
 
-                        <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Smart Contract Security</h3>
-                            <ul class="space-y-2 text-slate-300">
+                        <div class="bg-pink-100 border-4 border-black brutal-shadow-sm p-4">
+                            <h3 class="text-lg font-black text-black mb-3 uppercase">Smart Contract Security</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ No custom smart contracts (uses standard USDC)</li>
                                 <li>✓ Client-side transaction signing only</li>
                                 <li>✓ Non-custodial architecture - we never hold funds</li>
@@ -141,9 +224,9 @@
                             </ul>
                         </div>
 
-                        <div class="bg-blue-900/20 border border-blue-800 rounded p-4 mt-4">
-                            <div class="text-sm text-blue-300 font-medium">Security Roadmap</div>
-                            <div class="text-xs text-blue-400 mt-2">
+                        <div class="bg-blue-100 border-4 border-black p-4">
+                            <div class="text-sm text-black font-black uppercase">Security Roadmap</div>
+                            <div class="text-sm text-black font-medium mt-2">
                                 We are working towards SOC 2 Type II certification. Expected completion: Q2 2025.
                             </div>
                         </div>
@@ -152,15 +235,15 @@
             </div>
 
             <!-- Privacy & Data Protection -->
-            <div class="trust-card rounded-lg">
-                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+            <div class="trust-card">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between bg-white" onclick="toggleAccordion(this)">
                     <div>
-                        <h2 class="text-2xl font-bold text-white mb-2">🔐 Privacy & Data Protection</h2>
-                        <p class="text-slate-400">GDPR compliant and privacy-first</p>
+                        <h2 class="text-2xl font-black text-black mb-2 uppercase">🔐 Privacy & Data Protection</h2>
+                        <p class="text-gray-700 font-medium">GDPR compliant and privacy-first</p>
                     </div>
-                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                    <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
-                <div class="accordion-content px-6 pb-6">
+                <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t border-slate-800">
                         <div>
                             <h3 class="text-lg font-semibold text-white mb-3">GDPR Compliance</h3>
@@ -211,15 +294,15 @@
             </div>
 
             <!-- How StablePay Works -->
-            <div class="trust-card rounded-lg">
-                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+            <div class="trust-card">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between bg-white" onclick="toggleAccordion(this)">
                     <div>
-                        <h2 class="text-2xl font-bold text-white mb-2">⚙️ How StablePay Works</h2>
-                        <p class="text-slate-400">Non-custodial and transparent payment flow</p>
+                        <h2 class="text-2xl font-black text-black mb-2 uppercase">⚙️ How StablePay Works</h2>
+                        <p class="text-gray-700 font-medium">Non-custodial and transparent payment flow</p>
                     </div>
-                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                    <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
-                <div class="accordion-content px-6 pb-6">
+                <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t border-slate-800">
                         <div class="bg-slate-900 border border-slate-700 rounded-lg p-6">
                             <h3 class="text-lg font-semibold text-white mb-4">Payment Flow</h3>
@@ -266,15 +349,15 @@
             </div>
 
             <!-- Blockchain Security -->
-            <div class="trust-card rounded-lg">
-                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+            <div class="trust-card">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between bg-white" onclick="toggleAccordion(this)">
                     <div>
-                        <h2 class="text-2xl font-bold text-white mb-2">⛓️ Blockchain Security</h2>
-                        <p class="text-slate-400">Multi-chain security standards</p>
+                        <h2 class="text-2xl font-black text-black mb-2 uppercase">⛓️ Blockchain Security</h2>
+                        <p class="text-gray-700 font-medium">Multi-chain security standards</p>
                     </div>
-                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                    <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
-                <div class="accordion-content px-6 pb-6">
+                <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t border-slate-800">
                         <div>
                             <h3 class="text-lg font-semibold text-white mb-3">Supported Networks</h3>
@@ -323,15 +406,15 @@
             </div>
 
             <!-- Operational Security -->
-            <div class="trust-card rounded-lg">
-                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+            <div class="trust-card">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between bg-white" onclick="toggleAccordion(this)">
                     <div>
-                        <h2 class="text-2xl font-bold text-white mb-2">🛠️ Operational Security</h2>
-                        <p class="text-slate-400">Our internal security practices</p>
+                        <h2 class="text-2xl font-black text-black mb-2 uppercase">🛠️ Operational Security</h2>
+                        <p class="text-gray-700 font-medium">Our internal security practices</p>
                     </div>
-                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                    <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
-                <div class="accordion-content px-6 pb-6">
+                <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t border-slate-800">
                         <div>
                             <h3 class="text-lg font-semibold text-white mb-3">Access Control</h3>
@@ -367,15 +450,15 @@
             </div>
 
             <!-- Merchant Protection -->
-            <div class="trust-card rounded-lg">
-                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+            <div class="trust-card">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between bg-white" onclick="toggleAccordion(this)">
                     <div>
-                        <h2 class="text-2xl font-bold text-white mb-2">🏪 Merchant Protection</h2>
-                        <p class="text-slate-400">How we protect merchant businesses</p>
+                        <h2 class="text-2xl font-black text-black mb-2 uppercase">🏪 Merchant Protection</h2>
+                        <p class="text-gray-700 font-medium">How we protect merchant businesses</p>
                     </div>
-                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                    <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
-                <div class="accordion-content px-6 pb-6">
+                <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t border-slate-800">
                         <div>
                             <h3 class="text-lg font-semibold text-white mb-3">Payment Security</h3>
@@ -411,15 +494,15 @@
             </div>
 
             <!-- Transparency -->
-            <div class="trust-card rounded-lg">
-                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+            <div class="trust-card">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between bg-white" onclick="toggleAccordion(this)">
                     <div>
-                        <h2 class="text-2xl font-bold text-white mb-2">📊 Transparency</h2>
-                        <p class="text-slate-400">Open communication and reporting</p>
+                        <h2 class="text-2xl font-black text-black mb-2 uppercase">📊 Transparency</h2>
+                        <p class="text-gray-700 font-medium">Open communication and reporting</p>
                     </div>
-                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                    <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
-                <div class="accordion-content px-6 pb-6">
+                <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t border-slate-800">
                         <div>
                             <h3 class="text-lg font-semibold text-white mb-3">Open Source</h3>
@@ -441,12 +524,12 @@
                             </ul>
                         </div>
 
-                        <div class="bg-slate-900 border border-slate-700 rounded p-4">
-                            <div class="text-white font-medium mb-2">Report Security Issues</div>
-                            <div class="text-slate-400 text-sm mb-3">
+                        <div class="bg-pink-300 brutal-border p-4">
+                            <div class="text-black font-bold mb-2 uppercase">Report Security Issues</div>
+                            <div class="text-black text-sm mb-3 font-medium">
                                 If you discover a security vulnerability, please email us at:
                             </div>
-                            <a href="mailto:security@stablepay.io" class="text-blue-400 hover:text-blue-300 font-mono text-sm">
+                            <a href="mailto:security@stablepay.io" class="text-black hover:text-gray-700 font-mono text-sm font-bold underline">
                                 security@stablepay.io
                             </a>
                         </div>
@@ -458,60 +541,64 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="py-20 px-4 border-t border-slate-800">
+    <section class="py-20 px-4 bg-white border-t-4 border-black">
         <div class="max-w-4xl mx-auto text-center">
-            <h2 class="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
-            <p class="text-slate-300 mb-8">
-                Join hundreds of merchants accepting crypto payments with StablePay
-            </p>
-            <div class="flex gap-4 justify-center">
-                <a href="/dashboard.html" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded font-medium transition-colors">
-                    Start Accepting Payments
-                </a>
-                <a href="https://github.com/stablepay" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded font-medium transition-colors">
-                    View Documentation
-                </a>
+            <div class="bg-green-300 brutal-border p-12 inline-block">
+                <h2 class="text-4xl font-black text-black mb-4 uppercase">Ready to Get Started?</h2>
+                <p class="text-black text-lg mb-8 font-medium">
+                    Join hundreds of merchants accepting crypto payments with StablePay
+                </p>
+                <div class="flex gap-6 justify-center flex-wrap">
+                    <a href="/dashboard.html" class="btn-brutal inline-block px-10 py-4 text-lg">
+                        Start Accepting Payments →
+                    </a>
+                    <a href="https://github.com/stablepay" target="_blank" class="bg-white text-black border-4 border-black box-shadow-[6px_6px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_#000] px-10 py-4 font-bold text-lg uppercase inline-block transition-all">
+                        View Documentation →
+                    </a>
+                </div>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="border-t border-slate-800 py-12 px-4">
+    <footer class="bg-white border-t-4 border-black py-12 px-4">
         <div class="max-w-7xl mx-auto">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                 <div>
-                    <h3 class="text-white font-bold text-lg mb-4">StablePay</h3>
-                    <p class="text-slate-400 text-sm">
+                    <h3 class="text-black font-black text-xl mb-4 uppercase">StablePay</h3>
+                    <p class="text-black text-sm font-medium">
                         Multi-chain USDC payment infrastructure for the modern web
                     </p>
                 </div>
                 <div>
-                    <h4 class="text-white font-medium mb-3">Product</h4>
+                    <h4 class="text-black font-bold mb-3 uppercase">Product</h4>
                     <ul class="space-y-2 text-sm">
-                        <li><a href="/" class="text-slate-400 hover:text-white">Home</a></li>
-                        <li><a href="/dashboard.html" class="text-slate-400 hover:text-white">Dashboard</a></li>
-                        <li><a href="#" class="text-slate-400 hover:text-white">API Docs</a></li>
+                        <li><a href="/" class="text-black hover:text-gray-600 font-medium underline">Home</a></li>
+                        <li><a href="/dashboard.html" class="text-black hover:text-gray-600 font-medium underline">Dashboard</a></li>
+                        <li><a href="#" class="text-black hover:text-gray-600 font-medium underline">API Docs</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h4 class="text-white font-medium mb-3">Security</h4>
+                    <h4 class="text-black font-bold mb-3 uppercase">Security</h4>
                     <ul class="space-y-2 text-sm">
-                        <li><a href="/trust.html" class="text-slate-400 hover:text-white">Trust Center</a></li>
-                        <li><a href="#" class="text-slate-400 hover:text-white">Privacy Policy</a></li>
-                        <li><a href="#" class="text-slate-400 hover:text-white">Terms of Service</a></li>
+                        <li><a href="/trust.html" class="text-black hover:text-gray-600 font-medium underline">Trust Center</a></li>
+                        <li><a href="#" class="text-black hover:text-gray-600 font-medium underline">Privacy Policy</a></li>
+                        <li><a href="#" class="text-black hover:text-gray-600 font-medium underline">Terms of Service</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h4 class="text-white font-medium mb-3">Contact</h4>
+                    <h4 class="text-black font-bold mb-3 uppercase">Contact</h4>
                     <ul class="space-y-2 text-sm">
-                        <li><a href="mailto:security@stablepay.io" class="text-slate-400 hover:text-white">Security</a></li>
-                        <li><a href="mailto:support@stablepay.io" class="text-slate-400 hover:text-white">Support</a></li>
-                        <li><a href="https://github.com/stablepay" class="text-slate-400 hover:text-white">GitHub</a></li>
+                        <li><a href="mailto:security@stablepay.io" class="text-black hover:text-gray-600 font-medium underline">Security</a></li>
+                        <li><a href="mailto:support@stablepay.io" class="text-black hover:text-gray-600 font-medium underline">Support</a></li>
+                        <li><a href="https://github.com/stablepay" class="text-black hover:text-gray-600 font-medium underline">GitHub</a></li>
                     </ul>
                 </div>
             </div>
-            <div class="border-t border-slate-800 pt-8 text-center text-slate-400 text-sm">
-                © 2025 StablePay. All rights reserved. Built with security and transparency.
+            <div class="border-t-4 border-black pt-8 text-center">
+                <p class="text-black text-sm font-bold uppercase">
+                    © 2025 StablePay. All rights reserved. Built with security and transparency.
+                </p>
             </div>
         </div>
     </footer>
