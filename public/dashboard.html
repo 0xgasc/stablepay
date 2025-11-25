@@ -259,6 +259,43 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Batch Refund Section -->
+                    <div class="mt-8 border-t border-slate-800 pt-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-white">Batch Refund</h3>
+                                <p class="text-sm text-slate-400 mt-1">Process multiple refunds in a single transaction (EVM only)</p>
+                            </div>
+                            <button id="clearBatchRefunds" class="text-red-400 hover:text-red-300 text-sm">
+                                Clear Selection
+                            </button>
+                        </div>
+
+                        <div id="batchRefundSection" class="bg-slate-950 border border-slate-800 p-6 rounded">
+                            <div id="batchRefundEmpty" class="text-center py-8 text-slate-400">
+                                Select orders from the table above to add them to batch refund
+                            </div>
+
+                            <div id="batchRefundList" class="hidden">
+                                <div class="mb-4">
+                                    <div class="text-sm text-slate-400 mb-2">Selected Orders (<span id="batchRefundCount">0</span>)</div>
+                                    <div id="batchRefundItems" class="space-y-2 max-h-64 overflow-y-auto">
+                                        <!-- Populated dynamically -->
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between pt-4 border-t border-slate-800">
+                                    <div class="text-white">
+                                        Total: <span id="batchRefundTotal" class="font-bold">0</span> USDC
+                                    </div>
+                                    <button id="executeBatchRefundBtn" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 font-medium transition-colors rounded">
+                                        Execute Batch Refund
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Wallets Tab -->
@@ -284,167 +321,270 @@
                 <!-- Developer Tab -->
                 <div id="developerTab" class="tab-content hidden">
                     <div class="space-y-6">
-                        <!-- API Keys Section -->
-                        <div class="bg-slate-950 border shadow-sm border p-6">
-                            <div class="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 class="text-lg font-semibold text-white">API Keys</h3>
-                                    <p class="text-sm text-slate-400 mt-1">Use these keys to integrate StablePay into your application</p>
-                                </div>
-                                <button id="generateApiKeyBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 border font-medium transition-colors text-sm">
-                                    Generate New Key
-                                </button>
-                            </div>
+
+                        <!-- Quick Start Guide -->
+                        <div class="bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-blue-800 p-6">
+                            <h2 class="text-2xl font-bold text-white mb-2">Add Crypto Payments in 3 Steps</h2>
+                            <p class="text-slate-300 mb-6">Copy-paste this code to accept USDC on your website</p>
 
                             <div class="space-y-4">
-                                <div class="bg-slate-950 border p-4 border border-slate-800">
-                                    <div class="flex justify-between items-start">
-                                        <div class="flex-1">
-                                            <div class="text-sm font-medium text-slate-300 mb-1">Merchant ID</div>
-                                            <code class="text-sm bg-slate-950 px-3 py-2 rounded border border-slate-800 inline-block font-mono" id="apiMerchantId">Loading...</code>
-                                        </div>
-                                        <button onclick="navigator.clipboard.writeText(document.getElementById('apiMerchantId').textContent); alert('Copied!')" class="text-blue-400 hover:text-blue-700 text-sm font-medium ml-4">
+                                <!-- Step 1 -->
+                                <div class="bg-slate-950 border border-slate-800 p-4">
+                                    <div class="flex items-center mb-3">
+                                        <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold mr-3">1</div>
+                                        <h3 class="text-white font-semibold">Add Script to Your Website</h3>
+                                    </div>
+                                    <p class="text-sm text-slate-400 mb-3">Add this before your closing &lt;/head&gt; tag:</p>
+                                    <div class="bg-gray-900 p-3 rounded border border-slate-700 relative">
+                                        <pre class="text-xs text-green-400 font-mono overflow-x-auto">&lt;script src="https://stablepay-nine.vercel.app/checkout-widget.js"&gt;&lt;/script&gt;</pre>
+                                        <button onclick="copyToClipboard(this, '&lt;script src=&quot;https://stablepay-nine.vercel.app/checkout-widget.js&quot;&gt;&lt;/script&gt;')" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-xs">
                                             Copy
                                         </button>
                                     </div>
                                 </div>
 
-                                <div class="bg-yellow-50 border p-4 border border-yellow-300">
-                                    <div class="flex items-start">
-                                        
-                                        <div>
-                                            <div class="text-sm font-medium text-yellow-800 mb-1">Keep your API keys secure</div>
-                                            <p class="text-xs text-yellow-700">Never share your API keys publicly or commit them to version control</p>
-                                        </div>
+                                <!-- Step 2 -->
+                                <div class="bg-slate-950 border border-slate-800 p-4">
+                                    <div class="flex items-center mb-3">
+                                        <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold mr-3">2</div>
+                                        <h3 class="text-white font-semibold">Add Checkout Widget</h3>
+                                    </div>
+                                    <p class="text-sm text-slate-400 mb-3">Paste this where you want the payment button:</p>
+                                    <div class="bg-gray-900 p-3 rounded border border-slate-700 relative">
+                                        <pre class="text-xs text-green-400 font-mono overflow-x-auto" id="widgetCode">&lt;div class="stablepay-checkout"
+     data-merchant="<span id="widgetMerchantId" class="text-yellow-400">YOUR_MERCHANT_ID</span>"
+     data-amount="10.00"
+     data-chain="BASE_MAINNET"&gt;
+&lt;/div&gt;</pre>
+                                        <button onclick="copyToClipboard(this, document.getElementById('widgetCode').textContent)" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-xs">
+                                            Copy
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Step 3 -->
+                                <div class="bg-slate-950 border border-slate-800 p-4">
+                                    <div class="flex items-center mb-3">
+                                        <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold mr-3">3</div>
+                                        <h3 class="text-white font-semibold">Test & Go Live!</h3>
+                                    </div>
+                                    <p class="text-sm text-slate-400 mb-3">That's it! Your customers can now pay with USDC.</p>
+                                    <div class="flex space-x-3">
+                                        <a href="/docs/GETTING_STARTED.md" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">
+                                            Full Guide
+                                        </a>
+                                        <button onclick="openTestPayment()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-medium">
+                                            Test Payment
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- API Documentation -->
+                        <!-- Your Credentials -->
                         <div class="bg-slate-950 border shadow-sm border p-6">
-                            <h3 class="text-lg font-semibold text-white mb-6">API Endpoints</h3>
-
-                            <!-- Create Order -->
-                            <div class="mb-8">
-                                <div class="flex items-center mb-3">
-                                    <span class="px-3 py-1 bg-green-900/20 text-green-800 rounded-full text-xs font-bold mr-3">POST</span>
-                                    <code class="text-sm font-mono text-slate-300">/api/v1/orders</code>
-                                </div>
-                                <p class="text-sm text-slate-400 mb-4">Create a new payment order</p>
-
-                                <div class="bg-gray-900 border p-4 overflow-x-auto">
-                                    <pre class="text-xs text-green-400 font-mono" id="createOrderExample">curl -X POST https://stablepay-nine.vercel.app/api/v1/orders \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "merchantId": "<span id="exampleMerchantId">YOUR_MERCHANT_ID</span>",
-    "amount": "10.00",
-    "chain": "BASE_SEPOLIA",
-    "customerEmail": "customer@example.com",
-    "customerName": "Product Purchase",
-    "paymentAddress": "YOUR_WALLET_ADDRESS"
-  }'</pre>
-                                </div>
-
-                                <button onclick="testCreateOrder()" class="mt-3 text-blue-400 hover:text-blue-700 text-sm font-medium">
-                                    Test this endpoint
-                                </button>
-                            </div>
-
-                            <!-- Get Order -->
-                            <div class="mb-8">
-                                <div class="flex items-center mb-3">
-                                    <span class="px-3 py-1 bg-blue-900/20 text-blue-800 rounded-full text-xs font-bold mr-3">GET</span>
-                                    <code class="text-sm font-mono text-slate-300">/api/orders/:orderId</code>
-                                </div>
-                                <p class="text-sm text-slate-400 mb-4">Get order status and details</p>
-
-                                <div class="bg-gray-900 border p-4 overflow-x-auto">
-                                    <pre class="text-xs text-green-400 font-mono">curl https://stablepay-nine.vercel.app/api/orders/ORDER_ID</pre>
-                                </div>
-                            </div>
-
-                            <!-- List Orders -->
-                            <div>
-                                <div class="flex items-center mb-3">
-                                    <span class="px-3 py-1 bg-blue-900/20 text-blue-800 rounded-full text-xs font-bold mr-3">GET</span>
-                                    <code class="text-sm font-mono text-slate-300">/api/v1/admin?resource=orders&merchantId=YOUR_ID</code>
-                                </div>
-                                <p class="text-sm text-slate-400 mb-4">List all orders for your merchant account</p>
-
-                                <div class="bg-gray-900 border p-4 overflow-x-auto">
-                                    <pre class="text-xs text-green-400 font-mono">curl https://stablepay-nine.vercel.app/api/v1/admin?resource=orders&merchantId=YOUR_ID \\
-  -H "Authorization: Bearer YOUR_TOKEN"</pre>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Code Examples -->
-                        <div class="bg-slate-950 border shadow-sm border p-6">
-                            <h3 class="text-lg font-semibold text-white mb-6">Code Examples</h3>
+                            <h3 class="text-lg font-semibold text-white mb-4">Your Credentials</h3>
 
                             <div class="space-y-4">
-                                <!-- JavaScript -->
-                                <div>
-                                    <div class="flex items-center mb-2">
-                                        <span class="text-yellow-500 mr-2">📦</span>
-                                        <span class="font-medium text-white">JavaScript / Node.js</span>
+                                <div class="bg-slate-900 border border-slate-800 p-4 rounded">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <div class="text-sm font-medium text-slate-300">Merchant ID</div>
+                                        <button onclick="copyMerchantId()" class="text-blue-400 hover:text-blue-300 text-sm font-medium">
+                                            Copy
+                                        </button>
                                     </div>
-                                    <div class="bg-gray-900 border p-4 overflow-x-auto">
-                                        <pre class="text-xs text-green-400 font-mono">const response = await fetch('https://stablepay-nine.vercel.app/api/orders-simple', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    merchantId: 'YOUR_MERCHANT_ID',
-    amount: '10.00',
-    chain: 'BASE_SEPOLIA',
-    customerEmail: 'customer@example.com'
-  })
-});
+                                    <code class="text-sm bg-slate-950 px-3 py-2 rounded border border-slate-700 inline-block font-mono text-green-400" id="apiMerchantId">Loading...</code>
+                                    <p class="text-xs text-slate-500 mt-2">Use this in data-merchant attribute</p>
+                                </div>
 
-const order = await response.json();
-console.log('Order created:', order.id);</pre>
+                                <div class="bg-slate-900 border border-slate-800 p-4 rounded">
+                                    <div class="text-sm font-medium text-slate-300 mb-2">Configured Wallets</div>
+                                    <div id="configuredWalletsList" class="space-y-2 text-sm">
+                                        <div class="text-slate-400">Loading...</div>
                                     </div>
                                 </div>
 
-                                <!-- Python -->
-                                <div>
-                                    <div class="flex items-center mb-2">
-                                        <span class="text-blue-500 mr-2">🐍</span>
-                                        <span class="font-medium text-white">Python</span>
-                                    </div>
-                                    <div class="bg-gray-900 border p-4 overflow-x-auto">
-                                        <pre class="text-xs text-green-400 font-mono">import requests
-
-response = requests.post(
-    'https://stablepay-nine.vercel.app/api/orders-simple',
-    json={
-        'merchantId': 'YOUR_MERCHANT_ID',
-        'amount': '10.00',
-        'chain': 'BASE_SEPOLIA',
-        'customerEmail': 'customer@example.com'
-    }
-)
-
-order = response.json()
-print(f"Order created: {order['id']}")</pre>
-                                    </div>
+                                <div class="bg-yellow-900/20 border border-yellow-800 p-4 rounded">
+                                    <div class="text-sm font-medium text-yellow-300 mb-1">Security</div>
+                                    <p class="text-xs text-yellow-200">Your merchant ID is public (safe to use in frontend code). Your wallet private keys stay with you.</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Webhooks -->
+                        <!-- Framework Examples -->
                         <div class="bg-slate-950 border shadow-sm border p-6">
                             <div class="flex justify-between items-center mb-6">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-white">Webhooks</h3>
-                                    <p class="text-sm text-slate-400 mt-1">Get notified when payment status changes</p>
+                                    <h3 class="text-lg font-semibold text-white">Framework Examples</h3>
+                                    <p class="text-sm text-slate-400 mt-1">Ready-to-use code for popular frameworks</p>
                                 </div>
-                                <span class="px-3 py-1 bg-purple-900/20 text-purple-800 rounded-full text-xs font-medium">
-                                    Coming Soon
-                                </span>
+                                <a href="/docs/EXAMPLES.md" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm font-medium">
+                                    View All Examples →
+                                </a>
                             </div>
-                            <p class="text-sm text-slate-400">Configure webhook endpoints to receive real-time payment notifications</p>
+
+                            <!-- Framework Tabs -->
+                            <div class="mb-4">
+                                <div class="flex space-x-2 border-b border-slate-800">
+                                    <button onclick="showFramework('react')" id="tab-react" class="framework-tab px-4 py-2 text-sm font-medium text-slate-400 hover:text-white border-b-2 border-transparent">
+                                        React
+                                    </button>
+                                    <button onclick="showFramework('nextjs')" id="tab-nextjs" class="framework-tab px-4 py-2 text-sm font-medium text-slate-400 hover:text-white border-b-2 border-transparent">
+                                        Next.js
+                                    </button>
+                                    <button onclick="showFramework('vue')" id="tab-vue" class="framework-tab px-4 py-2 text-sm font-medium text-slate-400 hover:text-white border-b-2 border-transparent">
+                                        Vue
+                                    </button>
+                                    <button onclick="showFramework('wordpress')" id="tab-wordpress" class="framework-tab px-4 py-2 text-sm font-medium text-slate-400 hover:text-white border-b-2 border-transparent">
+                                        WordPress
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- React Example -->
+                            <div id="framework-react" class="framework-content hidden">
+                                <div class="bg-gray-900 border border-slate-700 p-4 overflow-x-auto relative">
+                                    <pre class="text-xs text-green-400 font-mono">import { useEffect } from 'react';
+
+export default function Checkout() {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://stablepay-nine.vercel.app/checkout-widget.js';
+    document.head.appendChild(script);
+
+    document.addEventListener('stablepay:payment.success', (event) => {
+      console.log('Payment successful:', event.detail);
+      // Save to your database
+    });
+  }, []);
+
+  return (
+    &lt;div className="stablepay-checkout"
+         data-merchant="YOUR_MERCHANT_ID"
+         data-amount="10.00"
+         data-chain="BASE_MAINNET"&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+                                    <button onclick="copyToClipboard(this, document.getElementById('framework-react').querySelector('pre').textContent)" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-xs">
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Next.js Example -->
+                            <div id="framework-nextjs" class="framework-content hidden">
+                                <div class="bg-gray-900 border border-slate-700 p-4 overflow-x-auto relative">
+                                    <pre class="text-xs text-green-400 font-mono">'use client';
+import Script from 'next/script';
+
+export default function CheckoutPage() {
+  return (
+    &lt;&gt;
+      &lt;Script src="https://stablepay-nine.vercel.app/checkout-widget.js" /&gt;
+
+      &lt;div className="stablepay-checkout"
+           data-merchant={process.env.NEXT_PUBLIC_STABLEPAY_MERCHANT_ID}
+           data-amount="10.00"
+           data-chain="BASE_MAINNET"&gt;
+      &lt;/div&gt;
+    &lt;/&gt;
+  );
+}</pre>
+                                    <button onclick="copyToClipboard(this, document.getElementById('framework-nextjs').querySelector('pre').textContent)" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-xs">
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Vue Example -->
+                            <div id="framework-vue" class="framework-content hidden">
+                                <div class="bg-gray-900 border border-slate-700 p-4 overflow-x-auto relative">
+                                    <pre class="text-xs text-green-400 font-mono">&lt;template&gt;
+  &lt;div class="stablepay-checkout"
+       :data-merchant="merchantId"
+       data-amount="10.00"
+       data-chain="BASE_MAINNET"&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+import { onMounted } from 'vue';
+
+const merchantId = import.meta.env.VITE_STABLEPAY_MERCHANT_ID;
+
+onMounted(() => {
+  const script = document.createElement('script');
+  script.src = 'https://stablepay-nine.vercel.app/checkout-widget.js';
+  document.head.appendChild(script);
+});
+&lt;/script&gt;</pre>
+                                    <button onclick="copyToClipboard(this, document.getElementById('framework-vue').querySelector('pre').textContent)" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-xs">
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- WordPress Example -->
+                            <div id="framework-wordpress" class="framework-content hidden">
+                                <div class="bg-gray-900 border border-slate-700 p-4 overflow-x-auto relative">
+                                    <pre class="text-xs text-green-400 font-mono">&lt;!-- Add to your WordPress post/page --&gt;
+
+&lt;script src="https://stablepay-nine.vercel.app/checkout-widget.js"&gt;&lt;/script&gt;
+
+&lt;div class="stablepay-checkout"
+     data-merchant="YOUR_MERCHANT_ID"
+     data-amount="10.00"
+     data-chain="BASE_MAINNET"&gt;
+&lt;/div&gt;
+
+&lt;!-- Or use shortcode (requires plugin) --&gt;
+[stablepay_checkout amount="10.00" product="Premium Membership"]</pre>
+                                    <button onclick="copyToClipboard(this, document.getElementById('framework-wordpress').querySelector('pre').textContent)" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-xs">
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resources -->
+                        <div class="bg-slate-950 border shadow-sm border p-6">
+                            <h3 class="text-lg font-semibold text-white mb-6">Documentation & Resources</h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <a href="/docs/GETTING_STARTED.md" target="_blank" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-4 rounded transition-colors group">
+                                    <div class="text-white font-semibold mb-2 group-hover:text-blue-400">Getting Started Guide</div>
+                                    <p class="text-sm text-slate-400">Complete setup guide in 5 minutes</p>
+                                </a>
+
+                                <a href="/docs/API.md" target="_blank" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-4 rounded transition-colors group">
+                                    <div class="text-white font-semibold mb-2 group-hover:text-blue-400">API Documentation</div>
+                                    <p class="text-sm text-slate-400">Full API reference with examples</p>
+                                </a>
+
+                                <a href="/docs/EXAMPLES.md" target="_blank" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-4 rounded transition-colors group">
+                                    <div class="text-white font-semibold mb-2 group-hover:text-blue-400">Code Examples</div>
+                                    <p class="text-sm text-slate-400">React, Vue, WordPress & more</p>
+                                </a>
+
+                                <a href="/docs/TROUBLESHOOTING.md" target="_blank" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 p-4 rounded transition-colors group">
+                                    <div class="text-white font-semibold mb-2 group-hover:text-blue-400">Troubleshooting</div>
+                                    <p class="text-sm text-slate-400">Common issues and solutions</p>
+                                </a>
+                            </div>
+
+                            <div class="mt-6 bg-blue-900/20 border border-blue-800 p-4 rounded">
+                                <div class="flex items-start">
+                                    <div class="text-blue-400 mr-3 text-xl">💬</div>
+                                    <div class="flex-1">
+                                        <div class="text-sm font-medium text-blue-300 mb-1">Need Help?</div>
+                                        <p class="text-xs text-blue-200 mb-2">Our support team is here to help you integrate StablePay</p>
+                                        <a href="mailto:support@stablepay.com" class="text-sm text-blue-400 hover:text-blue-300 font-medium">
+                                            support@stablepay.com
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -634,22 +774,48 @@ print(f"Order created: {order['id']}")</pre>
         </div>
     </div>
 
-    <!-- Refund Modal (Skeleton - Feature Toggle Required) -->
+    <!-- Refund Modal -->
     <div id="refundModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-slate-950 border border-slate-800 shadow-2xl p-8 max-w-md w-full mx-4">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold text-white">Request Refund</h3>
+                <h3 class="text-2xl font-bold text-white">Process Refund</h3>
                 <button id="closeRefundModal" class="text-slate-400 hover:text-slate-300 text-2xl">&times;</button>
             </div>
 
-            <div class="bg-yellow-900/20 border border-yellow-800 rounded p-4 mb-6">
-                <div class="text-sm text-yellow-300 font-medium">Feature In Development</div>
-                <div class="text-xs text-yellow-400 mt-1">
-                    Refund functionality requires admin approval. Contact support to enable this feature.
+            <!-- Wallet Connection Section -->
+            <div id="refundWalletConnection" class="mb-6">
+                <div id="refundWalletNotConnected" class="bg-blue-900/20 border border-blue-800 rounded p-4 mb-4">
+                    <div class="text-sm text-blue-300 font-medium mb-3">Connect Your Wallet</div>
+                    <div class="text-xs text-blue-400 mb-4">
+                        Connect the wallet that will send the refund to the customer
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="refundConnectMetaMask" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 px-4 py-3 rounded transition-colors">
+                            <div class="text-2xl mb-1">🦊</div>
+                            <div class="text-sm text-white">MetaMask</div>
+                        </button>
+                        <button id="refundConnectPhantom" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 px-4 py-3 rounded transition-colors">
+                            <div class="text-2xl mb-1">👻</div>
+                            <div class="text-sm text-white">Phantom</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="refundWalletConnected" class="hidden bg-green-900/20 border border-green-800 p-4 rounded mb-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-xs text-green-400 mb-1">Connected Wallet</div>
+                            <div id="refundConnectedAddress" class="text-sm text-white font-mono break-all"></div>
+                        </div>
+                        <button id="refundDisconnectWallet" class="text-red-400 hover:text-red-300 text-sm">
+                            Disconnect
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="space-y-4">
+            <!-- Refund Details -->
+            <div class="space-y-4" id="refundDetailsSection">
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Order ID</label>
                     <input type="text" id="refundOrderId" readonly
@@ -659,6 +825,12 @@ print(f"Order created: {order['id']}")</pre>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Original Amount</label>
                     <input type="text" id="refundOriginalAmount" readonly
+                           class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Chain</label>
+                    <input type="text" id="refundChain" readonly
                            class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded">
                 </div>
 
@@ -687,9 +859,9 @@ print(f"Order created: {order['id']}")</pre>
             </div>
 
             <div class="flex gap-3 mt-8">
-                <button id="submitRefundBtn"
-                        class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 font-medium transition-colors rounded">
-                    Submit Refund Request
+                <button id="executeRefundBtn" disabled
+                        class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 font-medium transition-colors rounded disabled:bg-slate-700 disabled:cursor-not-allowed">
+                    Execute Refund
                 </button>
                 <button id="cancelRefundBtn"
                         class="flex-1 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 font-medium transition-colors rounded">
@@ -949,6 +1121,9 @@ print(f"Order created: {order['id']}")</pre>
                     exampleMerchantId.textContent = currentMerchant.id;
                 }
 
+                // Update widget code with merchant ID
+                updateWidgetCode();
+
                 // Load current tab content after merchant data is ready
                 if (currentTab === 'orders') {
                     loadOrders();
@@ -1113,10 +1288,18 @@ print(f"Order created: {order['id']}")</pre>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             ${(order.status === 'CONFIRMED' || order.status === 'PAID') ? `
-                                <button onclick="openRefundModal('${order.id}', '${amount}', '${order.chain}')"
-                                        class="text-orange-400 hover:text-orange-300 text-xs font-medium">
-                                    Refund
-                                </button>
+                                <div class="flex gap-2">
+                                    <button onclick="openRefundModal('${order.id}', '${amount}', '${order.chain}')"
+                                            class="text-orange-400 hover:text-orange-300 text-xs font-medium">
+                                        Refund
+                                    </button>
+                                    ${!order.chain.includes('SOLANA') ? `
+                                        <button onclick="addToBatchRefund('${order.id}')"
+                                                class="text-blue-400 hover:text-blue-300 text-xs font-medium">
+                                            + Batch
+                                        </button>
+                                    ` : ''}
+                                </div>
                             ` : '<span class="text-slate-600 text-xs">-</span>'}
                         </td>
                     </tr>
@@ -2142,24 +2325,24 @@ print(f"Order created: {order['id']}")</pre>
             window.print();
         }
 
-        // Refund Functions (Skeleton - Requires Admin Toggle)
+        // Refund State
+        let refundWalletConnected = false;
+        let refundWalletAddress = null;
+        let refundWalletType = null; // 'metamask' or 'phantom'
+        let currentRefundOrder = null;
+
+        // Refund Functions
         window.openRefundModal = function(orderId, amount, chain) {
-            // TODO: Check if refunds are enabled via system settings
-            const refundsEnabled = localStorage.getItem('refundsEnabled') === 'true';
-
-            if (!refundsEnabled) {
-                alert('Refunds feature is not enabled. Contact admin to enable this feature.');
-                return;
-            }
-
             // Populate modal
             document.getElementById('refundOrderId').value = orderId;
             document.getElementById('refundOriginalAmount').value = amount + ' USDC';
+            document.getElementById('refundChain').value = chain;
             document.getElementById('refundAmount').value = amount;
             document.getElementById('refundAmount').max = amount;
 
             // Try to get customer wallet from order transaction
             const order = allOrders.find(o => o.id === orderId);
+            currentRefundOrder = order;
             if (order && order.transactions && order.transactions.length > 0) {
                 const fromAddress = order.transactions[0].fromAddress;
                 if (fromAddress) {
@@ -2167,9 +2350,77 @@ print(f"Order created: {order['id']}")</pre>
                 }
             }
 
+            // Reset wallet connection state
+            refundWalletConnected = false;
+            refundWalletAddress = null;
+            document.getElementById('refundWalletNotConnected').classList.remove('hidden');
+            document.getElementById('refundWalletConnected').classList.add('hidden');
+            document.getElementById('executeRefundBtn').disabled = true;
+
             // Show modal
             document.getElementById('refundModal').classList.remove('hidden');
         };
+
+        // Connect MetaMask for refund
+        document.getElementById('refundConnectMetaMask').addEventListener('click', async () => {
+            if (!window.ethereum) {
+                alert('MetaMask is not installed. Please install MetaMask to continue.');
+                return;
+            }
+
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const address = accounts[0];
+
+                refundWalletConnected = true;
+                refundWalletAddress = address;
+                refundWalletType = 'metamask';
+
+                document.getElementById('refundConnectedAddress').textContent = address;
+                document.getElementById('refundWalletNotConnected').classList.add('hidden');
+                document.getElementById('refundWalletConnected').classList.remove('hidden');
+                document.getElementById('executeRefundBtn').disabled = false;
+            } catch (error) {
+                console.error('MetaMask connection error:', error);
+                alert('Failed to connect MetaMask: ' + error.message);
+            }
+        });
+
+        // Connect Phantom for refund
+        document.getElementById('refundConnectPhantom').addEventListener('click', async () => {
+            if (!window.solana || !window.solana.isPhantom) {
+                alert('Phantom wallet is not installed. Please install Phantom to continue.');
+                return;
+            }
+
+            try {
+                const resp = await window.solana.connect();
+                const address = resp.publicKey.toString();
+
+                refundWalletConnected = true;
+                refundWalletAddress = address;
+                refundWalletType = 'phantom';
+
+                document.getElementById('refundConnectedAddress').textContent = address;
+                document.getElementById('refundWalletNotConnected').classList.add('hidden');
+                document.getElementById('refundWalletConnected').classList.remove('hidden');
+                document.getElementById('executeRefundBtn').disabled = false;
+            } catch (error) {
+                console.error('Phantom connection error:', error);
+                alert('Failed to connect Phantom: ' + error.message);
+            }
+        });
+
+        // Disconnect refund wallet
+        document.getElementById('refundDisconnectWallet').addEventListener('click', () => {
+            refundWalletConnected = false;
+            refundWalletAddress = null;
+            refundWalletType = null;
+
+            document.getElementById('refundWalletNotConnected').classList.remove('hidden');
+            document.getElementById('refundWalletConnected').classList.add('hidden');
+            document.getElementById('executeRefundBtn').disabled = true;
+        });
 
         // Close refund modal
         document.getElementById('closeRefundModal').addEventListener('click', () => {
@@ -2180,12 +2431,18 @@ print(f"Order created: {order['id']}")</pre>
             document.getElementById('refundModal').classList.add('hidden');
         });
 
-        // Submit refund request
-        document.getElementById('submitRefundBtn').addEventListener('click', async () => {
+        // Execute refund
+        document.getElementById('executeRefundBtn').addEventListener('click', async () => {
             const orderId = document.getElementById('refundOrderId').value;
             const amount = document.getElementById('refundAmount').value;
             const reason = document.getElementById('refundReason').value;
             const customerWallet = document.getElementById('refundCustomerWallet').value;
+            const chain = document.getElementById('refundChain').value;
+
+            if (!refundWalletConnected || !refundWalletAddress) {
+                alert('Please connect your wallet first');
+                return;
+            }
 
             if (!amount || parseFloat(amount) <= 0) {
                 alert('Please enter a valid refund amount');
@@ -2203,42 +2460,372 @@ print(f"Order created: {order['id']}")</pre>
             }
 
             try {
-                const btn = document.getElementById('submitRefundBtn');
+                const btn = document.getElementById('executeRefundBtn');
                 btn.disabled = true;
-                btn.textContent = 'Submitting...';
+                btn.textContent = 'Processing...';
 
-                // TODO: API call to create refund request
-                const response = await fetch(`/api/v1/orders/${orderId}/refund`, {
+                // Step 1: Create refund record
+                const createResponse = await fetch('/api/refunds', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${sessionStorage.getItem('merchantToken')}`
                     },
                     body: JSON.stringify({
+                        orderId: orderId,
                         amount: amount,
                         reason: reason,
-                        customerWallet: customerWallet
+                        status: 'PROCESSING'
                     })
                 });
 
-                if (response.ok) {
-                    const result = await response.json();
-                    alert('Refund request submitted successfully!\n\nRefund ID: ' + result.refund.id + '\nStatus: Pending Admin Approval');
-                    document.getElementById('refundModal').classList.add('hidden');
-                    loadOrders(); // Refresh orders
-                } else {
-                    const error = await response.json();
-                    alert('Failed to submit refund request: ' + (error.message || 'Unknown error'));
+                if (!createResponse.ok) {
+                    const error = await createResponse.json();
+                    throw new Error(error.error || 'Failed to create refund record');
                 }
+
+                const { refund } = await createResponse.json();
+
+                // Step 2: Execute blockchain transaction
+                let txHash;
+                if (refundWalletType === 'metamask') {
+                    txHash = await executeEVMRefund(chain, customerWallet, amount);
+                } else if (refundWalletType === 'phantom') {
+                    txHash = await executeSolanaRefund(customerWallet, amount);
+                }
+
+                // Step 3: Update refund with transaction hash
+                const updateResponse = await fetch(`/api/refunds/${refund.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        status: 'COMPLETED',
+                        refundTxHash: txHash
+                    })
+                });
+
+                if (!updateResponse.ok) {
+                    console.error('Failed to update refund record, but transaction was successful');
+                }
+
+                alert('Refund executed successfully!\n\nTransaction Hash: ' + txHash + '\nRefund ID: ' + refund.id);
+                document.getElementById('refundModal').classList.add('hidden');
+                loadOrders(); // Refresh orders
             } catch (error) {
-                console.error('Refund request error:', error);
-                alert('Error submitting refund request: ' + error.message);
+                console.error('Refund execution error:', error);
+                alert('Error executing refund: ' + error.message);
             } finally {
-                const btn = document.getElementById('submitRefundBtn');
+                const btn = document.getElementById('executeRefundBtn');
                 btn.disabled = false;
-                btn.textContent = 'Submit Refund Request';
+                btn.textContent = 'Execute Refund';
             }
         });
+
+        // Execute EVM refund (MetaMask)
+        async function executeEVMRefund(chain, recipientAddress, amount) {
+            if (!window.ethereum) {
+                throw new Error('MetaMask not found');
+            }
+
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+
+            // Get USDC token address for the chain
+            const tokenConfig = getChainConfig(chain, 'USDC');
+            const usdcAddress = tokenConfig.USDC;
+
+            if (!usdcAddress || usdcAddress === '0x') {
+                throw new Error(`USDC address not configured for ${chain}`);
+            }
+
+            // ERC20 ABI for transfer
+            const erc20ABI = [
+                'function transfer(address to, uint256 amount) returns (bool)',
+                'function decimals() view returns (uint8)'
+            ];
+
+            const usdcContract = new ethers.Contract(usdcAddress, erc20ABI, signer);
+
+            // USDC has 6 decimals
+            const amountInSmallestUnit = ethers.parseUnits(amount.toString(), 6);
+
+            // Execute transfer
+            const tx = await usdcContract.transfer(recipientAddress, amountInSmallestUnit);
+            console.log('Refund transaction sent:', tx.hash);
+
+            // Wait for confirmation
+            await tx.wait();
+            console.log('Refund transaction confirmed');
+
+            return tx.hash;
+        }
+
+        // Execute Solana refund (Phantom)
+        async function executeSolanaRefund(recipientAddress, amount) {
+            if (!window.solana || !window.solana.isPhantom) {
+                throw new Error('Phantom wallet not found');
+            }
+
+            const connection = new solanaWeb3.Connection(
+                solanaWeb3.clusterApiUrl('devnet'), // Change to mainnet for production
+                'confirmed'
+            );
+
+            const fromWallet = window.solana.publicKey;
+            const toWallet = new solanaWeb3.PublicKey(recipientAddress);
+
+            // USDC Mint on Solana (Devnet)
+            // Mainnet: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
+            const usdcMint = new solanaWeb3.PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'); // Devnet USDC
+
+            // Get token accounts
+            const fromTokenAccount = await getAssociatedTokenAddress(usdcMint, fromWallet);
+            const toTokenAccount = await getAssociatedTokenAddress(usdcMint, toWallet);
+
+            // USDC has 6 decimals on Solana
+            const amountInSmallestUnit = amount * 1_000_000;
+
+            // Create transfer instruction
+            const transferInstruction = solanaWeb3.SystemProgram.transfer({
+                fromPubkey: fromTokenAccount,
+                toPubkey: toTokenAccount,
+                lamports: amountInSmallestUnit
+            });
+
+            const transaction = new solanaWeb3.Transaction().add(transferInstruction);
+            transaction.feePayer = fromWallet;
+
+            const { blockhash } = await connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+
+            // Sign and send transaction
+            const signed = await window.solana.signTransaction(transaction);
+            const signature = await connection.sendRawTransaction(signed.serialize());
+
+            // Wait for confirmation
+            await connection.confirmTransaction(signature);
+            console.log('Refund transaction confirmed:', signature);
+
+            return signature;
+        }
+
+        // Batch Refund State
+        let batchRefundOrders = [];
+
+        // Add order to batch refund
+        window.addToBatchRefund = function(orderId) {
+            const order = allOrders.find(o => o.id === orderId);
+            if (!order) return;
+
+            // Check if already added
+            if (batchRefundOrders.some(o => o.id === orderId)) {
+                alert('Order already added to batch refund');
+                return;
+            }
+
+            // Get customer wallet from transaction
+            let customerWallet = '';
+            if (order.transactions && order.transactions.length > 0) {
+                customerWallet = order.transactions[0].fromAddress;
+            }
+
+            batchRefundOrders.push({
+                id: order.id,
+                amount: parseFloat(order.amount),
+                chain: order.chain,
+                customerWallet: customerWallet
+            });
+
+            updateBatchRefundUI();
+        };
+
+        // Remove order from batch refund
+        function removeFromBatchRefund(orderId) {
+            batchRefundOrders = batchRefundOrders.filter(o => o.id !== orderId);
+            updateBatchRefundUI();
+        }
+
+        // Update batch refund UI
+        function updateBatchRefundUI() {
+            const isEmpty = batchRefundOrders.length === 0;
+
+            document.getElementById('batchRefundEmpty').classList.toggle('hidden', !isEmpty);
+            document.getElementById('batchRefundList').classList.toggle('hidden', isEmpty);
+
+            if (!isEmpty) {
+                document.getElementById('batchRefundCount').textContent = batchRefundOrders.length;
+
+                const total = batchRefundOrders.reduce((sum, o) => sum + o.amount, 0);
+                document.getElementById('batchRefundTotal').textContent = total.toFixed(2);
+
+                const itemsHtml = batchRefundOrders.map(order => `
+                    <div class="flex items-center justify-between bg-slate-900 p-3 rounded">
+                        <div class="flex-1">
+                            <div class="text-white font-mono text-sm">${order.id}</div>
+                            <div class="text-slate-400 text-xs">${order.amount} USDC • ${order.chain}</div>
+                        </div>
+                        <button onclick="removeFromBatchRefund('${order.id}')" class="text-red-400 hover:text-red-300 text-sm ml-4">
+                            Remove
+                        </button>
+                    </div>
+                `).join('');
+
+                document.getElementById('batchRefundItems').innerHTML = itemsHtml;
+            }
+        }
+
+        // Clear batch refund selection
+        document.getElementById('clearBatchRefunds').addEventListener('click', () => {
+            if (batchRefundOrders.length === 0) return;
+
+            if (confirm(`Clear ${batchRefundOrders.length} selected orders?`)) {
+                batchRefundOrders = [];
+                updateBatchRefundUI();
+            }
+        });
+
+        // Execute batch refund using Multicall3
+        document.getElementById('executeBatchRefundBtn').addEventListener('click', async () => {
+            if (batchRefundOrders.length === 0) {
+                alert('No orders selected for batch refund');
+                return;
+            }
+
+            // Check all orders are on the same chain
+            const chains = [...new Set(batchRefundOrders.map(o => o.chain))];
+            if (chains.length > 1) {
+                alert('Batch refunds must be on the same chain. Selected orders span multiple chains: ' + chains.join(', '));
+                return;
+            }
+
+            const chain = chains[0];
+
+            // Check if chain is Solana (not supported for batch)
+            if (chain.includes('SOLANA')) {
+                alert('Batch refunds are not supported on Solana. Please process refunds individually.');
+                return;
+            }
+
+            // Connect wallet if not connected
+            if (!window.ethereum) {
+                alert('MetaMask is not installed. Please install MetaMask to continue.');
+                return;
+            }
+
+            try {
+                const btn = document.getElementById('executeBatchRefundBtn');
+                btn.disabled = true;
+                btn.textContent = 'Processing...';
+
+                // Connect wallet
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const walletAddress = accounts[0];
+
+                // Execute batch refund
+                const txHash = await executeBatchRefundTransaction(chain, batchRefundOrders);
+
+                // Create refund records for each order
+                for (const order of batchRefundOrders) {
+                    try {
+                        const createResponse = await fetch('/api/refunds', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                orderId: order.id,
+                                amount: order.amount.toString(),
+                                reason: `Batch refund (tx: ${txHash})`,
+                                status: 'COMPLETED'
+                            })
+                        });
+
+                        if (createResponse.ok) {
+                            const { refund } = await createResponse.json();
+
+                            // Update with tx hash
+                            await fetch(`/api/refunds/${refund.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    status: 'COMPLETED',
+                                    refundTxHash: txHash
+                                })
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`Failed to create refund record for order ${order.id}:`, error);
+                    }
+                }
+
+                alert(`Batch refund executed successfully!\n\nTransaction Hash: ${txHash}\n${batchRefundOrders.length} refunds processed`);
+
+                // Clear batch and refresh
+                batchRefundOrders = [];
+                updateBatchRefundUI();
+                loadOrders();
+            } catch (error) {
+                console.error('Batch refund error:', error);
+                alert('Error executing batch refund: ' + error.message);
+            } finally {
+                const btn = document.getElementById('executeBatchRefundBtn');
+                btn.disabled = false;
+                btn.textContent = 'Execute Batch Refund';
+            }
+        });
+
+        // Execute batch refund transaction using Multicall3
+        async function executeBatchRefundTransaction(chain, orders) {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+
+            // Multicall3 address (same on all EVM chains)
+            const multicall3Address = '0xcA11bde05977b3631167028862bE2a173976CA11';
+
+            // Get USDC token address
+            const tokenConfig = getChainConfig(chain, 'USDC');
+            const usdcAddress = tokenConfig.USDC;
+
+            if (!usdcAddress || usdcAddress === '0x') {
+                throw new Error(`USDC address not configured for ${chain}`);
+            }
+
+            // ERC20 ABI for transfer
+            const erc20Interface = new ethers.Interface([
+                'function transfer(address to, uint256 amount) returns (bool)'
+            ]);
+
+            // Build calls array for Multicall3
+            const calls = orders.map(order => {
+                const amountInSmallestUnit = ethers.parseUnits(order.amount.toString(), 6);
+                const callData = erc20Interface.encodeFunctionData('transfer', [
+                    order.customerWallet,
+                    amountInSmallestUnit
+                ]);
+
+                return {
+                    target: usdcAddress,
+                    allowFailure: false,
+                    callData: callData
+                };
+            });
+
+            // Multicall3 ABI
+            const multicall3ABI = [
+                'function aggregate3(tuple(address target, bool allowFailure, bytes callData)[] calls) returns (tuple(bool success, bytes returnData)[] returnData)'
+            ];
+
+            const multicall3Contract = new ethers.Contract(multicall3Address, multicall3ABI, signer);
+
+            // Execute multicall
+            const tx = await multicall3Contract.aggregate3(calls);
+            console.log('Batch refund transaction sent:', tx.hash);
+
+            // Wait for confirmation
+            await tx.wait();
+            console.log('Batch refund transaction confirmed');
+
+            return tx.hash;
+        }
 
         function getChainConfig(chainId, token = 'USDC') {
             const tokenAddresses = {
@@ -2441,6 +3028,86 @@ print(f"Order created: {order['id']}")</pre>
 
             // Load merchant data first, it will trigger loading the current tab
             loadMerchantData();
+        });
+
+        // Helper functions for Developer tab
+        function copyToClipboard(button, text) {
+            navigator.clipboard.writeText(text.trim());
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            button.classList.add('bg-green-700');
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('bg-green-700');
+            }, 2000);
+        }
+
+        function copyMerchantId() {
+            const merchantId = document.getElementById('apiMerchantId').textContent;
+            navigator.clipboard.writeText(merchantId);
+            alert('Merchant ID copied!');
+        }
+
+        function showFramework(framework) {
+            // Hide all framework content
+            document.querySelectorAll('.framework-content').forEach(el => {
+                el.classList.add('hidden');
+            });
+
+            // Remove active state from all tabs
+            document.querySelectorAll('.framework-tab').forEach(tab => {
+                tab.classList.remove('border-blue-500', 'text-white');
+                tab.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            // Show selected framework
+            document.getElementById(`framework-${framework}`).classList.remove('hidden');
+
+            // Mark tab as active
+            const activeTab = document.getElementById(`tab-${framework}`);
+            activeTab.classList.add('border-blue-500', 'text-white');
+            activeTab.classList.remove('border-transparent', 'text-slate-400');
+        }
+
+        function openTestPayment() {
+            document.getElementById('testPaymentBtn').click();
+        }
+
+        // Auto-populate merchant ID in widget code
+        function updateWidgetCode() {
+            if (currentMerchant && currentMerchant.id) {
+                // Update widget merchant ID placeholder
+                const widgetMerchantIdSpan = document.getElementById('widgetMerchantId');
+                if (widgetMerchantIdSpan) {
+                    widgetMerchantIdSpan.textContent = currentMerchant.id;
+                }
+
+                // Update configured wallets list
+                if (merchantWallets && merchantWallets.length > 0) {
+                    const walletsList = document.getElementById('configuredWalletsList');
+                    walletsList.innerHTML = merchantWallets
+                        .filter(w => w.isActive)
+                        .map(w => `
+                            <div class="flex justify-between items-center bg-slate-950 border border-slate-800 p-2 rounded">
+                                <div>
+                                    <div class="text-slate-300 font-mono text-xs">${w.chain}</div>
+                                    <div class="text-slate-500 text-xs truncate" style="max-width: 200px">${w.address}</div>
+                                </div>
+                                <div class="text-green-400 text-xs">✓</div>
+                            </div>
+                        `).join('');
+                } else {
+                    const walletsList = document.getElementById('configuredWalletsList');
+                    walletsList.innerHTML = '<div class="text-slate-400 text-sm">No wallets configured. Go to Wallets tab to add wallets.</div>';
+                }
+            }
+        }
+
+        // Show React framework by default when Developer tab loads
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                showFramework('react');
+            }, 100);
         });
     </script>
 </body>

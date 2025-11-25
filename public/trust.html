@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security & Trust | StablePay</title>
+    <meta name="description" content="StablePay security practices, compliance certifications, and trust center. Learn how we protect your payments and data.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(to bottom, #0f172a, #1e293b);
+            min-height: 100vh;
+        }
+        .trust-card {
+            backdrop-filter: blur(10px);
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        .trust-badge {
+            transition: transform 0.2s;
+        }
+        .trust-badge:hover {
+            transform: translateY(-4px);
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .accordion-content.active {
+            max-height: 2000px;
+            transition: max-height 0.5s ease-in;
+        }
+    </style>
+</head>
+<body class="text-slate-100">
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-950/50 backdrop-blur-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <a href="/" class="text-2xl font-bold text-white">
+                    <span class="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">StablePay</span>
+                </a>
+                <nav class="flex gap-6">
+                    <a href="/" class="text-slate-300 hover:text-white transition-colors">Home</a>
+                    <a href="/dashboard.html" class="text-slate-300 hover:text-white transition-colors">Dashboard</a>
+                    <a href="/trust.html" class="text-white font-medium">Trust Center</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="py-20 px-4">
+        <div class="max-w-4xl mx-auto text-center">
+            <div class="text-6xl mb-6">🔒</div>
+            <h1 class="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                Your Security is Our Priority
+            </h1>
+            <p class="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+                StablePay is built on enterprise-grade security infrastructure to protect your payments and data.
+                Non-custodial, transparent, and compliant.
+            </p>
+            <a href="#security" class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded font-medium transition-colors">
+                View Security Practices →
+            </a>
+        </div>
+    </section>
+
+    <!-- Trust Badges -->
+    <section class="py-16 px-4 border-y border-slate-800 bg-slate-950/30">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="trust-badge text-center">
+                    <div class="text-5xl mb-4">🛡️</div>
+                    <div class="text-2xl font-bold text-white mb-2">Non-Custodial</div>
+                    <div class="text-slate-400 text-sm">We never hold your funds</div>
+                </div>
+                <div class="trust-badge text-center">
+                    <div class="text-5xl mb-4">🔐</div>
+                    <div class="text-2xl font-bold text-white mb-2">Encrypted</div>
+                    <div class="text-slate-400 text-sm">AES-256 & TLS 1.3</div>
+                </div>
+                <div class="trust-badge text-center">
+                    <div class="text-5xl mb-4">⚡</div>
+                    <div class="text-2xl font-bold text-white mb-2">99.9% Uptime</div>
+                    <div class="text-slate-400 text-sm">Reliable infrastructure</div>
+                </div>
+                <div class="trust-badge text-center">
+                    <div class="text-5xl mb-4">📊</div>
+                    <div class="text-2xl font-bold text-white mb-2">GDPR Ready</div>
+                    <div class="text-slate-400 text-sm">Privacy compliant</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="py-16 px-4">
+        <div class="max-w-4xl mx-auto space-y-6">
+
+            <!-- Security & Compliance -->
+            <div id="security" class="trust-card rounded-lg">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-2">🔒 Security & Compliance</h2>
+                        <p class="text-slate-400">Enterprise-grade security infrastructure</p>
+                    </div>
+                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                </button>
+                <div class="accordion-content px-6 pb-6">
+                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Data Encryption</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ AES-256 encryption at rest</li>
+                                <li>✓ TLS 1.3 for data in transit</li>
+                                <li>✓ End-to-end encrypted API calls</li>
+                                <li>✓ Secure key management via Vercel</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Infrastructure Security</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ Hosted on Vercel (SOC 2, ISO 27001 certified)</li>
+                                <li>✓ Database on Supabase (SOC 2, GDPR compliant)</li>
+                                <li>✓ DDoS protection via Cloudflare</li>
+                                <li>✓ Automated hourly backups</li>
+                                <li>✓ Multi-region redundancy</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Smart Contract Security</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ No custom smart contracts (uses standard USDC)</li>
+                                <li>✓ Client-side transaction signing only</li>
+                                <li>✓ Non-custodial architecture - we never hold funds</li>
+                                <li>✓ All transactions verified on-chain</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-blue-900/20 border border-blue-800 rounded p-4 mt-4">
+                            <div class="text-sm text-blue-300 font-medium">Security Roadmap</div>
+                            <div class="text-xs text-blue-400 mt-2">
+                                We are working towards SOC 2 Type II certification. Expected completion: Q2 2025.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy & Data Protection -->
+            <div class="trust-card rounded-lg">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-2">🔐 Privacy & Data Protection</h2>
+                        <p class="text-slate-400">GDPR compliant and privacy-first</p>
+                    </div>
+                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                </button>
+                <div class="accordion-content px-6 pb-6">
+                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">GDPR Compliance</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ Data minimization principles applied</li>
+                                <li>✓ Right to access your data</li>
+                                <li>✓ Right to delete your data</li>
+                                <li>✓ EU data residency options available</li>
+                                <li>✓ Clear privacy policy and terms</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Data We Collect</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <div class="text-green-400 font-medium mb-2">✅ We Collect:</div>
+                                    <ul class="space-y-1 text-sm text-slate-300">
+                                        <li>• Order details (amount, chain, timestamp)</li>
+                                        <li>• Transaction hashes (public blockchain data)</li>
+                                        <li>• Merchant account info (email, company)</li>
+                                        <li>• Usage analytics (anonymized)</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <div class="text-red-400 font-medium mb-2">❌ We NEVER Collect:</div>
+                                    <ul class="space-y-1 text-sm text-slate-300">
+                                        <li>• Private keys or seed phrases</li>
+                                        <li>• Wallet passwords</li>
+                                        <li>• Credit card information</li>
+                                        <li>• Social security numbers</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Data Retention</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>• Transaction data: 7 years (regulatory compliance)</li>
+                                <li>• Order history: Indefinite (merchant access)</li>
+                                <li>• Server logs: 90 days</li>
+                                <li>• Account data: Until deletion requested</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How StablePay Works -->
+            <div class="trust-card rounded-lg">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-2">⚙️ How StablePay Works</h2>
+                        <p class="text-slate-400">Non-custodial and transparent payment flow</p>
+                    </div>
+                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                </button>
+                <div class="accordion-content px-6 pb-6">
+                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                        <div class="bg-slate-900 border border-slate-700 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Payment Flow</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-start gap-4">
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0">1</div>
+                                    <div>
+                                        <div class="text-white font-medium">Customer initiates payment</div>
+                                        <div class="text-slate-400 text-sm">Opens payment modal on merchant's website</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4">
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0">2</div>
+                                    <div>
+                                        <div class="text-white font-medium">Customer connects wallet</div>
+                                        <div class="text-slate-400 text-sm">MetaMask, Phantom, or other Web3 wallet</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4">
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0">3</div>
+                                    <div>
+                                        <div class="text-white font-medium">Direct blockchain transfer</div>
+                                        <div class="text-slate-400 text-sm">USDC sent directly to merchant's wallet (StablePay never holds funds)</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4">
+                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0">4</div>
+                                    <div>
+                                        <div class="text-white font-medium">Transaction confirmed</div>
+                                        <div class="text-slate-400 text-sm">Verified on blockchain, merchant notified via webhook</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-green-900/20 border border-green-800 rounded p-4">
+                            <div class="text-sm text-green-300 font-medium">Non-Custodial Architecture</div>
+                            <div class="text-xs text-green-400 mt-2">
+                                StablePay NEVER holds your funds. Payments go directly from customer to merchant wallet via blockchain. We only facilitate the connection.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blockchain Security -->
+            <div class="trust-card rounded-lg">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-2">⛓️ Blockchain Security</h2>
+                        <p class="text-slate-400">Multi-chain security standards</p>
+                    </div>
+                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                </button>
+                <div class="accordion-content px-6 pb-6">
+                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Supported Networks</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-slate-900 border border-slate-700 rounded p-4">
+                                    <div class="text-white font-medium mb-2">EVM Chains</div>
+                                    <ul class="space-y-1 text-sm text-slate-300">
+                                        <li>• Ethereum (Mainnet & Sepolia)</li>
+                                        <li>• Base (Mainnet & Sepolia)</li>
+                                        <li>• Polygon (Mainnet & Mumbai)</li>
+                                        <li>• Arbitrum (Mainnet & Sepolia)</li>
+                                        <li>• Optimism</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-slate-900 border border-slate-700 rounded p-4">
+                                    <div class="text-white font-medium mb-2">Non-EVM Chains</div>
+                                    <ul class="space-y-1 text-sm text-slate-300">
+                                        <li>• Solana (Mainnet & Devnet)</li>
+                                        <li>• More chains coming soon</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Token Standards</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ ERC-20 (USDC, USDT, EURC on EVM chains)</li>
+                                <li>✓ SPL Token (USDC on Solana)</li>
+                                <li>✓ All tokens audited by Circle, Tether, Circle</li>
+                                <li>✓ No custom tokens or untrusted contracts</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Transaction Verification</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ All transactions verified on-chain</li>
+                                <li>✓ Real-time blockchain monitoring</li>
+                                <li>✓ Automatic confirmation checks</li>
+                                <li>✓ Public transaction hashes for transparency</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Operational Security -->
+            <div class="trust-card rounded-lg">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-2">🛠️ Operational Security</h2>
+                        <p class="text-slate-400">Our internal security practices</p>
+                    </div>
+                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                </button>
+                <div class="accordion-content px-6 pb-6">
+                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Access Control</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ Role-based access control (RBAC)</li>
+                                <li>✓ Multi-factor authentication (MFA) required</li>
+                                <li>✓ API key rotation every 90 days</li>
+                                <li>✓ Principle of least privilege</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Monitoring & Logging</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ 24/7 system monitoring</li>
+                                <li>✓ Real-time error alerts</li>
+                                <li>✓ Comprehensive audit logs</li>
+                                <li>✓ Anomaly detection</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Incident Response</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ Documented incident response plan</li>
+                                <li>✓ 24-hour response time for critical issues</li>
+                                <li>✓ Post-incident analysis and reporting</li>
+                                <li>✓ Customer notification procedures</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Merchant Protection -->
+            <div class="trust-card rounded-lg">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-2">🏪 Merchant Protection</h2>
+                        <p class="text-slate-400">How we protect merchant businesses</p>
+                    </div>
+                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                </button>
+                <div class="accordion-content px-6 pb-6">
+                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Payment Security</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ Instant settlement (no chargebacks)</li>
+                                <li>✓ Blockchain-verified transactions</li>
+                                <li>✓ No payment reversals (crypto advantage)</li>
+                                <li>✓ Automatic fraud detection</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Business Continuity</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ 99.9% uptime SLA</li>
+                                <li>✓ Multi-region infrastructure</li>
+                                <li>✓ Automated failover systems</li>
+                                <li>✓ Real-time status page</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Refund Management</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ Built-in refund system</li>
+                                <li>✓ Batch refund support (gas optimized)</li>
+                                <li>✓ Full refund audit trail</li>
+                                <li>✓ Merchant-controlled refund policies</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transparency -->
+            <div class="trust-card rounded-lg">
+                <button class="accordion-trigger w-full text-left p-6 flex items-center justify-between" onclick="toggleAccordion(this)">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-2">📊 Transparency</h2>
+                        <p class="text-slate-400">Open communication and reporting</p>
+                    </div>
+                    <span class="text-3xl text-slate-400 accordion-icon">+</span>
+                </button>
+                <div class="accordion-content px-6 pb-6">
+                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Open Source</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ Client-side SDK available on GitHub</li>
+                                <li>✓ Public API documentation</li>
+                                <li>✓ No hidden fees or costs</li>
+                                <li>✓ Clear pricing structure</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-3">Security Disclosure</h3>
+                            <ul class="space-y-2 text-slate-300">
+                                <li>✓ Responsible disclosure program</li>
+                                <li>✓ Bug bounty program (coming soon)</li>
+                                <li>✓ Public security advisories</li>
+                                <li>✓ Regular security updates</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-slate-900 border border-slate-700 rounded p-4">
+                            <div class="text-white font-medium mb-2">Report Security Issues</div>
+                            <div class="text-slate-400 text-sm mb-3">
+                                If you discover a security vulnerability, please email us at:
+                            </div>
+                            <a href="mailto:security@stablepay.io" class="text-blue-400 hover:text-blue-300 font-mono text-sm">
+                                security@stablepay.io
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 px-4 border-t border-slate-800">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
+            <p class="text-slate-300 mb-8">
+                Join hundreds of merchants accepting crypto payments with StablePay
+            </p>
+            <div class="flex gap-4 justify-center">
+                <a href="/dashboard.html" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded font-medium transition-colors">
+                    Start Accepting Payments
+                </a>
+                <a href="https://github.com/stablepay" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded font-medium transition-colors">
+                    View Documentation
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 py-12 px-4">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="text-white font-bold text-lg mb-4">StablePay</h3>
+                    <p class="text-slate-400 text-sm">
+                        Multi-chain USDC payment infrastructure for the modern web
+                    </p>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium mb-3">Product</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/" class="text-slate-400 hover:text-white">Home</a></li>
+                        <li><a href="/dashboard.html" class="text-slate-400 hover:text-white">Dashboard</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-white">API Docs</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium mb-3">Security</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/trust.html" class="text-slate-400 hover:text-white">Trust Center</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-white">Privacy Policy</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-white">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium mb-3">Contact</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="mailto:security@stablepay.io" class="text-slate-400 hover:text-white">Security</a></li>
+                        <li><a href="mailto:support@stablepay.io" class="text-slate-400 hover:text-white">Support</a></li>
+                        <li><a href="https://github.com/stablepay" class="text-slate-400 hover:text-white">GitHub</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-slate-800 pt-8 text-center text-slate-400 text-sm">
+                © 2025 StablePay. All rights reserved. Built with security and transparency.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleAccordion(button) {
+            const content = button.nextElementSibling;
+            const icon = button.querySelector('.accordion-icon');
+            const isActive = content.classList.contains('active');
+
+            // Close all accordions
+            document.querySelectorAll('.accordion-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.accordion-icon').forEach(el => {
+                el.textContent = '+';
+            });
+
+            // Open clicked accordion if it wasn't active
+            if (!isActive) {
+                content.classList.add('active');
+                icon.textContent = '−';
+            }
+        }
+
+        // Open first accordion by default
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstAccordion = document.querySelector('.accordion-trigger');
+            if (firstAccordion) {
+                toggleAccordion(firstAccordion);
+            }
+        });
+    </script>
+</body>
+</html>
