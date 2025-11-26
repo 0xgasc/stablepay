@@ -7,31 +7,461 @@
   "sections": {
     "security": {
       "title": "Sécurité et Conformité",
-      "subtitle": "Infrastructure de sécurité de niveau entreprise"
+      "subtitle": "Infrastructure de sécurité de niveau entreprise",
+      "dataEncryption": {
+        "heading": "Chiffrement des Données",
+        "aes256": {
+          "title": "Chiffrement AES-256 au repos",
+          "text": "Chiffrement standard de l'industrie pour toutes les données stockées. Vos informations sensibles sont chiffrées avec AES-256, le même chiffrement utilisé par les banques et les gouvernements du monde entier."
+        },
+        "tls13": {
+          "title": "TLS 1.3 pour les données en transit",
+          "text": "Toutes les données transmises entre votre navigateur et nos serveurs utilisent TLS 1.3, la version la plus récente et la plus sécurisée de la sécurité de la couche de transport."
+        },
+        "e2eApi": {
+          "title": "Appels API chiffrés de bout en bout",
+          "text": "Chaque requête et réponse API est chiffrée de bout en bout. Même en cas d'interception, les données restent illisibles pour les attaquants."
+        },
+        "keyManagement": {
+          "title": "Gestion sécurisée des clés",
+          "text": "Les clés de chiffrement sont gérées via le système de variables d'environnement sécurisé de Vercel avec rotation automatique et contrôles d'accès."
+        }
+      },
+      "infrastructure": {
+        "heading": "Sécurité de l'Infrastructure",
+        "vercel": {
+          "title": "Hébergé sur Vercel",
+          "text": "Infrastructure certifiée SOC 2 Type II et ISO 27001. Sécurité de niveau entreprise avec SSL automatique et protection DDoS.",
+          "item1": "Mises à jour de sécurité automatiques",
+          "item2": "CDN mondial avec plus de 100 emplacements edge",
+          "item3": "Déploiements sans temps d'arrêt"
+        },
+        "supabase": {
+          "title": "Base de données sur Supabase",
+          "text": "Base de données PostgreSQL conforme SOC 2 et prête pour le RGPD avec fonctionnalités de sécurité intégrées.",
+          "item1": "Politiques de sécurité au niveau des lignes",
+          "item2": "Sauvegardes quotidiennes automatiques",
+          "item3": "Récupération à un instant donné"
+        },
+        "ddos": {
+          "title": "Protection DDoS",
+          "text": "Atténuation DDoS de niveau entreprise via Cloudflare gérant plus de 100 millions de requêtes par seconde."
+        },
+        "multiRegion": {
+          "title": "Redondance multi-régions",
+          "text": "Données répliquées sur plusieurs régions géographiques pour une haute disponibilité et une reprise après sinistre."
+        }
+      },
+      "smartContract": {
+        "heading": "Sécurité des Contrats Intelligents",
+        "noCustom": {
+          "title": "Aucun contrat intelligent personnalisé",
+          "text": "Nous utilisons des contrats de tokens USDC standard et éprouvés au combat. Pas de code personnalisé signifie pas de vulnérabilités personnalisées."
+        },
+        "clientSide": {
+          "title": "Signature de transaction côté client",
+          "text": "Toutes les transactions sont signées dans votre navigateur en utilisant votre portefeuille. Vos clés privées ne quittent jamais votre appareil."
+        },
+        "nonCustodial": {
+          "title": "Architecture sans garde",
+          "text": "Les fonds vont directement du portefeuille client au portefeuille marchand. StablePay n'a jamais accès pour déplacer, geler ou retenir votre argent."
+        },
+        "verification": {
+          "title": "Vérification blockchain",
+          "text": "Chaque paiement est vérifiable publiquement sur la blockchain. Transparence totale et piste d'audit immuable."
+        }
+      },
+      "roadmap": {
+        "title": "Feuille de Route Sécurité 2025-2026",
+        "intro": "Construit à NYC, sécurisant les paiements mondialement. Nos initiatives de sécurité en cours:",
+        "item1": "Certification SOC 2 Type II (objectif T2 2026)",
+        "item2": "Audits indépendants de contrats intelligents (T1 2026)",
+        "item3": "Lancement du programme de primes aux bugs (T4 2025)",
+        "item4": "Tests d'intrusion trimestriels",
+        "item5": "Certification ISO 27001 (2026)"
+      }
     },
     "privacy": {
       "title": "Confidentialité et Protection des Données",
-      "subtitle": "Conforme au RGPD et axé sur la confidentialité"
+      "subtitle": "Conforme au RGPD et axé sur la confidentialité",
+      "gdpr": {
+        "heading": "Conformité RGPD",
+        "minimization": {
+          "title": "Minimisation des données",
+          "text": "Nous ne collectons que les données essentielles au traitement des paiements. Aucun suivi ou profilage inutile."
+        },
+        "access": {
+          "title": "Droit d'accès à vos données",
+          "text": "Demandez une exportation complète de toutes vos données à tout moment via votre tableau de bord ou en contactant le support."
+        },
+        "delete": {
+          "title": "Droit de supprimer vos données",
+          "text": "Demandez la suppression complète de votre compte et des données associées. Nous conservons uniquement les enregistrements de transactions légalement requis."
+        },
+        "euResidency": {
+          "title": "Résidence des données dans l'UE",
+          "text": "Disponible sur les plans entreprise. Stockez vos données exclusivement dans des centres de données de l'UE pour une conformité RGPD totale."
+        }
+      },
+      "dataCollected": {
+        "heading": "Données que Nous Collectons",
+        "orderDetails": {
+          "title": "Détails de commande",
+          "text": "Informations de transaction essentielles pour le traitement des paiements:",
+          "item1": "Montant du paiement en USDC",
+          "item2": "Réseau blockchain utilisé",
+          "item3": "Horodatage de la transaction",
+          "item4": "ID de référence de commande"
+        },
+        "txHashes": {
+          "title": "Hachages de transaction",
+          "text": "IDs de transaction blockchain publiques. Ces données sont déjà publiques sur la blockchain et permettent la vérification des paiements."
+        },
+        "merchantInfo": {
+          "title": "Informations de compte marchand",
+          "text": "Email, nom de l'entreprise et adresses de portefeuille pour les marchands acceptant les paiements."
+        },
+        "neverCollect": {
+          "title": "Nous ne collectons JAMAIS de données sensibles",
+          "text": "Votre sécurité est primordiale. Nous ne collectons jamais:",
+          "item1": "Clés privées ou phrases de récupération",
+          "item2": "Mots de passe de portefeuille",
+          "item3": "Informations de carte bancaire",
+          "item4": "Numéros de sécurité sociale"
+        }
+      },
+      "dataRetention": {
+        "heading": "Conservation des Données",
+        "transactions": {
+          "title": "Données de transaction (7 ans)",
+          "text": "Requis par les réglementations financières à des fins d'audit et de conformité. Comprend les montants de paiement, horodatages et IDs de transaction."
+        },
+        "orderHistory": {
+          "title": "Historique des commandes (indéfini)",
+          "text": "Les marchands ont un accès permanent à leur historique de commandes pour les dossiers commerciaux et le support client."
+        },
+        "serverLogs": {
+          "title": "Journaux de serveur (90 jours)",
+          "text": "Journaux techniques pour le débogage et la surveillance de la sécurité. Supprimés automatiquement après 90 jours."
+        },
+        "accountData": {
+          "title": "Données de compte (jusqu'à suppression)",
+          "text": "Les informations de votre compte sont conservées jusqu'à ce que vous demandiez leur suppression. Vous pouvez exporter ou supprimer vos données à tout moment."
+        }
+      }
     },
     "howItWorks": {
       "title": "Comment Fonctionne StablePay",
-      "subtitle": "Flux de paiement transparent et sans garde"
+      "subtitle": "Flux de paiement transparent et sans garde",
+      "paymentFlow": {
+        "heading": "Flux de Paiement",
+        "step1": {
+          "title": "1. Le client initie le paiement",
+          "text": "Le client clique sur 'Payer avec Crypto' sur la page de paiement du marchand. Le modal de paiement StablePay s'ouvre avec les détails de la commande et les réseaux pris en charge."
+        },
+        "step2": {
+          "title": "2. Connexion du portefeuille",
+          "text": "Le client connecte son portefeuille Web3 pour confirmer le paiement:",
+          "item1": "MetaMask pour les chaînes EVM (Ethereum, Polygon, Base, Arbitrum)",
+          "item2": "Phantom pour Solana",
+          "item3": "WalletConnect pour les portefeuilles mobiles"
+        },
+        "step3": {
+          "title": "3. Transfert blockchain direct",
+          "text": "L'USDC est envoyé directement du portefeuille client au portefeuille marchand on-chain. Caractéristiques de sécurité clés:",
+          "item1": "StablePay ne détient jamais de fonds",
+          "item2": "Transaction signée dans le navigateur du client",
+          "item3": "Aucune garde intermédiaire",
+          "item4": "Transparence blockchain totale"
+        },
+        "step4": {
+          "title": "4. Transaction confirmée",
+          "text": "Le paiement est vérifié sur la blockchain et le marchand est notifié:",
+          "item1": "Hachage de transaction enregistré",
+          "item2": "Webhook envoyé au backend marchand",
+          "item3": "Statut de commande mis à jour comme payé",
+          "item4": "Le client reçoit une confirmation"
+        }
+      },
+      "nonCustodial": {
+        "title": "Architecture sans garde expliquée",
+        "text": "StablePay ne détient JAMAIS vos fonds. Voici pourquoi cela compte:",
+        "item1": "Aucun risque que StablePay soit piraté pour vos fonds",
+        "item2": "Aucune exigence réglementaire de garde",
+        "item3": "Les paiements arrivent instantanément dans votre portefeuille",
+        "item4": "Vous gardez le contrôle total à tout moment",
+        "item5": "Nous fournissons uniquement l'interface de paiement"
+      }
     },
     "blockchain": {
       "title": "Sécurité Blockchain",
-      "subtitle": "Normes de sécurité multi-chaînes"
+      "subtitle": "Normes de sécurité multi-chaînes",
+      "networks": {
+        "heading": "Réseaux Pris en Charge",
+        "ethereum": {
+          "title": "Ethereum (L1 + L2)",
+          "text": "Blockchain la plus sécurisée et éprouvée au combat. Support pour mainnet et testnets:",
+          "item1": "Ethereum Mainnet (production)",
+          "item2": "Sepolia Testnet (test)",
+          "item3": "Support complet des tokens ERC-20",
+          "item4": "Intégration native MetaMask"
+        },
+        "baseOptimism": {
+          "title": "Base et Optimism (L2)",
+          "text": "Optimistic Rollups à faible coût avec la sécurité d'Ethereum:",
+          "item1": "Base Mainnet et Sepolia",
+          "item2": "Optimism Mainnet",
+          "item3": "~100x moins cher qu'Ethereum L1",
+          "item4": "Temps de confirmation de 1-2 secondes"
+        },
+        "polygonArbitrum": {
+          "title": "Polygon et Arbitrum",
+          "text": "Solutions de mise à l'échelle haute performance:",
+          "item1": "Polygon (Mainnet et Mumbai testnet)",
+          "item2": "Arbitrum (Mainnet et Sepolia)",
+          "item3": "Frais de transaction inférieurs au centime",
+          "item4": "Finalité quasi instantanée"
+        },
+        "solana": {
+          "title": "Solana",
+          "text": "Paiements ultra-rapides avec finalité inférieure à la seconde:",
+          "item1": "Solana Mainnet et Devnet",
+          "item2": "Temps de bloc de 400ms",
+          "item3": "Coût moyen de transaction de 0,00025$",
+          "item4": "Intégration du portefeuille Phantom"
+        }
+      },
+      "tokens": {
+        "heading": "Normes de Tokens",
+        "erc20": {
+          "title": "Tokens ERC-20",
+          "text": "Tokens standard de l'industrie sur les chaînes EVM:",
+          "item1": "USDC (USD Coin par Circle)",
+          "item2": "USDT (Tether)",
+          "item3": "EURC (Euro Coin par Circle)",
+          "item4": "Tous audités et largement adoptés"
+        },
+        "spl": {
+          "title": "Tokens SPL sur Solana",
+          "text": "Norme Solana Program Library. Actuellement support d'USDC avec plus de tokens à venir."
+        },
+        "securityFirst": {
+          "title": "Approche axée sur la sécurité",
+          "text": "Nous ne supportons que des tokens éprouvés au combat:",
+          "item1": "Aucun token personnalisé ou non audité",
+          "item2": "Uniquement des tokens par Circle et Tether",
+          "item3": "Capitalisations boursières de plusieurs milliards de dollars",
+          "item4": "Années de sécurité prouvée"
+        }
+      },
+      "verification": {
+        "heading": "Vérification des Transactions",
+        "onchain": {
+          "title": "Vérification on-chain",
+          "text": "Chaque paiement est vérifié directement sur la blockchain. Aucune confiance hors chaîne requise - les mathématiques et la cryptographie garantissent l'authenticité du paiement."
+        },
+        "realtime": {
+          "title": "Surveillance en temps réel",
+          "text": "Nous surveillons les nœuds blockchain 24/7 pour détecter et confirmer les transactions instantanément. Les webhooks se déclenchent en quelques secondes après confirmation."
+        },
+        "publicTransparency": {
+          "title": "Transparence publique",
+          "text": "Tous les hachages de transaction sont visibles publiquement:",
+          "item1": "Vérifier sur Etherscan, Basescan, etc",
+          "item2": "Preuve de paiement immuable",
+          "item3": "Piste d'audit complète",
+          "item4": "Aucune transaction cachée"
+        }
+      }
     },
     "operational": {
       "title": "Sécurité Opérationnelle",
-      "subtitle": "Nos pratiques de sécurité internes"
+      "subtitle": "Nos pratiques de sécurité internes",
+      "accessControl": {
+        "heading": "Contrôle d'Accès",
+        "rbac": {
+          "title": "Contrôle d'accès basé sur les rôles",
+          "text": "Système de permissions granulaires. Les membres de l'équipe n'accèdent qu'à ce dont ils ont besoin - les développeurs ne peuvent pas accéder aux bases de données de production, le support ne peut pas modifier le code."
+        },
+        "mfa": {
+          "title": "Authentification multi-facteurs",
+          "text": "MFA requis pour tous les comptes d'équipe. Clés de sécurité matérielles (YubiKey) requises pour l'accès administrateur. Aucune exception."
+        },
+        "apiRotation": {
+          "title": "Rotation des clés API",
+          "text": "Toutes les clés API et secrets sont automatiquement renouvelés tous les 90 jours. Rotation sans temps d'arrêt avec des périodes de validité qui se chevauchent."
+        },
+        "leastPrivilege": {
+          "title": "Principe du moindre privilège",
+          "text": "Chaque utilisateur et service a les permissions minimales nécessaires. Examens d'accès réguliers pour supprimer les permissions inutilisées."
+        }
+      },
+      "monitoring": {
+        "heading": "Surveillance et Journalisation",
+        "system24x7": {
+          "title": "Surveillance système 24/7",
+          "text": "Surveillance de l'infrastructure 24 heures sur 24 sur tous les systèmes:",
+          "item1": "Métriques de performance des applications",
+          "item2": "Performance des requêtes de base de données",
+          "item3": "Santé des nœuds blockchain",
+          "item4": "Suivi de la latence réseau"
+        },
+        "alerts": {
+          "title": "Alertes en temps réel",
+          "text": "Notifications instantanées pour les erreurs, ralentissements ou anomalies. Ingénieurs d'astreinte alertés immédiatement pour les problèmes critiques."
+        },
+        "auditLogs": {
+          "title": "Journaux d'audit complets",
+          "text": "Chaque action journalisée avec horodatage, utilisateur, adresse IP et contexte. Conservation de 90 jours pour la conformité et le débogage."
+        },
+        "anomalyDetection": {
+          "title": "Détection d'anomalies",
+          "text": "Les modèles d'apprentissage automatique détectent les modèles inhabituels - pics de trafic soudains, utilisation inhabituelle de l'API ou attaques potentielles."
+        }
+      },
+      "incident": {
+        "heading": "Réponse aux Incidents",
+        "responsePlan": {
+          "title": "Plan de réponse documenté",
+          "text": "Manuels détaillés pour chaque scénario - violations de données, attaques DDoS, pannes d'infrastructure. Régulièrement testés et mis à jour."
+        },
+        "criticalResponse": {
+          "title": "Réponse critique sous 24 heures",
+          "text": "Problèmes de sécurité critiques traités en 24 heures. Rotation d'astreinte garantit une équipe de réponse toujours disponible dans le fuseau horaire de NYC."
+        },
+        "postAnalysis": {
+          "title": "Analyse post-incident",
+          "text": "Analyse approfondie des causes profondes après chaque incident. Post-mortems publics pour les problèmes affectant les marchands. Mesures préventives mises en œuvre."
+        },
+        "notifications": {
+          "title": "Notifications aux clients",
+          "text": "Communication transparente pendant les incidents. Email, alertes du tableau de bord et mises à jour de la page d'état tiennent les marchands informés."
+        }
+      }
     },
     "merchant": {
       "title": "Protection des Commerçants",
-      "subtitle": "Comment nous protégeons les entreprises commerciales"
+      "subtitle": "Comment nous protégeons les entreprises commerciales",
+      "paymentSecurity": {
+        "heading": "Sécurité des Paiements",
+        "instantSettlement": {
+          "title": "Règlement instantané",
+          "text": "Aucune rétrofacturation, jamais. Les paiements crypto sont définitifs une fois confirmés:",
+          "item1": "Les fonds arrivent en secondes, pas en jours",
+          "item2": "Aucune perte de fraude par rétrofacturation de 2-4%",
+          "item3": "Aucun litige ou annulation de paiement",
+          "item4": "Le marchand conserve 100% des revenus"
+        },
+        "blockchainVerify": {
+          "title": "Vérification blockchain",
+          "text": "Chaque transaction est vérifiée mathématiquement on-chain. Pas de faux paiements, pas de double dépense, pas de fraude."
+        },
+        "noReversals": {
+          "title": "Aucune annulation de paiement",
+          "text": "Le plus grand avantage de la crypto - les paiements ne peuvent pas être annulés par les banques ou les processeurs de paiement. Vous avez le contrôle."
+        },
+        "fraudDetection": {
+          "title": "Détection automatique de fraude",
+          "text": "L'apprentissage automatique surveille les modèles de transaction. L'activité suspecte est signalée instantanément pour examen par le marchand."
+        }
+      },
+      "businessContinuity": {
+        "heading": "Continuité des Activités",
+        "uptime": {
+          "title": "SLA de disponibilité de 99,9%",
+          "text": "Moins de 9 heures d'indisponibilité par an. Pénalités financières si nous manquons les objectifs SLA. Vos paiements restent en ligne."
+        },
+        "multiRegion": {
+          "title": "Infrastructure multi-régions",
+          "text": "Déployé dans plusieurs centres de données dans le monde. Si une région échoue, le trafic est automatiquement acheminé vers des régions saines."
+        },
+        "failover": {
+          "title": "Basculement automatisé",
+          "text": "Vérifications de santé toutes les 10 secondes. Basculement automatique vers les systèmes de secours en moins de 30 secondes. Zéro intervention manuelle."
+        },
+        "statusPage": {
+          "title": "Page d'état en temps réel",
+          "text": "État du système en direct sur status.stablepay.io. Abonnez-vous pour les notifications d'incidents et les fenêtres de maintenance."
+        }
+      },
+      "refundMgmt": {
+        "heading": "Gestion des Remboursements",
+        "builtIn": {
+          "title": "Système de remboursement intégré",
+          "text": "Émettez des remboursements directement depuis votre tableau de bord. Connectez votre portefeuille une fois, remboursez en un clic. Historique complet et suivi."
+        },
+        "batch": {
+          "title": "Support de remboursement par lots",
+          "text": "Traitez plusieurs remboursements en une seule transaction en utilisant Multicall3:",
+          "item1": "Économies de gas de 60-85% par rapport aux remboursements individuels",
+          "item2": "Remboursez des centaines de clients à la fois",
+          "item3": "Transaction blockchain unique",
+          "item4": "Disponible sur toutes les chaînes EVM"
+        },
+        "auditTrail": {
+          "title": "Piste d'audit complète",
+          "text": "Chaque remboursement enregistré avec raison, montant, horodatage et hachage de transaction. Exportez pour la comptabilité et la conformité."
+        },
+        "policies": {
+          "title": "Politiques contrôlées par le marchand",
+          "text": "Vous définissez les politiques de remboursement. Remboursements complets, partiels ou aucun remboursement - votre entreprise, vos règles."
+        }
+      }
     },
     "transparency": {
       "title": "Transparence",
-      "subtitle": "Communication ouverte et rapports"
+      "subtitle": "Communication ouverte et rapports",
+      "openSource": {
+        "heading": "Open Source",
+        "github": {
+          "title": "SDK côté client sur GitHub",
+          "text": "Code source complet disponible pour inspection:",
+          "item1": "Implémentation du modal de paiement",
+          "item2": "Logique de connexion du portefeuille",
+          "item3": "Code de signature de transaction",
+          "item4": "Contributions de la communauté bienvenues"
+        },
+        "apiDocs": {
+          "title": "Documentation API publique",
+          "text": "Documentation API complète avec exemples de code dans plusieurs langages. Testez tous les endpoints dans le playground interactif avant l'intégration."
+        },
+        "noHiddenFees": {
+          "title": "Aucun frais caché",
+          "text": "Un prix simple: 0,5% par transaction. Pas de frais de configuration, pas de frais mensuels, pas de frais surprise. Ce que vous voyez est ce que vous payez."
+        },
+        "pricing": {
+          "title": "Structure de tarification claire",
+          "text": "Tarification transparente, toujours:",
+          "item1": "Frais de transaction de 0,5%",
+          "item2": "Aucun minimum mensuel",
+          "item3": "Aucun frais d'intégration",
+          "item4": "Remises sur volume disponibles"
+        }
+      },
+      "securityDisclosure": {
+        "heading": "Divulgation de Sécurité",
+        "responsible": {
+          "title": "Programme de divulgation responsable",
+          "text": "Vous avez trouvé un problème de sécurité? Signalez-le en privé à security@stablepay.io. Nous accuserons réception sous 24 heures et vous tiendrons informé tout au long du processus de correction."
+        },
+        "bugBounty": {
+          "title": "Programme de prime aux bugs",
+          "text": "Lancement T4 2025. Récompenses jusqu'à 10 000$ pour les vulnérabilités critiques. Aidez-nous à construire la plateforme de paiement crypto la plus sécurisée."
+        },
+        "advisories": {
+          "title": "Avis de sécurité publics",
+          "text": "Tous les problèmes de sécurité publiés sur GitHub après le déploiement du correctif. Chronologie complète, évaluation de l'impact et étapes de remédiation divulguées."
+        },
+        "updates": {
+          "title": "Mises à jour de sécurité régulières",
+          "text": "Newsletter mensuelle sur la sécurité avec mises à jour de la plateforme, correctifs de dépendances et actualités de sécurité de l'industrie. Abonnez-vous dans votre tableau de bord."
+        }
+      },
+      "report": {
+        "title": "Signaler des Problèmes de Sécurité",
+        "intro": "Si vous découvrez une vulnérabilité de sécurité, veuillez nous envoyer un email à:",
+        "details": "Incluez: description détaillée, étapes pour reproduire, impact potentiel et vos coordonnées. Nous répondons sous 24 heures."
+      }
     }
   },
   "cta": {
