@@ -113,6 +113,178 @@
             font-weight: 700;
             letter-spacing: -0.02em;
         }
+
+        /* Night mode styles */
+        body.night-mode {
+            background: #1a1a1a;
+        }
+
+        body.night-mode .brutal-border,
+        body.night-mode .trust-card,
+        body.night-mode .trust-badge {
+            border-color: #fff;
+            box-shadow: 8px 8px 0px #fff;
+        }
+
+        body.night-mode .trust-card:hover {
+            box-shadow: 12px 12px 0px #fff;
+        }
+
+        body.night-mode .trust-badge {
+            box-shadow: 6px 6px 0px #fff;
+        }
+
+        body.night-mode .trust-badge:hover {
+            box-shadow: 8px 8px 0px #fff;
+        }
+
+        body.night-mode .brutal-border-thin {
+            border-color: #fff;
+            box-shadow: 6px 6px 0px #fff;
+        }
+
+        body.night-mode .brutal-shadow {
+            box-shadow: 6px 6px 0px #fff;
+        }
+
+        body.night-mode .brutal-shadow-sm {
+            box-shadow: 4px 4px 0px #fff;
+        }
+
+        body.night-mode .bg-white {
+            background: #000;
+        }
+
+        body.night-mode .bg-gray-100,
+        body.night-mode .bg-gray-50 {
+            background: #1a1a1a;
+        }
+
+        body.night-mode .text-black {
+            color: #fff;
+        }
+
+        body.night-mode .text-gray-700,
+        body.night-mode .text-gray-600 {
+            color: #d0d0d0;
+        }
+
+        body.night-mode .border-black,
+        body.night-mode .border-t-4,
+        body.night-mode .border-b-4 {
+            border-color: #fff;
+        }
+
+        body.night-mode .btn-brutal {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+            box-shadow: 6px 6px 0px #fff;
+        }
+
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 8px 8px 0px #fff;
+        }
+
+        body.night-mode .btn-brutal:active {
+            box-shadow: 2px 2px 0px #fff;
+        }
+
+        body.night-mode svg path,
+        body.night-mode svg rect,
+        body.night-mode svg circle {
+            stroke: #fff;
+            fill: #fff;
+        }
+
+        body.night-mode svg path[fill="none"],
+        body.night-mode svg rect[fill="none"] {
+            fill: none;
+        }
+
+        body.night-mode .accent-yellow {
+            background: #3a3500;
+        }
+
+        body.night-mode .accent-blue {
+            background: #1a3a1f;
+        }
+
+        body.night-mode .accent-pink {
+            background: #3a1a27;
+        }
+
+        body.night-mode .accent-purple {
+            background: #2d1a3a;
+        }
+
+        body.night-mode .bg-yellow-100 {
+            background: #3a3500;
+        }
+
+        body.night-mode .bg-green-100 {
+            background: #1a3a1f;
+        }
+
+        body.night-mode .bg-blue-100 {
+            background: #1a2a3a;
+        }
+
+        body.night-mode .bg-pink-300 {
+            background: #3a1a27;
+        }
+
+        body.night-mode .bg-green-300 {
+            background: #1a3a1f;
+        }
+
+        body.night-mode .bg-yellow-300 {
+            background: #3a3500;
+        }
+
+        body.night-mode .bg-purple-100 {
+            background: #2d1a3a;
+        }
+
+        body.night-mode .bg-pink-100 {
+            background: #3a1a27;
+        }
+
+        body.night-mode .hover\:text-gray-600:hover {
+            color: #999;
+        }
+
+        .night-toggle {
+            width: 60px;
+            height: 30px;
+            background: #000;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .night-toggle-slider {
+            width: 24px;
+            height: 24px;
+            background: #FFD93D;
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            transition: all 0.2s ease;
+        }
+
+        body.night-mode .night-toggle {
+            background: #fff;
+            border-color: #fff;
+            box-shadow: 4px 4px 0px #fff;
+        }
+
+        body.night-mode .night-toggle-slider {
+            left: 33px;
+            background: #C69EFF;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-black">
@@ -123,10 +295,13 @@
                 <a href="/" class="text-2xl font-bold text-black">
                     StablePay
                 </a>
-                <nav class="flex gap-6">
+                <nav class="flex gap-6 items-center">
                     <a href="/" class="text-black hover:underline decoration-4 decoration-black font-medium transition-all">Home</a>
                     <a href="/dashboard.html" class="text-black hover:underline decoration-4 decoration-black font-medium transition-all">Dashboard</a>
                     <a href="/trust.html" class="underline decoration-4 decoration-black font-bold">Trust Center</a>
+                    <button onclick="toggleNightMode()" class="night-toggle" aria-label="Toggle night mode">
+                        <div class="night-toggle-slider"></div>
+                    </button>
                 </nav>
             </div>
         </div>
@@ -266,10 +441,10 @@
                     <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
-                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                    <div class="space-y-6 pt-4 border-t-4 border-black">
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">GDPR Compliance</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black mb-3 uppercase">GDPR Compliance</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ Data minimization principles applied</li>
                                 <li>✓ Right to access your data</li>
                                 <li>✓ Right to delete your data</li>
@@ -279,11 +454,11 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Data We Collect</h3>
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Data We Collect</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <div class="text-green-400 font-medium mb-2">✅ We Collect:</div>
-                                    <ul class="space-y-1 text-sm text-slate-300">
+                                    <ul class="space-y-1 text-sm text-black font-medium">
                                         <li>• Order details (amount, chain, timestamp)</li>
                                         <li>• Transaction hashes (public blockchain data)</li>
                                         <li>• Merchant account info (email, company)</li>
@@ -292,7 +467,7 @@
                                 </div>
                                 <div>
                                     <div class="text-red-400 font-medium mb-2">❌ We NEVER Collect:</div>
-                                    <ul class="space-y-1 text-sm text-slate-300">
+                                    <ul class="space-y-1 text-sm text-black font-medium">
                                         <li>• Private keys or seed phrases</li>
                                         <li>• Wallet passwords</li>
                                         <li>• Credit card information</li>
@@ -303,8 +478,8 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Data Retention</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Data Retention</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>• Transaction data: 7 years (regulatory compliance)</li>
                                 <li>• Order history: Indefinite (merchant access)</li>
                                 <li>• Server logs: 90 days</li>
@@ -325,42 +500,42 @@
                     <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
-                    <div class="space-y-6 pt-4 border-t border-slate-800">
-                        <div class="bg-slate-900 border border-slate-700 rounded-lg p-6">
-                            <h3 class="text-lg font-semibold text-white mb-4">Payment Flow</h3>
+                    <div class="space-y-6 pt-4 border-t-4 border-black">
+                        <div class="bg-purple-100 border-4 border-black brutal-shadow-sm-lg p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Payment Flow</h3>
                             <div class="space-y-4">
                                 <div class="flex items-start gap-4">
-                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0">1</div>
+                                    <div class="bg-black text-white w-8 h-8 border-4 border-black flex items-center justify-center font-bold shrink-0">1</div>
                                     <div>
-                                        <div class="text-white font-medium">Customer initiates payment</div>
-                                        <div class="text-slate-400 text-sm">Opens payment modal on merchant's website</div>
+                                        <div class="text-black font-bold">Customer initiates payment</div>
+                                        <div class="text-black text-sm">Opens payment modal on merchant's website</div>
                                     </div>
                                 </div>
                                 <div class="flex items-start gap-4">
-                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0">2</div>
+                                    <div class="bg-black text-white w-8 h-8 border-4 border-black flex items-center justify-center font-bold shrink-0">2</div>
                                     <div>
-                                        <div class="text-white font-medium">Customer connects wallet</div>
-                                        <div class="text-slate-400 text-sm">MetaMask, Phantom, or other Web3 wallet</div>
+                                        <div class="text-black font-bold">Customer connects wallet</div>
+                                        <div class="text-black text-sm">MetaMask, Phantom, or other Web3 wallet</div>
                                     </div>
                                 </div>
                                 <div class="flex items-start gap-4">
-                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0">3</div>
+                                    <div class="bg-black text-white w-8 h-8 border-4 border-black flex items-center justify-center font-bold shrink-0">3</div>
                                     <div>
-                                        <div class="text-white font-medium">Direct blockchain transfer</div>
-                                        <div class="text-slate-400 text-sm">USDC sent directly to merchant's wallet (StablePay never holds funds)</div>
+                                        <div class="text-black font-bold">Direct blockchain transfer</div>
+                                        <div class="text-black text-sm">USDC sent directly to merchant's wallet (StablePay never holds funds)</div>
                                     </div>
                                 </div>
                                 <div class="flex items-start gap-4">
-                                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0">4</div>
+                                    <div class="bg-black text-white w-8 h-8 border-4 border-black flex items-center justify-center font-bold shrink-0">4</div>
                                     <div>
-                                        <div class="text-white font-medium">Transaction confirmed</div>
-                                        <div class="text-slate-400 text-sm">Verified on blockchain, merchant notified via webhook</div>
+                                        <div class="text-black font-bold">Transaction confirmed</div>
+                                        <div class="text-black text-sm">Verified on blockchain, merchant notified via webhook</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-green-900/20 border border-green-800 rounded p-4">
+                        <div class="bg-green-100 border-4 border-black brutal-shadow-sm p-4">
                             <div class="text-sm text-green-300 font-medium">Non-Custodial Architecture</div>
                             <div class="text-xs text-green-400 mt-2">
                                 StablePay NEVER holds your funds. Payments go directly from customer to merchant wallet via blockchain. We only facilitate the connection.
@@ -380,13 +555,13 @@
                     <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
-                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                    <div class="space-y-6 pt-4 border-t-4 border-black">
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Supported Networks</h3>
+                            <h3 class="text-lg font-black text-black mb-3 uppercase">Supported Networks</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="bg-slate-900 border border-slate-700 rounded p-4">
-                                    <div class="text-white font-medium mb-2">EVM Chains</div>
-                                    <ul class="space-y-1 text-sm text-slate-300">
+                                <div class="bg-purple-100 border-4 border-black brutal-shadow-sm p-4">
+                                    <div class="text-black font-bold mb-2">EVM Chains</div>
+                                    <ul class="space-y-1 text-sm text-black font-medium">
                                         <li>• Ethereum (Mainnet & Sepolia)</li>
                                         <li>• Base (Mainnet & Sepolia)</li>
                                         <li>• Polygon (Mainnet & Mumbai)</li>
@@ -394,9 +569,9 @@
                                         <li>• Optimism</li>
                                     </ul>
                                 </div>
-                                <div class="bg-slate-900 border border-slate-700 rounded p-4">
-                                    <div class="text-white font-medium mb-2">Non-EVM Chains</div>
-                                    <ul class="space-y-1 text-sm text-slate-300">
+                                <div class="bg-purple-100 border-4 border-black brutal-shadow-sm p-4">
+                                    <div class="text-black font-bold mb-2">Non-EVM Chains</div>
+                                    <ul class="space-y-1 text-sm text-black font-medium">
                                         <li>• Solana (Mainnet & Devnet)</li>
                                         <li>• More chains coming soon</li>
                                     </ul>
@@ -405,8 +580,8 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Token Standards</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Token Standards</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ ERC-20 (USDC, USDT, EURC on EVM chains)</li>
                                 <li>✓ SPL Token (USDC on Solana)</li>
                                 <li>✓ All tokens audited by Circle, Tether, Circle</li>
@@ -415,8 +590,8 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Transaction Verification</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Transaction Verification</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ All transactions verified on-chain</li>
                                 <li>✓ Real-time blockchain monitoring</li>
                                 <li>✓ Automatic confirmation checks</li>
@@ -437,10 +612,10 @@
                     <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
-                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                    <div class="space-y-6 pt-4 border-t-4 border-black">
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Access Control</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Access Control</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ Role-based access control (RBAC)</li>
                                 <li>✓ Multi-factor authentication (MFA) required</li>
                                 <li>✓ API key rotation every 90 days</li>
@@ -449,8 +624,8 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Monitoring & Logging</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Monitoring & Logging</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ 24/7 system monitoring</li>
                                 <li>✓ Real-time error alerts</li>
                                 <li>✓ Comprehensive audit logs</li>
@@ -459,8 +634,8 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Incident Response</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Incident Response</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ Documented incident response plan</li>
                                 <li>✓ 24-hour response time for critical issues</li>
                                 <li>✓ Post-incident analysis and reporting</li>
@@ -481,10 +656,10 @@
                     <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
-                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                    <div class="space-y-6 pt-4 border-t-4 border-black">
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Payment Security</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Payment Security</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ Instant settlement (no chargebacks)</li>
                                 <li>✓ Blockchain-verified transactions</li>
                                 <li>✓ No payment reversals (crypto advantage)</li>
@@ -493,8 +668,8 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Business Continuity</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Business Continuity</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ 99.9% uptime SLA</li>
                                 <li>✓ Multi-region infrastructure</li>
                                 <li>✓ Automated failover systems</li>
@@ -503,8 +678,8 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Refund Management</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Refund Management</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ Built-in refund system</li>
                                 <li>✓ Batch refund support (gas optimized)</li>
                                 <li>✓ Full refund audit trail</li>
@@ -525,10 +700,10 @@
                     <span class="text-4xl text-black font-black accordion-icon">+</span>
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
-                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                    <div class="space-y-6 pt-4 border-t-4 border-black">
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Open Source</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Open Source</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ Client-side SDK available on GitHub</li>
                                 <li>✓ Public API documentation</li>
                                 <li>✓ No hidden fees or costs</li>
@@ -537,8 +712,8 @@
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-semibold text-white mb-3">Security Disclosure</h3>
-                            <ul class="space-y-2 text-slate-300">
+                            <h3 class="text-lg font-black text-black uppercase mb-3">Security Disclosure</h3>
+                            <ul class="space-y-2 text-black font-medium">
                                 <li>✓ Responsible disclosure program</li>
                                 <li>✓ Bug bounty program (coming soon)</li>
                                 <li>✓ Public security advisories</li>
@@ -646,11 +821,22 @@
             }
         }
 
-        // Open first accordion by default
+        // Night mode toggle
+        function toggleNightMode() {
+            document.body.classList.toggle('night-mode');
+            localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
+        }
+
+        // Open first accordion by default and restore night mode preference
         document.addEventListener('DOMContentLoaded', () => {
             const firstAccordion = document.querySelector('.accordion-trigger');
             if (firstAccordion) {
                 toggleAccordion(firstAccordion);
+            }
+
+            // Restore night mode preference
+            if (localStorage.getItem('nightMode') === 'true') {
+                document.body.classList.add('night-mode');
             }
         });
     </script>
