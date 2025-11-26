@@ -1,0 +1,78 @@
+{
+  "title": "Documentação do Desenvolvedor - StablePay",
+  "nav": {
+    "badge": "DOCS DESENVOLVEDOR",
+    "quickstart": "INÍCIO RÁPIDO",
+    "checkout": "PAGAMENTO",
+    "wallets": "CARTEIRAS"
+  },
+  "hero": {
+    "title": "ACEITE PAGAMENTOS USDC EM MINUTOS",
+    "subtitle": "APIs simples para pagamentos cripto, infraestrutura de carteiras e rampas fiat",
+    "getStarted": "COMEÇAR",
+    "viewDemo": "VER DEMO"
+  },
+  "quickstart": {
+    "title": "INÍCIO RÁPIDO",
+    "step1": {
+      "title": "1. ADICIONAR O WIDGET DE PAGAMENTO",
+      "description": "Adicione isto à sua página web para aceitar pagamentos USDC:"
+    },
+    "step2": {
+      "title": "2. DEMO AO VIVO",
+      "description": "Veja o widget de pagamento em ação:"
+    }
+  },
+  "api": {
+    "title": "API DE PAGAMENTO",
+    "create": {
+      "title": "CRIAR SESSÃO DE PAGAMENTO",
+      "description": "Criar uma sessão de pagamento programaticamente"
+    },
+    "response": {
+      "title": "RESPOSTA"
+    }
+  },
+  "wallet": {
+    "title": "API DE CARTEIRA",
+    "create": {
+      "title": "CRIAR CARTEIRA DO CLIENTE",
+      "description": "Gerar carteiras invisíveis para seus usuários"
+    },
+    "balance": {
+      "title": "OBTER SALDO DA CARTEIRA"
+    }
+  },
+  "features": {
+    "title": "RECURSOS DA PLATAFORMA",
+    "checkout": {
+      "title": "PAGAMENTO INCORPORADO",
+      "description": "Aceite pagamentos cripto e com cartão com um único widget"
+    },
+    "wallets": {
+      "title": "CARTEIRAS INVISÍVEIS",
+      "description": "Crie carteiras para usuários sem que eles saibam que é cripto"
+    },
+    "onramps": {
+      "title": "RAMPAS FIAT ON/OFF",
+      "description": "Converta entre dinheiro tradicional e USDC perfeitamente"
+    },
+    "multichain": {
+      "title": "MULTI-CADEIA",
+      "description": "Suporte Ethereum, Base, Polygon, Arbitrum, Solana"
+    },
+    "settlement": {
+      "title": "LIQUIDAÇÃO INSTANTÂNEA",
+      "description": "Receba pagamentos USDC em segundos, não em dias"
+    },
+    "api": {
+      "title": "APIS DESENVOLVEDOR",
+      "description": "API REST completa com webhooks e eventos em tempo real"
+    }
+  },
+  "cta": {
+    "title": "PRONTO PARA COMEÇAR?",
+    "subtitle": "Junte-se a centenas de empresas aceitando pagamentos USDC com StablePay",
+    "button": "CRIAR CONTA GRATUITA"
+  }
+}

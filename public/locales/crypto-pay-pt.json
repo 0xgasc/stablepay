@@ -1,0 +1,36 @@
+{
+  "title": "Pagamento Cripto - StablePay",
+  "banner": "MODO TESTNET - USANDO BASE SEPOLIA E ETHEREUM SEPOLIA",
+  "backBtn": "VOLTAR À LOJA",
+  "heading": "COMPLETE SUA COMPRA",
+  "subheading": "Pague com USDC na testnet",
+  "summary": {
+    "heading": "RESUMO DO PEDIDO",
+    "product": "PRODUTO",
+    "amount": "VALOR"
+  },
+  "wallet": {
+    "connect": "CONECTAR CARTEIRA",
+    "connected": "CARTEIRA CONECTADA",
+    "disconnect": "DESCONECTAR",
+    "balances": "SALDO USDC EM TODAS AS CADEIAS",
+    "baseSepolia": "BASE SEPOLIA:",
+    "ethSepolia": "ETHEREUM SEPOLIA:"
+  },
+  "customer": {
+    "heading": "INFORMAÇÕES DO CLIENTE",
+    "email": "ENDEREÇO DE E-MAIL *",
+    "emailHint": "Enviaremos seu recibo para este endereço",
+    "name": "NOME COMPLETO (OPCIONAL)"
+  },
+  "payment": {
+    "heading": "SELECIONE A CADEIA DE PAGAMENTO",
+    "baseSepolia": "BASE SEPOLIA",
+    "baseDesc": "Recomendado - Taxas mais baixas",
+    "ethSepolia": "ETHEREUM SEPOLIA",
+    "ethDesc": "Testnet clássico Ethereum",
+    "payBtn": "PAGAR COM USDC",
+    "txStatus": "STATUS DA TRANSAÇÃO",
+    "viewExplorer": "VER NO EXPLORADOR"
+  }
+}

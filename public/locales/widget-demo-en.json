@@ -1,0 +1,25 @@
+{
+  "title": "StablePay Checkout Widget Demo",
+  "nav": {
+    "back": "BACK"
+  },
+  "heading": "CHECKOUT WIDGET DEMO",
+  "subheading": "Test our embedded payment widget below",
+  "demo1": {
+    "heading": "BASIC CHECKOUT",
+    "currency": "USDC",
+    "btn": "PAY NOW"
+  },
+  "demo2": {
+    "heading": "CUSTOM AMOUNT",
+    "currency": "USDC",
+    "btn": "PAY NOW"
+  },
+  "integration": {
+    "heading": "INTEGRATION CODE"
+  },
+  "events": {
+    "heading": "EVENTS CONSOLE",
+    "waiting": "Waiting for events..."
+  }
+}

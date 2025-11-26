@@ -1,0 +1,53 @@
+{
+  "title": "Admin Empresarial - StablePay",
+  "nav": {
+    "refresh": "ATUALIZAR",
+    "logout": "SAIR"
+  },
+  "login": {
+    "heading": "LOGIN DE ADMINISTRADOR EMPRESARIAL",
+    "subheading": "Acesso Somente para Super Administrador",
+    "password": "SENHA DE ADMINISTRADOR",
+    "button": "ENTRAR",
+    "error": "Senha de administrador inválida"
+  },
+  "tabs": {
+    "merchants": "COMERCIANTES",
+    "customers": "CLIENTES",
+    "transactions": "TRANSAÇÕES",
+    "system": "SISTEMA"
+  },
+  "merchants": {
+    "heading": "GESTÃO DE COMERCIANTES",
+    "createBtn": "CRIAR COMERCIANTE",
+    "search": "Procurar comerciantes...",
+    "filter": "Filtrar por Status",
+    "all": "Todos",
+    "active": "Ativo",
+    "inactive": "Inativo",
+    "table": {
+      "merchant": "COMERCIANTE",
+      "email": "E-MAIL",
+      "plan": "PLANO",
+      "status": "STATUS",
+      "actions": "AÇÕES"
+    }
+  },
+  "customers": {
+    "heading": "GESTÃO DE CLIENTES",
+    "search": "Procurar clientes...",
+    "filter": "Filtrar por Tipo"
+  },
+  "transactions": {
+    "heading": "MONITORAMENTO DE TRANSAÇÕES",
+    "search": "Procurar transações...",
+    "filter": "Filtrar por Status"
+  },
+  "system": {
+    "heading": "CONFIGURAÇÃO DO SISTEMA",
+    "api": "Configurações de API",
+    "features": "Flags de Recursos",
+    "maintenance": "Modo de Manutenção",
+    "save": "SALVAR CONFIGURAÇÕES"
+  }
+}

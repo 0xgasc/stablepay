@@ -1,0 +1,53 @@
+{
+  "title": "Enterprise Admin - StablePay",
+  "nav": {
+    "refresh": "REFRESH",
+    "logout": "LOGOUT"
+  },
+  "login": {
+    "heading": "ENTERPRISE ADMIN LOGIN",
+    "subheading": "Super Administrator Access Only",
+    "password": "ADMIN PASSWORD",
+    "button": "LOGIN",
+    "error": "Invalid admin password"
+  },
+  "tabs": {
+    "merchants": "MERCHANTS",
+    "customers": "CUSTOMERS",
+    "transactions": "TRANSACTIONS",
+    "system": "SYSTEM"
+  },
+  "merchants": {
+    "heading": "MERCHANT MANAGEMENT",
+    "createBtn": "CREATE MERCHANT",
+    "search": "Search merchants...",
+    "filter": "Filter by Status",
+    "all": "All",
+    "active": "Active",
+    "inactive": "Inactive",
+    "table": {
+      "merchant": "MERCHANT",
+      "email": "EMAIL",
+      "plan": "PLAN",
+      "status": "STATUS",
+      "actions": "ACTIONS"
+    }
+  },
+  "customers": {
+    "heading": "CUSTOMER MANAGEMENT",
+    "search": "Search customers...",
+    "filter": "Filter by Type"
+  },
+  "transactions": {
+    "heading": "TRANSACTION MONITORING",
+    "search": "Search transactions...",
+    "filter": "Filter by Status"
+  },
+  "system": {
+    "heading": "SYSTEM CONFIGURATION",
+    "api": "API Settings",
+    "features": "Feature Flags",
+    "maintenance": "Maintenance Mode",
+    "save": "SAVE SETTINGS"
+  }
+}

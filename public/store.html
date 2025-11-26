@@ -3,191 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StablePay Store</title>
+    <title data-i18n="title">StablePay Store</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .testnet-badge { 
-            background: linear-gradient(90deg, #f59e0b, #ef4444);
-            animation: gradient 3s ease infinite;
+        * {
+            font-family: 'Space Grotesk', sans-serif;
         }
-        @keyframes gradient {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+        body {
+            background: #FFFFFF;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        body.night-mode .bg-white {
+            background: #000 !important;
+        }
+        body.night-mode .text-black {
+            color: #fff !important;
+        }
+        body.night-mode .text-gray-700 {
+            color: #ccc !important;
+        }
+        body.night-mode .text-gray-400 {
+            color: #999 !important;
+        }
+        body.night-mode .text-gray-500 {
+            color: #888 !important;
+        }
+        body.night-mode .brutal-border,
+        body.night-mode .border-black {
+            border-color: #fff !important;
+        }
+        body.night-mode .border-gray-300 {
+            border-color: #666 !important;
+        }
+        body.night-mode [style*="box-shadow"][style*="#000"] {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        body.night-mode .shadow-brutal {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        .brutal-border {
+            border: 4px solid #000;
+        }
+        .shadow-brutal {
+            box-shadow: 8px 8px 0px #000;
+        }
+        .btn-brutal {
+            border: 4px solid #000;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        .btn-brutal:hover {
+            transform: translate(4px, 4px);
+            box-shadow: 4px 4px 0px #000;
+        }
+        body.night-mode .btn-brutal {
+            border-color: #fff;
+        }
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 4px 4px 0px #fff;
+        }
+        input, select {
+            border: 4px solid #000;
+            border-radius: 0;
+        }
+        body.night-mode input,
+        body.night-mode select {
+            border-color: #fff;
+            background: #000;
+            color: #fff;
+        }
+        .testnet-badge {
+            background: #FFA500;
+            border-bottom: 4px solid #000;
+        }
+        body.night-mode .testnet-badge {
+            border-color: #fff;
         }
         .product-card {
-            transition: all 0.3s ease;
+            transition: all 0.2s;
         }
         .product-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            transform: translate(4px, 4px);
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
+<body class="min-h-screen">
     <!-- Testnet Banner -->
-    <div class="testnet-badge text-white text-center py-2 text-sm font-bold">
-        🧪 TESTNET MODE - Demo Store with Base Sepolia & Ethereum Sepolia
+    <div class="testnet-badge text-black text-center py-3 text-sm font-bold tracking-wide" style="text-transform: uppercase;">
+        <span data-i18n="banner">TESTNET MODE - DEMO STORE WITH BASE SEPOLIA & ETHEREUM SEPOLIA</span>
     </div>
 
-    <div class="container mx-auto px-4 py-6 sm:py-8 max-w-6xl">
-        <!-- Admin Button -->
-        <div class="flex justify-end mb-4">
-            <a href="/enterprise-admin.html" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-                🔐 Admin Panel
-            </a>
+    <!-- Navigation -->
+    <nav class="bg-white border-b-4 border-black">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <a href="/" class="text-3xl font-bold tracking-tight text-black" style="text-transform: uppercase;">
+                    STABLEPAY
+                </a>
+                <div class="flex items-center gap-4">
+                    <!-- Language Selector -->
+                    <select id="languageSelector" class="px-3 py-2 bg-white text-black font-bold text-sm">
+                        <option value="en">EN</option>
+                        <option value="es">ES</option>
+                        <option value="fr">FR</option>
+                        <option value="pt">PT</option>
+                    </select>
+                    <!-- Night Mode Toggle -->
+                    <button id="nightModeToggle" class="px-4 py-2 bg-white text-black font-bold text-sm btn-brutal">
+                        <span class="night-icon">NIGHT</span>
+                    </button>
+                    <a href="/enterprise-admin.html" class="px-4 py-2 bg-white text-black font-bold text-sm btn-brutal" style="text-transform: uppercase; background: #FF6B6B;" data-i18n="nav.admin">
+                        ADMIN
+                    </a>
+                </div>
+            </div>
         </div>
-        
-        <div class="text-center mb-8 sm:mb-12">
-            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
-                StablePay Store
+    </nav>
+
+    <div class="container mx-auto px-4 py-12 max-w-6xl">
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-bold mb-4 text-black tracking-tight" style="text-transform: uppercase; background: linear-gradient(135deg, #00E5FF 0%, #4FC3F7 50%, #7C4DFF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;" data-i18n="heading">
+                STABLEPAY STORE
             </h1>
-            <p class="text-gray-400 text-sm sm:text-base lg:text-lg px-4">Choose your product and pay with crypto or card</p>
+            <p class="text-gray-700 text-lg" data-i18n="subheading">Choose your product and pay with crypto or card</p>
         </div>
 
         <!-- Products Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             <!-- Product A -->
-            <div class="product-card bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl p-4 sm:p-6 text-center">
-                <div class="mb-4">
-                    <div class="w-16 h-16 bg-white/20 rounded-full mx-auto flex items-center justify-center mb-4">
-                        <span class="text-2xl font-bold">A</span>
-                    </div>
-                    <h3 class="text-xl font-bold mb-2">Starter Package</h3>
-                    <p class="text-purple-200 text-sm mb-4">Perfect for beginners getting started</p>
-                </div>
-                
+            <div class="product-card bg-white border-4 border-black p-6 shadow-brutal">
                 <div class="mb-6">
-                    <div class="text-3xl font-bold mb-1">$0.10</div>
-                    <div class="text-purple-200 text-sm">0.1 USDC</div>
+                    <div class="w-20 h-20 border-4 border-black mx-auto flex items-center justify-center mb-4" style="background: #00E5FF;">
+                        <span class="text-4xl font-bold text-black">A</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-2 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="productA.name">STARTER PACKAGE</h3>
+                    <p class="text-gray-700 text-sm mb-4" data-i18n="productA.desc">Perfect for beginners getting started</p>
+                </div>
+
+                <div class="mb-6 pb-6 border-b-4 border-black">
+                    <div class="text-4xl font-bold text-black mb-1">$0.10</div>
+                    <div class="text-gray-700 text-sm font-bold tracking-wide" style="text-transform: uppercase;">0.1 USDC</div>
                 </div>
 
                 <div class="space-y-3">
-                    <button 
+                    <button
                         id="card-A"
-                        class="w-full bg-white/20 hover:bg-white/30 border border-white/40 text-white py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg font-semibold transition-all text-sm sm:text-base"
+                        class="w-full py-3 px-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #E5E5E5;" data-i18n="productA.cardBtn"
                     >
-                        💳 Pay with Card
+                        PAY WITH CARD
                     </button>
-                    <button 
+                    <button
                         id="crypto-A"
-                        class="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg font-semibold transition-all text-sm sm:text-base"
+                        class="w-full py-3 px-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #00E5FF;" data-i18n="productA.cryptoBtn"
                     >
-                        🪙 Pay with Stablecoins
+                        PAY WITH STABLECOINS
                     </button>
                 </div>
             </div>
 
             <!-- Product B -->
-            <div class="product-card bg-gradient-to-br from-green-600 to-teal-600 rounded-xl p-6 text-center">
-                <div class="mb-4">
-                    <div class="w-16 h-16 bg-white/20 rounded-full mx-auto flex items-center justify-center mb-4">
-                        <span class="text-2xl font-bold">B</span>
-                    </div>
-                    <h3 class="text-xl font-bold mb-2">Pro Package</h3>
-                    <p class="text-green-200 text-sm mb-4">For professionals who need more</p>
-                </div>
-                
+            <div class="product-card bg-white border-4 border-black p-6 shadow-brutal">
                 <div class="mb-6">
-                    <div class="text-3xl font-bold mb-1">$0.25</div>
-                    <div class="text-green-200 text-sm">0.25 USDC</div>
+                    <div class="w-20 h-20 border-4 border-black mx-auto flex items-center justify-center mb-4" style="background: #4FC3F7;">
+                        <span class="text-4xl font-bold text-black">B</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-2 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="productB.name">PRO PACKAGE</h3>
+                    <p class="text-gray-700 text-sm mb-4" data-i18n="productB.desc">For professionals who need more</p>
+                </div>
+
+                <div class="mb-6 pb-6 border-b-4 border-black">
+                    <div class="text-4xl font-bold text-black mb-1">$0.25</div>
+                    <div class="text-gray-700 text-sm font-bold tracking-wide" style="text-transform: uppercase;">0.25 USDC</div>
                 </div>
 
                 <div class="space-y-3">
-                    <button 
+                    <button
                         id="card-B"
-                        class="w-full bg-white/20 hover:bg-white/30 border border-white/40 text-white py-3 px-4 rounded-lg font-semibold transition-all"
+                        class="w-full py-3 px-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #E5E5E5;" data-i18n="productB.cardBtn"
                     >
-                        💳 Pay with Card
+                        PAY WITH CARD
                     </button>
-                    <button 
+                    <button
                         id="crypto-B"
-                        class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-semibold transition-all"
+                        class="w-full py-3 px-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #4FC3F7;" data-i18n="productB.cryptoBtn"
                     >
-                        🪙 Pay with Stablecoins
+                        PAY WITH STABLECOINS
                     </button>
                 </div>
             </div>
 
             <!-- Product C -->
-            <div class="product-card bg-gradient-to-br from-orange-600 to-red-600 rounded-xl p-6 text-center">
-                <div class="mb-4">
-                    <div class="w-16 h-16 bg-white/20 rounded-full mx-auto flex items-center justify-center mb-4">
-                        <span class="text-2xl font-bold">C</span>
-                    </div>
-                    <h3 class="text-xl font-bold mb-2">Premium Package</h3>
-                    <p class="text-orange-200 text-sm mb-4">Ultimate solution with everything</p>
-                </div>
-                
+            <div class="product-card bg-white border-4 border-black p-6 shadow-brutal">
                 <div class="mb-6">
-                    <div class="text-3xl font-bold mb-1">$1.00</div>
-                    <div class="text-orange-200 text-sm">1.0 USDC</div>
+                    <div class="w-20 h-20 border-4 border-black mx-auto flex items-center justify-center mb-4" style="background: #FF6B6B;">
+                        <span class="text-4xl font-bold text-black">C</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-2 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="productC.name">PREMIUM PACKAGE</h3>
+                    <p class="text-gray-700 text-sm mb-4" data-i18n="productC.desc">Ultimate solution with everything</p>
+                </div>
+
+                <div class="mb-6 pb-6 border-b-4 border-black">
+                    <div class="text-4xl font-bold text-black mb-1">$1.00</div>
+                    <div class="text-gray-700 text-sm font-bold tracking-wide" style="text-transform: uppercase;">1.0 USDC</div>
                 </div>
 
                 <div class="space-y-3">
-                    <button 
+                    <button
                         id="card-C"
-                        class="w-full bg-white/20 hover:bg-white/30 border border-white/40 text-white py-3 px-4 rounded-lg font-semibold transition-all"
+                        class="w-full py-3 px-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #E5E5E5;" data-i18n="productC.cardBtn"
                     >
-                        💳 Pay with Card
+                        PAY WITH CARD
                     </button>
-                    <button 
+                    <button
                         id="crypto-C"
-                        class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-semibold transition-all"
+                        class="w-full py-3 px-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #FF6B6B;" data-i18n="productC.cryptoBtn"
                     >
-                        🪙 Pay with Stablecoins
+                        PAY WITH STABLECOINS
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Additional Product (0.5 USDC) -->
-        <div class="max-w-md mx-auto">
-            <div class="product-card bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl p-6 text-center">
-                <div class="mb-4">
-                    <div class="w-16 h-16 bg-white/20 rounded-full mx-auto flex items-center justify-center mb-4">
-                        <span class="text-xl font-bold">⭐</span>
-                    </div>
-                    <h3 class="text-xl font-bold mb-2">Special Edition</h3>
-                    <p class="text-indigo-200 text-sm mb-4">Limited time offer with exclusive features</p>
-                </div>
-                
+        <div class="max-w-md mx-auto mb-12">
+            <div class="product-card bg-white border-4 border-black p-6 shadow-brutal">
                 <div class="mb-6">
-                    <div class="text-3xl font-bold mb-1">$0.50</div>
-                    <div class="text-indigo-200 text-sm">0.5 USDC</div>
+                    <div class="w-20 h-20 border-4 border-black mx-auto flex items-center justify-center mb-4" style="background: #7C4DFF;">
+                        <span class="text-3xl font-bold text-black">★</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-2 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="productSpecial.name">SPECIAL EDITION</h3>
+                    <p class="text-gray-700 text-sm mb-4" data-i18n="productSpecial.desc">Limited time offer with exclusive features</p>
+                </div>
+
+                <div class="mb-6 pb-6 border-b-4 border-black">
+                    <div class="text-4xl font-bold text-black mb-1">$0.50</div>
+                    <div class="text-gray-700 text-sm font-bold tracking-wide" style="text-transform: uppercase;">0.5 USDC</div>
                 </div>
 
                 <div class="space-y-3">
-                    <button 
+                    <button
                         id="card-Special"
-                        class="w-full bg-white/20 hover:bg-white/30 border border-white/40 text-white py-3 px-4 rounded-lg font-semibold transition-all"
+                        class="w-full py-3 px-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #E5E5E5;" data-i18n="productSpecial.cardBtn"
                     >
-                        💳 Pay with Card
+                        PAY WITH CARD
                     </button>
-                    <button 
+                    <button
                         id="crypto-Special"
-                        class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-semibold transition-all"
+                        class="w-full py-3 px-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #7C4DFF;" data-i18n="productSpecial.cryptoBtn"
                     >
-                        🪙 Pay with Stablecoins
+                        PAY WITH STABLECOINS
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Info Section -->
-        <div class="mt-12 text-center">
-            <div class="bg-gray-800 rounded-xl p-6">
-                <h3 class="text-lg font-semibold mb-4">Payment Methods</h3>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="font-semibold text-blue-400 mb-2">💳 Credit Card</h4>
-                        <p class="text-gray-400 text-sm">Traditional payment method (Coming Soon)</p>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold text-green-400 mb-2">🪙 Stablecoins</h4>
-                        <p class="text-gray-400 text-sm">Pay with USDC on Base Sepolia or Ethereum Sepolia testnets</p>
-                    </div>
+        <div class="bg-white border-4 border-black p-8 shadow-brutal">
+            <h3 class="text-2xl font-bold mb-6 text-black tracking-wide text-center" style="text-transform: uppercase;" data-i18n="info.heading">PAYMENT METHODS</h3>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="border-4 border-black p-6">
+                    <h4 class="font-bold text-xl text-black mb-2 tracking-wide" style="text-transform: uppercase; color: #4FC3F7;" data-i18n="info.cardHeading">CREDIT CARD</h4>
+                    <p class="text-gray-700" data-i18n="info.cardDesc">Traditional payment method (Coming Soon)</p>
+                </div>
+                <div class="border-4 border-black p-6">
+                    <h4 class="font-bold text-xl text-black mb-2 tracking-wide" style="text-transform: uppercase; color: #00E5FF;" data-i18n="info.cryptoHeading">STABLECOINS</h4>
+                    <p class="text-gray-700" data-i18n="info.cryptoDesc">Pay with USDC on Base Sepolia or Ethereum Sepolia testnets</p>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="mt-16 py-6 border-t-4 border-black">
+        <div class="text-center text-gray-700 font-bold tracking-wide" style="text-transform: uppercase;">
+            <span data-i18n="footer">DEVELOPED BY G.S</span>
         </div>
     </div>
 
@@ -201,20 +299,20 @@
 
         // Handle card payment (placeholder)
         function selectProduct(id, name, price) {
-            alert(`Card payments for ${name} ($${price}) coming soon! 💳\n\nFor now, please use "Pay with Stablecoins" to complete your purchase.`);
+            alert(`Card payments for ${name} ($${price}) coming soon!\n\nFor now, please use "Pay with Stablecoins" to complete your purchase.`);
         }
 
         // Handle crypto payment - redirect to payment page
         function payWithCrypto(id, name, price) {
             console.log(`Selected product: ${id} - ${name} - $${price}`);
-            
+
             // Store product data in URL parameters
             const params = new URLSearchParams({
                 productId: id,
                 productName: name,
                 price: price
             });
-            
+
             // Redirect to crypto payment page
             window.location.href = `crypto-pay.html?${params.toString()}`;
         }
@@ -222,11 +320,11 @@
         // Add event listeners when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Store page loaded');
-            
+
             // Add event listeners for all products
             Object.keys(products).forEach(productId => {
                 const product = products[productId];
-                
+
                 // Card payment buttons
                 const cardBtn = document.getElementById(`card-${productId}`);
                 if (cardBtn) {
@@ -234,8 +332,8 @@
                         selectProduct(productId, product.name, product.price);
                     });
                 }
-                
-                // Crypto payment buttons  
+
+                // Crypto payment buttons
                 const cryptoBtn = document.getElementById(`crypto-${productId}`);
                 if (cryptoBtn) {
                     cryptoBtn.addEventListener('click', () => {
@@ -243,26 +341,70 @@
                     });
                 }
             });
+        });
 
-            // Add nice animations on load
-            const cards = document.querySelectorAll('.product-card');
-            cards.forEach((card, index) => {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-                
-                setTimeout(() => {
-                    card.style.transition = 'all 0.5s ease';
-                    card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
-                }, index * 100);
+        // i18n functionality
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+        let translations = {};
+
+        async function loadTranslations(lang) {
+            try {
+                const response = await fetch(`./locales/store-${lang}.json`);
+                translations = await response.json();
+                applyTranslations();
+            } catch (error) {
+                console.error('Failed to load translations:', error);
+            }
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const keys = key.split('.');
+                let value = translations;
+
+                for (const k of keys) {
+                    value = value[k];
+                    if (!value) break;
+                }
+
+                if (value) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = value;
+                    } else {
+                        element.textContent = value;
+                    }
+                }
             });
+        }
+
+        // Language selector
+        document.getElementById('languageSelector').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('preferredLanguage', currentLang);
+            loadTranslations(currentLang);
+        });
+
+        // Set initial language
+        document.getElementById('languageSelector').value = currentLang;
+        loadTranslations(currentLang);
+
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const nightIcon = document.querySelector('.night-icon');
+
+        // Check for saved night mode preference
+        if (localStorage.getItem('nightMode') === 'true') {
+            document.body.classList.add('night-mode');
+            nightIcon.textContent = 'DAY';
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            const isNightMode = document.body.classList.contains('night-mode');
+            localStorage.setItem('nightMode', isNightMode);
+            nightIcon.textContent = isNightMode ? 'DAY' : 'NIGHT';
         });
     </script>
-    <!-- Footer -->
-    <div class="mt-16 py-6 border-t border-gray-800">
-        <div class="text-center text-gray-400 text-sm">
-            Developed by G.S
-        </div>
-    </div>
 </body>
 </html>

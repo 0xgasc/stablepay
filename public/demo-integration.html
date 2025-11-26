@@ -3,433 +3,275 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StablePay Integration Demo</title>
+    <title data-i18n="title">StablePay Integration Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            font-family: 'Space Grotesk', sans-serif;
         }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            background: linear-gradient(135deg, #00E5FF 0%, #4FC3F7 50%, #7C4DFF 100%);
+            font-family: 'Space Grotesk', sans-serif;
         }
-
-        .container {
-            max-width: 1200px;
-            width: 100%;
+        body.night-mode {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+            color: #fff;
         }
-
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            color: white;
+        body.night-mode .bg-white {
+            background: #000 !important;
         }
-
-        .header h1 {
-            font-size: 48px;
-            margin-bottom: 12px;
-            font-weight: 700;
+        body.night-mode .text-black {
+            color: #fff !important;
         }
-
-        .header p {
-            font-size: 18px;
-            opacity: 0.9;
+        body.night-mode .text-gray-700 {
+            color: #ccc !important;
         }
-
-        .demo-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 40px;
+        body.night-mode .text-gray-400 {
+            color: #999 !important;
         }
-
-        @media (max-width: 768px) {
-            .demo-grid {
-                grid-template-columns: 1fr;
-            }
+        body.night-mode .brutal-border,
+        body.night-mode .border-black {
+            border-color: #fff !important;
         }
-
-        .demo-card {
-            background: white;
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        body.night-mode [style*="box-shadow"][style*="#000"] {
+            box-shadow: 8px 8px 0px #fff !important;
         }
-
-        .demo-card h2 {
-            font-size: 24px;
-            margin-bottom: 8px;
-            color: #1f2937;
+        body.night-mode .shadow-brutal {
+            box-shadow: 8px 8px 0px #fff !important;
         }
-
-        .demo-card .subtitle {
-            color: #6b7280;
-            font-size: 14px;
-            margin-bottom: 20px;
+        .brutal-border {
+            border: 4px solid #000;
         }
-
-        .code-block {
-            background: #1f2937;
-            border-radius: 8px;
-            padding: 16px;
-            margin: 16px 0;
-            overflow-x: auto;
+        .shadow-brutal {
+            box-shadow: 8px 8px 0px #000;
         }
-
-        .code-block pre {
-            color: #10b981;
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-
-        .widget-demo {
-            margin-top: 24px;
-            padding: 24px;
-            background: #f9fafb;
-            border-radius: 12px;
-            border: 2px dashed #d1d5db;
-        }
-
-        .widget-demo-label {
-            text-align: center;
-            color: #6b7280;
-            font-size: 12px;
+        .btn-brutal {
+            border: 4px solid #000;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 16px;
-            font-weight: 600;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
         }
-
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background: linear-gradient(to right, #3b82f6, #8b5cf6);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            transition: transform 0.2s;
+        .btn-brutal:hover {
+            transform: translate(4px, 4px);
+            box-shadow: 4px 4px 0px #000;
         }
-
-        .btn:hover {
-            transform: translateY(-2px);
+        body.night-mode .btn-brutal {
+            border-color: #fff;
         }
-
-        .btn-outline {
-            background: white;
-            color: #3b82f6;
-            border: 2px solid #3b82f6;
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 4px 4px 0px #fff;
         }
-
-        .btn-outline:hover {
-            background: #eff6ff;
+        input, select {
+            border: 4px solid #000;
+            border-radius: 0;
         }
-
-        .feature-list {
-            list-style: none;
-            margin-top: 16px;
+        body.night-mode input,
+        body.night-mode select {
+            border-color: #fff;
+            background: #000;
+            color: #fff;
         }
-
-        .feature-list li {
-            padding: 8px 0;
-            color: #4b5563;
-            display: flex;
-            align-items: center;
-        }
-
-        .feature-list li:before {
-            content: "✓";
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            background: #10b981;
-            color: white;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 20px;
-            margin-right: 12px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .integration-types {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 16px;
-            margin: 24px 0;
-        }
-
-        .integration-type {
-            text-align: center;
+        pre {
+            border: 4px solid #000;
+            background: #000;
+            color: #00E5FF;
             padding: 20px;
-            background: #f9fafb;
-            border-radius: 8px;
-            border: 2px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
         }
-
+        body.night-mode pre {
+            border-color: #fff;
+            color: #00E5FF;
+        }
+        .tab-btn {
+            border-bottom: 4px solid transparent;
+        }
+        .tab-btn.active {
+            border-bottom-color: #00E5FF;
+        }
+        body.night-mode .tab-btn.active {
+            border-bottom-color: #fff;
+        }
+        .integration-type {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
         .integration-type:hover {
-            border-color: #3b82f6;
-            background: white;
+            transform: translate(2px, 2px);
         }
-
         .integration-type.active {
-            border-color: #3b82f6;
-            background: #eff6ff;
+            background: #00E5FF !important;
         }
-
-        .integration-type-icon {
-            font-size: 32px;
-            margin-bottom: 8px;
-        }
-
-        .integration-type-title {
-            font-weight: 600;
-            color: #1f2937;
-            font-size: 14px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        .tab {
-            padding: 12px 20px;
-            background: none;
-            border: none;
-            color: #6b7280;
-            font-weight: 500;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
-            transition: all 0.2s;
-        }
-
-        .tab:hover {
-            color: #3b82f6;
-        }
-
-        .tab.active {
-            color: #3b82f6;
-            border-bottom-color: #3b82f6;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .info-banner {
-            background: #fef3c7;
-            border: 1px solid #fbbf24;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-
-        .info-banner-title {
-            font-weight: 600;
-            color: #92400e;
-            margin-bottom: 4px;
-        }
-
-        .info-banner-text {
-            color: #78350f;
-            font-size: 14px;
-        }
-
-        .footer {
-            text-align: center;
-            color: white;
-            margin-top: 40px;
-        }
-
-        .footer a {
-            color: white;
-            text-decoration: underline;
+        body.night-mode .integration-type.active {
+            background: #7C4DFF !important;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>StablePay Integration Demo</h1>
-            <p>See how easy it is to accept USDC payments on any chain</p>
+<body class="min-h-screen flex items-center justify-center p-5">
+    <!-- Language & Night Mode Fixed Position -->
+    <div class="fixed top-4 right-4 flex items-center gap-3 z-50">
+        <select id="languageSelector" class="px-3 py-2 bg-white text-black font-bold text-sm">
+            <option value="en">EN</option>
+            <option value="es">ES</option>
+            <option value="fr">FR</option>
+            <option value="pt">PT</option>
+        </select>
+        <button id="nightModeToggle" class="px-4 py-2 bg-white text-black font-bold text-sm btn-brutal">
+            <span class="night-icon">NIGHT</span>
+        </button>
+    </div>
+
+    <div class="container max-w-7xl">
+        <div class="text-center mb-10">
+            <h1 class="text-6xl font-bold text-white mb-3 tracking-tight" style="text-transform: uppercase;" data-i18n="heading">
+                STABLEPAY INTEGRATION DEMO
+            </h1>
+            <p class="text-xl text-white" data-i18n="subheading">
+                See how easy it is to accept USDC payments on any chain
+            </p>
         </div>
 
-        <div class="demo-grid">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <!-- Left: Integration Options -->
-            <div class="demo-card">
-                <h2>Choose Your Integration</h2>
-                <p class="subtitle">Three ways to integrate StablePay checkout</p>
+            <div class="bg-white border-4 border-black p-8 shadow-brutal">
+                <h2 class="text-3xl font-bold mb-4 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="options.heading">CHOOSE YOUR INTEGRATION</h2>
+                <p class="text-gray-700 mb-6" data-i18n="options.subheading">Three ways to integrate StablePay checkout</p>
 
-                <div class="integration-types">
-                    <div class="integration-type active" data-type="widget">
-                        <div class="integration-type-icon">🔌</div>
-                        <div class="integration-type-title">Widget</div>
+                <div class="grid grid-cols-3 gap-4 mb-8">
+                    <div class="integration-type active border-4 border-black p-4 text-center bg-white" data-type="widget">
+                        <div class="text-3xl mb-2">★</div>
+                        <div class="font-bold text-sm text-black" style="text-transform: uppercase;" data-i18n="options.widget">WIDGET</div>
                     </div>
-                    <div class="integration-type" data-type="hosted">
-                        <div class="integration-type-icon">🌐</div>
-                        <div class="integration-type-title">Hosted</div>
+                    <div class="integration-type border-4 border-black p-4 text-center bg-white" data-type="hosted">
+                        <div class="text-3xl mb-2">◆</div>
+                        <div class="font-bold text-sm text-black" style="text-transform: uppercase;" data-i18n="options.hosted">HOSTED</div>
                     </div>
-                    <div class="integration-type" data-type="api">
-                        <div class="integration-type-icon">⚡</div>
-                        <div class="integration-type-title">API</div>
+                    <div class="integration-type border-4 border-black p-4 text-center bg-white" data-type="api">
+                        <div class="text-3xl mb-2">■</div>
+                        <div class="font-bold text-sm text-black" style="text-transform: uppercase;" data-i18n="options.api">API</div>
                     </div>
                 </div>
 
-                <div id="widget-content" class="tab-content active">
-                    <h3 style="margin-bottom: 12px; color: #1f2937;">Embedded Widget</h3>
-                    <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">
-                        Add checkout directly to your website with one script tag.
-                    </p>
+                <div id="widget-content" class="content-section">
+                    <h3 class="text-2xl font-bold mb-3 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="widget.heading">EMBEDDED WIDGET</h3>
+                    <p class="text-gray-700 mb-4" data-i18n="widget.description">Add checkout directly to your website with one script tag.</p>
 
-                    <div class="tabs">
-                        <button class="tab active" data-tab="html">HTML</button>
-                        <button class="tab" data-tab="react">React</button>
-                        <button class="tab" data-tab="vue">Vue</button>
+                    <div class="flex gap-2 mb-4">
+                        <button class="tab-btn active px-4 py-2 font-bold text-sm text-black" data-tab="html">HTML</button>
+                        <button class="tab-btn px-4 py-2 font-bold text-sm text-black" data-tab="react">REACT</button>
+                        <button class="tab-btn px-4 py-2 font-bold text-sm text-black" data-tab="vue">VUE</button>
                     </div>
 
-                    <div id="html-tab" class="tab-content active">
-                        <div class="code-block">
-                            <pre>&lt;!-- 1. Include the script --&gt;
-&lt;script src="https://stablepay-nine.vercel.app/checkout-widget.js"&gt;&lt;/script&gt;
+                    <div id="html-tab" class="tab-content">
+                        <pre><code>&lt;!-- 1. Include the script --&gt;
+&lt;script src="https://stablepay.com/checkout.js"&gt;&lt;/script&gt;
 
 &lt;!-- 2. Add the widget --&gt;
 &lt;div class="stablepay-checkout"
-     data-merchant="YOUR_MERCHANT_ID"
+     data-merchant="YOUR_ID"
      data-amount="10.00"
-     data-chain="BASE_SEPOLIA"
-     data-theme="light"&gt;
-&lt;/div&gt;</pre>
-                        </div>
+     data-chain="BASE_SEPOLIA"&gt;
+&lt;/div&gt;</code></pre>
                     </div>
 
-                    <div id="react-tab" class="tab-content">
-                        <div class="code-block">
-                            <pre>import { useEffect } from 'react';
+                    <div id="react-tab" class="tab-content hidden">
+                        <pre><code>import { useEffect } from 'react';
 
 function Checkout() {
   useEffect(() => {
-    // Load widget script
     const script = document.createElement('script');
-    script.src = 'https://stablepay-nine.vercel.app/checkout-widget.js';
+    script.src = 'https://stablepay.com/checkout.js';
     document.body.appendChild(script);
   }, []);
 
   return (
     &lt;div className="stablepay-checkout"
-         data-merchant="YOUR_MERCHANT_ID"
-         data-amount="10.00"
-         data-chain="BASE_SEPOLIA" /&gt;
+         data-merchant="YOUR_ID"
+         data-amount="10.00" /&gt;
   );
-}</pre>
-                        </div>
+}</code></pre>
                     </div>
 
-                    <div id="vue-tab" class="tab-content">
-                        <div class="code-block">
-                            <pre>&lt;template&gt;
+                    <div id="vue-tab" class="tab-content hidden">
+                        <pre><code>&lt;template&gt;
   &lt;div class="stablepay-checkout"
        :data-merchant="merchantId"
-       :data-amount="amount"
-       data-chain="BASE_SEPOLIA" /&gt;
+       :data-amount="amount" /&gt;
 &lt;/template&gt;
 
 &lt;script&gt;
 export default {
   data() {
     return {
-      merchantId: 'YOUR_MERCHANT_ID',
+      merchantId: 'YOUR_ID',
       amount: '10.00'
     }
   },
   mounted() {
     const script = document.createElement('script');
-    script.src = 'https://stablepay-nine.vercel.app/checkout-widget.js';
+    script.src = 'https://stablepay.com/checkout.js';
     document.body.appendChild(script);
   }
 }
-&lt;/script&gt;</pre>
-                        </div>
+&lt;/script&gt;</code></pre>
                     </div>
 
-                    <ul class="feature-list">
-                        <li>Works on any website</li>
-                        <li>Auto-detects MetaMask & Phantom</li>
-                        <li>Mobile responsive</li>
-                        <li>Customizable theme</li>
-                    </ul>
+                    <div class="mt-6 p-4 border-4 border-black">
+                        <div class="font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="widget.features">FEATURES:</div>
+                        <ul class="list-none space-y-2 text-gray-700">
+                            <li data-i18n="widget.feature1">★ Works on any website</li>
+                            <li data-i18n="widget.feature2">★ Auto-detects MetaMask & Phantom</li>
+                            <li data-i18n="widget.feature3">★ Mobile responsive</li>
+                            <li data-i18n="widget.feature4">★ Customizable theme</li>
+                        </ul>
+                    </div>
                 </div>
 
-                <div id="hosted-content" class="tab-content">
-                    <h3 style="margin-bottom: 12px; color: #1f2937;">Hosted Checkout</h3>
-                    <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">
-                        Redirect customers to a StablePay-hosted checkout page.
-                    </p>
+                <div id="hosted-content" class="content-section hidden">
+                    <h3 class="text-2xl font-bold mb-3 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="hosted.heading">HOSTED CHECKOUT</h3>
+                    <p class="text-gray-700 mb-4" data-i18n="hosted.description">Redirect customers to a StablePay-hosted checkout page.</p>
 
-                    <div class="code-block">
-                        <pre>// 1. Create order
+                    <pre><code>// 1. Create order
 const order = await fetch('/api/v1/orders', {
   method: 'POST',
   body: JSON.stringify({
-    merchantId: 'YOUR_MERCHANT_ID',
+    merchantId: 'YOUR_ID',
     amount: '10.00',
-    chain: 'BASE_SEPOLIA',
-    paymentAddress: 'YOUR_WALLET'
+    chain: 'BASE_SEPOLIA'
   })
 });
 
-const { order: { id } } = await order.json();
+const { id } = await order.json();
 
 // 2. Redirect to checkout
 window.location.href =
-  `https://stablepay-nine.vercel.app/checkout?orderId=${id}`;
+  `https://stablepay.com/checkout?id=${id}`;</code></pre>
 
-// 3. Customer pays and returns
-// 4. Check order status
-const status = await fetch(`/api/v1/orders/${id}`);</pre>
+                    <div class="mt-6 p-4 border-4 border-black">
+                        <div class="font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="hosted.features">FEATURES:</div>
+                        <ul class="list-none space-y-2 text-gray-700">
+                            <li data-i18n="hosted.feature1">★ No frontend code needed</li>
+                            <li data-i18n="hosted.feature2">★ PCI compliant</li>
+                            <li data-i18n="hosted.feature3">★ Built-in security</li>
+                            <li data-i18n="hosted.feature4">★ Returns to your site</li>
+                        </ul>
                     </div>
-
-                    <ul class="feature-list">
-                        <li>No frontend code needed</li>
-                        <li>PCI compliant</li>
-                        <li>Built-in security</li>
-                        <li>Returns to your site</li>
-                    </ul>
                 </div>
 
-                <div id="api-content" class="tab-content">
-                    <h3 style="margin-bottom: 12px; color: #1f2937;">Custom API Integration</h3>
-                    <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">
-                        Build your own checkout UI using our REST API.
-                    </p>
+                <div id="api-content" class="content-section hidden">
+                    <h3 class="text-2xl font-bold mb-3 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="api.heading">CUSTOM API INTEGRATION</h3>
+                    <p class="text-gray-700 mb-4" data-i18n="api.description">Build your own checkout UI using our REST API.</p>
 
-                    <div class="code-block">
-                        <pre>// Create order
+                    <pre><code>// Create order
 POST /api/v1/orders
 {
   "merchantId": "xxx",
   "amount": "10.00",
-  "chain": "BASE_SEPOLIA",
-  "paymentAddress": "0x..."
+  "chain": "BASE_SEPOLIA"
 }
 
 // Get order status
@@ -439,119 +281,99 @@ GET /api/v1/orders/:orderId
 POST /api/v1/orders/:orderId/confirm
 {
   "txHash": "0xabc..."
-}</pre>
+}</code></pre>
+
+                    <div class="mt-6 p-4 border-4 border-black">
+                        <div class="font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="api.features">FEATURES:</div>
+                        <ul class="list-none space-y-2 text-gray-700">
+                            <li data-i18n="api.feature1">★ Full control over UX</li>
+                            <li data-i18n="api.feature2">★ Custom branding</li>
+                            <li data-i18n="api.feature3">★ Advanced features</li>
+                            <li data-i18n="api.feature4">★ Backend integration</li>
+                        </ul>
                     </div>
-
-                    <ul class="feature-list">
-                        <li>Full control over UX</li>
-                        <li>Custom branding</li>
-                        <li>Advanced features</li>
-                        <li>Backend integration</li>
-                    </ul>
-
-                    <a href="https://stablepay-nine.vercel.app/dashboard.html" target="_blank" class="btn btn-outline" style="margin-top: 16px;">
-                        View API Documentation
-                    </a>
                 </div>
             </div>
 
             <!-- Right: Live Demo -->
-            <div class="demo-card">
-                <h2>Live Demo</h2>
-                <p class="subtitle">Try it yourself on Base Sepolia testnet</p>
+            <div class="bg-white border-4 border-black p-8 shadow-brutal">
+                <h2 class="text-3xl font-bold mb-4 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="demo.heading">LIVE DEMO</h2>
+                <p class="text-gray-700 mb-6" data-i18n="demo.subheading">Try it yourself on Base Sepolia testnet</p>
 
-                <div class="info-banner">
-                    <div class="info-banner-title">Need testnet USDC?</div>
-                    <div class="info-banner-text">
+                <div class="p-4 border-4 border-black mb-6" style="background: #FFF9E5;">
+                    <div class="font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="demo.testnetTitle">NEED TESTNET USDC?</div>
+                    <div class="text-sm text-gray-700" data-i18n="demo.testnetDesc">
                         Get free testnet USDC from the Base Sepolia faucet to test payments.
                     </div>
                 </div>
 
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500;">Amount (USDC)</label>
+                <div class="mb-6">
+                    <label class="block mb-2 font-bold text-black tracking-wide" style="text-transform: uppercase;" data-i18n="demo.amountLabel">AMOUNT (USDC)</label>
                     <input type="number" id="demo-amount" value="10.00" step="0.01" min="0.01"
-                           style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px;">
+                           class="w-full px-4 py-3 bg-white text-black font-bold text-lg focus:outline-none">
                 </div>
 
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500;">Chain</label>
-                    <select id="demo-chain" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px;">
-                        <option value="BASE_SEPOLIA">Base Sepolia (Testnet)</option>
-                        <option value="ETHEREUM_SEPOLIA">Ethereum Sepolia (Testnet)</option>
-                        <option value="SOLANA_DEVNET">Solana Devnet (Testnet)</option>
-                        <option value="BASE_MAINNET">Base Mainnet</option>
-                        <option value="ETHEREUM_MAINNET">Ethereum Mainnet</option>
-                        <option value="SOLANA_MAINNET">Solana Mainnet</option>
+                <div class="mb-6">
+                    <label class="block mb-2 font-bold text-black tracking-wide" style="text-transform: uppercase;" data-i18n="demo.chainLabel">CHAIN</label>
+                    <select id="demo-chain" class="w-full px-4 py-3 bg-white text-black font-bold focus:outline-none">
+                        <option value="BASE_SEPOLIA">BASE SEPOLIA (TESTNET)</option>
+                        <option value="ETHEREUM_SEPOLIA">ETHEREUM SEPOLIA (TESTNET)</option>
+                        <option value="BASE_MAINNET">BASE MAINNET</option>
+                        <option value="ETHEREUM_MAINNET">ETHEREUM MAINNET</option>
                     </select>
                 </div>
 
-                <div class="widget-demo">
-                    <div class="widget-demo-label">Widget renders here</div>
-
-                    <!-- This is where the widget would be embedded -->
-                    <div id="checkout-widget-container" class="stablepay-checkout"
-                         data-merchant="cmhkjckgi0000qut5wxmtsw1f"
-                         data-amount="10.00"
-                         data-chain="BASE_SEPOLIA"
-                         data-theme="light">
-
-                        <!-- Placeholder UI showing what the widget will look like -->
-                        <div style="text-align: center; padding: 40px 20px; border: 2px dashed #d1d5db; border-radius: 8px; background: white;">
-                            <div style="font-size: 48px; margin-bottom: 16px;">💳</div>
-                            <div style="font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">
-                                Pay with USDC
-                            </div>
-                            <div style="font-size: 32px; font-weight: bold; color: #3b82f6; margin-bottom: 20px;">
-                                $<span id="display-amount">10.00</span>
-                            </div>
-                            <div style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
-                                Chain: <span id="display-chain" style="font-weight: 600;">Base Sepolia</span>
-                            </div>
-                            <button class="btn" onclick="connectWallet()" style="width: 100%;">
-                                Connect Wallet
-                            </button>
-                            <div style="margin-top: 16px; color: #9ca3af; font-size: 12px;">
-                                Powered by StablePay
-                            </div>
+                <div class="border-4 border-black p-8 mb-6" style="background: linear-gradient(135deg, #E3F2FD 0%, #F3E5F5 100%);">
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">$</div>
+                        <div class="text-4xl font-bold text-black mb-4" id="display-amount">10.00</div>
+                        <div class="text-gray-700 font-bold mb-6 tracking-wide" style="text-transform: uppercase;">
+                            <span data-i18n="demo.chain">CHAIN:</span> <span id="display-chain">BASE SEPOLIA</span>
+                        </div>
+                        <button class="w-full px-6 py-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #00E5FF;" onclick="connectWallet()" data-i18n="demo.connectBtn">
+                            CONNECT WALLET
+                        </button>
+                        <div class="mt-4 text-xs text-gray-500 tracking-wide" style="text-transform: uppercase;" data-i18n="demo.powered">
+                            POWERED BY STABLEPAY
                         </div>
                     </div>
                 </div>
 
-                <div style="margin-top: 24px; display: flex; gap: 12px;">
-                    <button class="btn" onclick="updateWidget()" style="flex: 1;">
-                        Update Widget
+                <div class="flex gap-4">
+                    <button class="flex-1 px-6 py-3 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #4FC3F7;" onclick="updateWidget()" data-i18n="demo.updateBtn">
+                        UPDATE WIDGET
                     </button>
-                    <button class="btn btn-outline" onclick="resetWidget()" style="flex: 1;">
-                        Reset
+                    <button class="flex-1 px-6 py-3 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #E5E5E5;" onclick="resetWidget()" data-i18n="demo.resetBtn">
+                        RESET
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="footer">
-            <p>
-                Need help? Check out the
-                <a href="https://stablepay-nine.vercel.app/dashboard.html" target="_blank">Developer Dashboard</a>
-                for complete documentation and API reference.
+        <div class="text-center mt-10">
+            <p class="text-white text-lg">
+                <span data-i18n="footer.need">Need help? Check out the</span>
+                <a href="/dashboard.html" class="font-bold underline" data-i18n="footer.link">Developer Dashboard</a>
+                <span data-i18n="footer.docs">for complete documentation</span>
             </p>
         </div>
     </div>
 
     <script>
         // Tab switching
-        document.querySelectorAll('.tab').forEach(tab => {
+        document.querySelectorAll('.tab-btn').forEach(tab => {
             tab.addEventListener('click', () => {
-                const parent = tab.closest('.demo-card');
                 const tabName = tab.dataset.tab;
+                const parent = tab.closest('.content-section');
 
-                parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                parent.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
 
                 parent.querySelectorAll('.tab-content').forEach(content => {
                     if (content.id === `${tabName}-tab`) {
-                        content.classList.add('active');
+                        content.classList.remove('hidden');
                     } else {
-                        content.classList.remove('active');
+                        content.classList.add('hidden');
                     }
                 });
             });
@@ -565,11 +387,11 @@ POST /api/v1/orders/:orderId/confirm
                 document.querySelectorAll('.integration-type').forEach(t => t.classList.remove('active'));
                 type.classList.add('active');
 
-                document.querySelectorAll('#widget-content, #hosted-content, #api-content').forEach(content => {
-                    content.style.display = 'none';
+                document.querySelectorAll('.content-section').forEach(content => {
+                    content.classList.add('hidden');
                 });
 
-                document.getElementById(`${typeName}-content`).style.display = 'block';
+                document.getElementById(`${typeName}-content`).classList.remove('hidden');
             });
         });
 
@@ -577,14 +399,8 @@ POST /api/v1/orders/:orderId/confirm
         function updateWidget() {
             const amount = document.getElementById('demo-amount').value;
             const chain = document.getElementById('demo-chain').value;
-
             document.getElementById('display-amount').textContent = amount;
             document.getElementById('display-chain').textContent = chain.replace('_', ' ');
-
-            // Update widget attributes
-            const widget = document.getElementById('checkout-widget-container');
-            widget.setAttribute('data-amount', amount);
-            widget.setAttribute('data-chain', chain);
         }
 
         function resetWidget() {
@@ -604,6 +420,69 @@ POST /api/v1/orders/:orderId/confirm
 
         document.getElementById('demo-chain').addEventListener('change', (e) => {
             document.getElementById('display-chain').textContent = e.target.value.replace('_', ' ');
+        });
+
+        // i18n functionality
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+        let translations = {};
+
+        async function loadTranslations(lang) {
+            try {
+                const response = await fetch(`./locales/demo-integration-${lang}.json`);
+                translations = await response.json();
+                applyTranslations();
+            } catch (error) {
+                console.error('Failed to load translations:', error);
+            }
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const keys = key.split('.');
+                let value = translations;
+
+                for (const k of keys) {
+                    value = value[k];
+                    if (!value) break;
+                }
+
+                if (value) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = value;
+                    } else {
+                        element.textContent = value;
+                    }
+                }
+            });
+        }
+
+        // Language selector
+        document.getElementById('languageSelector').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('preferredLanguage', currentLang);
+            loadTranslations(currentLang);
+        });
+
+        // Set initial language
+        document.getElementById('languageSelector').value = currentLang;
+        loadTranslations(currentLang);
+
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const nightIcon = document.querySelector('.night-icon');
+
+        // Check for saved night mode preference
+        if (localStorage.getItem('nightMode') === 'true') {
+            document.body.classList.add('night-mode');
+            nightIcon.textContent = 'DAY';
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            const isNightMode = document.body.classList.contains('night-mode');
+            localStorage.setItem('nightMode', isNightMode);
+            nightIcon.textContent = isNightMode ? 'DAY' : 'NIGHT';
         });
     </script>
 </body>

@@ -1,0 +1,25 @@
+{
+  "title": "Demo do Widget de Pagamento StablePay",
+  "nav": {
+    "back": "VOLTAR"
+  },
+  "heading": "DEMO DO WIDGET DE PAGAMENTO",
+  "subheading": "Teste nosso widget de pagamento integrado abaixo",
+  "demo1": {
+    "heading": "PAGAMENTO BÁSICO",
+    "currency": "USDC",
+    "btn": "PAGAR AGORA"
+  },
+  "demo2": {
+    "heading": "VALOR PERSONALIZADO",
+    "currency": "USDC",
+    "btn": "PAGAR AGORA"
+  },
+  "integration": {
+    "heading": "CÓDIGO DE INTEGRAÇÃO"
+  },
+  "events": {
+    "heading": "CONSOLE DE EVENTOS",
+    "waiting": "Aguardando eventos..."
+  }
+}

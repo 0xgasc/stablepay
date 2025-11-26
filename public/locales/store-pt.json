@@ -1,0 +1,41 @@
+{
+  "title": "Loja StablePay",
+  "banner": "MODO TESTNET - LOJA DEMO COM BASE SEPOLIA E ETHEREUM SEPOLIA",
+  "nav": {
+    "admin": "ADMIN"
+  },
+  "heading": "LOJA STABLEPAY",
+  "subheading": "Escolha seu produto e pague com cripto ou cartão",
+  "productA": {
+    "name": "PACOTE INICIAL",
+    "desc": "Perfeito para iniciantes começando",
+    "cardBtn": "PAGAR COM CARTÃO",
+    "cryptoBtn": "PAGAR COM STABLECOINS"
+  },
+  "productB": {
+    "name": "PACOTE PRO",
+    "desc": "Para profissionais que precisam de mais",
+    "cardBtn": "PAGAR COM CARTÃO",
+    "cryptoBtn": "PAGAR COM STABLECOINS"
+  },
+  "productC": {
+    "name": "PACOTE PREMIUM",
+    "desc": "Solução completa com tudo",
+    "cardBtn": "PAGAR COM CARTÃO",
+    "cryptoBtn": "PAGAR COM STABLECOINS"
+  },
+  "productSpecial": {
+    "name": "EDIÇÃO ESPECIAL",
+    "desc": "Oferta por tempo limitado com recursos exclusivos",
+    "cardBtn": "PAGAR COM CARTÃO",
+    "cryptoBtn": "PAGAR COM STABLECOINS"
+  },
+  "info": {
+    "heading": "MÉTODOS DE PAGAMENTO",
+    "cardHeading": "CARTÃO DE CRÉDITO",
+    "cardDesc": "Método de pagamento tradicional (Em breve)",
+    "cryptoHeading": "STABLECOINS",
+    "cryptoDesc": "Pague com USDC nas testnets Base Sepolia ou Ethereum Sepolia"
+  },
+  "footer": "DESENVOLVIDO POR G.S"
+}

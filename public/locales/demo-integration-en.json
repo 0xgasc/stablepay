@@ -1,0 +1,57 @@
+{
+  "title": "StablePay Integration Demo",
+  "heading": "STABLEPAY INTEGRATION DEMO",
+  "subheading": "See how easy it is to accept USDC payments on any chain",
+  "options": {
+    "heading": "CHOOSE YOUR INTEGRATION",
+    "subheading": "Three ways to integrate StablePay checkout",
+    "widget": "WIDGET",
+    "hosted": "HOSTED",
+    "api": "API"
+  },
+  "widget": {
+    "heading": "EMBEDDED WIDGET",
+    "description": "Add checkout directly to your website with one script tag.",
+    "features": "FEATURES:",
+    "feature1": "★ Works on any website",
+    "feature2": "★ Auto-detects MetaMask & Phantom",
+    "feature3": "★ Mobile responsive",
+    "feature4": "★ Customizable theme"
+  },
+  "hosted": {
+    "heading": "HOSTED CHECKOUT",
+    "description": "Redirect customers to a StablePay-hosted checkout page.",
+    "features": "FEATURES:",
+    "feature1": "★ No frontend code needed",
+    "feature2": "★ PCI compliant",
+    "feature3": "★ Built-in security",
+    "feature4": "★ Returns to your site"
+  },
+  "api": {
+    "heading": "CUSTOM API INTEGRATION",
+    "description": "Build your own checkout UI using our REST API.",
+    "features": "FEATURES:",
+    "feature1": "★ Full control over UX",
+    "feature2": "★ Custom branding",
+    "feature3": "★ Advanced features",
+    "feature4": "★ Backend integration"
+  },
+  "demo": {
+    "heading": "LIVE DEMO",
+    "subheading": "Try it yourself on Base Sepolia testnet",
+    "testnetTitle": "NEED TESTNET USDC?",
+    "testnetDesc": "Get free testnet USDC from the Base Sepolia faucet to test payments.",
+    "amountLabel": "AMOUNT (USDC)",
+    "chainLabel": "CHAIN",
+    "chain": "CHAIN:",
+    "connectBtn": "CONNECT WALLET",
+    "powered": "POWERED BY STABLEPAY",
+    "updateBtn": "UPDATE WIDGET",
+    "resetBtn": "RESET"
+  },
+  "footer": {
+    "need": "Need help? Check out the",
+    "link": "Developer Dashboard",
+    "docs": "for complete documentation"
+  }
+}

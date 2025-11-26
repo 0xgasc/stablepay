@@ -1,0 +1,57 @@
+{
+  "title": "Demo de Integración StablePay",
+  "heading": "DEMO DE INTEGRACIÓN STABLEPAY",
+  "subheading": "Ve lo fácil que es aceptar pagos USDC en cualquier cadena",
+  "options": {
+    "heading": "ELIGE TU INTEGRACIÓN",
+    "subheading": "Tres formas de integrar el checkout de StablePay",
+    "widget": "WIDGET",
+    "hosted": "ALOJADO",
+    "api": "API"
+  },
+  "widget": {
+    "heading": "WIDGET INCORPORADO",
+    "description": "Agrega checkout directamente a tu sitio web con una etiqueta de script.",
+    "features": "CARACTERÍSTICAS:",
+    "feature1": "★ Funciona en cualquier sitio web",
+    "feature2": "★ Detecta automáticamente MetaMask y Phantom",
+    "feature3": "★ Responsive móvil",
+    "feature4": "★ Tema personalizable"
+  },
+  "hosted": {
+    "heading": "CHECKOUT ALOJADO",
+    "description": "Redirige clientes a una página de checkout alojada por StablePay.",
+    "features": "CARACTERÍSTICAS:",
+    "feature1": "★ No se necesita código frontend",
+    "feature2": "★ Compatible con PCI",
+    "feature3": "★ Seguridad integrada",
+    "feature4": "★ Regresa a tu sitio"
+  },
+  "api": {
+    "heading": "INTEGRACIÓN API PERSONALIZADA",
+    "description": "Construye tu propia UI de checkout usando nuestra API REST.",
+    "features": "CARACTERÍSTICAS:",
+    "feature1": "★ Control total sobre UX",
+    "feature2": "★ Marca personalizada",
+    "feature3": "★ Funciones avanzadas",
+    "feature4": "★ Integración backend"
+  },
+  "demo": {
+    "heading": "DEMO EN VIVO",
+    "subheading": "Pruébalo en la testnet de Base Sepolia",
+    "testnetTitle": "¿NECESITAS USDC DE TESTNET?",
+    "testnetDesc": "Obtén USDC gratis de testnet desde el faucet de Base Sepolia para probar pagos.",
+    "amountLabel": "MONTO (USDC)",
+    "chainLabel": "CADENA",
+    "chain": "CADENA:",
+    "connectBtn": "CONECTAR BILLETERA",
+    "powered": "IMPULSADO POR STABLEPAY",
+    "updateBtn": "ACTUALIZAR WIDGET",
+    "resetBtn": "RESTABLECER"
+  },
+  "footer": {
+    "need": "¿Necesitas ayuda? Consulta el",
+    "link": "Panel de Desarrollador",
+    "docs": "para documentación completa"
+  }
+}

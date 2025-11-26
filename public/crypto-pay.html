@@ -3,86 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StablePay - Crypto Payment</title>
+    <title data-i18n="title">Crypto Payment - StablePay</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        * {
+            font-family: 'Space Grotesk', sans-serif;
         }
-        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        .testnet-badge { 
-            background: linear-gradient(90deg, #f59e0b, #ef4444);
-            animation: gradient 3s ease infinite;
+        body {
+            background: #FFFFFF;
+            font-family: 'Space Grotesk', sans-serif;
         }
-        @keyframes gradient {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        body.night-mode .bg-white {
+            background: #000 !important;
+        }
+        body.night-mode .text-black {
+            color: #fff !important;
+        }
+        body.night-mode .text-gray-700 {
+            color: #ccc !important;
+        }
+        body.night-mode .text-gray-400 {
+            color: #999 !important;
+        }
+        body.night-mode .text-gray-500 {
+            color: #888 !important;
+        }
+        body.night-mode .brutal-border,
+        body.night-mode .border-black {
+            border-color: #fff !important;
+        }
+        body.night-mode .border-gray-300 {
+            border-color: #666 !important;
+        }
+        body.night-mode [style*="box-shadow"][style*="#000"] {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        body.night-mode .shadow-brutal {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        .brutal-border {
+            border: 4px solid #000;
+        }
+        .shadow-brutal {
+            box-shadow: 8px 8px 0px #000;
+        }
+        .btn-brutal {
+            border: 4px solid #000;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        .btn-brutal:hover {
+            transform: translate(4px, 4px);
+            box-shadow: 4px 4px 0px #000;
+        }
+        body.night-mode .btn-brutal {
+            border-color: #fff;
+        }
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 4px 4px 0px #fff;
+        }
+        input, select {
+            border: 4px solid #000;
+            border-radius: 0;
+        }
+        body.night-mode input,
+        body.night-mode select {
+            border-color: #fff;
+            background: #000;
+            color: #fff;
+        }
+        .testnet-badge {
+            background: #FFA500;
+            border-bottom: 4px solid #000;
+        }
+        body.night-mode .testnet-badge {
+            border-color: #fff;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
+<body class="min-h-screen">
     <!-- Testnet Banner -->
-    <div class="testnet-badge text-white text-center py-2 text-sm font-bold">
-        🧪 TESTNET MODE - Using Base Sepolia & Ethereum Sepolia
+    <div class="testnet-badge text-black text-center py-3 text-sm font-bold tracking-wide" style="text-transform: uppercase;">
+        <span data-i18n="banner">TESTNET MODE - USING BASE SEPOLIA & ETHEREUM SEPOLIA</span>
     </div>
 
-    <div class="container mx-auto px-4 py-6 sm:py-8 max-w-2xl">
+    <!-- Navigation -->
+    <nav class="bg-white border-b-4 border-black">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <a href="/" class="text-3xl font-bold tracking-tight text-black" style="text-transform: uppercase;">
+                    STABLEPAY
+                </a>
+                <div class="flex items-center gap-4">
+                    <!-- Language Selector -->
+                    <select id="languageSelector" class="px-3 py-2 bg-white text-black font-bold text-sm">
+                        <option value="en">EN</option>
+                        <option value="es">ES</option>
+                        <option value="fr">FR</option>
+                        <option value="pt">PT</option>
+                    </select>
+                    <!-- Night Mode Toggle -->
+                    <button id="nightModeToggle" class="px-4 py-2 bg-white text-black font-bold text-sm btn-brutal">
+                        <span class="night-icon">NIGHT</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-2xl">
         <!-- Back Button -->
         <div class="mb-6">
-            <button id="backBtn" class="text-blue-400 hover:text-blue-300 flex items-center">
-                <span class="mr-2">←</span> Back to Store
+            <button id="backBtn" class="text-black font-bold flex items-center tracking-wide btn-brutal px-4 py-2" style="text-transform: uppercase; background: #00E5FF;" data-i18n="backBtn">
+                BACK TO STORE
             </button>
         </div>
 
-        <div class="text-center mb-6 sm:mb-8">
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Complete Your Purchase</h1>
-            <p class="text-gray-400 text-sm sm:text-base">Pay with USDC on testnet</p>
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-3 text-black tracking-tight" style="text-transform: uppercase;" data-i18n="heading">COMPLETE YOUR PURCHASE</h1>
+            <p class="text-gray-700" data-i18n="subheading">Pay with USDC on testnet</p>
         </div>
 
         <!-- Product Summary -->
-        <div id="productSummary" class="bg-gray-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
-            <h2 class="text-xl font-bold mb-4">Order Summary</h2>
-            <div class="space-y-3">
-                <div class="flex justify-between">
-                    <span class="text-gray-400">Product</span>
-                    <span id="productName">Loading...</span>
+        <div id="productSummary" class="bg-white border-4 border-black p-6 shadow-brutal mb-6">
+            <h2 class="text-2xl font-bold mb-4 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="summary.heading">ORDER SUMMARY</h2>
+            <div class="space-y-4">
+                <div class="flex justify-between pb-3 border-b-4 border-black">
+                    <span class="text-gray-700 font-bold tracking-wide" style="text-transform: uppercase;" data-i18n="summary.product">PRODUCT</span>
+                    <span id="productName" class="text-black font-bold">Loading...</span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-gray-400">Amount</span>
-                    <span id="productPrice" class="text-green-400 font-bold">Loading...</span>
+                    <span class="text-gray-700 font-bold tracking-wide" style="text-transform: uppercase;" data-i18n="summary.amount">AMOUNT</span>
+                    <span id="productPrice" class="text-black font-bold" style="color: #00E5FF;">Loading...</span>
                 </div>
             </div>
         </div>
 
         <!-- Wallet Connection -->
-        <div id="walletSection" class="bg-gray-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+        <div id="walletSection" class="bg-white border-4 border-black p-6 shadow-brutal mb-6">
             <div id="connectWalletBtn" class="text-center">
-                <button id="connectBtn" class="bg-blue-600 hover:bg-blue-700 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold transition-colors text-sm sm:text-base">
-                    Connect Wallet
+                <button id="connectBtn" class="w-full px-6 py-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #4FC3F7;" data-i18n="wallet.connect">
+                    CONNECT WALLET
                 </button>
             </div>
             <div id="walletInfo" class="hidden">
-                <div class="flex justify-between items-center">
+                <div class="flex justify-between items-center pb-4 border-b-4 border-black">
                     <div>
-                        <p class="text-sm text-gray-400">Connected Wallet</p>
-                        <p class="font-mono text-sm" id="walletAddress"></p>
+                        <p class="text-sm text-gray-700 font-bold tracking-wide" style="text-transform: uppercase;" data-i18n="wallet.connected">CONNECTED WALLET</p>
+                        <p class="font-mono text-sm text-black font-bold" id="walletAddress"></p>
                     </div>
-                    <button id="disconnectBtn" class="text-red-400 hover:text-red-300 text-sm">
-                        Disconnect
+                    <button id="disconnectBtn" class="px-3 py-2 font-bold text-sm btn-brutal text-black" style="background: #FF6B6B; text-transform: uppercase;" data-i18n="wallet.disconnect">
+                        DISCONNECT
                     </button>
                 </div>
-                <div class="mt-4 pt-4 border-t border-gray-700">
-                    <p class="text-sm text-gray-400">USDC Balance on All Chains</p>
+                <div class="mt-4 pt-4">
+                    <p class="text-sm text-gray-700 font-bold tracking-wide mb-3" style="text-transform: uppercase;" data-i18n="wallet.balances">USDC BALANCE ON ALL CHAINS</p>
                     <div id="usdcBalances" class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-sm">Base Sepolia:</span>
-                            <span id="baseSepBalance" class="text-sm font-mono">Loading...</span>
+                        <div class="flex justify-between border-4 border-black p-3">
+                            <span class="text-sm font-bold text-black" data-i18n="wallet.baseSepolia">BASE SEPOLIA:</span>
+                            <span id="baseSepBalance" class="text-sm font-mono font-bold text-black">Loading...</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-sm">Ethereum Sepolia:</span>
-                            <span id="ethSepBalance" class="text-sm font-mono">Loading...</span>
+                        <div class="flex justify-between border-4 border-black p-3">
+                            <span class="text-sm font-bold text-black" data-i18n="wallet.ethSepolia">ETHEREUM SEPOLIA:</span>
+                            <span id="ethSepBalance" class="text-sm font-mono font-bold text-black">Loading...</span>
                         </div>
                     </div>
                 </div>
@@ -90,84 +183,86 @@
         </div>
 
         <!-- Customer Information -->
-        <div id="customerSection" class="hidden bg-gray-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
-            <h2 class="text-xl font-bold mb-4">Customer Information</h2>
+        <div id="customerSection" class="hidden bg-white border-4 border-black p-6 shadow-brutal mb-6">
+            <h2 class="text-2xl font-bold mb-4 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="customer.heading">CUSTOMER INFORMATION</h2>
             <div class="space-y-4">
                 <div>
-                    <label for="customerEmail" class="block text-sm font-medium text-gray-300 mb-2">
-                        Email Address *
+                    <label for="customerEmail" class="block text-sm font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="customer.email">
+                        EMAIL ADDRESS *
                     </label>
-                    <input 
-                        type="email" 
-                        id="customerEmail" 
+                    <input
+                        type="email"
+                        id="customerEmail"
                         placeholder="your@email.com"
-                        class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        class="w-full px-4 py-3 bg-white text-black focus:outline-none"
                         required
                     />
-                    <p class="text-xs text-gray-400 mt-1">We'll send your receipt to this address</p>
+                    <p class="text-xs text-gray-500 mt-2" data-i18n="customer.emailHint">We'll send your receipt to this address</p>
                 </div>
                 <div>
-                    <label for="customerName" class="block text-sm font-medium text-gray-300 mb-2">
-                        Full Name (Optional)
+                    <label for="customerName" class="block text-sm font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="customer.name">
+                        FULL NAME (OPTIONAL)
                     </label>
-                    <input 
-                        type="text" 
-                        id="customerName" 
+                    <input
+                        type="text"
+                        id="customerName"
                         placeholder="John Doe"
-                        class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        class="w-full px-4 py-3 bg-white text-black focus:outline-none"
                     />
                 </div>
             </div>
         </div>
 
         <!-- Chain Selection & Payment -->
-        <div id="paymentSection" class="hidden bg-gray-800 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
-            <h2 class="text-xl font-bold mb-4">Select Payment Chain</h2>
-            
+        <div id="paymentSection" class="hidden bg-white border-4 border-black p-6 shadow-brutal mb-6">
+            <h2 class="text-2xl font-bold mb-4 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="payment.heading">SELECT PAYMENT CHAIN</h2>
+
             <div class="space-y-4 mb-6">
-                <label class="flex items-center space-x-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600">
-                    <input type="radio" name="chain" value="BASE_SEPOLIA" class="text-blue-600">
+                <label class="flex items-center space-x-3 p-4 border-4 border-black cursor-pointer hover:bg-gray-100">
+                    <input type="radio" name="chain" value="BASE_SEPOLIA" class="w-5 h-5">
                     <div class="flex-1">
-                        <div class="font-semibold">Base Sepolia</div>
-                        <div class="text-sm text-gray-400">Recommended - Lower fees</div>
+                        <div class="font-bold text-black" data-i18n="payment.baseSepolia">BASE SEPOLIA</div>
+                        <div class="text-sm text-gray-700" data-i18n="payment.baseDesc">Recommended - Lower fees</div>
                     </div>
-                    <div class="text-sm font-mono" id="baseBalanceRadio">0.0 USDC</div>
+                    <div class="text-sm font-mono font-bold text-black" id="baseBalanceRadio">0.0 USDC</div>
                 </label>
 
-                <label class="flex items-center space-x-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600">
-                    <input type="radio" name="chain" value="ETHEREUM_SEPOLIA" class="text-blue-600">
+                <label class="flex items-center space-x-3 p-4 border-4 border-black cursor-pointer hover:bg-gray-100">
+                    <input type="radio" name="chain" value="ETHEREUM_SEPOLIA" class="w-5 h-5">
                     <div class="flex-1">
-                        <div class="font-semibold">Ethereum Sepolia</div>
-                        <div class="text-sm text-gray-400">Classic Ethereum testnet</div>
+                        <div class="font-bold text-black" data-i18n="payment.ethSepolia">ETHEREUM SEPOLIA</div>
+                        <div class="text-sm text-gray-700" data-i18n="payment.ethDesc">Classic Ethereum testnet</div>
                     </div>
-                    <div class="text-sm font-mono" id="ethBalanceRadio">0.0 USDC</div>
+                    <div class="text-sm font-mono font-bold text-black" id="ethBalanceRadio">0.0 USDC</div>
                 </label>
             </div>
 
-            <button 
+            <button
                 id="payBtn"
-                class="w-full bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-full px-6 py-4 font-bold tracking-wide btn-brutal text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                style="text-transform: uppercase; background: #00E5FF;"
                 disabled
+                data-i18n="payment.payBtn"
             >
-                Pay with USDC
+                PAY WITH USDC
             </button>
 
-            <div id="txStatus" class="hidden mt-4 p-4 bg-blue-900/30 rounded-lg">
-                <p class="text-sm font-semibold mb-2">Transaction Status</p>
-                <p id="txMessage" class="text-sm"></p>
-                <a id="txLink" href="#" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm mt-2 inline-block hidden">
-                    View on Explorer →
+            <div id="txStatus" class="hidden mt-4 p-4 border-4 border-black" style="background: #E3F2FD;">
+                <p class="text-sm font-bold mb-2 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="payment.txStatus">TRANSACTION STATUS</p>
+                <p id="txMessage" class="text-sm text-black font-bold"></p>
+                <a id="txLink" href="#" target="_blank" class="text-black font-bold text-sm mt-2 inline-block hidden underline" data-i18n="payment.viewExplorer">
+                    VIEW ON EXPLORER
                 </a>
             </div>
         </div>
 
         <!-- Error/Success Messages -->
-        <div id="errorMessage" class="hidden bg-red-900/30 border border-red-500 rounded-lg p-4 mb-6">
-            <p class="text-red-300"></p>
+        <div id="errorMessage" class="hidden border-4 border-black p-4 mb-6" style="background: #FFE5E5;">
+            <p class="text-black font-bold"></p>
         </div>
 
-        <div id="successMessage" class="hidden bg-green-900/30 border border-green-500 rounded-lg p-4 mb-6">
-            <p class="text-green-300"></p>
+        <div id="successMessage" class="hidden border-4 border-black p-4 mb-6" style="background: #E5FFE5;">
+            <p class="text-black font-bold"></p>
         </div>
     </div>
 
@@ -714,6 +809,69 @@
                     document.getElementById('payBtn').disabled = false;
                 });
             });
+        });
+
+        // i18n functionality
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+        let translations = {};
+
+        async function loadTranslations(lang) {
+            try {
+                const response = await fetch(`./locales/crypto-pay-${lang}.json`);
+                translations = await response.json();
+                applyTranslations();
+            } catch (error) {
+                console.error('Failed to load translations:', error);
+            }
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const keys = key.split('.');
+                let value = translations;
+
+                for (const k of keys) {
+                    value = value[k];
+                    if (!value) break;
+                }
+
+                if (value) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = value;
+                    } else {
+                        element.textContent = value;
+                    }
+                }
+            });
+        }
+
+        // Language selector
+        document.getElementById('languageSelector').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('preferredLanguage', currentLang);
+            loadTranslations(currentLang);
+        });
+
+        // Set initial language
+        document.getElementById('languageSelector').value = currentLang;
+        loadTranslations(currentLang);
+
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const nightIcon = document.querySelector('.night-icon');
+
+        // Check for saved night mode preference
+        if (localStorage.getItem('nightMode') === 'true') {
+            document.body.classList.add('night-mode');
+            nightIcon.textContent = 'DAY';
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            const isNightMode = document.body.classList.contains('night-mode');
+            localStorage.setItem('nightMode', isNightMode);
+            nightIcon.textContent = isNightMode ? 'DAY' : 'NIGHT';
         });
     </script>
 </body>

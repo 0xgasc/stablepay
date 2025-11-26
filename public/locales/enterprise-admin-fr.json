@@ -1,0 +1,53 @@
+{
+  "title": "Admin Entreprise - StablePay",
+  "nav": {
+    "refresh": "ACTUALISER",
+    "logout": "DÉCONNEXION"
+  },
+  "login": {
+    "heading": "CONNEXION ADMIN ENTREPRISE",
+    "subheading": "Accès Super Administrateur Uniquement",
+    "password": "MOT DE PASSE ADMIN",
+    "button": "CONNEXION",
+    "error": "Mot de passe administrateur invalide"
+  },
+  "tabs": {
+    "merchants": "MARCHANDS",
+    "customers": "CLIENTS",
+    "transactions": "TRANSACTIONS",
+    "system": "SYSTÈME"
+  },
+  "merchants": {
+    "heading": "GESTION DES MARCHANDS",
+    "createBtn": "CRÉER MARCHAND",
+    "search": "Rechercher des marchands...",
+    "filter": "Filtrer par Statut",
+    "all": "Tous",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "table": {
+      "merchant": "MARCHAND",
+      "email": "E-MAIL",
+      "plan": "PLAN",
+      "status": "STATUT",
+      "actions": "ACTIONS"
+    }
+  },
+  "customers": {
+    "heading": "GESTION DES CLIENTS",
+    "search": "Rechercher des clients...",
+    "filter": "Filtrer par Type"
+  },
+  "transactions": {
+    "heading": "SURVEILLANCE DES TRANSACTIONS",
+    "search": "Rechercher des transactions...",
+    "filter": "Filtrer par Statut"
+  },
+  "system": {
+    "heading": "CONFIGURATION SYSTÈME",
+    "api": "Paramètres API",
+    "features": "Drapeaux de Fonctionnalité",
+    "maintenance": "Mode Maintenance",
+    "save": "SAUVEGARDER LES PARAMÈTRES"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "title": "Démo d'Intégration StablePay",
+  "heading": "DÉMO D'INTÉGRATION STABLEPAY",
+  "subheading": "Voyez combien il est facile d'accepter les paiements USDC sur n'importe quelle chaîne",
+  "options": {
+    "heading": "CHOISISSEZ VOTRE INTÉGRATION",
+    "subheading": "Trois façons d'intégrer le checkout StablePay",
+    "widget": "WIDGET",
+    "hosted": "HÉBERGÉ",
+    "api": "API"
+  },
+  "widget": {
+    "heading": "WIDGET INTÉGRÉ",
+    "description": "Ajoutez le checkout directement à votre site web avec une balise script.",
+    "features": "FONCTIONNALITÉS:",
+    "feature1": "★ Fonctionne sur n'importe quel site web",
+    "feature2": "★ Détecte automatiquement MetaMask et Phantom",
+    "feature3": "★ Responsive mobile",
+    "feature4": "★ Thème personnalisable"
+  },
+  "hosted": {
+    "heading": "CHECKOUT HÉBERGÉ",
+    "description": "Redirigez les clients vers une page de checkout hébergée par StablePay.",
+    "features": "FONCTIONNALITÉS:",
+    "feature1": "★ Aucun code frontend nécessaire",
+    "feature2": "★ Conforme PCI",
+    "feature3": "★ Sécurité intégrée",
+    "feature4": "★ Retour vers votre site"
+  },
+  "api": {
+    "heading": "INTÉGRATION API PERSONNALISÉE",
+    "description": "Construisez votre propre UI de checkout en utilisant notre API REST.",
+    "features": "FONCTIONNALITÉS:",
+    "feature1": "★ Contrôle total sur l'UX",
+    "feature2": "★ Marque personnalisée",
+    "feature3": "★ Fonctionnalités avancées",
+    "feature4": "★ Intégration backend"
+  },
+  "demo": {
+    "heading": "DÉMO EN DIRECT",
+    "subheading": "Essayez-le sur le testnet Base Sepolia",
+    "testnetTitle": "BESOIN D'USDC TESTNET?",
+    "testnetDesc": "Obtenez gratuitement des USDC testnet depuis le faucet Base Sepolia pour tester les paiements.",
+    "amountLabel": "MONTANT (USDC)",
+    "chainLabel": "CHAÎNE",
+    "chain": "CHAÎNE:",
+    "connectBtn": "CONNECTER PORTEFEUILLE",
+    "powered": "PROPULSÉ PAR STABLEPAY",
+    "updateBtn": "METTRE À JOUR LE WIDGET",
+    "resetBtn": "RÉINITIALISER"
+  },
+  "footer": {
+    "need": "Besoin d'aide? Consultez le",
+    "link": "Tableau de Bord Développeur",
+    "docs": "pour la documentation complète"
+  }
+}

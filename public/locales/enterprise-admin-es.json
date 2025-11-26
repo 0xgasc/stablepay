@@ -1,0 +1,53 @@
+{
+  "title": "Administrador Empresarial - StablePay",
+  "nav": {
+    "refresh": "ACTUALIZAR",
+    "logout": "CERRAR SESIÓN"
+  },
+  "login": {
+    "heading": "INICIO DE SESIÓN DE ADMINISTRADOR EMPRESARIAL",
+    "subheading": "Acceso solo para Super Administrador",
+    "password": "CONTRASEÑA DE ADMINISTRADOR",
+    "button": "INICIAR SESIÓN",
+    "error": "Contraseña de administrador no válida"
+  },
+  "tabs": {
+    "merchants": "COMERCIANTES",
+    "customers": "CLIENTES",
+    "transactions": "TRANSACCIONES",
+    "system": "SISTEMA"
+  },
+  "merchants": {
+    "heading": "GESTIÓN DE COMERCIANTES",
+    "createBtn": "CREAR COMERCIANTE",
+    "search": "Buscar comerciantes...",
+    "filter": "Filtrar por Estado",
+    "all": "Todos",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "table": {
+      "merchant": "COMERCIANTE",
+      "email": "CORREO",
+      "plan": "PLAN",
+      "status": "ESTADO",
+      "actions": "ACCIONES"
+    }
+  },
+  "customers": {
+    "heading": "GESTIÓN DE CLIENTES",
+    "search": "Buscar clientes...",
+    "filter": "Filtrar por Tipo"
+  },
+  "transactions": {
+    "heading": "MONITOREO DE TRANSACCIONES",
+    "search": "Buscar transacciones...",
+    "filter": "Filtrar por Estado"
+  },
+  "system": {
+    "heading": "CONFIGURACIÓN DEL SISTEMA",
+    "api": "Configuración de API",
+    "features": "Banderas de Funcionalidad",
+    "maintenance": "Modo de Mantenimiento",
+    "save": "GUARDAR CONFIGURACIÓN"
+  }
+}

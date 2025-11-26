@@ -1,0 +1,57 @@
+{
+  "title": "Demo de Integração StablePay",
+  "heading": "DEMO DE INTEGRAÇÃO STABLEPAY",
+  "subheading": "Veja como é fácil aceitar pagamentos USDC em qualquer cadeia",
+  "options": {
+    "heading": "ESCOLHA SUA INTEGRAÇÃO",
+    "subheading": "Três formas de integrar o checkout StablePay",
+    "widget": "WIDGET",
+    "hosted": "HOSPEDADO",
+    "api": "API"
+  },
+  "widget": {
+    "heading": "WIDGET INCORPORADO",
+    "description": "Adicione checkout diretamente ao seu site com uma tag de script.",
+    "features": "RECURSOS:",
+    "feature1": "★ Funciona em qualquer site",
+    "feature2": "★ Detecta automaticamente MetaMask e Phantom",
+    "feature3": "★ Responsivo para mobile",
+    "feature4": "★ Tema personalizável"
+  },
+  "hosted": {
+    "heading": "CHECKOUT HOSPEDADO",
+    "description": "Redirecione clientes para uma página de checkout hospedada pela StablePay.",
+    "features": "RECURSOS:",
+    "feature1": "★ Nenhum código frontend necessário",
+    "feature2": "★ Conforme PCI",
+    "feature3": "★ Segurança integrada",
+    "feature4": "★ Retorna ao seu site"
+  },
+  "api": {
+    "heading": "INTEGRAÇÃO API PERSONALIZADA",
+    "description": "Construa sua própria UI de checkout usando nossa API REST.",
+    "features": "RECURSOS:",
+    "feature1": "★ Controle total sobre UX",
+    "feature2": "★ Marca personalizada",
+    "feature3": "★ Recursos avançados",
+    "feature4": "★ Integração backend"
+  },
+  "demo": {
+    "heading": "DEMO AO VIVO",
+    "subheading": "Teste você mesmo na testnet Base Sepolia",
+    "testnetTitle": "PRECISA DE USDC TESTNET?",
+    "testnetDesc": "Obtenha USDC testnet grátis do faucet Base Sepolia para testar pagamentos.",
+    "amountLabel": "VALOR (USDC)",
+    "chainLabel": "CADEIA",
+    "chain": "CADEIA:",
+    "connectBtn": "CONECTAR CARTEIRA",
+    "powered": "DESENVOLVIDO POR STABLEPAY",
+    "updateBtn": "ATUALIZAR WIDGET",
+    "resetBtn": "REDEFINIR"
+  },
+  "footer": {
+    "need": "Precisa de ajuda? Confira o",
+    "link": "Painel do Desenvolvedor",
+    "docs": "para documentação completa"
+  }
+}

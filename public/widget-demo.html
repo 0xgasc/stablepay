@@ -3,52 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StablePay Checkout Widget Demo</title>
+    <title data-i18n="title">StablePay Checkout Widget Demo</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body {
+            background: #FFFFFF;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        body.night-mode .bg-white {
+            background: #000 !important;
+        }
+        body.night-mode .text-black {
+            color: #fff !important;
+        }
+        body.night-mode .text-gray-700 {
+            color: #ccc !important;
+        }
+        body.night-mode .text-gray-400 {
+            color: #999 !important;
+        }
+        body.night-mode .text-gray-500 {
+            color: #888 !important;
+        }
+        body.night-mode .brutal-border,
+        body.night-mode .border-black {
+            border-color: #fff !important;
+        }
+        body.night-mode .border-gray-300 {
+            border-color: #666 !important;
+        }
+        body.night-mode [style*="box-shadow"][style*="#000"] {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        body.night-mode .shadow-brutal {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        .brutal-border {
+            border: 4px solid #000;
+        }
+        .shadow-brutal {
+            box-shadow: 8px 8px 0px #000;
+        }
+        .btn-brutal {
+            border: 4px solid #000;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        .btn-brutal:hover {
+            transform: translate(4px, 4px);
+            box-shadow: 4px 4px 0px #000;
+        }
+        body.night-mode .btn-brutal {
+            border-color: #fff;
+        }
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 4px 4px 0px #fff;
+        }
+        input, select {
+            border: 4px solid #000;
+            border-radius: 0;
+        }
+        body.night-mode input,
+        body.night-mode select {
+            border-color: #fff;
+            background: #000;
+            color: #fff;
+        }
+        pre {
+            border: 4px solid #000;
+            background: #000;
+            color: #00E5FF;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        body.night-mode pre {
+            border-color: #fff;
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white border-b-4 border-black">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <a href="/" class="text-3xl font-bold tracking-tight text-black" style="text-transform: uppercase;">
+                    STABLEPAY
+                </a>
+                <div class="flex items-center gap-4">
+                    <!-- Language Selector -->
+                    <select id="languageSelector" class="px-3 py-2 bg-white text-black font-bold text-sm">
+                        <option value="en">EN</option>
+                        <option value="es">ES</option>
+                        <option value="fr">FR</option>
+                        <option value="pt">PT</option>
+                    </select>
+                    <!-- Night Mode Toggle -->
+                    <button id="nightModeToggle" class="px-4 py-2 bg-white text-black font-bold text-sm btn-brutal">
+                        <span class="night-icon">NIGHT</span>
+                    </button>
+                    <a href="/" class="text-black hover:text-gray-700 text-sm font-bold tracking-wide transition-colors" style="text-transform: uppercase;" data-i18n="nav.back">
+                        BACK
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
     <div class="max-w-7xl mx-auto px-4 py-12">
         <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-gray-900 mb-4">
-                StablePay Checkout Widget Demo
+            <h1 class="text-5xl font-bold text-black mb-4 tracking-tight" style="text-transform: uppercase;" data-i18n="heading">
+                CHECKOUT WIDGET DEMO
             </h1>
-            <p class="text-xl text-gray-600">
+            <p class="text-xl text-gray-700" data-i18n="subheading">
                 Test our embedded payment widget below
             </p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <!-- Demo 1: Basic Checkout -->
-            <div>
-                <h2 class="text-2xl font-bold mb-4">Basic Checkout</h2>
-                <div
-                    class="stablepay-checkout"
-                    data-amount="100"
-                    data-currency="USDC"
-                    data-merchant="demo_merchant"
-                    data-recipient="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb5"
-                ></div>
+            <div class="bg-white border-4 border-black p-6 shadow-brutal">
+                <h2 class="text-2xl font-bold mb-4 tracking-wide text-black" style="text-transform: uppercase;" data-i18n="demo1.heading">BASIC CHECKOUT</h2>
+                <div class="bg-white border-4 border-black p-8" style="background: linear-gradient(135deg, #00E5FF 0%, #4FC3F7 50%, #7C4DFF 100%);">
+                    <div class="text-center text-black">
+                        <div class="text-4xl font-bold mb-4">$100.00</div>
+                        <div class="font-bold tracking-wide mb-6" data-i18n="demo1.currency">USDC</div>
+                        <button class="w-full px-6 py-4 bg-white text-black font-bold tracking-wide btn-brutal" style="text-transform: uppercase;" data-i18n="demo1.btn">
+                            PAY NOW
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Demo 2: Custom Amount -->
-            <div>
-                <h2 class="text-2xl font-bold mb-4">Custom Amount</h2>
-                <div
-                    class="stablepay-checkout"
-                    data-amount="250"
-                    data-currency="USDC"
-                    data-merchant="demo_merchant"
-                    data-recipient="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb5"
-                    data-theme="light"
-                ></div>
+            <div class="bg-white border-4 border-black p-6 shadow-brutal">
+                <h2 class="text-2xl font-bold mb-4 tracking-wide text-black" style="text-transform: uppercase;" data-i18n="demo2.heading">CUSTOM AMOUNT</h2>
+                <div class="bg-white border-4 border-black p-8" style="background: linear-gradient(135deg, #7C4DFF 0%, #00E5FF 100%);">
+                    <div class="text-center text-black">
+                        <div class="text-4xl font-bold mb-4">$250.00</div>
+                        <div class="font-bold tracking-wide mb-6" data-i18n="demo2.currency">USDC</div>
+                        <button class="w-full px-6 py-4 bg-white text-black font-bold tracking-wide btn-brutal" style="text-transform: uppercase;" data-i18n="demo2.btn">
+                            PAY NOW
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Integration Code -->
-        <div class="mt-16">
-            <h2 class="text-2xl font-bold mb-4">Integration Code</h2>
-            <div class="bg-gray-900 text-gray-100 p-6 rounded-lg">
-                <pre><code>&lt;!-- Add this script to your page --&gt;
+        <div class="mt-16 bg-white border-4 border-black p-6 shadow-brutal">
+            <h2 class="text-2xl font-bold mb-4 tracking-wide text-black" style="text-transform: uppercase;" data-i18n="integration.heading">INTEGRATION CODE</h2>
+            <pre><code>&lt;!-- Add this script to your page --&gt;
 &lt;script src="https://stablepay-nine.vercel.app/checkout-widget.js"&gt;&lt;/script&gt;
 
 &lt;!-- Add this div where you want the checkout to appear --&gt;
@@ -59,14 +175,13 @@
     data-merchant="your_merchant_id"
     data-recipient="your_wallet_address"
 &gt;&lt;/div&gt;</code></pre>
-            </div>
         </div>
 
         <!-- Events Listener Demo -->
-        <div class="mt-12">
-            <h2 class="text-2xl font-bold mb-4">Events Console</h2>
-            <div id="event-log" class="bg-white border rounded-lg p-4 h-32 overflow-auto font-mono text-sm">
-                <div class="text-gray-500">Waiting for events...</div>
+        <div class="mt-12 bg-white border-4 border-black p-6 shadow-brutal">
+            <h2 class="text-2xl font-bold mb-4 tracking-wide text-black" style="text-transform: uppercase;" data-i18n="events.heading">EVENTS CONSOLE</h2>
+            <div id="event-log" class="border-4 border-black p-4 h-32 overflow-auto font-mono text-sm bg-white">
+                <div class="text-gray-500" data-i18n="events.waiting">Waiting for events...</div>
             </div>
         </div>
     </div>
@@ -92,11 +207,74 @@
         function logEvent(type, data) {
             const log = document.getElementById('event-log');
             const entry = document.createElement('div');
-            entry.className = 'text-green-600 mb-1';
+            entry.className = 'text-black font-bold mb-1';
             entry.textContent = `[${new Date().toLocaleTimeString()}] ${type}: ${JSON.stringify(data)}`;
             log.appendChild(entry);
             log.scrollTop = log.scrollHeight;
         }
+
+        // i18n functionality
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+        let translations = {};
+
+        async function loadTranslations(lang) {
+            try {
+                const response = await fetch(`./locales/widget-demo-${lang}.json`);
+                translations = await response.json();
+                applyTranslations();
+            } catch (error) {
+                console.error('Failed to load translations:', error);
+            }
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const keys = key.split('.');
+                let value = translations;
+
+                for (const k of keys) {
+                    value = value[k];
+                    if (!value) break;
+                }
+
+                if (value) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = value;
+                    } else {
+                        element.textContent = value;
+                    }
+                }
+            });
+        }
+
+        // Language selector
+        document.getElementById('languageSelector').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('preferredLanguage', currentLang);
+            loadTranslations(currentLang);
+        });
+
+        // Set initial language
+        document.getElementById('languageSelector').value = currentLang;
+        loadTranslations(currentLang);
+
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const nightIcon = document.querySelector('.night-icon');
+
+        // Check for saved night mode preference
+        if (localStorage.getItem('nightMode') === 'true') {
+            document.body.classList.add('night-mode');
+            nightIcon.textContent = 'DAY';
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            const isNightMode = document.body.classList.contains('night-mode');
+            localStorage.setItem('nightMode', isNightMode);
+            nightIcon.textContent = isNightMode ? 'DAY' : 'NIGHT';
+        });
     </script>
 </body>
 </html>
