@@ -1,0 +1,31 @@
+{
+  "title": "Iniciar Sesión - StablePay",
+  "nav": {
+    "back": "VOLVER"
+  },
+  "heading": "INICIAR SESIÓN",
+  "subheading": "Accede a tu infraestructura de pagos",
+  "form": {
+    "email": "CORREO ELECTRÓNICO",
+    "token": "TOKEN DE ACCESO",
+    "tokenHint": "Revisa tu correo para el enlace de acceso enviado por el administrador",
+    "signInBtn": "INICIAR SESIÓN",
+    "or": "O",
+    "adminAccess": "ACCESO ADMINISTRATIVO"
+  },
+  "admin": {
+    "heading": "INICIO DE ADMINISTRADOR",
+    "loginBtn": "INICIAR",
+    "cancelBtn": "CANCELAR"
+  },
+  "footer": {
+    "noAccount": "¿No tienes una cuenta?",
+    "signUpLink": "REGISTRARSE"
+  },
+  "features": {
+    "heading": "INFRAESTRUCTURA EMPRESARIAL",
+    "instant": "LIQUIDACIÓN INSTANTÁNEA USDC",
+    "multichain": "MULTI-CADENA GLOBAL",
+    "noChargebacks": "CERO CONTRACARGOS"
+  }
+}

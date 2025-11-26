@@ -3,26 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - StablePay</title>
+    <title data-i18n="title">Login - StablePay</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
         body {
-            background: #000000;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #FFFFFF;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        body.night-mode .bg-white {
+            background: #000 !important;
+        }
+        body.night-mode .text-black {
+            color: #fff !important;
+        }
+        body.night-mode .text-gray-700 {
+            color: #ccc !important;
+        }
+        body.night-mode .text-gray-400 {
+            color: #999 !important;
+        }
+        body.night-mode .text-gray-500 {
+            color: #888 !important;
+        }
+        body.night-mode .brutal-border,
+        body.night-mode .border-black {
+            border-color: #fff !important;
+        }
+        body.night-mode .border-gray-300 {
+            border-color: #666 !important;
+        }
+        body.night-mode [style*="box-shadow"][style*="#000"] {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        body.night-mode .shadow-brutal {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        .brutal-border {
+            border: 4px solid #000;
+        }
+        .shadow-brutal {
+            box-shadow: 8px 8px 0px #000;
+        }
+        .btn-brutal {
+            border: 4px solid #000;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        .btn-brutal:hover {
+            transform: translate(4px, 4px);
+            box-shadow: 4px 4px 0px #000;
+        }
+        body.night-mode .btn-brutal {
+            border-color: #fff;
+        }
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 4px 4px 0px #fff;
+        }
+        input, select {
+            border: 4px solid #000;
+            border-radius: 0;
+        }
+        body.night-mode input,
+        body.night-mode select {
+            border-color: #fff;
+            background: #000;
+            color: #fff;
         }
     </style>
 </head>
 <body class="min-h-screen">
     <!-- Navigation -->
-    <nav class="bg-black border-b border-gray-900">
+    <nav class="bg-white border-b-4 border-black brutal-border">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <a href="/" class="text-2xl font-bold tracking-tight text-white">
+            <div class="flex justify-between items-center h-20">
+                <a href="/" class="text-3xl font-bold tracking-tight text-black" style="text-transform: uppercase;">
                     STABLEPAY
                 </a>
-                <a href="/" class="text-gray-400 hover:text-white text-sm font-medium tracking-wide transition-colors">
-                    BACK
-                </a>
+                <div class="flex items-center gap-4">
+                    <!-- Language Selector -->
+                    <select id="languageSelector" class="px-3 py-2 bg-white text-black font-bold text-sm">
+                        <option value="en">EN</option>
+                        <option value="es">ES</option>
+                        <option value="fr">FR</option>
+                        <option value="pt">PT</option>
+                    </select>
+                    <!-- Night Mode Toggle -->
+                    <button id="nightModeToggle" class="px-4 py-2 bg-white text-black font-bold text-sm btn-brutal">
+                        <span class="night-icon">NIGHT</span>
+                    </button>
+                    <a href="/" class="text-black hover:text-gray-700 text-sm font-bold tracking-wide transition-colors" style="text-transform: uppercase;" data-i18n="nav.back">
+                        BACK
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
@@ -32,16 +116,16 @@
         <div class="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
             <div class="max-w-md w-full">
                 <div class="text-center mb-12">
-                    <h2 class="text-4xl font-bold text-white mb-3 tracking-tight">Sign In</h2>
-                    <p class="text-gray-400">
+                    <h2 class="text-4xl font-bold text-black mb-3 tracking-tight" style="text-transform: uppercase;" data-i18n="heading">SIGN IN</h2>
+                    <p class="text-gray-700" data-i18n="subheading">
                         Access your payment infrastructure
                     </p>
                 </div>
 
-                <div id="loginForm" class="bg-gradient-to-b from-gray-900 to-black border border-gray-800 p-8">
+                <div id="loginForm" class="bg-white border-4 border-black p-8 shadow-brutal">
                     <form id="tokenLoginForm" class="space-y-6">
                         <div>
-                            <label for="email" class="block text-sm font-medium text-gray-400 mb-2 tracking-wide">
+                            <label for="email" class="block text-sm font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="form.email">
                                 EMAIL
                             </label>
                             <input
@@ -50,13 +134,13 @@
                                 type="email"
                                 autocomplete="email"
                                 required
-                                class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors"
+                                class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none"
                                 placeholder="your@email.com"
                             />
                         </div>
 
                         <div>
-                            <label for="token" class="block text-sm font-medium text-gray-400 mb-2 tracking-wide">
+                            <label for="token" class="block text-sm font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="form.token">
                                 LOGIN TOKEN
                             </label>
                             <input
@@ -64,10 +148,10 @@
                                 name="token"
                                 type="text"
                                 required
-                                class="w-full px-4 py-3 bg-black border border-gray-800 text-white font-mono focus:border-blue-600 focus:outline-none transition-colors"
+                                class="w-full px-4 py-3 bg-white border-4 border-black text-black font-mono focus:outline-none"
                                 placeholder="Enter your login token"
                             />
-                            <p class="text-xs text-gray-500 mt-2">
+                            <p class="text-xs text-gray-500 mt-2" data-i18n="form.tokenHint">
                                 Check your email for the login link sent by admin
                             </p>
                         </div>
@@ -76,7 +160,9 @@
                             <button
                                 type="submit"
                                 id="loginBtn"
-                                class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 font-medium text-base tracking-wide transition-colors"
+                                class="w-full bg-white text-black py-4 font-bold text-base tracking-wide btn-brutal"
+                                style="background: #00E5FF; text-transform: uppercase;"
+                                data-i18n="form.signInBtn"
                             >
                                 SIGN IN
                             </button>
@@ -86,10 +172,10 @@
                     <div class="mt-8">
                         <div class="relative">
                             <div class="absolute inset-0 flex items-center">
-                                <div class="w-full border-t border-gray-800"></div>
+                                <div class="w-full border-t-4 border-black"></div>
                             </div>
                             <div class="relative flex justify-center text-sm">
-                                <span class="px-4 bg-gradient-to-b from-gray-900 to-black text-gray-500">OR</span>
+                                <span class="px-4 bg-white text-black font-bold" data-i18n="form.or">OR</span>
                             </div>
                         </div>
 
@@ -97,7 +183,9 @@
                         <div class="mt-8">
                             <button
                                 id="adminLoginBtn"
-                                class="w-full border border-gray-800 hover:border-blue-600 text-gray-400 hover:text-white py-4 font-medium text-base tracking-wide transition-all"
+                                class="w-full border-4 border-black text-black py-4 font-bold text-base tracking-wide btn-brutal"
+                                style="text-transform: uppercase;"
+                                data-i18n="form.adminAccess"
                             >
                                 ADMIN ACCESS
                             </button>
@@ -108,15 +196,15 @@
                 <!-- Admin Login Modal -->
                 <div id="adminModal" class="hidden fixed inset-0 bg-black bg-opacity-90 overflow-y-auto h-full w-full z-50">
                     <div class="relative top-20 mx-auto p-5 w-96">
-                        <div class="bg-gradient-to-b from-gray-900 to-black border border-gray-800 p-8">
-                            <h3 class="text-xl font-bold text-white mb-6 tracking-wide">ADMIN LOGIN</h3>
+                        <div class="bg-white border-4 border-black p-8 shadow-brutal">
+                            <h3 class="text-xl font-bold text-black mb-6 tracking-wide" style="text-transform: uppercase;" data-i18n="admin.heading">ADMIN LOGIN</h3>
                             <form id="adminLoginForm" class="space-y-6">
                                 <div>
                                     <input
                                         type="email"
                                         id="adminEmail"
                                         placeholder="admin@stablepay.com"
-                                        class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors"
+                                        class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none"
                                         required
                                     />
                                 </div>
@@ -125,21 +213,25 @@
                                         type="password"
                                         id="adminPassword"
                                         placeholder="Password"
-                                        class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors"
+                                        class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none"
                                         required
                                     />
                                 </div>
                                 <div class="flex space-x-4">
                                     <button
                                         type="submit"
-                                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 font-medium tracking-wide transition-colors"
+                                        class="flex-1 text-black py-3 font-bold tracking-wide btn-brutal"
+                                        style="background: #4FC3F7; text-transform: uppercase;"
+                                        data-i18n="admin.loginBtn"
                                     >
                                         LOGIN
                                     </button>
                                     <button
                                         type="button"
                                         id="closeAdminModal"
-                                        class="flex-1 border border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white py-3 font-medium tracking-wide transition-all"
+                                        class="flex-1 border-4 border-black text-black py-3 font-bold tracking-wide btn-brutal"
+                                        style="text-transform: uppercase;"
+                                        data-i18n="admin.cancelBtn"
                                     >
                                         CANCEL
                                     </button>
@@ -150,9 +242,9 @@
                 </div>
 
                 <div class="text-center mt-8">
-                    <p class="text-sm text-gray-500">
-                        Don't have an account?
-                        <a href="/signup.html" class="font-medium text-blue-500 hover:text-blue-400 tracking-wide">
+                    <p class="text-sm text-gray-700">
+                        <span data-i18n="footer.noAccount">Don't have an account?</span>
+                        <a href="/signup.html" class="font-bold tracking-wide" style="color: #4FC3F7; text-transform: uppercase;" data-i18n="footer.signUpLink">
                             SIGN UP
                         </a>
                     </p>
@@ -162,27 +254,27 @@
 
         <!-- Right Side - Features -->
         <div class="hidden lg:block relative w-0 flex-1">
-            <div class="absolute inset-0 h-full w-full bg-gradient-to-br from-blue-950 to-black flex items-center justify-center border-l border-gray-900">
+            <div class="absolute inset-0 h-full w-full flex items-center justify-center border-l-4 border-black" style="background: linear-gradient(135deg, #00E5FF 0%, #4FC3F7 50%, #7C4DFF 100%);">
                 <div class="text-center p-8">
-                    <h3 class="text-3xl font-bold text-white mb-12 tracking-tight">ENTERPRISE INFRASTRUCTURE</h3>
+                    <h3 class="text-3xl font-bold text-black mb-12 tracking-tight" style="text-transform: uppercase;" data-i18n="features.heading">ENTERPRISE INFRASTRUCTURE</h3>
                     <div class="space-y-6 text-lg">
-                        <div class="flex items-center justify-center text-gray-300">
-                            <svg class="w-6 h-6 text-blue-500 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        <div class="flex items-center justify-center text-black font-bold">
+                            <svg class="w-6 h-6 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="3" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                             </svg>
-                            INSTANT USDC SETTLEMENT
+                            <span style="text-transform: uppercase;" data-i18n="features.instant">INSTANT USDC SETTLEMENT</span>
                         </div>
-                        <div class="flex items-center justify-center text-gray-300">
-                            <svg class="w-6 h-6 text-blue-500 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        <div class="flex items-center justify-center text-black font-bold">
+                            <svg class="w-6 h-6 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="3" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            GLOBAL MULTI-CHAIN
+                            <span style="text-transform: uppercase;" data-i18n="features.multichain">GLOBAL MULTI-CHAIN</span>
                         </div>
-                        <div class="flex items-center justify-center text-gray-300">
-                            <svg class="w-6 h-6 text-blue-500 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        <div class="flex items-center justify-center text-black font-bold">
+                            <svg class="w-6 h-6 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="3" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                             </svg>
-                            ZERO CHARGEBACKS
+                            <span style="text-transform: uppercase;" data-i18n="features.noChargebacks">ZERO CHARGEBACKS</span>
                         </div>
                     </div>
                 </div>
@@ -191,6 +283,69 @@
     </div>
 
     <script>
+        // i18n functionality
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+        let translations = {};
+
+        async function loadTranslations(lang) {
+            try {
+                const response = await fetch(`./locales/login-${lang}.json`);
+                translations = await response.json();
+                applyTranslations();
+            } catch (error) {
+                console.error('Failed to load translations:', error);
+            }
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const keys = key.split('.');
+                let value = translations;
+
+                for (const k of keys) {
+                    value = value[k];
+                    if (!value) break;
+                }
+
+                if (value) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = value;
+                    } else {
+                        element.textContent = value;
+                    }
+                }
+            });
+        }
+
+        // Language selector
+        document.getElementById('languageSelector').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('preferredLanguage', currentLang);
+            loadTranslations(currentLang);
+        });
+
+        // Set initial language
+        document.getElementById('languageSelector').value = currentLang;
+        loadTranslations(currentLang);
+
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const nightIcon = document.querySelector('.night-icon');
+
+        // Check for saved night mode preference
+        if (localStorage.getItem('nightMode') === 'true') {
+            document.body.classList.add('night-mode');
+            nightIcon.textContent = 'DAY';
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            const isNightMode = document.body.classList.contains('night-mode');
+            localStorage.setItem('nightMode', isNightMode);
+            nightIcon.textContent = isNightMode ? 'DAY' : 'NIGHT';
+        });
+
         // Check for token in URL (magic link login)
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');

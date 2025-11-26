@@ -1,0 +1,31 @@
+{
+  "title": "Connexion - StablePay",
+  "nav": {
+    "back": "RETOUR"
+  },
+  "heading": "SE CONNECTER",
+  "subheading": "Accédez à votre infrastructure de paiement",
+  "form": {
+    "email": "E-MAIL",
+    "token": "JETON DE CONNEXION",
+    "tokenHint": "Vérifiez votre e-mail pour le lien de connexion envoyé par l'administrateur",
+    "signInBtn": "SE CONNECTER",
+    "or": "OU",
+    "adminAccess": "ACCÈS ADMINISTRATEUR"
+  },
+  "admin": {
+    "heading": "CONNEXION ADMIN",
+    "loginBtn": "CONNEXION",
+    "cancelBtn": "ANNULER"
+  },
+  "footer": {
+    "noAccount": "Vous n'avez pas de compte ?",
+    "signUpLink": "S'INSCRIRE"
+  },
+  "features": {
+    "heading": "INFRASTRUCTURE D'ENTREPRISE",
+    "instant": "RÈGLEMENT USDC INSTANTANÉ",
+    "multichain": "MULTI-CHAÎNE MONDIALE",
+    "noChargebacks": "ZÉRO RÉTROFACTURATION"
+  }
+}

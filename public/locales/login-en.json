@@ -1,0 +1,31 @@
+{
+  "title": "Login - StablePay",
+  "nav": {
+    "back": "BACK"
+  },
+  "heading": "SIGN IN",
+  "subheading": "Access your payment infrastructure",
+  "form": {
+    "email": "EMAIL",
+    "token": "LOGIN TOKEN",
+    "tokenHint": "Check your email for the login link sent by admin",
+    "signInBtn": "SIGN IN",
+    "or": "OR",
+    "adminAccess": "ADMIN ACCESS"
+  },
+  "admin": {
+    "heading": "ADMIN LOGIN",
+    "loginBtn": "LOGIN",
+    "cancelBtn": "CANCEL"
+  },
+  "footer": {
+    "noAccount": "Don't have an account?",
+    "signUpLink": "SIGN UP"
+  },
+  "features": {
+    "heading": "ENTERPRISE INFRASTRUCTURE",
+    "instant": "INSTANT USDC SETTLEMENT",
+    "multichain": "GLOBAL MULTI-CHAIN",
+    "noChargebacks": "ZERO CHARGEBACKS"
+  }
+}

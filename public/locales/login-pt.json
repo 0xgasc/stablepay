@@ -1,0 +1,31 @@
+{
+  "title": "Entrar - StablePay",
+  "nav": {
+    "back": "VOLTAR"
+  },
+  "heading": "ENTRAR",
+  "subheading": "Acesse sua infraestrutura de pagamentos",
+  "form": {
+    "email": "E-MAIL",
+    "token": "TOKEN DE LOGIN",
+    "tokenHint": "Verifique seu e-mail para o link de login enviado pelo administrador",
+    "signInBtn": "ENTRAR",
+    "or": "OU",
+    "adminAccess": "ACESSO ADMINISTRATIVO"
+  },
+  "admin": {
+    "heading": "LOGIN ADMIN",
+    "loginBtn": "ENTRAR",
+    "cancelBtn": "CANCELAR"
+  },
+  "footer": {
+    "noAccount": "Não tem uma conta?",
+    "signUpLink": "REGISTRAR-SE"
+  },
+  "features": {
+    "heading": "INFRAESTRUTURA EMPRESARIAL",
+    "instant": "LIQUIDAÇÃO USDC INSTANTÂNEA",
+    "multichain": "MULTI-CADEIA GLOBAL",
+    "noChargebacks": "ZERO ESTORNOS"
+  }
+}
