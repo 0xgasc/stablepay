@@ -635,10 +635,19 @@
                             </div>
                         </div>
 
-                        <div class="bg-blue-100 border-4 border-black p-4">
-                            <div class="text-sm text-black font-black uppercase">Security Roadmap</div>
-                            <div class="text-sm text-black font-medium mt-2">
-                                We are working towards SOC 2 Type II certification. Expected completion: Q2 2025.
+                        <div class="bg-ice-100 border-4 border-black brutal-shadow-sm p-6">
+                            <div class="detail-item" onclick="toggleDetail(this)">
+                                <span class="text-black font-bold">Security Roadmap 2025-2026<span class="expand-icon">▶</span></span>
+                                <div class="detail-content">
+                                    <p class="text-sm text-black font-medium mb-2">Built in NYC, securing payments globally. Our ongoing security initiatives:</p>
+                                    <ul class="bullet-list text-xs">
+                                        <li>SOC 2 Type II certification (Q2 2026 target)</li>
+                                        <li>Independent smart contract audits (Q1 2026)</li>
+                                        <li>Bug bounty program launch (Q4 2025)</li>
+                                        <li>Penetration testing quarterly</li>
+                                        <li>ISO 27001 certification (2026)</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -849,47 +858,124 @@
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t-4 border-black">
-                        <div>
-                            <h3 class="text-lg font-black text-black mb-3 uppercase">Supported Networks</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-4">
-                                    <div class="text-black font-bold mb-2">EVM Chains</div>
-                                    <ul class="space-y-1 text-sm text-black font-medium">
-                                        <li>Ethereum (Mainnet & Sepolia)</li>
-                                        <li>Base (Mainnet & Sepolia)</li>
-                                        <li>Polygon (Mainnet & Mumbai)</li>
-                                        <li>Arbitrum (Mainnet & Sepolia)</li>
-                                        <li>Optimism</li>
-                                    </ul>
+                        <div class="bg-cyan-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black mb-4 uppercase">Supported Networks</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Ethereum (L1 + L2)<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Most secure and battle-tested blockchain. Support for mainnet and testnets:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Ethereum Mainnet (production)</li>
+                                            <li>Sepolia Testnet (testing)</li>
+                                            <li>Full ERC-20 token support</li>
+                                            <li>MetaMask native integration</li>
+                                        </ul>
+                                    </div>
                                 </div>
-                                <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-4">
-                                    <div class="text-black font-bold mb-2">Non-EVM Chains</div>
-                                    <ul class="space-y-1 text-sm text-black font-medium">
-                                        <li>Solana (Mainnet & Devnet)</li>
-                                        <li>More chains coming soon</li>
-                                    </ul>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Base & Optimism (L2)<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Low-cost Optimistic Rollups with Ethereum security:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Base Mainnet & Sepolia</li>
+                                            <li>Optimism Mainnet</li>
+                                            <li>~100x cheaper than Ethereum L1</li>
+                                            <li>1-2 second confirmation times</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Polygon & Arbitrum<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">High-throughput scaling solutions:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Polygon (Mainnet & Mumbai testnet)</li>
+                                            <li>Arbitrum (Mainnet & Sepolia)</li>
+                                            <li>Sub-cent transaction fees</li>
+                                            <li>Near-instant finality</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Solana<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Ultra-fast payments with sub-second finality:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Solana Mainnet & Devnet</li>
+                                            <li>400ms block times</li>
+                                            <li>$0.00025 avg transaction cost</li>
+                                            <li>Phantom wallet integration</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Token Standards</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>ERC-20 (USDC, USDT, EURC on EVM chains)</li>
-                                <li>SPL Token (USDC on Solana)</li>
-                                <li>All tokens audited by Circle, Tether, Circle</li>
-                                <li>No custom tokens or untrusted contracts</li>
-                            </ul>
+                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Token Standards</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">ERC-20 tokens<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Industry-standard tokens on EVM chains:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>USDC (USD Coin by Circle)</li>
+                                            <li>USDT (Tether)</li>
+                                            <li>EURC (Euro Coin by Circle)</li>
+                                            <li>All audited and widely adopted</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">SPL tokens on Solana<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Solana Program Library standard. Currently supporting USDC with more tokens coming soon.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Security-first approach<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">We only support battle-tested tokens:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>No custom or unaudited tokens</li>
+                                            <li>Only tokens by Circle and Tether</li>
+                                            <li>Multi-billion dollar market caps</li>
+                                            <li>Years of proven security</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Transaction Verification</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>All transactions verified on-chain</li>
-                                <li>Real-time blockchain monitoring</li>
-                                <li>Automatic confirmation checks</li>
-                                <li>Public transaction hashes for transparency</li>
-                            </ul>
+                        <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Transaction Verification</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">On-chain verification<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Every payment is verified directly on the blockchain. No off-chain trust required - math and cryptography guarantee payment authenticity.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Real-time monitoring<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">We monitor blockchain nodes 24/7 to detect and confirm transactions instantly. Webhooks fire within seconds of confirmation.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Public transparency<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">All transaction hashes are publicly visible:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Verify on Etherscan, Basescan, etc</li>
+                                            <li>Immutable proof of payment</li>
+                                            <li>Full audit trail</li>
+                                            <li>No hidden transactions</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -906,34 +992,100 @@
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t-4 border-black">
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Access Control</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>Role-based access control (RBAC)</li>
-                                <li>Multi-factor authentication (MFA) required</li>
-                                <li>API key rotation every 90 days</li>
-                                <li>Principle of least privilege</li>
-                            </ul>
+                        <div class="bg-cyan-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Access Control</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Role-based access control<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Granular permissions system. Team members only access what they need - developers can't access production databases, support can't modify code.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Multi-factor authentication<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">MFA required for all team accounts. Hardware security keys (YubiKey) required for admin access. No exceptions.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">API key rotation<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">All API keys and secrets automatically rotated every 90 days. Zero-downtime rotation with overlapping validity periods.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Least privilege principle<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Every user and service has minimum permissions needed. Regular access reviews to remove unused permissions.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Monitoring & Logging</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>24/7 system monitoring</li>
-                                <li>Real-time error alerts</li>
-                                <li>Comprehensive audit logs</li>
-                                <li>Anomaly detection</li>
-                            </ul>
+                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Monitoring & Logging</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">24/7 system monitoring<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Round-the-clock infrastructure monitoring across all systems:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Application performance metrics</li>
+                                            <li>Database query performance</li>
+                                            <li>Blockchain node health</li>
+                                            <li>Network latency tracking</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Real-time alerts<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Instant notifications for errors, slowdowns, or anomalies. On-call engineers paged immediately for critical issues.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Comprehensive audit logs<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Every action logged with timestamp, user, IP address, and context. 90-day retention for compliance and debugging.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Anomaly detection<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Machine learning models detect unusual patterns - sudden traffic spikes, unusual API usage, or potential attacks.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Incident Response</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>Documented incident response plan</li>
-                                <li>24-hour response time for critical issues</li>
-                                <li>Post-incident analysis and reporting</li>
-                                <li>Customer notification procedures</li>
-                            </ul>
+                        <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Incident Response</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Documented response plan<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Detailed playbooks for every scenario - data breaches, DDoS attacks, infrastructure failures. Regularly tested and updated.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">24-hour critical response<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Critical security issues addressed within 24 hours. On-call rotation ensures always-available response team in NYC timezone.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Post-incident analysis<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Thorough root cause analysis after every incident. Public postmortems for issues affecting merchants. Preventive measures implemented.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Customer notifications<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Transparent communication during incidents. Email, dashboard alerts, and status page updates keep merchants informed.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -950,34 +1102,106 @@
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t-4 border-black">
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Payment Security</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>Instant settlement (no chargebacks)</li>
-                                <li>Blockchain-verified transactions</li>
-                                <li>No payment reversals (crypto advantage)</li>
-                                <li>Automatic fraud detection</li>
-                            </ul>
+                        <div class="bg-cyan-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Payment Security</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Instant settlement<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">No chargebacks, ever. Crypto payments are final once confirmed:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Funds arrive in seconds, not days</li>
+                                            <li>No 2-4% chargeback fraud loss</li>
+                                            <li>No payment disputes or reversals</li>
+                                            <li>Merchant keeps 100% of revenue</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Blockchain verification<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Every transaction is mathematically verified on-chain. No fake payments, no double-spends, no fraud.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">No payment reversals<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Crypto's biggest advantage - payments can't be reversed by banks or payment processors. You're in control.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Automatic fraud detection<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Machine learning monitors transaction patterns. Suspicious activity flagged instantly for merchant review.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Business Continuity</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>99.9% uptime SLA</li>
-                                <li>Multi-region infrastructure</li>
-                                <li>Automated failover systems</li>
-                                <li>Real-time status page</li>
-                            </ul>
+                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Business Continuity</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">99.9% uptime SLA<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Less than 9 hours of downtime per year. Financial penalties if we miss SLA targets. Your payments stay online.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Multi-region infrastructure<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Deployed across multiple data centers worldwide. If one region fails, traffic automatically routes to healthy regions.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Automated failover<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Health checks every 10 seconds. Automatic failover to backup systems in under 30 seconds. Zero manual intervention.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Real-time status page<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Live system status at status.stablepay.io. Subscribe for incident notifications and maintenance windows.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Refund Management</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>Built-in refund system</li>
-                                <li>Batch refund support (gas optimized)</li>
-                                <li>Full refund audit trail</li>
-                                <li>Merchant-controlled refund policies</li>
-                            </ul>
+                        <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Refund Management</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Built-in refund system<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Issue refunds directly from your dashboard. Connect your wallet once, refund with one click. Full history and tracking.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Batch refund support<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Process multiple refunds in one transaction using Multicall3:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>60-85% gas savings vs individual refunds</li>
+                                            <li>Refund hundreds of customers at once</li>
+                                            <li>Single blockchain transaction</li>
+                                            <li>Available on all EVM chains</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Full audit trail<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Every refund logged with reason, amount, timestamp, and transaction hash. Export for accounting and compliance.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Merchant-controlled policies<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">You set refund policies. Full refunds, partial refunds, or no refunds - your business, your rules.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -994,34 +1218,93 @@
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t-4 border-black">
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Open Source</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>Client-side SDK available on GitHub</li>
-                                <li>Public API documentation</li>
-                                <li>No hidden fees or costs</li>
-                                <li>Clear pricing structure</li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Security Disclosure</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>Responsible disclosure program</li>
-                                <li>Bug bounty program (coming soon)</li>
-                                <li>Public security advisories</li>
-                                <li>Regular security updates</li>
-                            </ul>
-                        </div>
-
-                        <div class="bg-indigo-100 brutal-border p-4">
-                            <div class="text-black font-bold mb-2 uppercase">Report Security Issues</div>
-                            <div class="text-black text-sm mb-3 font-medium">
-                                If you discover a security vulnerability, please email us at:
+                        <div class="bg-cyan-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Open Source</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Client-side SDK on GitHub<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Full source code available for inspection:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Payment modal implementation</li>
+                                            <li>Wallet connection logic</li>
+                                            <li>Transaction signing code</li>
+                                            <li>Community contributions welcome</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Public API documentation<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Complete API docs with code examples in multiple languages. Try all endpoints in interactive playground before integrating.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">No hidden fees<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">One simple price: 0.5% per transaction. No setup fees, no monthly fees, no surprise charges. What you see is what you pay.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Clear pricing structure<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Transparent pricing, always:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>0.5% transaction fee</li>
+                                            <li>No monthly minimums</li>
+                                            <li>No integration fees</li>
+                                            <li>Volume discounts available</li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
-                            <a href="mailto:security@stablepay.io" class="text-black hover:text-gray-700 font-mono text-sm font-bold underline">
-                                security@stablepay.io
-                            </a>
+                        </div>
+
+                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Security Disclosure</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Responsible disclosure program<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Found a security issue? Report it privately to security@stablepay.io. We'll acknowledge within 24 hours and keep you updated throughout the fix process.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Bug bounty program<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Launching Q4 2025. Rewards up to $10,000 for critical vulnerabilities. Help us build the most secure crypto payment platform.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Public security advisories<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">All security issues published on GitHub after fix deployment. Full timeline, impact assessment, and remediation steps disclosed.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Regular security updates<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Monthly security newsletter with platform updates, dependency patches, and industry security news. Subscribe in your dashboard.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-6">
+                            <div class="detail-item" onclick="toggleDetail(this)">
+                                <span class="text-black font-bold">Report Security Issues<span class="expand-icon">▶</span></span>
+                                <div class="detail-content">
+                                    <p class="text-sm text-black font-medium mb-3">
+                                        If you discover a security vulnerability, please email us at:
+                                    </p>
+                                    <a href="mailto:security@stablepay.io" class="text-black hover:text-gray-700 font-mono text-sm font-bold underline block mb-3">
+                                        security@stablepay.io
+                                    </a>
+                                    <p class="text-xs text-black font-medium">
+                                        Include: detailed description, steps to reproduce, potential impact, and your contact info. We respond within 24 hours.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
