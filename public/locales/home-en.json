@@ -1,0 +1,124 @@
+{
+  "nav": {
+    "security": "Security",
+    "login": "Login"
+  },
+  "hero": {
+    "title1": "Accept USDC Payments",
+    "title2": "Instantly Worldwide",
+    "subtitle": "Professional payment infrastructure for businesses. No volatility, no chargebacks, instant settlement.",
+    "cta1": "Start Accepting Payments",
+    "cta2": "Sign Up"
+  },
+  "features": {
+    "title": "Why Choose StablePay?",
+    "subtitle": "Enterprise-grade infrastructure built for scale and reliability.",
+    "instant": {
+      "title": "Instant Settlement",
+      "description": "Direct wallet settlement in seconds. No intermediaries, no delays."
+    },
+    "global": {
+      "title": "Global Reach",
+      "description": "Accept payments globally. Multi-chain infrastructure across major networks."
+    },
+    "zeroChargeback": {
+      "title": "Zero Chargebacks",
+      "description": "Immutable blockchain transactions. Final settlement guaranteed."
+    }
+  },
+  "trust": {
+    "title": "Built with Security & Trust",
+    "subtitle": "Enterprise-grade security infrastructure protecting your payments",
+    "viewFull": "View Full Trust Center",
+    "badges": {
+      "nonCustodial": {
+        "title": "Non-Custodial",
+        "subtitle": "We never hold your funds"
+      },
+      "encrypted": {
+        "title": "Encrypted",
+        "subtitle": "AES-256 & TLS 1.3"
+      },
+      "uptime": {
+        "title": "99.9% Uptime",
+        "subtitle": "Reliable infrastructure"
+      },
+      "gdpr": {
+        "title": "GDPR Ready",
+        "subtitle": "Privacy compliant"
+      }
+    },
+    "details": {
+      "encryption": {
+        "title": "Data Encryption",
+        "item1": "✓ AES-256 encryption at rest",
+        "item2": "✓ TLS 1.3 for data in transit",
+        "item3": "✓ End-to-end encrypted API calls"
+      },
+      "infrastructure": {
+        "title": "Infrastructure Security",
+        "item1": "✓ Hosted on Vercel (SOC 2, ISO 27001)",
+        "item2": "✓ Database on Supabase (SOC 2)",
+        "item3": "✓ Multi-region redundancy"
+      },
+      "blockchain": {
+        "title": "Blockchain Security",
+        "item1": "✓ No custom smart contracts",
+        "item2": "✓ Client-side transaction signing",
+        "item3": "✓ All transactions verified on-chain"
+      }
+    }
+  },
+  "pricing": {
+    "title": "Transparent Pricing",
+    "subtitle": "Choose the plan that fits your needs",
+    "perMonth": "/mo",
+    "popular": "Popular",
+    "getStarted": "Get Started",
+    "contactSales": "Contact Sales",
+    "starter": {
+      "name": "Starter",
+      "feature1": "$1,000 monthly volume",
+      "feature2": "Direct wallet payments",
+      "feature3": "Payment links",
+      "feature4": "Email support"
+    },
+    "growth": {
+      "name": "Growth",
+      "feature1": "$10,000 monthly volume",
+      "feature2": "Escrow option",
+      "feature3": "Custom branding",
+      "feature4": "API access",
+      "feature5": "Priority support"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "feature1": "Unlimited volume",
+      "feature2": "White-label solution",
+      "feature3": "Multi-wallet management",
+      "feature4": "Webhooks & integrations",
+      "feature5": "Dedicated support"
+    }
+  },
+  "footer": {
+    "description": "Multi-chain USDC payment infrastructure for the modern web",
+    "product": {
+      "title": "Product",
+      "dashboard": "Dashboard",
+      "pricing": "Pricing",
+      "signUp": "Sign Up"
+    },
+    "security": {
+      "title": "Security",
+      "trustCenter": "Trust Center",
+      "practices": "Security Practices",
+      "privacy": "Privacy Policy"
+    },
+    "contact": {
+      "title": "Contact",
+      "security": "Security",
+      "support": "Support"
+    },
+    "copyright": "Developed by G.S © 2025 StablePay. All rights reserved."
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "nav": {
+    "merchantDashboard": "Tableau de Bord Marchand",
+    "logout": "Déconnexion"
+  },
+  "tabs": {
+    "orders": "Commandes",
+    "wallets": "Portefeuilles",
+    "developer": "Développeur",
+    "payments": "Liens de Paiement",
+    "settings": "Paramètres"
+  },
+  "profile": {
+    "pendingApproval": "En Attente d'Approbation",
+    "plan": "Plan",
+    "contact": "Contact",
+    "totalOrders": "Total des Commandes",
+    "memberSince": "Membre Depuis"
+  },
+  "stats": {
+    "totalOrders": "Total des Commandes",
+    "confirmed": "Confirmées",
+    "pending": "En Attente",
+    "totalVolume": "Volume Total"
+  },
+  "orders": {
+    "title": "Commandes Récentes",
+    "searchPlaceholder": "Rechercher des commandes...",
+    "refresh": "Actualiser",
+    "orderId": "ID de Commande",
+    "amount": "Montant",
+    "chain": "Chaîne",
+    "status": "Statut",
+    "transaction": "Transaction",
+    "receipt": "Reçu",
+    "customer": "Client",
+    "created": "Créé",
+    "actions": "Actions",
+    "loading": "Chargement des commandes...",
+    "batchRefund": {
+      "title": "Remboursement par Lots",
+      "subtitle": "Traitez plusieurs remboursements en une seule transaction (EVM uniquement)",
+      "clearSelection": "Effacer la Sélection",
+      "emptyMessage": "Sélectionnez des commandes dans le tableau ci-dessus pour les ajouter au remboursement par lots",
+      "selectedOrders": "Commandes Sélectionnées",
+      "total": "Total",
+      "execute": "Exécuter le Remboursement par Lots"
+    }
+  },
+  "wallets": {
+    "title": "Chaînes de Paiement et Portefeuilles",
+    "subtitle": "Configurez sur quelles blockchains accepter les paiements et définissez vos adresses de portefeuille"
+  },
+  "developer": {
+    "title": "Ajoutez des Paiements Crypto en 3 Étapes",
+    "subtitle": "Copiez-collez ce code pour accepter USDC sur votre site web",
+    "step1": {
+      "title": "Ajoutez le Script à Votre Site Web",
+      "description": "Ajoutez ceci avant votre balise de fermeture </head> :"
+    },
+    "step2": {
+      "title": "Ajoutez le Widget de Paiement",
+      "description": "Collez ceci où vous voulez le bouton de paiement :"
+    },
+    "step3": {
+      "title": "Testez et Activez !",
+      "description": "C'est tout ! Vos clients peuvent maintenant payer avec USDC."
+    },
+    "credentials": {
+      "title": "Vos Identifiants",
+      "merchantId": "ID Marchand",
+      "copy": "Copier",
+      "usageNote": "Utilisez ceci dans l'attribut data-merchant",
+      "configuredWallets": "Portefeuilles Configurés",
+      "securityTitle": "Sécurité",
+      "securityNote": "Votre ID marchand est public (sûr à utiliser dans le code frontend). Vos clés privées restent avec vous."
+    },
+    "frameworks": {
+      "title": "Exemples de Frameworks",
+      "subtitle": "Code prêt à l'emploi pour les frameworks populaires",
+      "viewExamples": "Voir les Exemples Complets"
+    },
+    "documentation": {
+      "title": "Documentation et Ressources",
+      "gettingStarted": {
+        "title": "Guide de Démarrage",
+        "description": "Guide de configuration complet en 5 minutes"
+      },
+      "api": {
+        "title": "Documentation API",
+        "description": "Référence API complète avec exemples"
+      },
+      "examples": {
+        "title": "Exemples de Code",
+        "description": "React, Vue, WordPress et plus"
+      },
+      "troubleshooting": {
+        "title": "Dépannage",
+        "description": "Problèmes courants et solutions"
+      },
+      "support": {
+        "title": "Besoin d'Aide ?",
+        "description": "Notre équipe de support est là pour vous aider à intégrer StablePay",
+        "contact": "Contacter le Support"
+      }
+    }
+  },
+  "paymentLinks": {
+    "title": "Liens de Paiement",
+    "createNew": "Créer un Nouveau Lien",
+    "viewAll": "Voir Tous les Liens",
+    "description": "Créez des liens de paiement partageables pour vos produits ou services"
+  },
+  "settings": {
+    "title": "Informations du Compte",
+    "save": "Enregistrer les Modifications"
+  },
+  "common": {
+    "copy": "Copier",
+    "copied": "Copié !",
+    "close": "Fermer",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès"
+  }
+}

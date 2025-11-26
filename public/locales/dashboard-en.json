@@ -1,0 +1,128 @@
+{
+  "nav": {
+    "merchantDashboard": "Merchant Dashboard",
+    "logout": "Logout"
+  },
+  "tabs": {
+    "orders": "Orders",
+    "wallets": "Wallets",
+    "developer": "Developer",
+    "payments": "Payment Links",
+    "settings": "Settings"
+  },
+  "profile": {
+    "pendingApproval": "Pending Approval",
+    "plan": "Plan",
+    "contact": "Contact",
+    "totalOrders": "Total Orders",
+    "memberSince": "Member Since"
+  },
+  "stats": {
+    "totalOrders": "Total Orders",
+    "confirmed": "Confirmed",
+    "pending": "Pending",
+    "totalVolume": "Total Volume"
+  },
+  "orders": {
+    "title": "Recent Orders",
+    "searchPlaceholder": "Search orders...",
+    "refresh": "Refresh",
+    "orderId": "Order ID",
+    "amount": "Amount",
+    "chain": "Chain",
+    "status": "Status",
+    "transaction": "Transaction",
+    "receipt": "Receipt",
+    "customer": "Customer",
+    "created": "Created",
+    "actions": "Actions",
+    "loading": "Loading orders...",
+    "batchRefund": {
+      "title": "Batch Refund",
+      "subtitle": "Process multiple refunds in a single transaction (EVM only)",
+      "clearSelection": "Clear Selection",
+      "emptyMessage": "Select orders from the table above to add them to batch refund",
+      "selectedOrders": "Selected Orders",
+      "total": "Total",
+      "execute": "Execute Batch Refund"
+    }
+  },
+  "wallets": {
+    "title": "Payment Chains & Wallets",
+    "subtitle": "Configure which blockchains to accept payments on and set your wallet addresses"
+  },
+  "developer": {
+    "title": "Add Crypto Payments in 3 Steps",
+    "subtitle": "Copy-paste this code to accept USDC on your website",
+    "step1": {
+      "title": "Add Script to Your Website",
+      "description": "Add this before your closing </head> tag:"
+    },
+    "step2": {
+      "title": "Add Checkout Widget",
+      "description": "Paste this where you want the payment button:"
+    },
+    "step3": {
+      "title": "Test & Go Live!",
+      "description": "That's it! Your customers can now pay with USDC."
+    },
+    "credentials": {
+      "title": "Your Credentials",
+      "merchantId": "Merchant ID",
+      "copy": "Copy",
+      "usageNote": "Use this in data-merchant attribute",
+      "configuredWallets": "Configured Wallets",
+      "securityTitle": "Security",
+      "securityNote": "Your merchant ID is public (safe to use in frontend code). Your wallet private keys stay with you."
+    },
+    "frameworks": {
+      "title": "Framework Examples",
+      "subtitle": "Ready-to-use code for popular frameworks",
+      "viewExamples": "View Full Examples"
+    },
+    "documentation": {
+      "title": "Documentation & Resources",
+      "gettingStarted": {
+        "title": "Getting Started Guide",
+        "description": "Complete setup guide in 5 minutes"
+      },
+      "api": {
+        "title": "API Documentation",
+        "description": "Full API reference with examples"
+      },
+      "examples": {
+        "title": "Code Examples",
+        "description": "React, Vue, WordPress & more"
+      },
+      "troubleshooting": {
+        "title": "Troubleshooting",
+        "description": "Common issues and solutions"
+      },
+      "support": {
+        "title": "Need Help?",
+        "description": "Our support team is here to help you integrate StablePay",
+        "contact": "Contact Support"
+      }
+    }
+  },
+  "paymentLinks": {
+    "title": "Payment Links",
+    "createNew": "Create New Link",
+    "viewAll": "View All Links",
+    "description": "Create shareable payment links for your products or services"
+  },
+  "settings": {
+    "title": "Account Information",
+    "save": "Save Changes"
+  },
+  "common": {
+    "copy": "Copy",
+    "copied": "Copied!",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  }
+}

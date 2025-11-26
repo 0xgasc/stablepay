@@ -6,39 +6,306 @@
     <title>StablePay - Accept USDC Payments Instantly</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+
+        * {
+            font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+        }
+
         body {
-            background: #0a0a0f;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8f8f8;
+            min-height: 100vh;
         }
-        .gradient-bg {
-            background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+
+        /* Neo-brutalism elements */
+        .brutal-border {
+            border: 4px solid #000;
+            box-shadow: 8px 8px 0px #000;
         }
+
+        .brutal-border-thin {
+            border: 3px solid #000;
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .brutal-shadow {
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .brutal-shadow-sm {
+            box-shadow: 4px 4px 0px #000;
+        }
+
         .feature-card {
-            background: #0f172a;
-            border: 1px solid #1e293b;
-            transition: all 0.3s;
+            background: #fff;
+            border: 4px solid #000;
+            box-shadow: 8px 8px 0px #000;
+            transition: all 0.2s ease;
         }
+
         .feature-card:hover {
-            border-color: #3b82f6;
+            transform: translate(-4px, -4px);
+            box-shadow: 12px 12px 0px #000;
+        }
+
+        .btn-brutal {
+            background: #000;
+            color: #fff;
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0px #000;
+            transition: all 0.15s ease;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1rem 2.5rem;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .btn-brutal:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px #000;
+        }
+
+        .btn-brutal:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        .btn-brutal-outline {
+            background: #fff;
+            color: #000;
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0px #000;
+            transition: all 0.15s ease;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1rem 2.5rem;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .btn-brutal-outline:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px #000;
+            background: #f0f0f0;
+        }
+
+        .btn-brutal-outline:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        /* Cold color palette */
+        .accent-cyan {
+            background: #00E5FF;
+        }
+
+        .accent-blue {
+            background: #4FC3F7;
+        }
+
+        .accent-indigo {
+            background: #7C4DFF;
+        }
+
+        .accent-teal {
+            background: #1DE9B6;
+        }
+
+        .accent-ice {
+            background: #B2EBF2;
+        }
+
+        .accent-steel {
+            background: #90A4AE;
+        }
+
+        .bg-cyan-100 {
+            background: #B2EBF2;
+        }
+
+        .bg-teal-100 {
+            background: #B2DFDB;
+        }
+
+        .bg-ice-100 {
+            background: #B2EBF2;
+        }
+
+        .bg-indigo-100 {
+            background: #C5CAE9;
+        }
+
+        .bg-steel-100 {
+            background: #CFD8DC;
+        }
+
+        /* Floating animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes slide-diagonal {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(10px, -10px); }
+        }
+
+        @keyframes pulse-shadow {
+            0%, 100% { box-shadow: 8px 8px 0px #000; }
+            50% { box-shadow: 12px 12px 0px #000; }
+        }
+
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .slide-animation {
+            animation: slide-diagonal 4s ease-in-out infinite;
+        }
+
+        .pulse-shadow-animation {
+            animation: pulse-shadow 2s ease-in-out infinite;
+        }
+
+        /* Typography enhancements */
+        .text-massive {
+            font-size: 7rem;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+        }
+
+        @media (max-width: 768px) {
+            .text-massive {
+                font-size: 4rem;
+            }
+        }
+
+        h1, h2, h3 {
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* Night mode styles */
+        body.night-mode {
+            background: #1a1a1a;
+        }
+
+        body.night-mode .brutal-border,
+        body.night-mode .feature-card {
+            border-color: #fff;
+            box-shadow: 8px 8px 0px #fff;
+        }
+
+        body.night-mode .feature-card:hover {
+            box-shadow: 12px 12px 0px #fff;
+        }
+
+        body.night-mode .brutal-border-thin {
+            border-color: #fff;
+            box-shadow: 6px 6px 0px #fff;
+        }
+
+        body.night-mode .brutal-shadow {
+            box-shadow: 6px 6px 0px #fff;
+        }
+
+        body.night-mode .brutal-shadow-sm {
+            box-shadow: 4px 4px 0px #fff;
+        }
+
+        body.night-mode .bg-white {
+            background: #000;
+        }
+
+        body.night-mode .bg-gray-100,
+        body.night-mode .bg-gray-50 {
+            background: #222;
+        }
+
+        body.night-mode .text-black {
+            color: #fff;
+        }
+
+        body.night-mode .text-gray-700,
+        body.night-mode .text-gray-600 {
+            color: #ccc;
+        }
+
+        body.night-mode .text-gray-800 {
+            color: #ddd;
+        }
+
+        body.night-mode .btn-brutal {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+            box-shadow: 6px 6px 0px #fff;
+        }
+
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 8px 8px 0px #fff;
+        }
+
+        body.night-mode .btn-brutal:active {
+            box-shadow: 2px 2px 0px #fff;
+        }
+
+        body.night-mode .btn-brutal-outline {
+            background: #000;
+            color: #fff;
+            border-color: #fff;
+            box-shadow: 6px 6px 0px #fff;
+        }
+
+        body.night-mode .btn-brutal-outline:hover {
+            box-shadow: 8px 8px 0px #fff;
+            background: #111;
+        }
+
+        body.night-mode .btn-brutal-outline:active {
+            box-shadow: 2px 2px 0px #fff;
+        }
+
+        body.night-mode .accent-cyan,
+        body.night-mode .accent-blue,
+        body.night-mode .accent-indigo,
+        body.night-mode .accent-teal,
+        body.night-mode .accent-ice,
+        body.night-mode .accent-steel {
+            opacity: 0.9;
         }
     </style>
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="bg-black border-b border-slate-800">
+    <nav class="bg-white brutal-border mb-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
+            <div class="flex justify-between items-center h-20">
                 <div class="flex items-center">
-                    <span class="text-2xl font-bold text-white">
+                    <span class="text-3xl font-black text-black uppercase">
                         StablePay
                     </span>
                 </div>
                 <div class="flex items-center space-x-6">
-                    <a href="/trust.html" class="text-slate-300 hover:text-white transition-colors text-sm">
+                    <a href="/trust.html" class="text-black hover:underline decoration-4 decoration-black font-medium transition-all" data-i18n="nav.security">
                         Security
                     </a>
-                    <a href="/login.html" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 text-sm font-medium transition-colors">
-                        Login
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="bg-white border-4 border-black px-3 py-1 font-bold text-sm cursor-pointer hover:bg-gray-100">
+                        <option value="en">EN</option>
+                        <option value="es">ES</option>
+                        <option value="fr">FR</option>
+                        <option value="pt">PT</option>
+                    </select>
+                    <button id="nightModeToggle" class="px-3 py-1 border-4 border-black bg-white hover:bg-gray-100 font-bold text-sm">
+                        <span class="night-icon">🌙</span>
+                        <span class="day-icon hidden">☀️</span>
+                    </button>
+                    <a href="/login.html" class="bg-black text-white px-6 py-2 font-bold border-4 border-black brutal-shadow-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all uppercase text-sm">
+                        <span data-i18n="nav.login">Login</span>
                     </a>
                 </div>
             </div>
@@ -46,135 +313,127 @@
     </nav>
 
     <!-- Hero Section -->
-    <div class="gradient-bg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
-            <div class="text-center">
-                <h1 class="text-5xl sm:text-7xl font-bold text-white mb-8">
-                    Accept USDC Payments
-                    <span class="block text-blue-500">Instantly Worldwide</span>
-                </h1>
-                <p class="text-xl text-slate-400 mb-12 max-w-3xl mx-auto">
-                    Professional payment infrastructure for businesses. No volatility, no chargebacks, instant settlement.
-                </p>
-                <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                    <a href="/signup.html" class="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 text-base font-medium transition-colors">
-                        Start Accepting Payments
-                    </a>
-                    <a href="/signup.html" class="border border-slate-600 hover:border-blue-500 text-white px-10 py-4 text-base font-medium transition-colors">
-                        Sign Up
-                    </a>
-                </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div class="text-center mb-16">
+            <h1 class="text-6xl sm:text-7xl font-black text-black mb-8 uppercase" style="line-height: 1.1;">
+                <span data-i18n="hero.title1">Accept USDC Payments</span>
+                <span class="block accent-cyan px-6 py-4 brutal-border inline-block mt-4 slide-animation" data-i18n="hero.title2">Instantly Worldwide</span>
+            </h1>
+            <p class="text-xl text-gray-700 font-medium mb-12 max-w-3xl mx-auto" data-i18n="hero.subtitle">
+                Professional payment infrastructure for businesses. No volatility, no chargebacks, instant settlement.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-6 justify-center">
+                <a href="/signup.html" class="btn-brutal">
+                    <span data-i18n="hero.cta1">Start Accepting Payments</span>
+                </a>
+                <a href="/signup.html" class="btn-brutal-outline">
+                    <span data-i18n="hero.cta2">Sign Up</span>
+                </a>
             </div>
         </div>
     </div>
 
     <!-- Features Section -->
-    <div class="py-24 bg-slate-950">
+    <div class="py-24 bg-gray-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-20">
-                <h2 class="text-4xl sm:text-5xl font-bold text-white mb-6">
+                <h2 class="text-5xl sm:text-6xl font-black text-black mb-6 uppercase" data-i18n="features.title">
                     Why Choose StablePay?
                 </h2>
-                <p class="text-xl text-slate-400 max-w-3xl mx-auto">
+                <p class="text-xl text-gray-700 font-medium max-w-3xl mx-auto" data-i18n="features.subtitle">
                     Enterprise-grade infrastructure built for scale and reliability.
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div class="feature-card p-8">
-                    <div class="w-12 h-12 bg-blue-600/10 border border-blue-600/30 mb-6 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
+                    <div class="w-16 h-16 accent-cyan brutal-border mb-6 flex items-center justify-center font-black text-3xl">
+                        ⚡
                     </div>
-                    <h3 class="text-xl font-semibold text-white mb-4">Instant Settlement</h3>
-                    <p class="text-slate-400">Direct wallet settlement in seconds. No intermediaries, no delays.</p>
+                    <h3 class="text-2xl font-black text-black mb-4 uppercase" data-i18n="features.instant.title">Instant Settlement</h3>
+                    <p class="text-gray-700 font-medium" data-i18n="features.instant.description">Direct wallet settlement in seconds. No intermediaries, no delays.</p>
                 </div>
 
                 <div class="feature-card p-8">
-                    <div class="w-12 h-12 bg-blue-600/10 border border-blue-600/30 mb-6 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
+                    <div class="w-16 h-16 accent-teal brutal-border mb-6 flex items-center justify-center font-black text-3xl">
+                        🌍
                     </div>
-                    <h3 class="text-xl font-semibold text-white mb-4">Global Reach</h3>
-                    <p class="text-slate-400">Accept payments globally. Multi-chain infrastructure across major networks.</p>
+                    <h3 class="text-2xl font-black text-black mb-4 uppercase" data-i18n="features.global.title">Global Reach</h3>
+                    <p class="text-gray-700 font-medium" data-i18n="features.global.description">Accept payments globally. Multi-chain infrastructure across major networks.</p>
                 </div>
 
                 <div class="feature-card p-8">
-                    <div class="w-12 h-12 bg-blue-600/10 border border-blue-600/30 mb-6 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                        </svg>
+                    <div class="w-16 h-16 accent-indigo brutal-border mb-6 flex items-center justify-center font-black text-3xl">
+                        🛡️
                     </div>
-                    <h3 class="text-xl font-semibold text-white mb-4">Zero Chargebacks</h3>
-                    <p class="text-slate-400">Immutable blockchain transactions. Final settlement guaranteed.</p>
+                    <h3 class="text-2xl font-black text-black mb-4 uppercase" data-i18n="features.zeroChargeback.title">Zero Chargebacks</h3>
+                    <p class="text-gray-700 font-medium" data-i18n="features.zeroChargeback.description">Immutable blockchain transactions. Final settlement guaranteed.</p>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Trust & Security Section -->
-    <div class="py-24 bg-black border-t border-slate-800">
+    <div class="py-24 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
-                <h2 class="text-4xl sm:text-5xl font-bold text-white mb-6">
+                <h2 class="text-5xl sm:text-6xl font-black text-black mb-6 uppercase" data-i18n="trust.title">
                     Built with Security & Trust
                 </h2>
-                <p class="text-xl text-slate-400 max-w-3xl mx-auto mb-8">
+                <p class="text-xl text-gray-700 font-medium max-w-3xl mx-auto mb-8" data-i18n="trust.subtitle">
                     Enterprise-grade security infrastructure protecting your payments
                 </p>
-                <a href="/trust.html" class="inline-block text-blue-400 hover:text-blue-300 transition-colors">
-                    View Full Trust Center →
+                <a href="/trust.html" class="inline-block text-black hover:underline decoration-4 decoration-black font-bold transition-all">
+                    <span data-i18n="trust.viewFull">View Full Trust Center</span> →
                 </a>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
-                <div class="text-center">
+                <div class="text-center p-6 bg-ice-100 brutal-border-thin">
                     <div class="text-5xl mb-4">🛡️</div>
-                    <div class="text-xl font-bold text-white mb-2">Non-Custodial</div>
-                    <div class="text-slate-400 text-sm">We never hold your funds</div>
+                    <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.nonCustodial.title">Non-Custodial</div>
+                    <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.nonCustodial.subtitle">We never hold your funds</div>
                 </div>
-                <div class="text-center">
+                <div class="text-center p-6 bg-cyan-100 brutal-border-thin">
                     <div class="text-5xl mb-4">🔐</div>
-                    <div class="text-xl font-bold text-white mb-2">Encrypted</div>
-                    <div class="text-slate-400 text-sm">AES-256 & TLS 1.3</div>
+                    <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.encrypted.title">Encrypted</div>
+                    <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.encrypted.subtitle">AES-256 & TLS 1.3</div>
                 </div>
-                <div class="text-center">
+                <div class="text-center p-6 bg-teal-100 brutal-border-thin">
                     <div class="text-5xl mb-4">⚡</div>
-                    <div class="text-xl font-bold text-white mb-2">99.9% Uptime</div>
-                    <div class="text-slate-400 text-sm">Reliable infrastructure</div>
+                    <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.uptime.title">99.9% Uptime</div>
+                    <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.uptime.subtitle">Reliable infrastructure</div>
                 </div>
-                <div class="text-center">
+                <div class="text-center p-6 bg-indigo-100 brutal-border-thin">
                     <div class="text-5xl mb-4">📊</div>
-                    <div class="text-xl font-bold text-white mb-2">GDPR Ready</div>
-                    <div class="text-slate-400 text-sm">Privacy compliant</div>
+                    <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.gdpr.title">GDPR Ready</div>
+                    <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.gdpr.subtitle">Privacy compliant</div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="feature-card p-6">
-                    <h3 class="text-lg font-semibold text-white mb-3">Data Encryption</h3>
-                    <ul class="space-y-2 text-slate-400 text-sm">
-                        <li>✓ AES-256 encryption at rest</li>
-                        <li>✓ TLS 1.3 for data in transit</li>
-                        <li>✓ End-to-end encrypted API calls</li>
+                    <h3 class="text-lg font-black text-black mb-3 uppercase" data-i18n="trust.details.encryption.title">Data Encryption</h3>
+                    <ul class="space-y-2 text-gray-700 text-sm font-medium">
+                        <li data-i18n="trust.details.encryption.item1">✓ AES-256 encryption at rest</li>
+                        <li data-i18n="trust.details.encryption.item2">✓ TLS 1.3 for data in transit</li>
+                        <li data-i18n="trust.details.encryption.item3">✓ End-to-end encrypted API calls</li>
                     </ul>
                 </div>
                 <div class="feature-card p-6">
-                    <h3 class="text-lg font-semibold text-white mb-3">Infrastructure Security</h3>
-                    <ul class="space-y-2 text-slate-400 text-sm">
-                        <li>✓ Hosted on Vercel (SOC 2, ISO 27001)</li>
-                        <li>✓ Database on Supabase (SOC 2)</li>
-                        <li>✓ Multi-region redundancy</li>
+                    <h3 class="text-lg font-black text-black mb-3 uppercase" data-i18n="trust.details.infrastructure.title">Infrastructure Security</h3>
+                    <ul class="space-y-2 text-gray-700 text-sm font-medium">
+                        <li data-i18n="trust.details.infrastructure.item1">✓ Hosted on Vercel (SOC 2, ISO 27001)</li>
+                        <li data-i18n="trust.details.infrastructure.item2">✓ Database on Supabase (SOC 2)</li>
+                        <li data-i18n="trust.details.infrastructure.item3">✓ Multi-region redundancy</li>
                     </ul>
                 </div>
                 <div class="feature-card p-6">
-                    <h3 class="text-lg font-semibold text-white mb-3">Blockchain Security</h3>
-                    <ul class="space-y-2 text-slate-400 text-sm">
-                        <li>✓ No custom smart contracts</li>
-                        <li>✓ Client-side transaction signing</li>
-                        <li>✓ All transactions verified on-chain</li>
+                    <h3 class="text-lg font-black text-black mb-3 uppercase" data-i18n="trust.details.blockchain.title">Blockchain Security</h3>
+                    <ul class="space-y-2 text-gray-700 text-sm font-medium">
+                        <li data-i18n="trust.details.blockchain.item1">✓ No custom smart contracts</li>
+                        <li data-i18n="trust.details.blockchain.item2">✓ Client-side transaction signing</li>
+                        <li data-i18n="trust.details.blockchain.item3">✓ All transactions verified on-chain</li>
                     </ul>
                 </div>
             </div>
@@ -182,119 +441,121 @@
     </div>
 
     <!-- Pricing Section -->
-    <div class="py-24 bg-black payment-plan-ref" id="pricing">
+    <div class="py-24 bg-gray-100 payment-plan-ref" id="pricing">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-20">
-                <h2 class="text-4xl sm:text-5xl font-bold text-white mb-6">
+                <h2 class="text-5xl sm:text-6xl font-black text-black mb-6 uppercase" data-i18n="pricing.title">
                     Transparent Pricing
                 </h2>
-                <p class="text-xl text-slate-400">
+                <p class="text-xl text-gray-700 font-medium" data-i18n="pricing.subtitle">
                     Choose the plan that fits your needs
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <!-- Starter Plan -->
-                <div class="bg-slate-950 border border-slate-800 p-10">
+                <div class="bg-white brutal-border p-10">
                     <div>
-                        <h3 class="text-2xl font-bold text-white mb-6">Starter</h3>
+                        <h3 class="text-3xl font-black text-black mb-6 uppercase" data-i18n="pricing.starter.name">Starter</h3>
                         <div class="mb-8">
-                            <span class="text-5xl font-bold text-white">$29</span>
-                            <span class="text-slate-500">/mo</span>
+                            <span class="text-6xl font-black text-black">$29</span>
+                            <span class="text-gray-600 font-medium" data-i18n="pricing.perMonth">/mo</span>
                         </div>
                         <ul class="space-y-4 mb-10 text-left">
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                $1,000 monthly volume
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.starter.feature1">$1,000 monthly volume</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                Direct wallet payments
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.starter.feature2">Direct wallet payments</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                Payment links
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.starter.feature3">Payment links</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                Email support
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.starter.feature4">Email support</span>
                             </li>
                         </ul>
-                        <a href="/signup.html" class="block w-full bg-slate-800 hover:bg-slate-700 text-white py-4 font-medium transition-colors text-center">
-                            Get Started
+                        <a href="/signup.html" class="block w-full bg-white border-4 border-black text-black py-4 font-black transition-all text-center uppercase hover:bg-gray-100 brutal-shadow-sm">
+                            <span data-i18n="pricing.getStarted">Get Started</span>
                         </a>
                     </div>
                 </div>
 
                 <!-- Growth Plan -->
-                <div class="bg-slate-950 border-2 border-blue-600 p-10 relative">
-                    <div class="absolute -top-px left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
+                <div class="bg-white brutal-border p-10 relative pulse-shadow-animation">
+                    <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-2 font-black uppercase text-sm border-4 border-black">
+                        <span data-i18n="pricing.popular">Popular</span>
+                    </div>
                     <div>
-                        <h3 class="text-2xl font-bold text-white mb-6">Growth</h3>
+                        <h3 class="text-3xl font-black text-black mb-6 uppercase" data-i18n="pricing.growth.name">Growth</h3>
                         <div class="mb-8">
-                            <span class="text-5xl font-bold text-white">$79</span>
-                            <span class="text-slate-500">/mo</span>
+                            <span class="text-6xl font-black text-black">$79</span>
+                            <span class="text-gray-600 font-medium" data-i18n="pricing.perMonth">/mo</span>
                         </div>
                         <ul class="space-y-4 mb-10 text-left">
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                $10,000 monthly volume
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.growth.feature1">$10,000 monthly volume</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                Escrow option
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.growth.feature2">Escrow option</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                Custom branding
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.growth.feature3">Custom branding</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                API access
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.growth.feature4">API access</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                Priority support
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.growth.feature5">Priority support</span>
                             </li>
                         </ul>
-                        <a href="/signup.html" class="block w-full bg-blue-600 hover:bg-blue-700 text-white py-4 font-medium transition-colors text-center">
-                            Get Started
+                        <a href="/signup.html" class="block w-full btn-brutal text-center">
+                            <span data-i18n="pricing.getStarted">Get Started</span>
                         </a>
                     </div>
                 </div>
 
                 <!-- Enterprise Plan -->
-                <div class="bg-slate-950 border border-slate-800 p-10">
+                <div class="bg-white brutal-border p-10">
                     <div>
-                        <h3 class="text-2xl font-bold text-white mb-6">Enterprise</h3>
+                        <h3 class="text-3xl font-black text-black mb-6 uppercase" data-i18n="pricing.enterprise.name">Enterprise</h3>
                         <div class="mb-8">
-                            <span class="text-5xl font-bold text-white">$199</span>
-                            <span class="text-slate-500">/mo</span>
+                            <span class="text-6xl font-black text-black">$199</span>
+                            <span class="text-gray-600 font-medium" data-i18n="pricing.perMonth">/mo</span>
                         </div>
                         <ul class="space-y-4 mb-10 text-left">
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                Unlimited volume
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.enterprise.feature1">Unlimited volume</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                White-label solution
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.enterprise.feature2">White-label solution</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                Multi-wallet management
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.enterprise.feature3">Multi-wallet management</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                Webhooks & integrations
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.enterprise.feature4">Webhooks & integrations</span>
                             </li>
-                            <li class="flex items-center text-slate-300">
-                                <span class="text-blue-500 mr-3">—</span>
-                                Dedicated support
+                            <li class="flex items-center text-black font-medium">
+                                <span class="font-black mr-3">—</span>
+                                <span data-i18n="pricing.enterprise.feature5">Dedicated support</span>
                             </li>
                         </ul>
-                        <a href="/signup.html" class="block w-full bg-slate-800 hover:bg-slate-700 text-white py-4 font-medium transition-colors text-center">
-                            Contact Sales
+                        <a href="/signup.html" class="block w-full bg-white border-4 border-black text-black py-4 font-black transition-all text-center uppercase hover:bg-gray-100 brutal-shadow-sm">
+                            <span data-i18n="pricing.contactSales">Contact Sales</span>
                         </a>
                     </div>
                 </div>
@@ -303,42 +564,42 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-slate-950 border-t border-slate-800">
+    <footer class="bg-white brutal-border">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                 <div>
-                    <h3 class="text-white font-bold text-lg mb-4">StablePay</h3>
-                    <p class="text-slate-400 text-sm">
+                    <h3 class="text-black font-black text-lg mb-4 uppercase">StablePay</h3>
+                    <p class="text-gray-700 text-sm font-medium" data-i18n="footer.description">
                         Multi-chain USDC payment infrastructure for the modern web
                     </p>
                 </div>
                 <div>
-                    <h4 class="text-white font-medium mb-3">Product</h4>
+                    <h4 class="text-black font-black mb-3 uppercase" data-i18n="footer.product.title">Product</h4>
                     <ul class="space-y-2 text-sm">
-                        <li><a href="/dashboard.html" class="text-slate-400 hover:text-white">Dashboard</a></li>
-                        <li><a href="/#pricing" class="text-slate-400 hover:text-white">Pricing</a></li>
-                        <li><a href="/signup.html" class="text-slate-400 hover:text-white">Sign Up</a></li>
+                        <li><a href="/dashboard.html" class="text-gray-700 hover:text-black font-medium hover:underline decoration-2 decoration-black" data-i18n="footer.product.dashboard">Dashboard</a></li>
+                        <li><a href="/#pricing" class="text-gray-700 hover:text-black font-medium hover:underline decoration-2 decoration-black" data-i18n="footer.product.pricing">Pricing</a></li>
+                        <li><a href="/signup.html" class="text-gray-700 hover:text-black font-medium hover:underline decoration-2 decoration-black" data-i18n="footer.product.signUp">Sign Up</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h4 class="text-white font-medium mb-3">Security</h4>
+                    <h4 class="text-black font-black mb-3 uppercase" data-i18n="footer.security.title">Security</h4>
                     <ul class="space-y-2 text-sm">
-                        <li><a href="/trust.html" class="text-slate-400 hover:text-white">Trust Center</a></li>
-                        <li><a href="/trust.html#security" class="text-slate-400 hover:text-white">Security Practices</a></li>
-                        <li><a href="/trust.html" class="text-slate-400 hover:text-white">Privacy Policy</a></li>
+                        <li><a href="/trust.html" class="text-gray-700 hover:text-black font-medium hover:underline decoration-2 decoration-black" data-i18n="footer.security.trustCenter">Trust Center</a></li>
+                        <li><a href="/trust.html#security" class="text-gray-700 hover:text-black font-medium hover:underline decoration-2 decoration-black" data-i18n="footer.security.practices">Security Practices</a></li>
+                        <li><a href="/trust.html" class="text-gray-700 hover:text-black font-medium hover:underline decoration-2 decoration-black" data-i18n="footer.security.privacy">Privacy Policy</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h4 class="text-white font-medium mb-3">Contact</h4>
+                    <h4 class="text-black font-black mb-3 uppercase" data-i18n="footer.contact.title">Contact</h4>
                     <ul class="space-y-2 text-sm">
-                        <li><a href="mailto:security@stablepay.io" class="text-slate-400 hover:text-white">Security</a></li>
-                        <li><a href="mailto:support@stablepay.io" class="text-slate-400 hover:text-white">Support</a></li>
-                        <li><a href="https://github.com/stablepay" class="text-slate-400 hover:text-white">GitHub</a></li>
+                        <li><a href="mailto:security@stablepay.io" class="text-gray-700 hover:text-black font-medium hover:underline decoration-2 decoration-black" data-i18n="footer.contact.security">Security</a></li>
+                        <li><a href="mailto:support@stablepay.io" class="text-gray-700 hover:text-black font-medium hover:underline decoration-2 decoration-black" data-i18n="footer.contact.support">Support</a></li>
+                        <li><a href="https://github.com/stablepay" class="text-gray-700 hover:text-black font-medium hover:underline decoration-2 decoration-black">GitHub</a></li>
                     </ul>
                 </div>
             </div>
-            <div class="border-t border-slate-800 pt-8 text-center">
-                <p class="text-slate-600 text-sm">
+            <div class="border-t-4 border-black pt-8 text-center">
+                <p class="text-gray-600 text-sm font-medium" data-i18n="footer.copyright">
                     Developed by G.S © 2025 StablePay. All rights reserved.
                 </p>
             </div>
@@ -346,6 +607,26 @@
     </footer>
 
     <script>
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const nightIcon = nightModeToggle.querySelector('.night-icon');
+        const dayIcon = nightModeToggle.querySelector('.day-icon');
+
+        // Check for saved preference
+        const savedMode = localStorage.getItem('nightMode');
+        if (savedMode === 'true') {
+            document.body.classList.add('night-mode');
+            nightIcon.classList.add('hidden');
+            dayIcon.classList.remove('hidden');
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            nightIcon.classList.toggle('hidden');
+            dayIcon.classList.toggle('hidden');
+            localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
+        });
+
         // Apply system settings visibility
         function applySystemSettings() {
             const showPaymentPlans = localStorage.getItem('showPaymentPlans') !== 'false';
@@ -358,75 +639,61 @@
         // Apply on page load
         applySystemSettings();
 
-        // Registration form handler
-        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            
+        // i18n Translation system
+        let translations = {};
+        let currentLang = 'en';
+
+        async function changeLanguage(lang) {
             try {
-                submitBtn.textContent = 'Creating Account...';
-                submitBtn.disabled = true;
-                
-                const formData = new FormData(e.target);
-                const data = Object.fromEntries(formData);
-                
-                console.log('Registration data:', data); // Debug log
-                
-                const response = await fetch('/api/register-minimal', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    // Show success message and redirect to login
-                    const form = e.target;
-                    
-                    form.innerHTML = `
-                        <div class="text-center py-8">
-                            <div class="text-6xl mb-4">✅</div>
-                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Account Created!</h3>
-                            <p class="text-gray-600 mb-6">
-                                Your account has been created successfully for <strong>${data.email}</strong>
-                            </p>
-                            <div class="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                                <p class="text-sm text-green-800 font-medium mb-3">
-                                    ${result.note || 'You can now sign in with your email and password'}
-                                </p>
-                                <a href="/login.html" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                                    Go to Login →
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    // Check for duplicate email error
-                    if (response.status === 409 || result.error?.includes('already')) {
-                        alert('This email is already registered. Please login or use a different email.');
+                const response = await fetch(`./locales/home-${lang}.json`);
+                translations = await response.json();
+                currentLang = lang;
+                localStorage.setItem('language', lang);
+                document.getElementById('langSelector').value = lang;
+                updatePageText();
+            } catch (error) {
+                console.error('Error loading translation:', error);
+            }
+        }
+
+        function updatePageText() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const keys = key.split('.');
+                let value = translations;
+
+                for (const k of keys) {
+                    value = value[k];
+                    if (!value) break;
+                }
+
+                if (value) {
+                    if (value.includes('<')) {
+                        element.innerHTML = value;
                     } else {
-                        alert(result.error || 'Registration failed');
+                        element.textContent = value;
                     }
                 }
-            } catch (error) {
-                console.error('Registration error:', error);
-                alert('Registration failed: ' + error.message);
-                
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-            }
+            });
+        }
+
+        // Load saved language preference on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedLang = localStorage.getItem('language') || 'en';
+            document.getElementById('langSelector').value = savedLang;
+            changeLanguage(savedLang);
         });
 
         // Smooth scrolling for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
             });
         });
     </script>

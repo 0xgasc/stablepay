@@ -1,0 +1,124 @@
+{
+  "nav": {
+    "security": "Segurança",
+    "login": "Entrar"
+  },
+  "hero": {
+    "title1": "Aceite Pagamentos USDC",
+    "title2": "Instantaneamente no Mundo Inteiro",
+    "subtitle": "Infraestrutura de pagamento profissional para empresas. Sem volatilidade, sem estornos, liquidação instantânea.",
+    "cta1": "Comece a Aceitar Pagamentos",
+    "cta2": "Inscrever-se"
+  },
+  "features": {
+    "title": "Por Que Escolher StablePay?",
+    "subtitle": "Infraestrutura de nível empresarial construída para escala e confiabilidade.",
+    "instant": {
+      "title": "Liquidação Instantânea",
+      "description": "Liquidação direta para carteira em segundos. Sem intermediários, sem atrasos."
+    },
+    "global": {
+      "title": "Alcance Global",
+      "description": "Aceite pagamentos globalmente. Infraestrutura multi-cadeia nas principais redes."
+    },
+    "zeroChargeback": {
+      "title": "Zero Estornos",
+      "description": "Transações blockchain imutáveis. Liquidação final garantida."
+    }
+  },
+  "trust": {
+    "title": "Construído com Segurança e Confiança",
+    "subtitle": "Infraestrutura de segurança de nível empresarial protegendo seus pagamentos",
+    "viewFull": "Ver Centro de Confiança Completo",
+    "badges": {
+      "nonCustodial": {
+        "title": "Não Custodial",
+        "subtitle": "Nunca mantemos seus fundos"
+      },
+      "encrypted": {
+        "title": "Criptografado",
+        "subtitle": "AES-256 e TLS 1.3"
+      },
+      "uptime": {
+        "title": "99.9% Disponibilidade",
+        "subtitle": "Infraestrutura confiável"
+      },
+      "gdpr": {
+        "title": "Pronto para GDPR",
+        "subtitle": "Conformidade de privacidade"
+      }
+    },
+    "details": {
+      "encryption": {
+        "title": "Criptografia de Dados",
+        "item1": "✓ Criptografia AES-256 em repouso",
+        "item2": "✓ TLS 1.3 para dados em trânsito",
+        "item3": "✓ Chamadas API criptografadas ponta a ponta"
+      },
+      "infrastructure": {
+        "title": "Segurança de Infraestrutura",
+        "item1": "✓ Hospedado na Vercel (SOC 2, ISO 27001)",
+        "item2": "✓ Banco de dados no Supabase (SOC 2)",
+        "item3": "✓ Redundância multi-região"
+      },
+      "blockchain": {
+        "title": "Segurança Blockchain",
+        "item1": "✓ Sem contratos inteligentes personalizados",
+        "item2": "✓ Assinatura de transações no lado do cliente",
+        "item3": "✓ Todas as transações verificadas na cadeia"
+      }
+    }
+  },
+  "pricing": {
+    "title": "Preços Transparentes",
+    "subtitle": "Escolha o plano que atende suas necessidades",
+    "perMonth": "/mês",
+    "popular": "Popular",
+    "getStarted": "Começar",
+    "contactSales": "Contatar Vendas",
+    "starter": {
+      "name": "Inicial",
+      "feature1": "$1,000 volume mensal",
+      "feature2": "Pagamentos diretos para carteira",
+      "feature3": "Links de pagamento",
+      "feature4": "Suporte por e-mail"
+    },
+    "growth": {
+      "name": "Crescimento",
+      "feature1": "$10,000 volume mensal",
+      "feature2": "Opção de custódia",
+      "feature3": "Marca personalizada",
+      "feature4": "Acesso API",
+      "feature5": "Suporte prioritário"
+    },
+    "enterprise": {
+      "name": "Empresa",
+      "feature1": "Volume ilimitado",
+      "feature2": "Solução de marca branca",
+      "feature3": "Gerenciamento de múltiplas carteiras",
+      "feature4": "Webhooks e integrações",
+      "feature5": "Suporte dedicado"
+    }
+  },
+  "footer": {
+    "description": "Infraestrutura de pagamento USDC multi-cadeia para a web moderna",
+    "product": {
+      "title": "Produto",
+      "dashboard": "Painel",
+      "pricing": "Preços",
+      "signUp": "Inscrever-se"
+    },
+    "security": {
+      "title": "Segurança",
+      "trustCenter": "Centro de Confiança",
+      "practices": "Práticas de Segurança",
+      "privacy": "Política de Privacidade"
+    },
+    "contact": {
+      "title": "Contato",
+      "security": "Segurança",
+      "support": "Suporte"
+    },
+    "copyright": "Desenvolvido por G.S © 2025 StablePay. Todos os direitos reservados."
+  }
+}

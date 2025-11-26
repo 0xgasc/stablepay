@@ -7,33 +7,226 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/chain-config.js"></script>
     <style>
-        body {
-            background: #0a0a0f;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+
         * {
-            color: inherit;
+            font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
         }
-        .network-badge {
-            background: linear-gradient(90deg, #f59e0b, #ef4444);
-            animation: gradient 3s ease infinite;
-            background-size: 400% 400%;
+
+        body {
+            background: #f8f8f8;
+            color: #000;
+            min-height: 100vh;
         }
-        .mainnet-badge {
-            background: linear-gradient(90deg, #059669, #0891b2);
-            animation: gradient 3s ease infinite;
-            background-size: 400% 400%;
+
+        /* Neo-brutalism elements */
+        .brutal-border {
+            border: 4px solid #000;
+            box-shadow: 8px 8px 0px #000;
         }
+
+        .brutal-border-thin {
+            border: 3px solid #000;
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .brutal-shadow {
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .brutal-shadow-sm {
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        .btn-brutal {
+            background: #000;
+            color: #fff;
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0px #000;
+            transition: all 0.15s ease;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-brutal:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px #000;
+        }
+
+        .btn-brutal:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        /* Cold color palette */
+        .accent-cyan {
+            background: #00E5FF;
+        }
+
+        .accent-blue {
+            background: #4FC3F7;
+        }
+
+        .accent-indigo {
+            background: #7C4DFF;
+        }
+
+        .accent-teal {
+            background: #1DE9B6;
+        }
+
+        .bg-cyan-100 {
+            background: #B2EBF2;
+        }
+
+        .bg-teal-100 {
+            background: #B2DFDB;
+        }
+
+        .bg-indigo-100 {
+            background: #C5CAE9;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes pulse-shadow {
+            0%, 100% { box-shadow: 8px 8px 0px #000; }
+            50% { box-shadow: 12px 12px 0px #000; }
+        }
+
         @keyframes gradient {
             0%, 100% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
         }
-        .status-pending { @apply bg-yellow-900/20 text-yellow-400 border border-yellow-800; }
-        .status-paid { @apply bg-blue-900/20 text-blue-400 border border-blue-800; }
-        .status-confirmed { @apply bg-green-900/20 text-green-400 border border-green-800; }
-        .status-failed { @apply bg-red-900/20 text-red-400 border border-red-800; }
-        .status-expired { @apply bg-slate-900/20 text-slate-400 border border-slate-800; }
+
+        .network-badge {
+            background: linear-gradient(90deg, #f59e0b, #ef4444);
+            animation: gradient 3s ease infinite;
+            background-size: 400% 400%;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        .mainnet-badge {
+            background: linear-gradient(90deg, #059669, #0891b2);
+            animation: gradient 3s ease infinite;
+            background-size: 400% 400%;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        .status-paid {
+            background: #dbeafe;
+            color: #1e3a8a;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        .status-confirmed {
+            background: #d1fae5;
+            color: #065f46;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        .status-failed {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        .status-expired {
+            background: #e2e8f0;
+            color: #475569;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        h1, h2, h3 {
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* Night mode styles */
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        body.night-mode .brutal-border,
+        body.night-mode .brutal-border-thin {
+            border-color: #fff;
+            box-shadow: 8px 8px 0px #fff;
+        }
+
+        body.night-mode .brutal-shadow {
+            box-shadow: 6px 6px 0px #fff;
+        }
+
+        body.night-mode .brutal-shadow-sm {
+            box-shadow: 4px 4px 0px #fff;
+        }
+
+        body.night-mode .btn-brutal {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+            box-shadow: 6px 6px 0px #fff;
+        }
+
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 8px 8px 0px #fff;
+        }
+
+        body.night-mode .btn-brutal:active {
+            box-shadow: 2px 2px 0px #fff;
+        }
+
+        body.night-mode .bg-white {
+            background: #000;
+        }
+
+        body.night-mode .bg-gray-100,
+        body.night-mode .bg-gray-50 {
+            background: #222;
+        }
+
+        body.night-mode .text-black {
+            color: #fff;
+        }
+
+        body.night-mode .text-gray-700,
+        body.night-mode .text-gray-600 {
+            color: #ccc;
+        }
+
+        body.night-mode .network-badge,
+        body.night-mode .mainnet-badge {
+            border-color: #fff;
+            box-shadow: 4px 4px 0px #fff;
+        }
+
+        body.night-mode .status-pending,
+        body.night-mode .status-paid,
+        body.night-mode .status-confirmed,
+        body.night-mode .status-failed,
+        body.night-mode .status-expired {
+            border-color: #fff;
+            box-shadow: 4px 4px 0px #fff;
+        }
     </style>
 </head>
 <body class="bg-slate-950">
@@ -54,26 +247,36 @@
             </div>
         </div>
     </div>
-    <nav class="bg-slate-950 shadow-sm border-b">
+    <nav class="bg-white brutal-border mb-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
+            <div class="flex justify-between items-center h-20">
                 <div class="flex items-center">
-                    <a href="/" class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <a href="/" class="text-3xl font-black text-black uppercase">
                         StablePay
                     </a>
-                    <span class="ml-4 px-3 py-1 bg-blue-900/20 text-blue-800 rounded-full text-sm font-medium">
+                    <span class="ml-4 px-4 py-2 bg-cyan-100 text-black border-4 border-black brutal-shadow-sm text-sm font-black uppercase" data-i18n="nav.merchantDashboard">
                         Merchant Dashboard
                     </span>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <div class="text-sm text-slate-400" id="merchantInfo">
-                        <span class="font-medium text-white" id="merchantName">Loading...</span>
+                    <div class="text-sm text-black font-bold" id="merchantInfo">
+                        <span class="font-black" id="merchantName">Loading...</span>
                     </div>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="bg-white border-4 border-black px-3 py-1 font-bold text-sm cursor-pointer hover:bg-gray-100">
+                        <option value="en">EN</option>
+                        <option value="es">ES</option>
+                        <option value="fr">FR</option>
+                        <option value="pt">PT</option>
+                    </select>
+                    <button id="nightModeToggle" class="px-3 py-1 border-4 border-black bg-white hover:bg-gray-100 font-bold text-sm">
+                        <span class="night-icon">🌙</span>
+                        <span class="day-icon hidden">☀️</span>
+                    </button>
                     <button
                         id="logoutBtn"
-                        class="text-slate-400 hover:text-white px-3 py-2 text-sm font-medium"
+                        class="bg-black text-white px-6 py-2 font-black border-4 border-black brutal-shadow-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all uppercase text-sm"
                     >
-                        Logout
+                        <span data-i18n="nav.logout">Logout</span>
                     </button>
                 </div>
             </div>
@@ -3108,6 +3311,71 @@ onMounted(() => {
             setTimeout(() => {
                 showFramework('react');
             }, 100);
+        });
+
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const nightIcon = nightModeToggle.querySelector('.night-icon');
+        const dayIcon = nightModeToggle.querySelector('.day-icon');
+
+        // Check for saved preference
+        const savedMode = localStorage.getItem('nightMode');
+        if (savedMode === 'true') {
+            document.body.classList.add('night-mode');
+            nightIcon.classList.add('hidden');
+            dayIcon.classList.remove('hidden');
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            nightIcon.classList.toggle('hidden');
+            dayIcon.classList.toggle('hidden');
+            localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
+        });
+
+        // i18n Translation system
+        let translations = {};
+        let currentLang = 'en';
+
+        async function changeLanguage(lang) {
+            try {
+                const response = await fetch(`./locales/dashboard-${lang}.json`);
+                translations = await response.json();
+                currentLang = lang;
+                localStorage.setItem('language', lang);
+                document.getElementById('langSelector').value = lang;
+                updatePageText();
+            } catch (error) {
+                console.error('Error loading translation:', error);
+            }
+        }
+
+        function updatePageText() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const keys = key.split('.');
+                let value = translations;
+
+                for (const k of keys) {
+                    value = value[k];
+                    if (!value) break;
+                }
+
+                if (value) {
+                    if (value.includes('<')) {
+                        element.innerHTML = value;
+                    } else {
+                        element.textContent = value;
+                    }
+                }
+            });
+        }
+
+        // Load saved language preference on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedLang = localStorage.getItem('language') || 'en';
+            document.getElementById('langSelector').value = savedLang;
+            changeLanguage(savedLang);
         });
     </script>
 </body>

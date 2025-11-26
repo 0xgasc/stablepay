@@ -1,0 +1,128 @@
+{
+  "nav": {
+    "merchantDashboard": "Panel del Comerciante",
+    "logout": "Cerrar Sesión"
+  },
+  "tabs": {
+    "orders": "Pedidos",
+    "wallets": "Billeteras",
+    "developer": "Desarrollador",
+    "payments": "Enlaces de Pago",
+    "settings": "Configuración"
+  },
+  "profile": {
+    "pendingApproval": "Aprobación Pendiente",
+    "plan": "Plan",
+    "contact": "Contacto",
+    "totalOrders": "Total de Pedidos",
+    "memberSince": "Miembro Desde"
+  },
+  "stats": {
+    "totalOrders": "Total de Pedidos",
+    "confirmed": "Confirmados",
+    "pending": "Pendientes",
+    "totalVolume": "Volumen Total"
+  },
+  "orders": {
+    "title": "Pedidos Recientes",
+    "searchPlaceholder": "Buscar pedidos...",
+    "refresh": "Actualizar",
+    "orderId": "ID del Pedido",
+    "amount": "Cantidad",
+    "chain": "Cadena",
+    "status": "Estado",
+    "transaction": "Transacción",
+    "receipt": "Recibo",
+    "customer": "Cliente",
+    "created": "Creado",
+    "actions": "Acciones",
+    "loading": "Cargando pedidos...",
+    "batchRefund": {
+      "title": "Reembolso por Lotes",
+      "subtitle": "Procesa múltiples reembolsos en una sola transacción (solo EVM)",
+      "clearSelection": "Borrar Selección",
+      "emptyMessage": "Seleccione pedidos de la tabla anterior para agregarlos al reembolso por lotes",
+      "selectedOrders": "Pedidos Seleccionados",
+      "total": "Total",
+      "execute": "Ejecutar Reembolso por Lotes"
+    }
+  },
+  "wallets": {
+    "title": "Cadenas de Pago y Billeteras",
+    "subtitle": "Configure en qué blockchains aceptar pagos y establezca sus direcciones de billetera"
+  },
+  "developer": {
+    "title": "Agrega Pagos Cripto en 3 Pasos",
+    "subtitle": "Copia y pega este código para aceptar USDC en tu sitio web",
+    "step1": {
+      "title": "Agrega el Script a tu Sitio Web",
+      "description": "Agrega esto antes de tu etiqueta de cierre </head>:"
+    },
+    "step2": {
+      "title": "Agrega el Widget de Pago",
+      "description": "Pega esto donde quieras el botón de pago:"
+    },
+    "step3": {
+      "title": "¡Prueba y Activa!",
+      "description": "¡Eso es todo! Tus clientes ahora pueden pagar con USDC."
+    },
+    "credentials": {
+      "title": "Tus Credenciales",
+      "merchantId": "ID del Comerciante",
+      "copy": "Copiar",
+      "usageNote": "Usa esto en el atributo data-merchant",
+      "configuredWallets": "Billeteras Configuradas",
+      "securityTitle": "Seguridad",
+      "securityNote": "Tu ID de comerciante es público (seguro para usar en código frontend). Tus claves privadas permanecen contigo."
+    },
+    "frameworks": {
+      "title": "Ejemplos de Frameworks",
+      "subtitle": "Código listo para usar para frameworks populares",
+      "viewExamples": "Ver Ejemplos Completos"
+    },
+    "documentation": {
+      "title": "Documentación y Recursos",
+      "gettingStarted": {
+        "title": "Guía de Inicio",
+        "description": "Guía de configuración completa en 5 minutos"
+      },
+      "api": {
+        "title": "Documentación de API",
+        "description": "Referencia completa de API con ejemplos"
+      },
+      "examples": {
+        "title": "Ejemplos de Código",
+        "description": "React, Vue, WordPress y más"
+      },
+      "troubleshooting": {
+        "title": "Solución de Problemas",
+        "description": "Problemas comunes y soluciones"
+      },
+      "support": {
+        "title": "¿Necesitas Ayuda?",
+        "description": "Nuestro equipo de soporte está aquí para ayudarte a integrar StablePay",
+        "contact": "Contactar Soporte"
+      }
+    }
+  },
+  "paymentLinks": {
+    "title": "Enlaces de Pago",
+    "createNew": "Crear Nuevo Enlace",
+    "viewAll": "Ver Todos los Enlaces",
+    "description": "Crea enlaces de pago compartibles para tus productos o servicios"
+  },
+  "settings": {
+    "title": "Información de la Cuenta",
+    "save": "Guardar Cambios"
+  },
+  "common": {
+    "copy": "Copiar",
+    "copied": "¡Copiado!",
+    "close": "Cerrar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito"
+  }
+}
