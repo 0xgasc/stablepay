@@ -1,0 +1,37 @@
+{
+  "title": "S'inscrire - StablePay",
+  "nav": {
+    "signIn": "SE CONNECTER"
+  },
+  "heading": "CRÉER UN COMPTE",
+  "subheading": "Infrastructure de paiement d'entreprise en 30 secondes",
+  "form": {
+    "companyName": "NOM DE L'ENTREPRISE",
+    "companyPlaceholder": "Acme Corp",
+    "yourName": "VOTRE NOM",
+    "namePlaceholder": "Jean Dupont",
+    "email": "E-MAIL",
+    "emailPlaceholder": "jean@acme.com",
+    "password": "MOT DE PASSE",
+    "passwordPlaceholder": "Minimum 8 caractères",
+    "terms": "J'accepte les Conditions de Service",
+    "createBtn": "CRÉER UN COMPTE",
+    "creatingBtn": "CRÉATION DU COMPTE..."
+  },
+  "nextSteps": {
+    "heading": "PROCHAINES ÉTAPES",
+    "step1": "Accès immédiat au tableau de bord",
+    "step2": "Configurer les adresses de portefeuille",
+    "step3": "Sélectionner le plan et les chaînes",
+    "step4": "Commencer à accepter les paiements"
+  },
+  "footer": {
+    "hasAccount": "Vous avez déjà un compte?",
+    "signInLink": "SE CONNECTER"
+  },
+  "success": {
+    "heading": "COMPTE CRÉÉ",
+    "message": "Bienvenue dans l'infrastructure d'entreprise StablePay",
+    "continueBtn": "CONTINUER VERS LE TABLEAU DE BORD"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "title": "Developer Documentation - StablePay",
+  "nav": {
+    "badge": "DEVELOPER DOCS",
+    "quickstart": "QUICK START",
+    "checkout": "CHECKOUT",
+    "wallets": "WALLETS"
+  },
+  "hero": {
+    "title": "ACCEPT USDC PAYMENTS IN MINUTES",
+    "subtitle": "Simple APIs for crypto payments, wallet infrastructure, and fiat onramps",
+    "getStarted": "GET STARTED",
+    "viewDemo": "VIEW DEMO"
+  },
+  "quickstart": {
+    "title": "QUICK START",
+    "step1": {
+      "title": "1. ADD THE CHECKOUT WIDGET",
+      "description": "Add this to your webpage to accept USDC payments:"
+    },
+    "step2": {
+      "title": "2. LIVE DEMO",
+      "description": "See the checkout widget in action:"
+    }
+  },
+  "api": {
+    "title": "CHECKOUT API",
+    "create": {
+      "title": "CREATE CHECKOUT SESSION",
+      "description": "Create a payment session programmatically"
+    },
+    "response": {
+      "title": "RESPONSE"
+    }
+  },
+  "wallet": {
+    "title": "WALLET API",
+    "create": {
+      "title": "CREATE CUSTOMER WALLET",
+      "description": "Generate invisible wallets for your users"
+    },
+    "balance": {
+      "title": "GET WALLET BALANCE"
+    }
+  },
+  "features": {
+    "title": "PLATFORM FEATURES",
+    "checkout": {
+      "title": "EMBEDDED CHECKOUT",
+      "description": "Accept crypto and card payments with a single widget"
+    },
+    "wallets": {
+      "title": "INVISIBLE WALLETS",
+      "description": "Create wallets for users without them knowing it's crypto"
+    },
+    "onramps": {
+      "title": "FIAT ON/OFF RAMPS",
+      "description": "Convert between traditional money and USDC seamlessly"
+    },
+    "multichain": {
+      "title": "MULTI-CHAIN",
+      "description": "Support Ethereum, Base, Polygon, Arbitrum, Solana"
+    },
+    "settlement": {
+      "title": "INSTANT SETTLEMENT",
+      "description": "Receive USDC payments in seconds, not days"
+    },
+    "api": {
+      "title": "DEVELOPER APIS",
+      "description": "Full REST API with webhooks and real-time events"
+    }
+  },
+  "cta": {
+    "title": "READY TO GET STARTED?",
+    "subtitle": "Join hundreds of businesses accepting USDC payments with StablePay",
+    "button": "CREATE FREE ACCOUNT"
+  }
+}

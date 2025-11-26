@@ -1,0 +1,37 @@
+{
+  "title": "Sign Up - StablePay",
+  "nav": {
+    "signIn": "SIGN IN"
+  },
+  "heading": "CREATE ACCOUNT",
+  "subheading": "Enterprise payment infrastructure in 30 seconds",
+  "form": {
+    "companyName": "COMPANY NAME",
+    "companyPlaceholder": "Acme Corp",
+    "yourName": "YOUR NAME",
+    "namePlaceholder": "John Doe",
+    "email": "EMAIL",
+    "emailPlaceholder": "john@acme.com",
+    "password": "PASSWORD",
+    "passwordPlaceholder": "Minimum 8 characters",
+    "terms": "I agree to the Terms of Service",
+    "createBtn": "CREATE ACCOUNT",
+    "creatingBtn": "CREATING ACCOUNT..."
+  },
+  "nextSteps": {
+    "heading": "NEXT STEPS",
+    "step1": "Access dashboard immediately",
+    "step2": "Configure wallet addresses",
+    "step3": "Select plan and chains",
+    "step4": "Begin accepting payments"
+  },
+  "footer": {
+    "hasAccount": "Already have an account?",
+    "signInLink": "SIGN IN"
+  },
+  "success": {
+    "heading": "ACCOUNT CREATED",
+    "message": "Welcome to StablePay enterprise infrastructure",
+    "continueBtn": "CONTINUE TO DASHBOARD"
+  }
+}

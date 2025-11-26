@@ -1,0 +1,37 @@
+{
+  "title": "Registrarse - StablePay",
+  "nav": {
+    "signIn": "INICIAR SESIÓN"
+  },
+  "heading": "CREAR CUENTA",
+  "subheading": "Infraestructura de pago empresarial en 30 segundos",
+  "form": {
+    "companyName": "NOMBRE DE LA EMPRESA",
+    "companyPlaceholder": "Acme Corp",
+    "yourName": "SU NOMBRE",
+    "namePlaceholder": "Juan Pérez",
+    "email": "CORREO ELECTRÓNICO",
+    "emailPlaceholder": "juan@acme.com",
+    "password": "CONTRASEÑA",
+    "passwordPlaceholder": "Mínimo 8 caracteres",
+    "terms": "Acepto los Términos de Servicio",
+    "createBtn": "CREAR CUENTA",
+    "creatingBtn": "CREANDO CUENTA..."
+  },
+  "nextSteps": {
+    "heading": "PRÓXIMOS PASOS",
+    "step1": "Acceso inmediato al panel",
+    "step2": "Configurar direcciones de billetera",
+    "step3": "Seleccionar plan y cadenas",
+    "step4": "Comenzar a aceptar pagos"
+  },
+  "footer": {
+    "hasAccount": "¿Ya tienes una cuenta?",
+    "signInLink": "INICIAR SESIÓN"
+  },
+  "success": {
+    "heading": "CUENTA CREADA",
+    "message": "Bienvenido a la infraestructura empresarial de StablePay",
+    "continueBtn": "CONTINUAR AL PANEL"
+  }
+}

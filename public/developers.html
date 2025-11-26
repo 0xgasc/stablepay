@@ -3,32 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StablePay Developer Documentation</title>
+    <title data-i18n="title">Developer Documentation - StablePay</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        pre { background: #f1f5f9; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
-        code { background: #e2e8f0; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body {
+            background: #FFFFFF;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        body.night-mode .bg-white {
+            background: #000 !important;
+        }
+        body.night-mode .bg-gray-50 {
+            background: #1a1a1a !important;
+        }
+        body.night-mode .text-black {
+            color: #fff !important;
+        }
+        body.night-mode .text-gray-900 {
+            color: #fff !important;
+        }
+        body.night-mode .text-gray-600 {
+            color: #aaa !important;
+        }
+        body.night-mode .text-gray-700 {
+            color: #ccc !important;
+        }
+        body.night-mode .border-black {
+            border-color: #fff !important;
+        }
+        body.night-mode .border-gray-300 {
+            border-color: #666 !important;
+        }
+        body.night-mode .shadow-brutal {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        .brutal-border {
+            border: 4px solid #000;
+        }
+        .shadow-brutal {
+            box-shadow: 8px 8px 0px #000;
+        }
+        .btn-brutal {
+            border: 4px solid #000;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        .btn-brutal:hover {
+            transform: translate(4px, 4px);
+            box-shadow: 4px 4px 0px #000;
+        }
+        body.night-mode .btn-brutal {
+            border-color: #fff;
+        }
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 4px 4px 0px #fff;
+        }
+        pre {
+            background: #000;
+            padding: 1rem;
+            border: 4px solid #000;
+            overflow-x: auto;
+            color: #00E5FF;
+            font-family: 'Courier New', monospace;
+        }
+        body.night-mode pre {
+            background: #000;
+            border-color: #fff;
+            color: #00E5FF;
+        }
+        code {
+            background: #000;
+            color: #00E5FF;
+            padding: 0.25rem 0.5rem;
+            border: 2px solid #000;
+            font-family: 'Courier New', monospace;
+        }
+        body.night-mode code {
+            background: #000;
+            border-color: #fff;
+        }
+        input, select {
+            border: 4px solid #000;
+            border-radius: 0;
+        }
+        body.night-mode input,
+        body.night-mode select {
+            border-color: #fff;
+            background: #000;
+            color: #fff;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b">
+    <header class="bg-white border-b-4 border-black brutal-border">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center">
-                    <a href="/" class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        StablePay
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center gap-4">
+                    <a href="/" class="text-3xl font-bold text-black" style="text-transform: uppercase;">
+                        STABLEPAY
                     </a>
-                    <span class="ml-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                        Developer Docs
+                    <span class="px-3 py-1 bg-white border-4 border-black text-black text-sm font-bold" style="background: #4FC3F7;" data-i18n="nav.badge">
+                        DEVELOPER DOCS
                     </span>
                 </div>
-                <nav class="flex space-x-8">
-                    <a href="#quickstart" class="text-gray-600 hover:text-gray-900">Quick Start</a>
-                    <a href="#checkout" class="text-gray-600 hover:text-gray-900">Checkout</a>
-                    <a href="#wallets" class="text-gray-600 hover:text-gray-900">Wallets</a>
-                    <a href="#onramp" class="text-gray-600 hover:text-gray-900">Onramp</a>
-                </nav>
+                <div class="flex items-center gap-4">
+                    <!-- Language Selector -->
+                    <select id="languageSelector" class="px-3 py-2 bg-white text-black font-bold text-sm">
+                        <option value="en">EN</option>
+                        <option value="es">ES</option>
+                        <option value="fr">FR</option>
+                        <option value="pt">PT</option>
+                    </select>
+                    <!-- Night Mode Toggle -->
+                    <button id="nightModeToggle" class="px-4 py-2 bg-white text-black font-bold text-sm btn-brutal">
+                        <span class="night-icon">NIGHT</span>
+                    </button>
+                    <nav class="flex space-x-6">
+                        <a href="#quickstart" class="text-black hover:text-gray-600 font-bold text-sm" style="text-transform: uppercase;" data-i18n="nav.quickstart">QUICK START</a>
+                        <a href="#checkout" class="text-black hover:text-gray-600 font-bold text-sm" style="text-transform: uppercase;" data-i18n="nav.checkout">CHECKOUT</a>
+                        <a href="#wallets" class="text-black hover:text-gray-600 font-bold text-sm" style="text-transform: uppercase;" data-i18n="nav.wallets">WALLETS</a>
+                    </nav>
+                </div>
             </div>
         </div>
     </header>
@@ -36,29 +144,29 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Hero -->
         <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-gray-900 mb-4">
-                Accept USDC payments in minutes
+            <h1 class="text-5xl font-bold text-black mb-4" style="text-transform: uppercase;" data-i18n="hero.title">
+                ACCEPT USDC PAYMENTS IN MINUTES
             </h1>
-            <p class="text-xl text-gray-600 mb-8">
+            <p class="text-xl text-gray-700 mb-8" data-i18n="hero.subtitle">
                 Simple APIs for crypto payments, wallet infrastructure, and fiat onramps
             </p>
             <div class="flex justify-center space-x-4">
-                <a href="#quickstart" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
-                    Get Started
+                <a href="#quickstart" class="bg-white text-black px-6 py-3 font-bold btn-brutal" style="background: #00E5FF; text-transform: uppercase; text-decoration: none;" data-i18n="hero.getStarted">
+                    GET STARTED
                 </a>
-                <a href="#demo" class="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50">
-                    View Demo
+                <a href="#demo" class="border-4 border-black text-black px-6 py-3 font-bold btn-brutal" style="text-transform: uppercase; text-decoration: none;" data-i18n="hero.viewDemo">
+                    VIEW DEMO
                 </a>
             </div>
         </div>
 
         <!-- Quick Start -->
         <section id="quickstart" class="mb-16">
-            <h2 class="text-3xl font-bold text-gray-900 mb-8">Quick Start</h2>
+            <h2 class="text-4xl font-bold text-black mb-8" style="text-transform: uppercase;" data-i18n="quickstart.title">QUICK START</h2>
 
-            <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
-                <h3 class="text-xl font-semibold mb-4">1. Add the checkout widget</h3>
-                <p class="text-gray-600 mb-4">Add this to your webpage to accept USDC payments:</p>
+            <div class="bg-white border-4 border-black p-8 mb-8 shadow-brutal">
+                <h3 class="text-2xl font-bold mb-4" style="text-transform: uppercase;" data-i18n="quickstart.step1.title">1. ADD THE CHECKOUT WIDGET</h3>
+                <p class="text-gray-700 mb-4 font-medium" data-i18n="quickstart.step1.description">Add this to your webpage to accept USDC payments:</p>
                 <pre><code>&lt;script src="https://stablepay-nine.vercel.app/checkout-widget.js"&gt;&lt;/script&gt;
 &lt;div
   class="stablepay-checkout"
@@ -69,10 +177,10 @@
 &gt;&lt;/div&gt;</code></pre>
             </div>
 
-            <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
-                <h3 class="text-xl font-semibold mb-4">2. Live Demo</h3>
-                <p class="text-gray-600 mb-4">See the checkout widget in action:</p>
-                <div id="demo-widget" class="max-w-md mx-auto">
+            <div class="bg-white border-4 border-black p-8 mb-8 shadow-brutal">
+                <h3 class="text-2xl font-bold mb-4" style="text-transform: uppercase;" data-i18n="quickstart.step2.title">2. LIVE DEMO</h3>
+                <p class="text-gray-700 mb-4 font-medium" data-i18n="quickstart.step2.description">See the checkout widget in action:</p>
+                <div id="demo-widget" class="max-w-md mx-auto border-4 border-black p-8 shadow-brutal" style="background: #4FC3F7;">
                     <div
                         class="stablepay-checkout"
                         data-amount="100"
@@ -86,12 +194,12 @@
 
         <!-- API Documentation -->
         <section id="checkout" class="mb-16">
-            <h2 class="text-3xl font-bold text-gray-900 mb-8">Checkout API</h2>
+            <h2 class="text-4xl font-bold text-black mb-8" style="text-transform: uppercase;" data-i18n="api.title">CHECKOUT API</h2>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h3 class="text-xl font-semibold mb-4">Create Checkout Session</h3>
-                    <p class="text-gray-600 mb-4">Create a payment session programmatically</p>
+                <div class="bg-white border-4 border-black p-8 shadow-brutal">
+                    <h3 class="text-2xl font-bold mb-4" style="text-transform: uppercase;" data-i18n="api.create.title">CREATE CHECKOUT SESSION</h3>
+                    <p class="text-gray-700 mb-4 font-medium" data-i18n="api.create.description">Create a payment session programmatically</p>
                     <pre><code>POST /api/v1/checkout/sessions
 
 {
@@ -103,8 +211,8 @@
 }</code></pre>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h3 class="text-xl font-semibold mb-4">Response</h3>
+                <div class="bg-white border-4 border-black p-8 shadow-brutal">
+                    <h3 class="text-2xl font-bold mb-4" style="text-transform: uppercase;" data-i18n="api.response.title">RESPONSE</h3>
                     <pre><code>{
   "id": "cs_1234567890",
   "status": "pending",
@@ -118,12 +226,12 @@
         </section>
 
         <section id="wallets" class="mb-16">
-            <h2 class="text-3xl font-bold text-gray-900 mb-8">Wallet API</h2>
+            <h2 class="text-4xl font-bold text-black mb-8" style="text-transform: uppercase;" data-i18n="wallet.title">WALLET API</h2>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h3 class="text-xl font-semibold mb-4">Create Customer Wallet</h3>
-                    <p class="text-gray-600 mb-4">Generate invisible wallets for your users</p>
+                <div class="bg-white border-4 border-black p-8 shadow-brutal">
+                    <h3 class="text-2xl font-bold mb-4" style="text-transform: uppercase;" data-i18n="wallet.create.title">CREATE CUSTOMER WALLET</h3>
+                    <p class="text-gray-700 mb-4 font-medium" data-i18n="wallet.create.description">Generate invisible wallets for your users</p>
                     <pre><code>POST /api/v1/wallets
 
 {
@@ -134,8 +242,8 @@
 }</code></pre>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h3 class="text-xl font-semibold mb-4">Get Wallet Balance</h3>
+                <div class="bg-white border-4 border-black p-8 shadow-brutal">
+                    <h3 class="text-2xl font-bold mb-4" style="text-transform: uppercase;" data-i18n="wallet.balance.title">GET WALLET BALANCE</h3>
                     <pre><code>{
   "id": "wallet_1234567890",
   "address": "0x...",
@@ -150,86 +258,50 @@
             </div>
         </section>
 
-        <section id="onramp" class="mb-16">
-            <h2 class="text-3xl font-bold text-gray-900 mb-8">Onramp API</h2>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h3 class="text-xl font-semibold mb-4">Get Quote</h3>
-                    <p class="text-gray-600 mb-4">Get real-time conversion rates</p>
-                    <pre><code>POST /api/v1/onramp/quote
-
-{
-  "amount": 100,
-  "sourceCurrency": "USD",
-  "destinationCurrency": "USDC"
-}</code></pre>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h3 class="text-xl font-semibold mb-4">Create Onramp</h3>
-                    <pre><code>POST /api/v1/onramp/create
-
-{
-  "amount": 100,
-  "destinationAddress": "0x...",
-  "email": "user@example.com",
-  "paymentMethod": "card"
-}</code></pre>
-                </div>
-            </div>
-        </section>
-
         <!-- Features Grid -->
         <section class="mb-16">
-            <h2 class="text-3xl font-bold text-gray-900 mb-8">Platform Features</h2>
+            <h2 class="text-4xl font-bold text-black mb-8" style="text-transform: uppercase;" data-i18n="features.title">PLATFORM FEATURES</h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-                    <div class="text-4xl mb-4">💳</div>
-                    <h3 class="text-xl font-semibold mb-2">Embedded Checkout</h3>
-                    <p class="text-gray-600">Accept crypto and card payments with a single widget</p>
+                <div class="bg-white border-4 border-black p-8 text-center shadow-brutal" style="background: #00E5FF;">
+                    <h3 class="text-xl font-bold mb-2" style="text-transform: uppercase;" data-i18n="features.checkout.title">EMBEDDED CHECKOUT</h3>
+                    <p class="text-black font-medium" data-i18n="features.checkout.description">Accept crypto and card payments with a single widget</p>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-                    <div class="text-4xl mb-4">👛</div>
-                    <h3 class="text-xl font-semibold mb-2">Invisible Wallets</h3>
-                    <p class="text-gray-600">Create wallets for users without them knowing it's crypto</p>
+                <div class="bg-white border-4 border-black p-8 text-center shadow-brutal" style="background: #4FC3F7;">
+                    <h3 class="text-xl font-bold mb-2" style="text-transform: uppercase;" data-i18n="features.wallets.title">INVISIBLE WALLETS</h3>
+                    <p class="text-black font-medium" data-i18n="features.wallets.description">Create wallets for users without them knowing it's crypto</p>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-                    <div class="text-4xl mb-4">🔄</div>
-                    <h3 class="text-xl font-semibold mb-2">Fiat On/Off Ramps</h3>
-                    <p class="text-gray-600">Convert between traditional money and USDC seamlessly</p>
+                <div class="bg-white border-4 border-black p-8 text-center shadow-brutal" style="background: #7C4DFF;">
+                    <h3 class="text-xl font-bold mb-2 text-white" style="text-transform: uppercase;" data-i18n="features.onramps.title">FIAT ON/OFF RAMPS</h3>
+                    <p class="text-white font-medium" data-i18n="features.onramps.description">Convert between traditional money and USDC seamlessly</p>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-                    <div class="text-4xl mb-4">🌐</div>
-                    <h3 class="text-xl font-semibant mb-2">Multi-Chain</h3>
-                    <p class="text-gray-600">Support Ethereum, Base, Polygon, Arbitrum, Solana</p>
+                <div class="bg-white border-4 border-black p-8 text-center shadow-brutal">
+                    <h3 class="text-xl font-bold mb-2" style="text-transform: uppercase;" data-i18n="features.multichain.title">MULTI-CHAIN</h3>
+                    <p class="text-black font-medium" data-i18n="features.multichain.description">Support Ethereum, Base, Polygon, Arbitrum, Solana</p>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-                    <div class="text-4xl mb-4">⚡</div>
-                    <h3 class="text-xl font-semibold mb-2">Instant Settlement</h3>
-                    <p class="text-gray-600">Receive USDC payments in seconds, not days</p>
+                <div class="bg-white border-4 border-black p-8 text-center shadow-brutal">
+                    <h3 class="text-xl font-bold mb-2" style="text-transform: uppercase;" data-i18n="features.settlement.title">INSTANT SETTLEMENT</h3>
+                    <p class="text-black font-medium" data-i18n="features.settlement.description">Receive USDC payments in seconds, not days</p>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-                    <div class="text-4xl mb-4">🔧</div>
-                    <h3 class="text-xl font-semibold mb-2">Developer APIs</h3>
-                    <p class="text-gray-600">Full REST API with webhooks and real-time events</p>
+                <div class="bg-white border-4 border-black p-8 text-center shadow-brutal">
+                    <h3 class="text-xl font-bold mb-2" style="text-transform: uppercase;" data-i18n="features.api.title">DEVELOPER APIS</h3>
+                    <p class="text-black font-medium" data-i18n="features.api.description">Full REST API with webhooks and real-time events</p>
                 </div>
             </div>
         </section>
 
         <!-- CTA -->
         <section class="text-center">
-            <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-12 text-white">
-                <h2 class="text-3xl font-bold mb-4">Ready to get started?</h2>
-                <p class="text-xl mb-8">Join hundreds of businesses accepting USDC payments with StablePay</p>
-                <a href="/register" class="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                    Create Free Account
+            <div class="bg-white border-4 border-black p-12 text-black shadow-brutal" style="background: linear-gradient(135deg, #00E5FF 0%, #4FC3F7 50%, #7C4DFF 100%);">
+                <h2 class="text-4xl font-bold mb-4" style="text-transform: uppercase;" data-i18n="cta.title">READY TO GET STARTED?</h2>
+                <p class="text-xl mb-8 font-medium" data-i18n="cta.subtitle">Join hundreds of businesses accepting USDC payments with StablePay</p>
+                <a href="/signup.html" class="bg-white text-black px-8 py-4 font-bold btn-brutal" style="text-transform: uppercase; text-decoration: none;" data-i18n="cta.button">
+                    CREATE FREE ACCOUNT
                 </a>
             </div>
         </section>
@@ -237,5 +309,70 @@
 
     <!-- Load the checkout widget -->
     <script src="/checkout-widget.js"></script>
+
+    <script>
+        // i18n functionality
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+        let translations = {};
+
+        async function loadTranslations(lang) {
+            try {
+                const response = await fetch(`./locales/developers-${lang}.json`);
+                translations = await response.json();
+                applyTranslations();
+            } catch (error) {
+                console.error('Failed to load translations:', error);
+            }
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const keys = key.split('.');
+                let value = translations;
+
+                for (const k of keys) {
+                    value = value[k];
+                    if (!value) break;
+                }
+
+                if (value) {
+                    if (element.tagName === 'TITLE') {
+                        document.title = value;
+                    } else {
+                        element.textContent = value;
+                    }
+                }
+            });
+        }
+
+        // Language selector
+        document.getElementById('languageSelector').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('preferredLanguage', currentLang);
+            loadTranslations(currentLang);
+        });
+
+        // Set initial language
+        document.getElementById('languageSelector').value = currentLang;
+        loadTranslations(currentLang);
+
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const nightIcon = document.querySelector('.night-icon');
+
+        // Check for saved night mode preference
+        if (localStorage.getItem('nightMode') === 'true') {
+            document.body.classList.add('night-mode');
+            nightIcon.textContent = 'DAY';
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            const isNightMode = document.body.classList.contains('night-mode');
+            localStorage.setItem('nightMode', isNightMode);
+            nightIcon.textContent = isNightMode ? 'DAY' : 'NIGHT';
+        });
+    </script>
 </body>
 </html>

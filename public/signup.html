@@ -3,94 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - StablePay</title>
+    <title data-i18n="title">Sign Up - StablePay</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
         body {
-            background: #000000;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #FFFFFF;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        body.night-mode .bg-white {
+            background: #000 !important;
+        }
+        body.night-mode .text-black {
+            color: #fff !important;
+        }
+        body.night-mode .text-gray-700 {
+            color: #ccc !important;
+        }
+        body.night-mode .text-gray-400 {
+            color: #999 !important;
+        }
+        body.night-mode .text-gray-500 {
+            color: #888 !important;
+        }
+        body.night-mode .brutal-border,
+        body.night-mode .border-black {
+            border-color: #fff !important;
+        }
+        body.night-mode .border-gray-300 {
+            border-color: #666 !important;
+        }
+        body.night-mode [style*="box-shadow"][style*="#000"] {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        body.night-mode .shadow-brutal {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        .brutal-border {
+            border: 4px solid #000;
+        }
+        .shadow-brutal {
+            box-shadow: 8px 8px 0px #000;
+        }
+        .btn-brutal {
+            border: 4px solid #000;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        .btn-brutal:hover {
+            transform: translate(4px, 4px);
+            box-shadow: 4px 4px 0px #000;
+        }
+        body.night-mode .btn-brutal {
+            border-color: #fff;
+        }
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 4px 4px 0px #fff;
+        }
+        input, select {
+            border: 4px solid #000;
+            border-radius: 0;
+        }
+        body.night-mode input,
+        body.night-mode select {
+            border-color: #fff;
+            background: #000;
+            color: #fff;
         }
     </style>
 </head>
 <body class="min-h-screen">
-    <nav class="bg-black border-b border-gray-900">
+    <!-- Navigation -->
+    <nav class="bg-white border-b-4 border-black brutal-border">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <a href="/" class="text-2xl font-bold tracking-tight text-white">
+            <div class="flex justify-between items-center h-20">
+                <a href="/" class="text-3xl font-bold tracking-tight text-black" style="text-transform: uppercase;">
                     STABLEPAY
                 </a>
-                <a href="/login.html" class="text-gray-400 hover:text-white text-sm font-medium tracking-wide transition-colors">
-                    SIGN IN
-                </a>
+                <div class="flex items-center gap-4">
+                    <!-- Language Selector -->
+                    <select id="languageSelector" class="px-3 py-2 bg-white text-black font-bold text-sm">
+                        <option value="en">EN</option>
+                        <option value="es">ES</option>
+                        <option value="fr">FR</option>
+                        <option value="pt">PT</option>
+                    </select>
+                    <!-- Night Mode Toggle -->
+                    <button id="nightModeToggle" class="px-4 py-2 bg-white text-black font-bold text-sm btn-brutal">
+                        <span class="night-icon">NIGHT</span>
+                    </button>
+                    <a href="/login.html" class="text-black hover:text-gray-700 text-sm font-bold tracking-wide transition-colors" style="text-transform: uppercase;" data-i18n="nav.signIn">
+                        SIGN IN
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
 
     <div class="max-w-md mx-auto px-4 py-20">
         <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-white mb-3 tracking-tight">Create Account</h1>
-            <p class="text-gray-400">Enterprise payment infrastructure in 30 seconds</p>
+            <h1 class="text-4xl font-bold text-black mb-3 tracking-tight" style="text-transform: uppercase;" data-i18n="heading">CREATE ACCOUNT</h1>
+            <p class="text-gray-700" data-i18n="subheading">Enterprise payment infrastructure in 30 seconds</p>
         </div>
 
-        <div class="bg-gradient-to-b from-gray-900 to-black border border-gray-800 p-8">
+        <div class="bg-white border-4 border-black p-8 shadow-brutal">
             <form id="signupForm" class="space-y-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2 tracking-wide">COMPANY NAME</label>
-                    <input type="text" id="companyName" required class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors" placeholder="Acme Corp">
+                    <label class="block text-sm font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="form.companyName">COMPANY NAME</label>
+                    <input type="text" id="companyName" required class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none" data-i18n-placeholder="form.companyPlaceholder" placeholder="Acme Corp">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2 tracking-wide">YOUR NAME</label>
-                    <input type="text" id="contactName" required class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors" placeholder="John Doe">
+                    <label class="block text-sm font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="form.yourName">YOUR NAME</label>
+                    <input type="text" id="contactName" required class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none" data-i18n-placeholder="form.namePlaceholder" placeholder="John Doe">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2 tracking-wide">EMAIL</label>
-                    <input type="email" id="email" required class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors" placeholder="john@acme.com">
+                    <label class="block text-sm font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="form.email">EMAIL</label>
+                    <input type="email" id="email" required class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none" data-i18n-placeholder="form.emailPlaceholder" placeholder="john@acme.com">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2 tracking-wide">PASSWORD</label>
-                    <input type="password" id="password" required minlength="8" class="w-full px-4 py-3 bg-black border border-gray-800 text-white focus:border-blue-600 focus:outline-none transition-colors" placeholder="Minimum 8 characters">
+                    <label class="block text-sm font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="form.password">PASSWORD</label>
+                    <input type="password" id="password" required minlength="8" class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none" data-i18n-placeholder="form.passwordPlaceholder" placeholder="Minimum 8 characters">
                 </div>
 
-                <div class="bg-blue-950/30 border border-blue-900/50 p-4">
-                    <p class="text-sm font-medium text-blue-400 mb-3 tracking-wide">NEXT STEPS</p>
-                    <ul class="text-sm text-gray-400 space-y-2">
-                        <li>— Access dashboard immediately</li>
-                        <li>— Configure wallet addresses</li>
-                        <li>— Select plan and chains</li>
-                        <li>— Begin accepting payments</li>
+                <div class="bg-white border-4 border-black p-4" style="background: #00E5FF;">
+                    <p class="text-sm font-bold text-black mb-3 tracking-wide" style="text-transform: uppercase;" data-i18n="nextSteps.heading">NEXT STEPS</p>
+                    <ul class="text-sm text-black space-y-2 font-medium">
+                        <li data-i18n="nextSteps.step1">Access dashboard immediately</li>
+                        <li data-i18n="nextSteps.step2">Configure wallet addresses</li>
+                        <li data-i18n="nextSteps.step3">Select plan and chains</li>
+                        <li data-i18n="nextSteps.step4">Begin accepting payments</li>
                     </ul>
                 </div>
 
                 <label class="flex items-start">
-                    <input type="checkbox" required class="mt-1 mr-3 bg-black border-gray-800">
-                    <span class="text-sm text-gray-400">I agree to the Terms of Service</span>
+                    <input type="checkbox" required class="mt-1 mr-3 border-4 border-black">
+                    <span class="text-sm text-gray-700" data-i18n="form.terms">I agree to the Terms of Service</span>
                 </label>
 
-                <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 font-medium text-base tracking-wide transition-colors">
+                <button type="submit" id="submitBtn" class="w-full bg-white text-black py-4 font-bold text-base tracking-wide btn-brutal" style="background: #4FC3F7; text-transform: uppercase;" data-i18n="form.createBtn">
                     CREATE ACCOUNT
                 </button>
 
-                <p class="text-center text-sm text-gray-500">
-                    Already have an account? <a href="/login.html" class="text-blue-500 hover:text-blue-400 font-medium">Sign in</a>
+                <p class="text-center text-sm text-gray-700">
+                    <span data-i18n="footer.hasAccount">Already have an account?</span>
+                    <a href="/login.html" class="font-bold tracking-wide" style="color: #4FC3F7; text-transform: uppercase; text-decoration: underline;" data-i18n="footer.signInLink">
+                        SIGN IN
+                    </a>
                 </p>
             </form>
         </div>
     </div>
 
     <div id="successModal" class="hidden fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-        <div class="bg-gradient-to-b from-gray-900 to-black border border-gray-800 p-10 max-w-md w-full mx-4">
+        <div class="bg-white border-4 border-black p-10 max-w-md w-full mx-4 shadow-brutal">
             <div class="text-center">
-                <div class="w-16 h-16 bg-blue-600/20 border border-blue-600/50 flex items-center justify-center mx-auto mb-6">
-                    <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                <div class="w-16 h-16 bg-white border-4 border-black flex items-center justify-center mx-auto mb-6" style="background: #4FC3F7;">
+                    <svg class="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                        <path stroke-linecap="square" stroke-linejoin="miter" d="M5 13l4 4L19 7"/>
                     </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-white mb-3 tracking-tight">ACCOUNT CREATED</h2>
-                <p class="text-gray-400 mb-8">Welcome to StablePay enterprise infrastructure</p>
-                <a href="/login.html" class="block w-full bg-blue-600 hover:bg-blue-700 text-white py-4 font-medium tracking-wide transition-colors">
+                <h2 class="text-2xl font-bold text-black mb-3 tracking-tight" style="text-transform: uppercase;" data-i18n="success.heading">ACCOUNT CREATED</h2>
+                <p class="text-gray-700 mb-8" data-i18n="success.message">Welcome to StablePay enterprise infrastructure</p>
+                <a href="/login.html" class="block w-full bg-white text-black py-4 font-bold tracking-wide btn-brutal" style="background: #4FC3F7; text-transform: uppercase; text-decoration: none;" data-i18n="success.continueBtn">
                     CONTINUE TO DASHBOARD
                 </a>
             </div>
@@ -98,11 +186,93 @@
     </div>
 
     <script>
+        // i18n functionality
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+        let translations = {};
+
+        async function loadTranslations(lang) {
+            try {
+                const response = await fetch(`./locales/signup-${lang}.json`);
+                translations = await response.json();
+                applyTranslations();
+            } catch (error) {
+                console.error('Failed to load translations:', error);
+            }
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const keys = key.split('.');
+                let value = translations;
+
+                for (const k of keys) {
+                    value = value[k];
+                    if (!value) break;
+                }
+
+                if (value) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = value;
+                    } else if (element.tagName === 'TITLE') {
+                        document.title = value;
+                    } else {
+                        element.textContent = value;
+                    }
+                }
+            });
+
+            // Handle placeholders separately
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-i18n-placeholder');
+                const keys = key.split('.');
+                let value = translations;
+
+                for (const k of keys) {
+                    value = value[k];
+                    if (!value) break;
+                }
+
+                if (value) {
+                    element.placeholder = value;
+                }
+            });
+        }
+
+        // Language selector
+        document.getElementById('languageSelector').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            localStorage.setItem('preferredLanguage', currentLang);
+            loadTranslations(currentLang);
+        });
+
+        // Set initial language
+        document.getElementById('languageSelector').value = currentLang;
+        loadTranslations(currentLang);
+
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const nightIcon = document.querySelector('.night-icon');
+
+        // Check for saved night mode preference
+        if (localStorage.getItem('nightMode') === 'true') {
+            document.body.classList.add('night-mode');
+            nightIcon.textContent = 'DAY';
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            const isNightMode = document.body.classList.contains('night-mode');
+            localStorage.setItem('nightMode', isNightMode);
+            nightIcon.textContent = isNightMode ? 'DAY' : 'NIGHT';
+        });
+
+        // Signup form submission
         document.getElementById('signupForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.textContent = 'CREATING ACCOUNT...';
+            submitBtn.textContent = translations.form?.creatingBtn || 'CREATING ACCOUNT...';
 
             try {
                 const response = await fetch(window.location.origin + '/api/v1/signup', {
@@ -124,12 +294,12 @@
                 } else {
                     alert('Error: ' + (result.error || 'Failed to create account'));
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'CREATE ACCOUNT';
+                    submitBtn.textContent = translations.form?.createBtn || 'CREATE ACCOUNT';
                 }
             } catch (error) {
                 alert('Failed to create account. Please try again.');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'CREATE ACCOUNT';
+                submitBtn.textContent = translations.form?.createBtn || 'CREATE ACCOUNT';
             }
         });
     </script>
