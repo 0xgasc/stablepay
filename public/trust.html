@@ -93,20 +93,104 @@
             box-shadow: 2px 2px 0px #000;
         }
 
-        .accent-yellow {
-            background: #FFD93D;
+        /* Cold color palette */
+        .accent-cyan {
+            background: #00E5FF;
         }
 
         .accent-blue {
-            background: #6BCF7F;
+            background: #4FC3F7;
         }
 
-        .accent-pink {
-            background: #FF6B9D;
+        .accent-indigo {
+            background: #7C4DFF;
         }
 
-        .accent-purple {
-            background: #C69EFF;
+        .accent-teal {
+            background: #1DE9B6;
+        }
+
+        .accent-ice {
+            background: #B2EBF2;
+        }
+
+        .accent-steel {
+            background: #90A4AE;
+        }
+
+        .bg-cyan-100 {
+            background: #B2EBF2;
+        }
+
+        .bg-teal-100 {
+            background: #B2DFDB;
+        }
+
+        .bg-ice-100 {
+            background: #B2EBF2;
+        }
+
+        .bg-indigo-100 {
+            background: #C5CAE9;
+        }
+
+        .bg-steel-100 {
+            background: #CFD8DC;
+        }
+
+        /* List styling */
+        ul li {
+            padding-left: 1em;
+            position: relative;
+        }
+
+        ul li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        /* Floating animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes slide-diagonal {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(10px, -10px); }
+        }
+
+        @keyframes pulse-shadow {
+            0%, 100% { box-shadow: 8px 8px 0px #000; }
+            50% { box-shadow: 12px 12px 0px #000; }
+        }
+
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .slide-animation {
+            animation: slide-diagonal 4s ease-in-out infinite;
+        }
+
+        .pulse-shadow-animation {
+            animation: pulse-shadow 2s ease-in-out infinite;
+        }
+
+        /* Typography enhancements */
+        .text-massive {
+            font-size: 7rem;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+        }
+
+        @media (max-width: 768px) {
+            .text-massive {
+                font-size: 4rem;
+            }
         }
 
         h1, h2, h3 {
@@ -202,52 +286,52 @@
             fill: none;
         }
 
-        body.night-mode .accent-yellow {
-            background: #3a3500;
+        body.night-mode .accent-cyan {
+            background: #004D5C;
         }
 
         body.night-mode .accent-blue {
-            background: #1a3a1f;
+            background: #1A3E5C;
         }
 
-        body.night-mode .accent-pink {
-            background: #3a1a27;
+        body.night-mode .accent-indigo {
+            background: #2D1B4E;
         }
 
-        body.night-mode .accent-purple {
-            background: #2d1a3a;
+        body.night-mode .accent-teal {
+            background: #0A3D35;
         }
 
-        body.night-mode .bg-yellow-100 {
-            background: #3a3500;
+        body.night-mode .accent-ice {
+            background: #1E3D42;
         }
 
-        body.night-mode .bg-green-100 {
-            background: #1a3a1f;
+        body.night-mode .accent-steel {
+            background: #2C3539;
+        }
+
+        body.night-mode .bg-cyan-100 {
+            background: #004D5C;
         }
 
         body.night-mode .bg-blue-100 {
-            background: #1a2a3a;
+            background: #1A3E5C;
         }
 
-        body.night-mode .bg-pink-300 {
-            background: #3a1a27;
+        body.night-mode .bg-indigo-100 {
+            background: #2D1B4E;
         }
 
-        body.night-mode .bg-green-300 {
-            background: #1a3a1f;
+        body.night-mode .bg-teal-100 {
+            background: #0A3D35;
         }
 
-        body.night-mode .bg-yellow-300 {
-            background: #3a3500;
+        body.night-mode .bg-ice-100 {
+            background: #1E3D42;
         }
 
-        body.night-mode .bg-purple-100 {
-            background: #2d1a3a;
-        }
-
-        body.night-mode .bg-pink-100 {
-            background: #3a1a27;
+        body.night-mode .bg-steel-100 {
+            background: #2C3539;
         }
 
         body.night-mode .hover\:text-gray-600:hover {
@@ -268,7 +352,7 @@
         .night-toggle-slider {
             width: 24px;
             height: 24px;
-            background: #FFD93D;
+            background: #00E5FF;
             position: absolute;
             top: 3px;
             left: 3px;
@@ -283,7 +367,7 @@
 
         body.night-mode .night-toggle-slider {
             left: 33px;
-            background: #C69EFF;
+            background: #7C4DFF;
         }
     </style>
 </head>
@@ -308,25 +392,29 @@
     </header>
 
     <!-- Hero Section -->
-    <section class="py-16 px-4 bg-white border-b-4 border-black">
-        <div class="max-w-5xl mx-auto">
-            <div class="bg-yellow-300 brutal-border p-12 text-center">
-                <svg class="w-24 h-24 mx-auto mb-6" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M50 10 L50 40" stroke="#000" stroke-width="5" stroke-linecap="round"/>
-                    <rect x="25" y="40" width="50" height="45" fill="none" stroke="#000" stroke-width="5" stroke-linejoin="round"/>
-                    <circle cx="50" cy="62" r="6" fill="#000"/>
-                    <path d="M50 68 L50 75" stroke="#000" stroke-width="5" stroke-linecap="round"/>
-                    <path d="M35 40 C35 28 42 20 50 20 C58 20 65 28 65 40" stroke="#000" stroke-width="5" stroke-linecap="round" fill="none"/>
-                </svg>
-                <h1 class="text-5xl md:text-6xl font-black mb-6 text-black uppercase">
-                    SECURITY FIRST
+    <section class="py-20 px-4 bg-white border-b-4 border-black overflow-hidden">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-12">
+                <div class="inline-block float-animation mb-6">
+                    <svg class="w-32 h-32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 10 L50 40" stroke="#000" stroke-width="5" stroke-linecap="round"/>
+                        <rect x="25" y="40" width="50" height="45" fill="none" stroke="#000" stroke-width="5" stroke-linejoin="round"/>
+                        <circle cx="50" cy="62" r="6" fill="#000"/>
+                        <path d="M50 68 L50 75" stroke="#000" stroke-width="5" stroke-linecap="round"/>
+                        <path d="M35 40 C35 28 42 20 50 20 C58 20 65 28 65 40" stroke="#000" stroke-width="5" stroke-linecap="round" fill="none"/>
+                    </svg>
+                </div>
+                <h1 class="text-massive text-black uppercase mb-6">
+                    TRUST
                 </h1>
-                <p class="text-xl md:text-2xl text-black font-medium mb-8 max-w-2xl mx-auto">
-                    Non-custodial crypto payments. Your keys, your coins. We never touch your money.
-                </p>
-                <a href="#security" class="btn-brutal inline-block px-10 py-4 text-lg">
-                    See How We Protect You →
-                </a>
+                <div class="max-w-3xl mx-auto">
+                    <p class="text-2xl md:text-3xl text-black font-bold mb-4 uppercase tracking-tight">
+                        Non-custodial architecture
+                    </p>
+                    <p class="text-lg text-gray-700 font-medium max-w-2xl mx-auto">
+                        Your wallet. Your keys. Your control. We never touch your funds.
+                    </p>
+                </div>
             </div>
         </div>
     </section>
@@ -335,15 +423,15 @@
     <section class="py-16 px-4 bg-gray-100">
         <div class="max-w-6xl mx-auto">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div class="trust-badge p-8 text-center accent-yellow">
+                <div class="trust-badge p-8 text-center accent-cyan slide-animation">
                     <svg class="w-16 h-16 mx-auto mb-4" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M50 10 L80 25 L80 50 C80 65 70 78 50 90 C30 78 20 65 20 50 L20 25 Z" fill="none" stroke="#000" stroke-width="5" stroke-linejoin="round"/>
                         <path d="M40 50 L47 57 L65 39" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     <div class="text-xl font-black text-black mb-2 uppercase">Non-Custodial</div>
-                    <div class="text-black font-medium text-sm">We never hold your funds</div>
+                    <div class="text-black font-medium text-sm">Never hold your funds</div>
                 </div>
-                <div class="trust-badge p-8 text-center accent-blue">
+                <div class="trust-badge p-8 text-center accent-blue float-animation" style="animation-delay: 0.2s;">
                     <svg class="w-16 h-16 mx-auto mb-4" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="30" y="45" width="40" height="35" fill="none" stroke="#000" stroke-width="5" stroke-linejoin="round"/>
                         <path d="M40 45 C40 35 43 25 50 25 C57 25 60 35 60 45" stroke="#000" stroke-width="5" stroke-linecap="round" fill="none"/>
@@ -353,15 +441,15 @@
                     <div class="text-xl font-black text-black mb-2 uppercase">Encrypted</div>
                     <div class="text-black font-medium text-sm">AES-256 & TLS 1.3</div>
                 </div>
-                <div class="trust-badge p-8 text-center accent-pink">
+                <div class="trust-badge p-8 text-center accent-teal slide-animation" style="animation-delay: 0.4s;">
                     <svg class="w-16 h-16 mx-auto mb-4" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M50 20 L60 45 L85 48 L65 65 L72 90 L50 75 L28 90 L35 65 L15 48 L40 45 Z" fill="none" stroke="#000" stroke-width="5" stroke-linejoin="round"/>
-                        <path d="M30 30 L70 70 M70 30 L30 70" stroke="#000" stroke-width="4" stroke-linecap="round"/>
+                        <circle cx="50" cy="50" r="35" fill="none" stroke="#000" stroke-width="5"/>
+                        <path d="M50 20 L50 50 L70 60" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     <div class="text-xl font-black text-black mb-2 uppercase">99.9% Uptime</div>
                     <div class="text-black font-medium text-sm">Reliable infrastructure</div>
                 </div>
-                <div class="trust-badge p-8 text-center accent-purple">
+                <div class="trust-badge p-8 text-center accent-indigo float-animation" style="animation-delay: 0.6s;">
                     <svg class="w-16 h-16 mx-auto mb-4" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="20" y="75" width="15" height="15" fill="#000"/>
                         <rect x="42" y="55" width="15" height="35" fill="#000"/>
@@ -390,34 +478,34 @@
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t-4 border-black">
-                        <div class="bg-yellow-100 border-4 border-black brutal-shadow-sm p-4">
+                        <div class="bg-cyan-100 border-4 border-black brutal-shadow-sm p-4">
                             <h3 class="text-lg font-black text-black mb-3 uppercase">Data Encryption</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ AES-256 encryption at rest</li>
-                                <li>✓ TLS 1.3 for data in transit</li>
-                                <li>✓ End-to-end encrypted API calls</li>
-                                <li>✓ Secure key management via Vercel</li>
+                                <li>AES-256 encryption at rest</li>
+                                <li>TLS 1.3 for data in transit</li>
+                                <li>End-to-end encrypted API calls</li>
+                                <li>Secure key management via Vercel</li>
                             </ul>
                         </div>
 
-                        <div class="bg-green-100 border-4 border-black brutal-shadow-sm p-4">
+                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-4">
                             <h3 class="text-lg font-black text-black mb-3 uppercase">Infrastructure Security</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ Hosted on Vercel (SOC 2, ISO 27001 certified)</li>
-                                <li>✓ Database on Supabase (SOC 2, GDPR compliant)</li>
-                                <li>✓ DDoS protection via Cloudflare</li>
-                                <li>✓ Automated hourly backups</li>
-                                <li>✓ Multi-region redundancy</li>
+                                <li>Hosted on Vercel (SOC 2, ISO 27001 certified)</li>
+                                <li>Database on Supabase (SOC 2, GDPR compliant)</li>
+                                <li>DDoS protection via Cloudflare</li>
+                                <li>Automated hourly backups</li>
+                                <li>Multi-region redundancy</li>
                             </ul>
                         </div>
 
-                        <div class="bg-pink-100 border-4 border-black brutal-shadow-sm p-4">
+                        <div class="bg-steel-100 border-4 border-black brutal-shadow-sm p-4">
                             <h3 class="text-lg font-black text-black mb-3 uppercase">Smart Contract Security</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ No custom smart contracts (uses standard USDC)</li>
-                                <li>✓ Client-side transaction signing only</li>
-                                <li>✓ Non-custodial architecture - we never hold funds</li>
-                                <li>✓ All transactions verified on-chain</li>
+                                <li>No custom smart contracts (uses standard USDC)</li>
+                                <li>Client-side transaction signing only</li>
+                                <li>Non-custodial architecture - we never hold funds</li>
+                                <li>All transactions verified on-chain</li>
                             </ul>
                         </div>
 
@@ -445,11 +533,11 @@
                         <div>
                             <h3 class="text-lg font-black text-black mb-3 uppercase">GDPR Compliance</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ Data minimization principles applied</li>
-                                <li>✓ Right to access your data</li>
-                                <li>✓ Right to delete your data</li>
-                                <li>✓ EU data residency options available</li>
-                                <li>✓ Clear privacy policy and terms</li>
+                                <li>Data minimization principles applied</li>
+                                <li>Right to access your data</li>
+                                <li>Right to delete your data</li>
+                                <li>EU data residency options available</li>
+                                <li>Clear privacy policy and terms</li>
                             </ul>
                         </div>
 
@@ -457,7 +545,7 @@
                             <h3 class="text-lg font-black text-black uppercase mb-3">Data We Collect</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <div class="text-green-400 font-medium mb-2">✅ We Collect:</div>
+                                    <div class="text-black font-bold mb-2 uppercase">We Collect:</div>
                                     <ul class="space-y-1 text-sm text-black font-medium">
                                         <li>• Order details (amount, chain, timestamp)</li>
                                         <li>• Transaction hashes (public blockchain data)</li>
@@ -466,7 +554,7 @@
                                     </ul>
                                 </div>
                                 <div>
-                                    <div class="text-red-400 font-medium mb-2">❌ We NEVER Collect:</div>
+                                    <div class="text-black font-bold mb-2 uppercase">We NEVER Collect:</div>
                                     <ul class="space-y-1 text-sm text-black font-medium">
                                         <li>• Private keys or seed phrases</li>
                                         <li>• Wallet passwords</li>
@@ -501,7 +589,7 @@
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t-4 border-black">
-                        <div class="bg-purple-100 border-4 border-black brutal-shadow-sm-lg p-6">
+                        <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm-lg p-6">
                             <h3 class="text-lg font-black text-black uppercase mb-4">Payment Flow</h3>
                             <div class="space-y-4">
                                 <div class="flex items-start gap-4">
@@ -535,9 +623,9 @@
                             </div>
                         </div>
 
-                        <div class="bg-green-100 border-4 border-black brutal-shadow-sm p-4">
-                            <div class="text-sm text-green-300 font-medium">Non-Custodial Architecture</div>
-                            <div class="text-xs text-green-400 mt-2">
+                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-4">
+                            <div class="text-sm text-black font-bold uppercase">Non-Custodial Architecture</div>
+                            <div class="text-xs text-black font-medium mt-2">
                                 StablePay NEVER holds your funds. Payments go directly from customer to merchant wallet via blockchain. We only facilitate the connection.
                             </div>
                         </div>
@@ -559,7 +647,7 @@
                         <div>
                             <h3 class="text-lg font-black text-black mb-3 uppercase">Supported Networks</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="bg-purple-100 border-4 border-black brutal-shadow-sm p-4">
+                                <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-4">
                                     <div class="text-black font-bold mb-2">EVM Chains</div>
                                     <ul class="space-y-1 text-sm text-black font-medium">
                                         <li>• Ethereum (Mainnet & Sepolia)</li>
@@ -569,7 +657,7 @@
                                         <li>• Optimism</li>
                                     </ul>
                                 </div>
-                                <div class="bg-purple-100 border-4 border-black brutal-shadow-sm p-4">
+                                <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-4">
                                     <div class="text-black font-bold mb-2">Non-EVM Chains</div>
                                     <ul class="space-y-1 text-sm text-black font-medium">
                                         <li>• Solana (Mainnet & Devnet)</li>
@@ -582,20 +670,20 @@
                         <div>
                             <h3 class="text-lg font-black text-black uppercase mb-3">Token Standards</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ ERC-20 (USDC, USDT, EURC on EVM chains)</li>
-                                <li>✓ SPL Token (USDC on Solana)</li>
-                                <li>✓ All tokens audited by Circle, Tether, Circle</li>
-                                <li>✓ No custom tokens or untrusted contracts</li>
+                                <li>ERC-20 (USDC, USDT, EURC on EVM chains)</li>
+                                <li>SPL Token (USDC on Solana)</li>
+                                <li>All tokens audited by Circle, Tether, Circle</li>
+                                <li>No custom tokens or untrusted contracts</li>
                             </ul>
                         </div>
 
                         <div>
                             <h3 class="text-lg font-black text-black uppercase mb-3">Transaction Verification</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ All transactions verified on-chain</li>
-                                <li>✓ Real-time blockchain monitoring</li>
-                                <li>✓ Automatic confirmation checks</li>
-                                <li>✓ Public transaction hashes for transparency</li>
+                                <li>All transactions verified on-chain</li>
+                                <li>Real-time blockchain monitoring</li>
+                                <li>Automatic confirmation checks</li>
+                                <li>Public transaction hashes for transparency</li>
                             </ul>
                         </div>
                     </div>
@@ -616,30 +704,30 @@
                         <div>
                             <h3 class="text-lg font-black text-black uppercase mb-3">Access Control</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ Role-based access control (RBAC)</li>
-                                <li>✓ Multi-factor authentication (MFA) required</li>
-                                <li>✓ API key rotation every 90 days</li>
-                                <li>✓ Principle of least privilege</li>
+                                <li>Role-based access control (RBAC)</li>
+                                <li>Multi-factor authentication (MFA) required</li>
+                                <li>API key rotation every 90 days</li>
+                                <li>Principle of least privilege</li>
                             </ul>
                         </div>
 
                         <div>
                             <h3 class="text-lg font-black text-black uppercase mb-3">Monitoring & Logging</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ 24/7 system monitoring</li>
-                                <li>✓ Real-time error alerts</li>
-                                <li>✓ Comprehensive audit logs</li>
-                                <li>✓ Anomaly detection</li>
+                                <li>24/7 system monitoring</li>
+                                <li>Real-time error alerts</li>
+                                <li>Comprehensive audit logs</li>
+                                <li>Anomaly detection</li>
                             </ul>
                         </div>
 
                         <div>
                             <h3 class="text-lg font-black text-black uppercase mb-3">Incident Response</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ Documented incident response plan</li>
-                                <li>✓ 24-hour response time for critical issues</li>
-                                <li>✓ Post-incident analysis and reporting</li>
-                                <li>✓ Customer notification procedures</li>
+                                <li>Documented incident response plan</li>
+                                <li>24-hour response time for critical issues</li>
+                                <li>Post-incident analysis and reporting</li>
+                                <li>Customer notification procedures</li>
                             </ul>
                         </div>
                     </div>
@@ -660,30 +748,30 @@
                         <div>
                             <h3 class="text-lg font-black text-black uppercase mb-3">Payment Security</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ Instant settlement (no chargebacks)</li>
-                                <li>✓ Blockchain-verified transactions</li>
-                                <li>✓ No payment reversals (crypto advantage)</li>
-                                <li>✓ Automatic fraud detection</li>
+                                <li>Instant settlement (no chargebacks)</li>
+                                <li>Blockchain-verified transactions</li>
+                                <li>No payment reversals (crypto advantage)</li>
+                                <li>Automatic fraud detection</li>
                             </ul>
                         </div>
 
                         <div>
                             <h3 class="text-lg font-black text-black uppercase mb-3">Business Continuity</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ 99.9% uptime SLA</li>
-                                <li>✓ Multi-region infrastructure</li>
-                                <li>✓ Automated failover systems</li>
-                                <li>✓ Real-time status page</li>
+                                <li>99.9% uptime SLA</li>
+                                <li>Multi-region infrastructure</li>
+                                <li>Automated failover systems</li>
+                                <li>Real-time status page</li>
                             </ul>
                         </div>
 
                         <div>
                             <h3 class="text-lg font-black text-black uppercase mb-3">Refund Management</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ Built-in refund system</li>
-                                <li>✓ Batch refund support (gas optimized)</li>
-                                <li>✓ Full refund audit trail</li>
-                                <li>✓ Merchant-controlled refund policies</li>
+                                <li>Built-in refund system</li>
+                                <li>Batch refund support (gas optimized)</li>
+                                <li>Full refund audit trail</li>
+                                <li>Merchant-controlled refund policies</li>
                             </ul>
                         </div>
                     </div>
@@ -704,24 +792,24 @@
                         <div>
                             <h3 class="text-lg font-black text-black uppercase mb-3">Open Source</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ Client-side SDK available on GitHub</li>
-                                <li>✓ Public API documentation</li>
-                                <li>✓ No hidden fees or costs</li>
-                                <li>✓ Clear pricing structure</li>
+                                <li>Client-side SDK available on GitHub</li>
+                                <li>Public API documentation</li>
+                                <li>No hidden fees or costs</li>
+                                <li>Clear pricing structure</li>
                             </ul>
                         </div>
 
                         <div>
                             <h3 class="text-lg font-black text-black uppercase mb-3">Security Disclosure</h3>
                             <ul class="space-y-2 text-black font-medium">
-                                <li>✓ Responsible disclosure program</li>
-                                <li>✓ Bug bounty program (coming soon)</li>
-                                <li>✓ Public security advisories</li>
-                                <li>✓ Regular security updates</li>
+                                <li>Responsible disclosure program</li>
+                                <li>Bug bounty program (coming soon)</li>
+                                <li>Public security advisories</li>
+                                <li>Regular security updates</li>
                             </ul>
                         </div>
 
-                        <div class="bg-pink-300 brutal-border p-4">
+                        <div class="bg-indigo-100 brutal-border p-4">
                             <div class="text-black font-bold mb-2 uppercase">Report Security Issues</div>
                             <div class="text-black text-sm mb-3 font-medium">
                                 If you discover a security vulnerability, please email us at:
@@ -740,7 +828,7 @@
     <!-- CTA Section -->
     <section class="py-20 px-4 bg-white border-t-4 border-black">
         <div class="max-w-4xl mx-auto text-center">
-            <div class="bg-green-300 brutal-border p-12 inline-block">
+            <div class="bg-teal-100 brutal-border p-12 inline-block">
                 <h2 class="text-4xl font-black text-black mb-4 uppercase">Ready to Get Started?</h2>
                 <p class="text-black text-lg mb-8 font-medium">
                     Join hundreds of merchants accepting crypto payments with StablePay
