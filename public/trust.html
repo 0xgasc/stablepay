@@ -139,16 +139,73 @@
         }
 
         /* List styling */
-        ul li {
-            padding-left: 1em;
+        .bullet-list li {
+            padding-left: 1.5em;
             position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0.5em 0 0.5em 1.5em;
+            border-radius: 0;
         }
 
-        ul li::before {
+        .bullet-list li::before {
             content: "→";
             position: absolute;
             left: 0;
             font-weight: bold;
+            transition: transform 0.2s ease;
+        }
+
+        .bullet-list li:hover {
+            padding-left: 2em;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .bullet-list li:hover::before {
+            transform: translateX(4px);
+        }
+
+        body.night-mode .bullet-list li:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Expandable detail */
+        .detail-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .detail-item:hover {
+            transform: translateX(4px);
+        }
+
+        .detail-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            padding: 0 1em;
+        }
+
+        .detail-content.active {
+            max-height: 500px;
+            padding: 1em;
+            margin-top: 0.5em;
+            border-left: 4px solid #000;
+        }
+
+        body.night-mode .detail-content.active {
+            border-left-color: #fff;
+        }
+
+        .expand-icon {
+            display: inline-block;
+            transition: transform 0.2s ease;
+            font-weight: bold;
+            margin-left: 0.5em;
+        }
+
+        .detail-item.active .expand-icon {
+            transform: rotate(90deg);
         }
 
         /* Floating animation */
@@ -478,35 +535,104 @@
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t-4 border-black">
-                        <div class="bg-cyan-100 border-4 border-black brutal-shadow-sm p-4">
-                            <h3 class="text-lg font-black text-black mb-3 uppercase">Data Encryption</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>AES-256 encryption at rest</li>
-                                <li>TLS 1.3 for data in transit</li>
-                                <li>End-to-end encrypted API calls</li>
-                                <li>Secure key management via Vercel</li>
-                            </ul>
+                        <div class="bg-cyan-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black mb-4 uppercase">Data Encryption</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">AES-256 encryption at rest<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Industry-standard encryption for all stored data. Your sensitive information is encrypted using AES-256, the same encryption used by banks and governments worldwide.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">TLS 1.3 for data in transit<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">All data transmitted between your browser and our servers uses TLS 1.3, the latest and most secure version of transport layer security.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">End-to-end encrypted API calls<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Every API request and response is encrypted end-to-end. Even if intercepted, the data remains unreadable to attackers.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Secure key management<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Encryption keys are managed through Vercel's secure environment variables system with automatic rotation and access controls.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-4">
-                            <h3 class="text-lg font-black text-black mb-3 uppercase">Infrastructure Security</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>Hosted on Vercel (SOC 2, ISO 27001 certified)</li>
-                                <li>Database on Supabase (SOC 2, GDPR compliant)</li>
-                                <li>DDoS protection via Cloudflare</li>
-                                <li>Automated hourly backups</li>
-                                <li>Multi-region redundancy</li>
-                            </ul>
+                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black mb-4 uppercase">Infrastructure Security</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Hosted on Vercel<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">SOC 2 Type II and ISO 27001 certified infrastructure. Enterprise-grade security with automatic SSL and DDoS protection.</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Automatic security updates</li>
+                                            <li>Global CDN 100+ edge locations</li>
+                                            <li>Zero-downtime deployments</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Database on Supabase<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">SOC 2 compliant and GDPR ready PostgreSQL database with built-in security features.</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Row-level security policies</li>
+                                            <li>Automatic daily backups</li>
+                                            <li>Point-in-time recovery</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">DDoS protection<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Enterprise-level DDoS mitigation via Cloudflare handling 100+ million requests per second.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Multi-region redundancy<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Data replicated across multiple geographic regions for high availability and disaster recovery.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="bg-steel-100 border-4 border-black brutal-shadow-sm p-4">
-                            <h3 class="text-lg font-black text-black mb-3 uppercase">Smart Contract Security</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>No custom smart contracts (uses standard USDC)</li>
-                                <li>Client-side transaction signing only</li>
-                                <li>Non-custodial architecture - we never hold funds</li>
-                                <li>All transactions verified on-chain</li>
-                            </ul>
+                        <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black mb-4 uppercase">Smart Contract Security</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">No custom smart contracts<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">We use standard, battle-tested USDC token contracts. No custom code means no custom vulnerabilities.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Client-side transaction signing<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">All transactions are signed in your browser using your wallet. Your private keys never leave your device.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Non-custodial architecture<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Funds go directly from customer wallet to merchant wallet. StablePay never has access to move, freeze, or hold your money.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Blockchain verification<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Every payment is publicly verifiable on the blockchain. Full transparency and immutable audit trail.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="bg-blue-100 border-4 border-black p-4">
@@ -906,6 +1032,21 @@
             if (!isActive) {
                 content.classList.add('active');
                 icon.textContent = '−';
+            }
+        }
+
+        // Toggle detail expansion
+        function toggleDetail(element) {
+            const content = element.querySelector('.detail-content');
+            const isActive = element.classList.contains('active');
+
+            // Toggle the clicked item
+            if (isActive) {
+                element.classList.remove('active');
+                content.classList.remove('active');
+            } else {
+                element.classList.add('active');
+                content.classList.add('active');
             }
         }
 
