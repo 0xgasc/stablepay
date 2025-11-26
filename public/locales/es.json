@@ -3,5 +3,88 @@
     "home": "Inicio",
     "dashboard": "Panel",
     "trust": "Centro de Confianza"
+  },
+  "sections": {
+    "security": {
+      "title": "Seguridad y Cumplimiento",
+      "subtitle": "Infraestructura de seguridad de nivel empresarial"
+    },
+    "privacy": {
+      "title": "Privacidad y Protección de Datos",
+      "subtitle": "Compatible con GDPR y enfocado en la privacidad"
+    },
+    "howItWorks": {
+      "title": "Cómo Funciona StablePay",
+      "subtitle": "Flujo de pago transparente y sin custodia"
+    },
+    "blockchain": {
+      "title": "Seguridad Blockchain",
+      "subtitle": "Estándares de seguridad multicadena"
+    },
+    "operational": {
+      "title": "Seguridad Operacional",
+      "subtitle": "Nuestras prácticas de seguridad interna"
+    },
+    "merchant": {
+      "title": "Protección del Comerciante",
+      "subtitle": "Cómo protegemos a los negocios comerciales"
+    },
+    "transparency": {
+      "title": "Transparencia",
+      "subtitle": "Comunicación abierta e informes"
+    }
+  },
+  "cta": {
+    "title": "¿Listo para Comenzar?",
+    "subtitle": "Únete a cientos de comerciantes que aceptan pagos cripto con StablePay",
+    "benefits": {
+      "title": "Lo que obtienes:",
+      "item1": "En vivo en 5 minutos",
+      "item2": "0.5% por transacción",
+      "item3": "6 blockchains soportadas",
+      "item4": "Reembolsos integrados",
+      "item5": "Webhooks en tiempo real",
+      "item6": "Panel de análisis gratuito"
+    },
+    "button1": "Comenzar a Aceptar Pagos →",
+    "button2": "Ver Documentación →"
+  },
+  "footer": {
+    "brand": {
+      "title": "StablePay",
+      "tagline": "Infraestructura de pago USDC multicadena para la web moderna",
+      "missionLabel": "Nuestra misión:",
+      "missionText": "Pagos cripto simples, seguros y autocustodiados. Construido por desarrolladores, para desarrolladores."
+    },
+    "product": {
+      "title": "Producto",
+      "home": "Inicio",
+      "dashboard": "Panel",
+      "apiDocs": "Documentación API",
+      "dashboardDesc": "<strong>Panel:</strong> Pagos, reembolsos, análisis",
+      "apiDesc": "<strong>API:</strong> REST + webhooks"
+    },
+    "security": {
+      "title": "Seguridad",
+      "trustCenter": "Centro de Confianza",
+      "privacy": "Política de Privacidad",
+      "terms": "Términos de Servicio",
+      "label": "Seguridad primero:",
+      "text": "Sin custodia, AES-256, SOC 2 en progreso."
+    },
+    "contact": {
+      "title": "Contacto",
+      "security": "Seguridad",
+      "support": "Soporte",
+      "github": "GitHub",
+      "securityResponse": "<strong>Seguridad:</strong> Respuesta en 24hrs",
+      "supportTime": "<strong>Soporte:</strong> Promedio 4hrs",
+      "location": "<strong>Con sede en NYC</strong> (zona horaria EST)"
+    },
+    "copyright": {
+      "text": "© 2025 StablePay. Todos los derechos reservados. Construido con seguridad y transparencia.",
+      "aboutLabel": "Acerca de StablePay:",
+      "aboutText": "Fundado en 2025 en NYC. Código abierto, precios transparentes, autocustodia. Autofinanciado y rentable."
+    }
   }
 }

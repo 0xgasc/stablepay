@@ -3,5 +3,88 @@
     "home": "Home",
     "dashboard": "Dashboard",
     "trust": "Trust Center"
+  },
+  "sections": {
+    "security": {
+      "title": "Security & Compliance",
+      "subtitle": "Enterprise-grade security infrastructure"
+    },
+    "privacy": {
+      "title": "Privacy & Data Protection",
+      "subtitle": "GDPR compliant and privacy-first"
+    },
+    "howItWorks": {
+      "title": "How StablePay Works",
+      "subtitle": "Non-custodial and transparent payment flow"
+    },
+    "blockchain": {
+      "title": "Blockchain Security",
+      "subtitle": "Multi-chain security standards"
+    },
+    "operational": {
+      "title": "Operational Security",
+      "subtitle": "Our internal security practices"
+    },
+    "merchant": {
+      "title": "Merchant Protection",
+      "subtitle": "How we protect merchant businesses"
+    },
+    "transparency": {
+      "title": "Transparency",
+      "subtitle": "Open communication and reporting"
+    }
+  },
+  "cta": {
+    "title": "Ready to Get Started?",
+    "subtitle": "Join hundreds of merchants accepting crypto payments with StablePay",
+    "benefits": {
+      "title": "What you get:",
+      "item1": "Live in 5 minutes",
+      "item2": "0.5% per transaction",
+      "item3": "6 blockchains supported",
+      "item4": "Built-in refunds",
+      "item5": "Real-time webhooks",
+      "item6": "Free analytics dashboard"
+    },
+    "button1": "Start Accepting Payments →",
+    "button2": "View Documentation →"
+  },
+  "footer": {
+    "brand": {
+      "title": "StablePay",
+      "tagline": "Multi-chain USDC payment infrastructure for the modern web",
+      "missionLabel": "Our mission:",
+      "missionText": "Crypto payments made simple, secure, and self-custodial. Built by developers, for developers."
+    },
+    "product": {
+      "title": "Product",
+      "home": "Home",
+      "dashboard": "Dashboard",
+      "apiDocs": "API Docs",
+      "dashboardDesc": "<strong>Dashboard:</strong> Payments, refunds, analytics",
+      "apiDesc": "<strong>API:</strong> REST + webhooks"
+    },
+    "security": {
+      "title": "Security",
+      "trustCenter": "Trust Center",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "label": "Security first:",
+      "text": "Non-custodial, AES-256, SOC 2 in progress."
+    },
+    "contact": {
+      "title": "Contact",
+      "security": "Security",
+      "support": "Support",
+      "github": "GitHub",
+      "securityResponse": "<strong>Security:</strong> 24hr response",
+      "supportTime": "<strong>Support:</strong> 4hr average",
+      "location": "<strong>NYC-based</strong> (EST timezone)"
+    },
+    "copyright": {
+      "text": "© 2025 StablePay. All rights reserved. Built with security and transparency.",
+      "aboutLabel": "About StablePay:",
+      "aboutText": "Founded 2025 in NYC. Open-source, transparent pricing, self-custody. Bootstrapped and profitable."
+    }
   }
 }
