@@ -656,49 +656,106 @@
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t-4 border-black">
-                        <div>
-                            <h3 class="text-lg font-black text-black mb-3 uppercase">GDPR Compliance</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>Data minimization principles applied</li>
-                                <li>Right to access your data</li>
-                                <li>Right to delete your data</li>
-                                <li>EU data residency options available</li>
-                                <li>Clear privacy policy and terms</li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Data We Collect</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <div class="text-black font-bold mb-2 uppercase">We Collect:</div>
-                                    <ul class="space-y-1 text-sm text-black font-medium">
-                                        <li>• Order details (amount, chain, timestamp)</li>
-                                        <li>• Transaction hashes (public blockchain data)</li>
-                                        <li>• Merchant account info (email, company)</li>
-                                        <li>• Usage analytics (anonymized)</li>
-                                    </ul>
+                        <div class="bg-cyan-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black mb-4 uppercase">GDPR Compliance</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Data minimization<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">We only collect data that's essential for payment processing. No unnecessary tracking or profiling.</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div class="text-black font-bold mb-2 uppercase">We NEVER Collect:</div>
-                                    <ul class="space-y-1 text-sm text-black font-medium">
-                                        <li>• Private keys or seed phrases</li>
-                                        <li>• Wallet passwords</li>
-                                        <li>• Credit card information</li>
-                                        <li>• Social security numbers</li>
-                                    </ul>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Right to access your data<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Request a full export of all your data at any time through your dashboard or by contacting support.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Right to delete your data<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Request complete deletion of your account and associated data. We retain only legally required transaction records.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">EU data residency<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Available on enterprise plans. Store your data exclusively in EU data centers for full GDPR compliance.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div>
-                            <h3 class="text-lg font-black text-black uppercase mb-3">Data Retention</h3>
-                            <ul class="space-y-2 text-black font-medium">
-                                <li>• Transaction data: 7 years (regulatory compliance)</li>
-                                <li>• Order history: Indefinite (merchant access)</li>
-                                <li>• Server logs: 90 days</li>
-                                <li>• Account data: Until deletion requested</li>
-                            </ul>
+                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Data We Collect</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Order details<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Essential transaction information for payment processing:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Payment amount in USDC</li>
+                                            <li>Blockchain network used</li>
+                                            <li>Timestamp of transaction</li>
+                                            <li>Order reference ID</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Transaction hashes<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Public blockchain transaction IDs. This data is already public on the blockchain and allows payment verification.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Merchant account info<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Email, company name, and wallet addresses for merchants accepting payments.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">We NEVER collect sensitive data<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Your security is paramount. We never collect:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Private keys or seed phrases</li>
+                                            <li>Wallet passwords</li>
+                                            <li>Credit card information</li>
+                                            <li>Social security numbers</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-6">
+                            <h3 class="text-lg font-black text-black uppercase mb-4">Data Retention</h3>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Transaction data (7 years)<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Required by financial regulations for audit and compliance purposes. Includes payment amounts, timestamps, and transaction IDs.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Order history (indefinite)<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Merchants have permanent access to their order history for business records and customer support.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Server logs (90 days)<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Technical logs for debugging and security monitoring. Automatically deleted after 90 days.</p>
+                                    </div>
+                                </div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">Account data (until deleted)<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Your account information is retained until you request deletion. You can export or delete your data anytime.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -715,44 +772,66 @@
                 </button>
                 <div class="accordion-content px-6 pb-6 bg-white">
                     <div class="space-y-6 pt-4 border-t-4 border-black">
-                        <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm-lg p-6">
+                        <div class="bg-cyan-100 border-4 border-black brutal-shadow-sm p-6">
                             <h3 class="text-lg font-black text-black uppercase mb-4">Payment Flow</h3>
-                            <div class="space-y-4">
-                                <div class="flex items-start gap-4">
-                                    <div class="bg-black text-white w-8 h-8 border-4 border-black flex items-center justify-center font-bold shrink-0">1</div>
-                                    <div>
-                                        <div class="text-black font-bold">Customer initiates payment</div>
-                                        <div class="text-black text-sm">Opens payment modal on merchant's website</div>
+                            <div class="space-y-1">
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">1. Customer initiates payment<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium">Customer clicks 'Pay with Crypto' on merchant's checkout page. StablePay payment modal opens with order details and supported networks.</p>
                                     </div>
                                 </div>
-                                <div class="flex items-start gap-4">
-                                    <div class="bg-black text-white w-8 h-8 border-4 border-black flex items-center justify-center font-bold shrink-0">2</div>
-                                    <div>
-                                        <div class="text-black font-bold">Customer connects wallet</div>
-                                        <div class="text-black text-sm">MetaMask, Phantom, or other Web3 wallet</div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">2. Wallet connection<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Customer connects their Web3 wallet to confirm payment:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>MetaMask for EVM chains (Ethereum, Polygon, Base, Arbitrum)</li>
+                                            <li>Phantom for Solana</li>
+                                            <li>WalletConnect for mobile wallets</li>
+                                        </ul>
                                     </div>
                                 </div>
-                                <div class="flex items-start gap-4">
-                                    <div class="bg-black text-white w-8 h-8 border-4 border-black flex items-center justify-center font-bold shrink-0">3</div>
-                                    <div>
-                                        <div class="text-black font-bold">Direct blockchain transfer</div>
-                                        <div class="text-black text-sm">USDC sent directly to merchant's wallet (StablePay never holds funds)</div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">3. Direct blockchain transfer<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">USDC is sent directly from customer wallet to merchant wallet on-chain. Key security features:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>StablePay never holds funds</li>
+                                            <li>Transaction signed in customer's browser</li>
+                                            <li>No intermediary custody</li>
+                                            <li>Full blockchain transparency</li>
+                                        </ul>
                                     </div>
                                 </div>
-                                <div class="flex items-start gap-4">
-                                    <div class="bg-black text-white w-8 h-8 border-4 border-black flex items-center justify-center font-bold shrink-0">4</div>
-                                    <div>
-                                        <div class="text-black font-bold">Transaction confirmed</div>
-                                        <div class="text-black text-sm">Verified on blockchain, merchant notified via webhook</div>
+                                <div class="detail-item" onclick="toggleDetail(this)">
+                                    <span class="text-black font-bold">4. Transaction confirmed<span class="expand-icon">▶</span></span>
+                                    <div class="detail-content">
+                                        <p class="text-sm text-black font-medium mb-2">Payment is verified on blockchain and merchant is notified:</p>
+                                        <ul class="bullet-list text-xs">
+                                            <li>Transaction hash recorded</li>
+                                            <li>Webhook sent to merchant backend</li>
+                                            <li>Order status updated to paid</li>
+                                            <li>Customer receives confirmation</li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-4">
-                            <div class="text-sm text-black font-bold uppercase">Non-Custodial Architecture</div>
-                            <div class="text-xs text-black font-medium mt-2">
-                                StablePay NEVER holds your funds. Payments go directly from customer to merchant wallet via blockchain. We only facilitate the connection.
+                        <div class="bg-teal-100 border-4 border-black brutal-shadow-sm p-6">
+                            <div class="detail-item" onclick="toggleDetail(this)">
+                                <span class="text-black font-bold">Non-custodial architecture explained<span class="expand-icon">▶</span></span>
+                                <div class="detail-content">
+                                    <p class="text-sm text-black font-medium mb-2">StablePay NEVER holds your funds. Here's why this matters:</p>
+                                    <ul class="bullet-list text-xs">
+                                        <li>No risk of StablePay being hacked for your funds</li>
+                                        <li>No regulatory custody requirements</li>
+                                        <li>Payments arrive instantly in your wallet</li>
+                                        <li>You maintain full control at all times</li>
+                                        <li>We only provide the payment interface</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -776,18 +855,18 @@
                                 <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-4">
                                     <div class="text-black font-bold mb-2">EVM Chains</div>
                                     <ul class="space-y-1 text-sm text-black font-medium">
-                                        <li>• Ethereum (Mainnet & Sepolia)</li>
-                                        <li>• Base (Mainnet & Sepolia)</li>
-                                        <li>• Polygon (Mainnet & Mumbai)</li>
-                                        <li>• Arbitrum (Mainnet & Sepolia)</li>
-                                        <li>• Optimism</li>
+                                        <li>Ethereum (Mainnet & Sepolia)</li>
+                                        <li>Base (Mainnet & Sepolia)</li>
+                                        <li>Polygon (Mainnet & Mumbai)</li>
+                                        <li>Arbitrum (Mainnet & Sepolia)</li>
+                                        <li>Optimism</li>
                                     </ul>
                                 </div>
                                 <div class="bg-indigo-100 border-4 border-black brutal-shadow-sm p-4">
                                     <div class="text-black font-bold mb-2">Non-EVM Chains</div>
                                     <ul class="space-y-1 text-sm text-black font-medium">
-                                        <li>• Solana (Mainnet & Devnet)</li>
-                                        <li>• More chains coming soon</li>
+                                        <li>Solana (Mainnet & Devnet)</li>
+                                        <li>More chains coming soon</li>
                                     </ul>
                                 </div>
                             </div>
