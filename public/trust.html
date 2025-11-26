@@ -1455,7 +1455,7 @@
 
         async function changeLanguage(lang) {
             try {
-                const response = await fetch(`/public/locales/${lang}.json`);
+                const response = await fetch(`./locales/${lang}.json`);
                 translations = await response.json();
                 currentLang = lang;
                 localStorage.setItem('language', lang);
