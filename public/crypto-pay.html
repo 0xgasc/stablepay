@@ -537,15 +537,15 @@
                         orderData = await response.json();
                         orderData.usdcAddress = chainConfig.usdcAddress;
                         orderData.paymentAddress = chainConfig.paymentAddress;
-                        console.log('✅ Order created via API:', orderData);
+                        console.log('[SUCCESS] Order created via API:', orderData);
                     } else {
                         const errorText = await response.text();
-                        console.error('❌ API Error Response:', errorText);
+                        console.error('[ERROR] API Error Response:', errorText);
                         throw new Error('API returned error: ' + response.status);
                     }
                 } catch (apiError) {
-                    console.error('❌ API Error details:', apiError);
-                    console.log('⚠️ Using localStorage fallback');
+                    console.error('[ERROR] API Error details:', apiError);
+                    console.log('[WARNING] Using localStorage fallback');
                     // Fallback to localStorage
                     const mockOrderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                     orderData = {
@@ -713,18 +713,18 @@
                 
                 if (confirmResponse.ok) {
                     const confirmData = await confirmResponse.json();
-                    console.log('✅ Order confirmed in database:', confirmData);
+                    console.log('[SUCCESS] Order confirmed in database:', confirmData);
                 } else {
                     const errorText = await confirmResponse.text();
-                    console.error('❌ Confirm API Error:', errorText);
+                    console.error('[ERROR] Confirm API Error:', errorText);
                 }
             } catch (err) {
-                console.error('❌ Failed to confirm order in database:', err);
+                console.error('[ERROR] Failed to confirm order in database:', err);
             }
 
             // Disable pay button
             document.getElementById('payBtn').disabled = true;
-            document.getElementById('payBtn').textContent = 'Payment Completed ✓';
+            document.getElementById('payBtn').textContent = 'Payment Completed';
         }
 
         // UI Helper functions

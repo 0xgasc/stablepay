@@ -269,8 +269,8 @@
                         <option value="pt">PT</option>
                     </select>
                     <button id="nightModeToggle" class="px-3 py-1 border-4 border-black bg-white hover:bg-gray-100 font-bold text-sm">
-                        <span class="night-icon">🌙</span>
-                        <span class="day-icon hidden">☀️</span>
+                        <span class="night-icon">NIGHT</span>
+                        <span class="day-icon hidden">DAY</span>
                     </button>
                     <button
                         id="logoutBtn"
@@ -807,7 +807,7 @@ onMounted(() => {
                                 id="testPaymentBtn"
                                 class="bg-black border-2 border-blue-600 hover:border-blue-500 text-blue-400 px-6 py-3 font-medium transition-all"
                             >
-                                ⚡ Test Payment
+                                Test Payment
                             </button>
                         </div>
                         <p class="text-sm text-slate-400 mt-3">
@@ -843,7 +843,7 @@ onMounted(() => {
                                 </div>
                                 <div class="mt-6">
                                     <button id="saveProfileBtn" type="button" class="bg-blue-600 text-white px-6 py-2 border hover:bg-blue-700 transition-colors">
-                                        💾 Save Profile
+                                        Save Profile
                                     </button>
                                 </div>
                             </div>
@@ -909,7 +909,7 @@ onMounted(() => {
     <!-- Test Payment Modal -->
     <div id="testPaymentModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-slate-950 border border-slate-800 shadow-2xl p-8 max-w-md w-full mx-4">
-            <h2 class="text-2xl font-bold text-white mb-6">⚡ Test Payment</h2>
+            <h2 class="text-2xl font-bold text-white mb-6">Test Payment</h2>
 
             <div class="space-y-4 mb-6">
                 <div>
@@ -1376,12 +1376,12 @@ onMounted(() => {
                 const result = await response.json();
 
                 if (response.ok) {
-                    alert(`✅ Test order created successfully!\n\nOrder ID: ${result.order.id}\nChain: ${firstChain}\nAmount: 10.00 USDC\nStatus: ${result.order.status}\n\nCheck the Orders tab to see it!`);
+                    alert(`[SUCCESS] Test order created successfully!\n\nOrder ID: ${result.order.id}\nChain: ${firstChain}\nAmount: 10.00 USDC\nStatus: ${result.order.status}\n\nCheck the Orders tab to see it!`);
                 } else {
-                    alert(`❌ Test failed: ${result.error || 'Unknown error'}`);
+                    alert(`[ERROR] Test failed: ${result.error || 'Unknown error'}`);
                 }
             } catch (error) {
-                alert(`❌ Test failed: ${error.message}`);
+                alert(`[ERROR] Test failed: ${error.message}`);
             }
         };
 
@@ -3296,7 +3296,7 @@ onMounted(() => {
                                     <div class="text-slate-300 font-mono text-xs">${w.chain}</div>
                                     <div class="text-slate-500 text-xs truncate" style="max-width: 200px">${w.address}</div>
                                 </div>
-                                <div class="text-green-400 text-xs">✓</div>
+                                <div class="text-green-400 text-xs">[OK]</div>
                             </div>
                         `).join('');
                 } else {

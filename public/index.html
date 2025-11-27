@@ -301,8 +301,8 @@
                         <option value="pt">PT</option>
                     </select>
                     <button id="nightModeToggle" class="px-3 py-1 border-4 border-black bg-white hover:bg-gray-100 font-bold text-sm">
-                        <span class="night-icon">🌙</span>
-                        <span class="day-icon hidden">☀️</span>
+                        <span class="night-icon">NIGHT</span>
+                        <span class="day-icon hidden">DAY</span>
                     </button>
                     <a href="/login.html" class="bg-black text-white px-6 py-2 font-bold border-4 border-black brutal-shadow-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all uppercase text-sm">
                         <span data-i18n="nav.login">Login</span>
@@ -348,7 +348,6 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div class="feature-card p-8">
                     <div class="w-16 h-16 accent-cyan brutal-border mb-6 flex items-center justify-center font-black text-3xl">
-                        ⚡
                     </div>
                     <h3 class="text-2xl font-black text-black mb-4 uppercase" data-i18n="features.instant.title">Instant Settlement</h3>
                     <p class="text-gray-700 font-medium" data-i18n="features.instant.description">Direct wallet settlement in seconds. No intermediaries, no delays.</p>
@@ -356,7 +355,6 @@
 
                 <div class="feature-card p-8">
                     <div class="w-16 h-16 accent-teal brutal-border mb-6 flex items-center justify-center font-black text-3xl">
-                        🌍
                     </div>
                     <h3 class="text-2xl font-black text-black mb-4 uppercase" data-i18n="features.global.title">Global Reach</h3>
                     <p class="text-gray-700 font-medium" data-i18n="features.global.description">Accept payments globally. Multi-chain infrastructure across major networks.</p>
@@ -364,7 +362,6 @@
 
                 <div class="feature-card p-8">
                     <div class="w-16 h-16 accent-indigo brutal-border mb-6 flex items-center justify-center font-black text-3xl">
-                        🛡️
                     </div>
                     <h3 class="text-2xl font-black text-black mb-4 uppercase" data-i18n="features.zeroChargeback.title">Zero Chargebacks</h3>
                     <p class="text-gray-700 font-medium" data-i18n="features.zeroChargeback.description">Immutable blockchain transactions. Final settlement guaranteed.</p>
@@ -390,22 +387,22 @@
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
                 <div class="text-center p-6 bg-ice-100 brutal-border-thin">
-                    <div class="text-5xl mb-4">🛡️</div>
+                    <div class="text-5xl mb-4"></div>
                     <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.nonCustodial.title">Non-Custodial</div>
                     <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.nonCustodial.subtitle">We never hold your funds</div>
                 </div>
                 <div class="text-center p-6 bg-cyan-100 brutal-border-thin">
-                    <div class="text-5xl mb-4">🔐</div>
+                    <div class="text-5xl mb-4"></div>
                     <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.encrypted.title">Encrypted</div>
                     <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.encrypted.subtitle">AES-256 & TLS 1.3</div>
                 </div>
                 <div class="text-center p-6 bg-teal-100 brutal-border-thin">
-                    <div class="text-5xl mb-4">⚡</div>
+                    <div class="text-5xl mb-4"></div>
                     <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.uptime.title">99.9% Uptime</div>
                     <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.uptime.subtitle">Reliable infrastructure</div>
                 </div>
                 <div class="text-center p-6 bg-indigo-100 brutal-border-thin">
-                    <div class="text-5xl mb-4">📊</div>
+                    <div class="text-5xl mb-4"></div>
                     <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.gdpr.title">GDPR Ready</div>
                     <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.gdpr.subtitle">Privacy compliant</div>
                 </div>
@@ -415,25 +412,25 @@
                 <div class="feature-card p-6">
                     <h3 class="text-lg font-black text-black mb-3 uppercase" data-i18n="trust.details.encryption.title">Data Encryption</h3>
                     <ul class="space-y-2 text-gray-700 text-sm font-medium">
-                        <li data-i18n="trust.details.encryption.item1">✓ AES-256 encryption at rest</li>
-                        <li data-i18n="trust.details.encryption.item2">✓ TLS 1.3 for data in transit</li>
-                        <li data-i18n="trust.details.encryption.item3">✓ End-to-end encrypted API calls</li>
+                        <li data-i18n="trust.details.encryption.item1">AES-256 encryption at rest</li>
+                        <li data-i18n="trust.details.encryption.item2">TLS 1.3 for data in transit</li>
+                        <li data-i18n="trust.details.encryption.item3">End-to-end encrypted API calls</li>
                     </ul>
                 </div>
                 <div class="feature-card p-6">
                     <h3 class="text-lg font-black text-black mb-3 uppercase" data-i18n="trust.details.infrastructure.title">Infrastructure Security</h3>
                     <ul class="space-y-2 text-gray-700 text-sm font-medium">
-                        <li data-i18n="trust.details.infrastructure.item1">✓ Hosted on Vercel (SOC 2, ISO 27001)</li>
-                        <li data-i18n="trust.details.infrastructure.item2">✓ Database on Supabase (SOC 2)</li>
-                        <li data-i18n="trust.details.infrastructure.item3">✓ Multi-region redundancy</li>
+                        <li data-i18n="trust.details.infrastructure.item1">Hosted on Vercel (SOC 2, ISO 27001)</li>
+                        <li data-i18n="trust.details.infrastructure.item2">Database on Supabase (SOC 2)</li>
+                        <li data-i18n="trust.details.infrastructure.item3">Multi-region redundancy</li>
                     </ul>
                 </div>
                 <div class="feature-card p-6">
                     <h3 class="text-lg font-black text-black mb-3 uppercase" data-i18n="trust.details.blockchain.title">Blockchain Security</h3>
                     <ul class="space-y-2 text-gray-700 text-sm font-medium">
-                        <li data-i18n="trust.details.blockchain.item1">✓ No custom smart contracts</li>
-                        <li data-i18n="trust.details.blockchain.item2">✓ Client-side transaction signing</li>
-                        <li data-i18n="trust.details.blockchain.item3">✓ All transactions verified on-chain</li>
+                        <li data-i18n="trust.details.blockchain.item1">No custom smart contracts</li>
+                        <li data-i18n="trust.details.blockchain.item2">Client-side transaction signing</li>
+                        <li data-i18n="trust.details.blockchain.item3">All transactions verified on-chain</li>
                     </ul>
                 </div>
             </div>
@@ -622,9 +619,10 @@
 
         nightModeToggle.addEventListener('click', () => {
             document.body.classList.toggle('night-mode');
-            nightIcon.classList.toggle('hidden');
+            const isNightMode = document.body.classList.contains('night-mode');
+            nightIcon.textContent = isNightMode ? 'DAY' : 'NIGHT';
             dayIcon.classList.toggle('hidden');
-            localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
+            localStorage.setItem('nightMode', isNightMode);
         });
 
         // Apply system settings visibility
