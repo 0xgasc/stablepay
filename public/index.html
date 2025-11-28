@@ -13,7 +13,7 @@
         }
 
         body {
-            background: #f8f8f8;
+            background: #FFFFFF;
             min-height: 100vh;
         }
 
@@ -270,13 +270,37 @@
             box-shadow: 2px 2px 0px #fff;
         }
 
-        body.night-mode .accent-cyan,
-        body.night-mode .accent-blue,
-        body.night-mode .accent-indigo,
-        body.night-mode .accent-teal,
-        body.night-mode .accent-ice,
-        body.night-mode .accent-steel {
-            opacity: 0.9;
+        body.night-mode .bg-cyan-100 {
+            background: #004d5c !important;
+        }
+
+        body.night-mode .bg-teal-100 {
+            background: #004d4d !important;
+        }
+
+        body.night-mode .bg-ice-100 {
+            background: #004d5c !important;
+        }
+
+        body.night-mode .bg-indigo-100 {
+            background: #2d1b69 !important;
+        }
+
+        body.night-mode .bg-steel-100 {
+            background: #2d3438 !important;
+        }
+
+        body.night-mode .feature-card {
+            background: #000 !important;
+        }
+
+        body.night-mode .pulse-shadow-animation {
+            animation: pulse-shadow-night 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-shadow-night {
+            0%, 100% { box-shadow: 8px 8px 0px #fff; }
+            50% { box-shadow: 12px 12px 0px #fff; }
         }
     </style>
 </head>
@@ -387,22 +411,18 @@
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
                 <div class="text-center p-6 bg-ice-100 brutal-border-thin">
-                    <div class="text-5xl mb-4"></div>
                     <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.nonCustodial.title">Non-Custodial</div>
                     <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.nonCustodial.subtitle">We never hold your funds</div>
                 </div>
                 <div class="text-center p-6 bg-cyan-100 brutal-border-thin">
-                    <div class="text-5xl mb-4"></div>
                     <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.encrypted.title">Encrypted</div>
                     <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.encrypted.subtitle">AES-256 & TLS 1.3</div>
                 </div>
                 <div class="text-center p-6 bg-teal-100 brutal-border-thin">
-                    <div class="text-5xl mb-4"></div>
                     <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.uptime.title">99.9% Uptime</div>
                     <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.uptime.subtitle">Reliable infrastructure</div>
                 </div>
                 <div class="text-center p-6 bg-indigo-100 brutal-border-thin">
-                    <div class="text-5xl mb-4"></div>
                     <div class="text-xl font-black text-black mb-2 uppercase" data-i18n="trust.badges.gdpr.title">GDPR Ready</div>
                     <div class="text-gray-700 text-sm font-medium" data-i18n="trust.badges.gdpr.subtitle">Privacy compliant</div>
                 </div>
