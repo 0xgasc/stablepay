@@ -13,7 +13,20 @@ import { validateEnv } from './utils/env';
 
 // Load and validate environment variables
 dotenv.config();
-const env = validateEnv();
+
+let env;
+try {
+  env = validateEnv();
+} catch (error) {
+  console.error('Environment validation failed:', error);
+  // Use defaults for Vercel
+  env = {
+    PORT: process.env.PORT || '3000',
+    NODE_ENV: process.env.NODE_ENV || 'production',
+    DATABASE_URL: process.env.DATABASE_URL || '',
+    DIRECT_URL: process.env.DIRECT_URL,
+  } as any;
+}
 
 const app = express();
 const port = env.PORT || 3000;
