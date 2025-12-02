@@ -1,42 +1,12 @@
 {
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "dist/index.js",
-      "use": "@vercel/node"
+      "source": "/api/:path*",
+      "destination": "/api"
     },
     {
-      "src": "public/**",
-      "use": "@vercel/static"
+      "source": "/health/:path*",
+      "destination": "/api"
     }
-  ],
-  "routes": [
-    {
-      "src": "/health.*",
-      "dest": "dist/index.js"
-    },
-    {
-      "src": "/api/.*",
-      "dest": "dist/index.js"
-    },
-    {
-      "src": "/(admin|crypto-pay|demo-store|login|enterprise-admin|onboard-merchant|pricing|dashboard|widget-demo|developers|store|demo-integration|trust|signup)\\.html",
-      "dest": "/public/$1.html"
-    },
-    {
-      "src": "/(.*\\.(js|css|png|jpg|jpeg|svg|ico|json))",
-      "dest": "/public/$1"
-    },
-    {
-      "src": "/",
-      "dest": "/public/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
