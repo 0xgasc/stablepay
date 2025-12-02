@@ -233,6 +233,20 @@
             border-color: #fff;
             box-shadow: 4px 4px 0px #fff;
         }
+
+        #pendingBanner {
+            border-bottom: 4px solid #000;
+        }
+
+        body.night-mode #pendingBanner {
+            background: #92400e;
+            border-color: #fff;
+        }
+
+        body.night-mode #pendingBanner .text-yellow-800,
+        body.night-mode #pendingBanner .text-yellow-700 {
+            color: #fff;
+        }
     </style>
 </head>
 <body class="bg-slate-950">
@@ -240,11 +254,11 @@
     <!-- Navigation -->
 
     <!-- Pending Account Banner -->
-    <div id="pendingBanner" class="hidden bg-yellow-50 border-b-2 border-yellow-400">
+    <div id="pendingBanner" class="hidden bg-yellow-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div class="flex items-center justify-between">
                 <div class="flex items-center">
-                    
+
                     <div>
                         <p class="font-semibold text-yellow-800">Account Pending Approval</p>
                         <p class="text-sm text-yellow-700">Your account is being reviewed. Full features will be enabled once activated by our team.</p>
