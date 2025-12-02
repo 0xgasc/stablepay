@@ -2,7 +2,9 @@
   "nav": {
     "home": "Home",
     "dashboard": "Dashboard",
-    "trust": "Trust Center"
+    "trust": "Trust Center",
+    "night": "NIGHT",
+    "day": "DAY"
   },
   "sections": {
     "security": {

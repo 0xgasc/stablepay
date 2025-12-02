@@ -2,7 +2,9 @@
   "nav": {
     "home": "Accueil",
     "dashboard": "Tableau de bord",
-    "trust": "Centre de Confiance"
+    "trust": "Centre de Confiance",
+    "night": "NUIT",
+    "day": "JOUR"
   },
   "sections": {
     "security": {

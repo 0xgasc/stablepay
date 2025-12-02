@@ -312,8 +312,8 @@
                         <option value="pt">PT</option>
                     </select>
                     <button id="nightModeToggle" class="px-3 py-1 border-4 border-black bg-white hover:bg-gray-100 font-bold text-sm">
-                        <span class="night-icon">NIGHT</span>
-                        <span class="day-icon hidden">DAY</span>
+                        <span class="night-icon" data-i18n="nav.night">NIGHT</span>
+                        <span class="day-icon hidden" data-i18n="nav.day">DAY</span>
                     </button>
                     <button
                         id="logoutBtn"
@@ -3517,6 +3517,16 @@ onMounted(() => {
             document.body.classList.toggle('night-mode');
             nightIcon.classList.toggle('hidden');
             dayIcon.classList.toggle('hidden');
+
+            // Update translations
+            const currentLang = localStorage.getItem('language') || 'en';
+            fetch(`/locales/${currentLang}.json`)
+                .then(res => res.json())
+                .then(translations => {
+                    nightIcon.textContent = translations.nav.night;
+                    dayIcon.textContent = translations.nav.day;
+                });
+
             localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
         });
 

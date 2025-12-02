@@ -131,7 +131,7 @@
                     </select>
                     <!-- Night Mode Toggle -->
                     <button id="nightModeToggle" class="px-4 py-2 bg-white text-black font-bold text-sm btn-brutal">
-                        <span class="night-icon">NIGHT</span>
+                        <span class="night-icon" data-i18n="nav.night">NIGHT</span>
                     </button>
                     <a href="/" class="text-black hover:text-gray-700 text-sm font-bold tracking-wide transition-colors" style="text-transform: uppercase;" data-i18n="nav.back">
                         BACK
@@ -366,14 +366,28 @@
         // Check for saved night mode preference
         if (localStorage.getItem('nightMode') === 'true') {
             document.body.classList.add('night-mode');
-            nightIcon.textContent = 'DAY';
+            const currentLang = localStorage.getItem('language') || 'en';
+            fetch(`/locales/${currentLang}.json`)
+                .then(res => res.json())
+                .then(translations => {
+                    nightIcon.textContent = translations.nav.day;
+                    nightIcon.setAttribute('data-i18n', 'nav.day');
+                });
         }
 
         nightModeToggle.addEventListener('click', () => {
             document.body.classList.toggle('night-mode');
             const isNightMode = document.body.classList.contains('night-mode');
             localStorage.setItem('nightMode', isNightMode);
-            nightIcon.textContent = isNightMode ? 'DAY' : 'NIGHT';
+
+            // Update translation
+            const currentLang = localStorage.getItem('language') || 'en';
+            fetch(`/locales/${currentLang}.json`)
+                .then(res => res.json())
+                .then(translations => {
+                    nightIcon.textContent = isNightMode ? translations.nav.day : translations.nav.night;
+                    nightIcon.setAttribute('data-i18n', isNightMode ? 'nav.day' : 'nav.night');
+                });
         });
 
         // Check for token in URL (magic link login)

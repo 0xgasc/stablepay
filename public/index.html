@@ -349,8 +349,8 @@
                         <option value="pt">PT</option>
                     </select>
                     <button id="nightModeToggle" class="px-3 py-1 border-4 border-black bg-white hover:bg-gray-100 font-bold text-sm">
-                        <span class="night-icon">NIGHT</span>
-                        <span class="day-icon hidden">DAY</span>
+                        <span class="night-icon" data-i18n="nav.night">NIGHT</span>
+                        <span class="day-icon hidden" data-i18n="nav.day">DAY</span>
                     </button>
                     <a href="/login.html" class="bg-black text-white px-6 py-2 font-bold border-4 border-black brutal-shadow-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all uppercase text-sm">
                         <span data-i18n="nav.login">Login</span>
@@ -703,8 +703,20 @@
         nightModeToggle.addEventListener('click', () => {
             document.body.classList.toggle('night-mode');
             const isNightMode = document.body.classList.contains('night-mode');
-            nightIcon.textContent = isNightMode ? 'DAY' : 'NIGHT';
+
+            // Toggle visibility and update i18n attributes
+            nightIcon.classList.toggle('hidden');
             dayIcon.classList.toggle('hidden');
+
+            // Update translations
+            const currentLang = localStorage.getItem('language') || 'en';
+            fetch(`/locales/${currentLang}.json`)
+                .then(res => res.json())
+                .then(translations => {
+                    nightIcon.textContent = translations.nav.night;
+                    dayIcon.textContent = translations.nav.day;
+                });
+
             localStorage.setItem('nightMode', isNightMode);
         });
 
