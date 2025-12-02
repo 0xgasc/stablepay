@@ -327,6 +327,51 @@
             </div>
         </div>
 
+        <!-- Pricing Tier Card -->
+        <div class="bg-cyan-100 border-4 border-black brutal-shadow mb-8 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-2xl font-black text-black uppercase" id="currentPlanName">FREE TIER</h3>
+                    <p class="text-sm text-black font-medium" data-i18n="pricing.tierDescription">Your current pricing plan</p>
+                </div>
+                <button id="upgradeBtn" class="bg-black text-white px-6 py-3 font-bold uppercase border-4 border-black brutal-shadow hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all" data-i18n="pricing.upgrade">
+                    UPGRADE
+                </button>
+            </div>
+
+            <!-- Usage Bar -->
+            <div class="mb-4">
+                <div class="flex justify-between mb-2">
+                    <span class="text-sm font-bold text-black uppercase" data-i18n="pricing.monthlyUsage">Monthly Volume Used</span>
+                    <span class="text-sm font-bold text-black" id="volumeUsageText">$0 / $1,000</span>
+                </div>
+                <div class="w-full bg-white border-4 border-black h-8">
+                    <div id="volumeUsageBar" class="bg-indigo-500 h-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <p class="text-xs text-black font-medium mt-2" id="billingCycleText">Billing cycle resets in 30 days</p>
+            </div>
+
+            <!-- Plan Features -->
+            <div class="grid grid-cols-2 gap-4 text-sm font-medium text-black">
+                <div>
+                    <span class="font-bold uppercase" data-i18n="pricing.features.blockchains">Blockchains:</span>
+                    <span id="planBlockchains">1</span>
+                </div>
+                <div>
+                    <span class="font-bold uppercase" data-i18n="pricing.features.fee">Fee:</span>
+                    <span id="planFee">0.5%</span>
+                </div>
+                <div>
+                    <span class="font-bold uppercase" data-i18n="pricing.features.refunds">Refunds:</span>
+                    <span id="planRefunds">No</span>
+                </div>
+                <div>
+                    <span class="font-bold uppercase" data-i18n="pricing.features.webhooks">Webhooks:</span>
+                    <span id="planWebhooks">No</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Quick Stats -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div class="bg-slate-950 border p-6 shadow-sm border">
@@ -1247,6 +1292,65 @@ onMounted(() => {
 
 
         // Load merchant data
+        const PRICING_TIERS = {
+            FREE: { name: 'Free', limit: 1000, blockchains: 1, fee: '0.5%', refunds: false, webhooks: false },
+            STARTER: { name: 'Starter', limit: 100000, blockchains: 6, fee: '0.5%', refunds: true, webhooks: true },
+            PRO: { name: 'Pro', limit: null, blockchains: 6, fee: '0.3%', refunds: true, webhooks: true },
+            ENTERPRISE: { name: 'Enterprise', limit: null, blockchains: 6, fee: '0.2%', refunds: true, webhooks: true }
+        };
+
+        function updatePricingTierDisplay(merchant) {
+            const plan = merchant.plan || 'FREE';
+            const tier = PRICING_TIERS[plan];
+            if (!tier) return;
+
+            // Update plan name
+            document.getElementById('currentPlanName').textContent = tier.name.toUpperCase() + ' TIER';
+
+            // Update usage
+            const volumeUsed = parseFloat(merchant.monthlyVolumeUsed || 0);
+            const volumeLimit = tier.limit;
+
+            if (volumeLimit) {
+                const percentage = Math.min((volumeUsed / volumeLimit) * 100, 100);
+                document.getElementById('volumeUsageBar').style.width = percentage + '%';
+                document.getElementById('volumeUsageText').textContent = `$${volumeUsed.toFixed(2)} / $${volumeLimit.toLocaleString()}`;
+
+                // Change color based on usage
+                const bar = document.getElementById('volumeUsageBar');
+                if (percentage >= 90) bar.style.background = '#EF4444'; // Red
+                else if (percentage >= 75) bar.style.background = '#F59E0B'; // Orange
+                else bar.style.background = '#7C4DFF'; // Indigo
+            } else {
+                document.getElementById('volumeUsageBar').style.width = '0%';
+                document.getElementById('volumeUsageText').textContent = `$${volumeUsed.toFixed(2)} / Unlimited`;
+            }
+
+            // Calculate days until reset
+            if (merchant.billingCycleStart) {
+                const cycleStart = new Date(merchant.billingCycleStart);
+                const now = new Date();
+                const daysPassed = Math.floor((now - cycleStart) / (1000 * 60 * 60 * 24));
+                const daysRemaining = Math.max(30 - daysPassed, 0);
+                document.getElementById('billingCycleText').textContent = `Billing cycle resets in ${daysRemaining} days`;
+            }
+
+            // Update features
+            document.getElementById('planBlockchains').textContent = tier.blockchains;
+            document.getElementById('planFee').textContent = tier.fee;
+            document.getElementById('planRefunds').textContent = tier.refunds ? 'Yes' : 'No';
+            document.getElementById('planWebhooks').textContent = tier.webhooks ? 'Yes' : 'No';
+
+            // Show/hide upgrade button
+            const upgradeBtn = document.getElementById('upgradeBtn');
+            if (plan === 'ENTERPRISE') {
+                upgradeBtn.style.display = 'none';
+            } else {
+                upgradeBtn.style.display = 'block';
+                upgradeBtn.onclick = () => window.location.href = '/pricing.html';
+            }
+        }
+
         async function loadMerchantData() {
             try {
                 // Get merchant ID and token from session
@@ -1296,6 +1400,9 @@ onMounted(() => {
                     const created = new Date(currentMerchant.createdAt);
                     document.getElementById('profileCreatedAt').textContent = created.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
                 }
+
+                // Update pricing tier card
+                updatePricingTierDisplay(currentMerchant);
 
                 // Update status badge
                 const statusBadge = document.getElementById('profileStatusBadge');
