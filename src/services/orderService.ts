@@ -3,6 +3,7 @@ import { CHAIN_CONFIGS } from '../config/chains';
 import { Chain, CreateOrderRequest, CreateOrderResponse, OrderDetailsResponse } from '../types';
 import { Decimal } from '@prisma/client/runtime/library';
 import { canProcessPayment } from '../config/pricing';
+import { logger } from '../utils/logger';
 
 export class OrderService {
   async createOrder(data: CreateOrderRequest): Promise<CreateOrderResponse> {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../config/database';
+import { PRICING_TIERS } from '../config/pricing';
 
 const router = Router();
 
@@ -25,11 +26,36 @@ router.post('/', async (req, res) => {
     // Verify order exists and get original amount
     const order = await db.order.findUnique({
       where: { id: data.orderId },
-      include: { transactions: true }
+      include: {
+        transactions: true,
+        merchant: {
+          select: {
+            id: true,
+            plan: true,
+            companyName: true
+          }
+        }
+      }
     });
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Check tier permissions for refunds
+    if (order.merchant) {
+      const merchantPlan = order.merchant.plan || 'FREE';
+      const tier = PRICING_TIERS[merchantPlan];
+
+      if (!tier || !tier.features.refunds) {
+        return res.status(403).json({
+          error: 'Refunds not available',
+          message: `Refunds are not available on ${tier?.name || 'FREE'} plan. Upgrade to STARTER or higher to process refunds.`,
+          upgradeRequired: true,
+          currentPlan: merchantPlan,
+          requiredFeature: 'refunds'
+        });
+      }
     }
 
     // Validate refund amount doesn't exceed original
