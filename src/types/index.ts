@@ -1,10 +1,9 @@
-export type Chain = 'BASE_SEPOLIA' | 'ETHEREUM_SEPOLIA';
+import { Chain as PrismaChain, OrderStatus as PrismaOrderStatus, TransactionStatus as PrismaTransactionStatus, RefundStatus as PrismaRefundStatus } from '@prisma/client';
 
-export type OrderStatus = 'PENDING' | 'PAID' | 'CONFIRMED' | 'REFUNDED' | 'EXPIRED' | 'CANCELLED';
-
-export type TransactionStatus = 'PENDING' | 'CONFIRMED' | 'FAILED';
-
-export type RefundStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSED';
+export type Chain = PrismaChain;
+export type OrderStatus = PrismaOrderStatus;
+export type TransactionStatus = PrismaTransactionStatus;
+export type RefundStatus = PrismaRefundStatus;
 
 export interface CreateOrderRequest {
   amount: number;

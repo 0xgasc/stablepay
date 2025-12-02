@@ -84,6 +84,10 @@ model Merchant {
   monthly_volume        Decimal?    @db.Decimal(18, 2) @map("monthly_volume")
   monthlyVolumeUsed     Decimal     @default(0) @db.Decimal(18, 2)
   monthlyTransactions   Int         @default(0)
+  mainnetVolumeUsed     Decimal     @default(0) @db.Decimal(18, 2)
+  mainnetTransactions   Int         @default(0)
+  testnetVolumeUsed     Decimal     @default(0) @db.Decimal(18, 2)
+  testnetTransactions   Int         @default(0)
   billingCycleStart     DateTime    @default(now())
   stripeCustomerId      String?     @unique
   stripeSubscriptionId  String?     @unique
@@ -94,6 +98,9 @@ model Merchant {
   wallets               MerchantWallet[]
   orders                Order[]
 
+  @@index([plan])
+  @@index([networkMode])
+  @@index([billingCycleStart])
   @@map("merchants")
 }
 

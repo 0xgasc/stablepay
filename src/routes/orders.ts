@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { OrderService } from '../services/orderService';
 import { canProcessPayment } from '../config/pricing';
+import { rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 const orderService = new OrderService();
@@ -14,7 +15,11 @@ const createOrderSchema = z.object({
   expiryMinutes: z.number().positive().optional(),
 });
 
-router.post('/', async (req, res) => {
+router.post('/', rateLimit({
+  getMerchantId: async (req) => req.body.merchantId || null,
+  limitAnonymous: true,
+  anonymousLimit: 10 // 10 orders per hour for unauthenticated requests
+}), async (req, res) => {
   try {
     console.log('Creating order with data:', req.body);
     const data = createOrderSchema.parse(req.body);
@@ -27,7 +32,8 @@ router.post('/', async (req, res) => {
         return res.status(403).json({
           error: 'Tier limit exceeded',
           message: limitCheck.reason,
-          upgradeRequired: true
+          upgradeRequired: limitCheck.upgradeRequired || true,
+          upgradeUrl: '/pricing.html'
         });
       }
     }
@@ -50,7 +56,11 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.get('/:orderId', async (req, res) => {
+router.get('/:orderId', rateLimit({
+  getMerchantId: async (req) => req.query.merchantId as string || null,
+  limitAnonymous: true,
+  anonymousLimit: 30
+}), async (req, res) => {
   try {
     const { orderId } = req.params;
     const order = await orderService.getOrder(orderId);
@@ -66,7 +76,11 @@ router.get('/:orderId', async (req, res) => {
   }
 });
 
-router.get('/', async (req, res) => {
+router.get('/', rateLimit({
+  getMerchantId: async (req) => req.query.merchantId as string || null,
+  limitAnonymous: true,
+  anonymousLimit: 30
+}), async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);

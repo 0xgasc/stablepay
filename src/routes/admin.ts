@@ -1,10 +1,17 @@
 import { Router } from 'express';
 import { db } from '../config/database';
+import { PRICING_TIERS } from '../config/pricing';
+import { logger } from '../utils/logger';
+import { rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 
 // GET admin resources (orders, wallets, merchants)
-router.get('/', async (req, res) => {
+router.get('/', rateLimit({
+  getMerchantId: async (req) => req.query.merchantId as string || null,
+  limitAnonymous: true,
+  anonymousLimit: 20
+}), async (req, res) => {
   try {
     const { resource, merchantId } = req.query;
 
@@ -132,6 +139,37 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'merchantId and wallets array are required' });
       }
 
+      // Validate tier limits for multi-chain support
+      const merchant = await db.merchant.findUnique({
+        where: { id: merchantId },
+        select: { plan: true, companyName: true },
+      });
+
+      if (!merchant) {
+        return res.status(404).json({ error: 'Merchant not found' });
+      }
+
+      const plan = merchant.plan || 'FREE';
+      const tier = PRICING_TIERS[plan];
+
+      // Count unique chains being added
+      const uniqueChains = new Set(wallets.map(w => w.chain));
+      const chainCount = uniqueChains.size;
+
+      // Check if merchant exceeds their blockchain limit
+      if (chainCount > tier.features.blockchains) {
+        logger.tierLimitExceeded(merchantId, plan, 'blockchains');
+        return res.status(403).json({
+          error: 'Blockchain limit exceeded',
+          message: `Your ${tier.name} plan supports ${tier.features.blockchains} blockchain${tier.features.blockchains > 1 ? 's' : ''}. You're trying to add ${chainCount}.`,
+          upgradeRequired: true,
+          currentPlan: plan,
+          currentLimit: tier.features.blockchains,
+          requested: chainCount,
+          upgradeUrl: '/pricing.html'
+        });
+      }
+
       // Delete existing wallets for this merchant
       await db.merchantWallet.deleteMany({
         where: { merchantId },
@@ -150,6 +188,14 @@ router.post('/', async (req, res) => {
           })
         )
       );
+
+      logger.info('Wallets configured', {
+        merchantId,
+        companyName: merchant.companyName,
+        chains: Array.from(uniqueChains),
+        walletCount: created.length,
+        event: 'wallets.configured'
+      });
 
       return res.json({ success: true, wallets: created });
     }
@@ -173,6 +219,37 @@ router.post('/wallets', async (req, res) => {
       return res.status(400).json({ error: 'merchantId and wallets array are required' });
     }
 
+    // Validate tier limits for multi-chain support
+    const merchant = await db.merchant.findUnique({
+      where: { id: merchantId },
+      select: { plan: true, companyName: true },
+    });
+
+    if (!merchant) {
+      return res.status(404).json({ error: 'Merchant not found' });
+    }
+
+    const plan = merchant.plan || 'FREE';
+    const tier = PRICING_TIERS[plan];
+
+    // Count unique chains being added
+    const uniqueChains = new Set(wallets.map(w => w.chain));
+    const chainCount = uniqueChains.size;
+
+    // Check if merchant exceeds their blockchain limit
+    if (chainCount > tier.features.blockchains) {
+      logger.tierLimitExceeded(merchantId, plan, 'blockchains');
+      return res.status(403).json({
+        error: 'Blockchain limit exceeded',
+        message: `Your ${tier.name} plan supports ${tier.features.blockchains} blockchain${tier.features.blockchains > 1 ? 's' : ''}. You're trying to add ${chainCount}.`,
+        upgradeRequired: true,
+        currentPlan: plan,
+        currentLimit: tier.features.blockchains,
+        requested: chainCount,
+        upgradeUrl: '/pricing.html'
+      });
+    }
+
     // Delete existing wallets for this merchant
     await db.merchantWallet.deleteMany({
       where: { merchantId },
@@ -192,12 +269,22 @@ router.post('/wallets', async (req, res) => {
       )
     );
 
+    logger.info('Wallets configured', {
+      merchantId,
+      companyName: merchant.companyName,
+      chains: Array.from(uniqueChains),
+      walletCount: created.length,
+      event: 'wallets.configured'
+    });
+
     res.json({ success: true, wallets: created });
   } catch (error) {
     console.error('Wallet save error:', error);
+    const err = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Failed to save wallets', err);
     res.status(500).json({
       error: 'Failed to save wallets',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: err.message
     });
   }
 });

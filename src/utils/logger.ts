@@ -79,10 +79,10 @@ class Logger {
   }
 
   // Convenience methods for common operations
-  orderCreated(orderId: string, merchantId: string | null, amount: number, chain: string) {
+  orderCreated(orderId: string, merchantId: string | null | undefined, amount: number, chain: string) {
     this.info('Order created', {
       orderId,
-      merchantId,
+      merchantId: merchantId || undefined,
       amount,
       chain,
       event: 'order.created'

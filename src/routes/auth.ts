@@ -1,10 +1,17 @@
 import { Router } from 'express';
 import { db } from '../config/database';
+import { rateLimit } from '../middleware/rateLimit';
+import { logger } from '../utils/logger';
+import { hashPassword, comparePassword, validatePassword } from '../utils/password';
 
 const router = Router();
 
 // Merchant login endpoint
-router.post('/login', async (req, res) => {
+router.post('/login', rateLimit({
+  getMerchantId: async () => null, // Anonymous endpoint
+  limitAnonymous: true,
+  anonymousLimit: 20 // 20 login attempts per hour per IP
+}), async (req, res) => {
   try {
     const { email, token } = req.body;
 
@@ -21,6 +28,11 @@ router.post('/login', async (req, res) => {
     });
 
     if (!merchant) {
+      logger.warn('Failed login attempt', {
+        email,
+        ip: req.ip,
+        event: 'auth.login_failed'
+      });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -115,7 +127,11 @@ router.put('/merchant-profile', async (req, res) => {
 });
 
 // Merchant signup endpoint
-router.post('/v1/signup', async (req, res) => {
+router.post('/v1/signup', rateLimit({
+  getMerchantId: async () => null, // Anonymous endpoint
+  limitAnonymous: true,
+  anonymousLimit: 10 // 10 signup attempts per hour per IP
+}), async (req, res) => {
   try {
     const { email, companyName, contactName, password, plan } = req.body;
 
@@ -129,22 +145,52 @@ router.post('/v1/signup', async (req, res) => {
     });
 
     if (existing) {
+      logger.warn('Duplicate signup attempt', {
+        email,
+        ip: req.ip,
+        event: 'auth.signup_duplicate'
+      });
       return res.status(400).json({ error: 'An account with this email already exists' });
     }
 
     // Create merchant in pending state (no login token yet)
+    // Default to FREE tier for new signups
+    const merchantPlan = plan || 'FREE';
+
+    // Validate and hash password if provided
+    let hashedPassword: string | undefined;
+    if (password) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({
+          error: 'Invalid password',
+          message: passwordValidation.error
+        });
+      }
+      hashedPassword = await hashPassword(password);
+    }
+
     const merchant = await db.merchant.create({
       data: {
         email,
         companyName,
         contactName,
-        plan: plan || 'STARTER',
+        plan: merchantPlan,
         networkMode: 'TESTNET',
         paymentMode: 'DIRECT',
         isActive: false, // Pending admin approval
         setupCompleted: false,
-        passwordHash: password, // In production, hash this!
+        ...(hashedPassword && { passwordHash: hashedPassword }),
       },
+    });
+
+    logger.info('New merchant signup', {
+      merchantId: merchant.id,
+      email: merchant.email,
+      companyName: merchant.companyName,
+      plan: merchantPlan,
+      ip: req.ip,
+      event: 'auth.signup_success'
     });
 
     res.json({

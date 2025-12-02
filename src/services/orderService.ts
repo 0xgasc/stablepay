@@ -256,12 +256,18 @@ export class OrderService {
     });
   }
 
-  async checkTierLimits(merchantId: string, orderAmount: number): Promise<{ allowed: boolean; reason?: string }> {
+  async checkTierLimits(merchantId: string, orderAmount: number): Promise<{ allowed: boolean; reason?: string; upgradeRequired?: boolean }> {
     const merchant = await db.merchant.findUnique({
       where: { id: merchantId },
       select: {
         plan: true,
+        networkMode: true,
         monthlyVolumeUsed: true,
+        monthlyTransactions: true,
+        mainnetVolumeUsed: true,
+        mainnetTransactions: true,
+        testnetVolumeUsed: true,
+        testnetTransactions: true,
         billingCycleStart: true,
       },
     });
@@ -276,6 +282,8 @@ export class OrderService {
     const daysSinceStart = Math.floor((now.getTime() - billingCycleStart.getTime()) / (1000 * 60 * 60 * 24));
 
     let currentMonthlyVolume = parseFloat(merchant.monthlyVolumeUsed.toString());
+    let currentMainnetVolume = parseFloat(merchant.mainnetVolumeUsed.toString());
+    let currentMainnetTxns = merchant.mainnetTransactions;
 
     if (daysSinceStart >= 30) {
       // Reset billing cycle
@@ -284,17 +292,50 @@ export class OrderService {
         data: {
           monthlyVolumeUsed: 0,
           monthlyTransactions: 0,
+          mainnetVolumeUsed: 0,
+          mainnetTransactions: 0,
+          testnetVolumeUsed: 0,
+          testnetTransactions: 0,
           billingCycleStart: now,
         },
       });
       currentMonthlyVolume = 0;
+      currentMainnetVolume = 0;
+      currentMainnetTxns = 0;
     }
 
-    // Check tier limits
-    return canProcessPayment(merchant.plan, currentMonthlyVolume, orderAmount);
+    // For FREE tier, check mainnet vs testnet limits separately
+    const networkMode = merchant.networkMode;
+
+    if (merchant.plan === 'FREE') {
+      // Use mainnet-specific tracking for FREE tier
+      return canProcessPayment(
+        merchant.plan,
+        currentMainnetVolume,
+        orderAmount,
+        networkMode,
+        currentMainnetTxns
+      );
+    }
+
+    // For other tiers, use combined volume tracking
+    return canProcessPayment(merchant.plan, currentMonthlyVolume, orderAmount, networkMode);
   }
 
   async updateMerchantVolume(merchantId: string, amount: number) {
+    // Get merchant's network mode
+    const merchant = await db.merchant.findUnique({
+      where: { id: merchantId },
+      select: { networkMode: true },
+    });
+
+    if (!merchant) {
+      throw new Error('Merchant not found');
+    }
+
+    const isMainnet = merchant.networkMode === 'MAINNET';
+
+    // Update both combined and network-specific counters
     await db.merchant.update({
       where: { id: merchantId },
       data: {
@@ -304,7 +345,30 @@ export class OrderService {
         monthlyTransactions: {
           increment: 1,
         },
+        ...(isMainnet && {
+          mainnetVolumeUsed: {
+            increment: amount,
+          },
+          mainnetTransactions: {
+            increment: 1,
+          },
+        }),
+        ...(!isMainnet && {
+          testnetVolumeUsed: {
+            increment: amount,
+          },
+          testnetTransactions: {
+            increment: 1,
+          },
+        }),
       },
+    });
+
+    logger.info('Merchant volume updated', {
+      merchantId,
+      amount,
+      networkMode: merchant.networkMode,
+      event: 'volume.updated'
     });
   }
 }

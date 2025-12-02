@@ -213,6 +213,12 @@
             color: #ccc;
         }
 
+        body.night-mode .bg-cyan-100,
+        body.night-mode .bg-indigo-100,
+        body.night-mode .bg-teal-100 {
+            background: #1e3a8a;
+        }
+
         body.night-mode .network-badge,
         body.night-mode .mainnet-badge {
             border-color: #fff;
@@ -1293,7 +1299,17 @@ onMounted(() => {
 
         // Load merchant data
         const PRICING_TIERS = {
-            FREE: { name: 'Free', limit: 1000, blockchains: 1, fee: '0.5%', refunds: false, webhooks: false },
+            FREE: {
+                name: 'Free',
+                limit: null, // No combined limit
+                testnetLimit: null, // Unlimited testnet
+                mainnetLimit: 100, // $100 mainnet
+                mainnetTxLimit: 10, // 10 mainnet transactions
+                blockchains: 1,
+                fee: '0.5%',
+                refunds: true,
+                webhooks: true
+            },
             STARTER: { name: 'Starter', limit: 100000, blockchains: 6, fee: '0.5%', refunds: true, webhooks: true },
             PRO: { name: 'Pro', limit: null, blockchains: 6, fee: '0.3%', refunds: true, webhooks: true },
             ENTERPRISE: { name: 'Enterprise', limit: null, blockchains: 6, fee: '0.2%', refunds: true, webhooks: true }
@@ -1307,23 +1323,50 @@ onMounted(() => {
             // Update plan name
             document.getElementById('currentPlanName').textContent = tier.name.toUpperCase() + ' TIER';
 
-            // Update usage
-            const volumeUsed = parseFloat(merchant.monthlyVolumeUsed || 0);
-            const volumeLimit = tier.limit;
+            // Update usage - special handling for FREE tier with mainnet/testnet split
+            if (plan === 'FREE') {
+                const mainnetVolumeUsed = parseFloat(merchant.mainnetVolumeUsed || 0);
+                const mainnetTxns = merchant.mainnetTransactions || 0;
+                const testnetVolumeUsed = parseFloat(merchant.testnetVolumeUsed || 0);
+                const testnetTxns = merchant.testnetTransactions || 0;
 
-            if (volumeLimit) {
-                const percentage = Math.min((volumeUsed / volumeLimit) * 100, 100);
-                document.getElementById('volumeUsageBar').style.width = percentage + '%';
-                document.getElementById('volumeUsageText').textContent = `$${volumeUsed.toFixed(2)} / $${volumeLimit.toLocaleString()}`;
+                // Show mainnet usage (what matters for FREE tier)
+                const volumePercentage = Math.min((mainnetVolumeUsed / tier.mainnetLimit) * 100, 100);
+                const txnPercentage = Math.min((mainnetTxns / tier.mainnetTxLimit) * 100, 100);
+                const maxPercentage = Math.max(volumePercentage, txnPercentage);
+
+                document.getElementById('volumeUsageBar').style.width = maxPercentage + '%';
+                document.getElementById('volumeUsageText').innerHTML = `
+                    <div class="text-sm">
+                        <div><strong>Mainnet:</strong> ${mainnetTxns}/${tier.mainnetTxLimit} txns | $${mainnetVolumeUsed.toFixed(2)}/$${tier.mainnetLimit}</div>
+                        <div class="text-xs text-gray-600 mt-1"><strong>Testnet:</strong> ${testnetTxns} txns | $${testnetVolumeUsed.toFixed(2)} (unlimited)</div>
+                    </div>
+                `;
 
                 // Change color based on usage
                 const bar = document.getElementById('volumeUsageBar');
-                if (percentage >= 90) bar.style.background = '#EF4444'; // Red
-                else if (percentage >= 75) bar.style.background = '#F59E0B'; // Orange
+                if (maxPercentage >= 90) bar.style.background = '#EF4444'; // Red
+                else if (maxPercentage >= 75) bar.style.background = '#F59E0B'; // Orange
                 else bar.style.background = '#7C4DFF'; // Indigo
             } else {
-                document.getElementById('volumeUsageBar').style.width = '0%';
-                document.getElementById('volumeUsageText').textContent = `$${volumeUsed.toFixed(2)} / Unlimited`;
+                // Standard volume tracking for other tiers
+                const volumeUsed = parseFloat(merchant.monthlyVolumeUsed || 0);
+                const volumeLimit = tier.limit;
+
+                if (volumeLimit) {
+                    const percentage = Math.min((volumeUsed / volumeLimit) * 100, 100);
+                    document.getElementById('volumeUsageBar').style.width = percentage + '%';
+                    document.getElementById('volumeUsageText').textContent = `$${volumeUsed.toFixed(2)} / $${volumeLimit.toLocaleString()}`;
+
+                    // Change color based on usage
+                    const bar = document.getElementById('volumeUsageBar');
+                    if (percentage >= 90) bar.style.background = '#EF4444'; // Red
+                    else if (percentage >= 75) bar.style.background = '#F59E0B'; // Orange
+                    else bar.style.background = '#7C4DFF'; // Indigo
+                } else {
+                    document.getElementById('volumeUsageBar').style.width = '0%';
+                    document.getElementById('volumeUsageText').textContent = `$${volumeUsed.toFixed(2)} / Unlimited`;
+                }
             }
 
             // Calculate days until reset

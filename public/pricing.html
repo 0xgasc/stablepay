@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - StablePay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .brutal-border {
+            border: 4px solid black;
+        }
+        .brutal-shadow {
+            box-shadow: 8px 8px 0px rgba(0, 0, 0, 1);
+        }
+        .brutal-shadow-sm {
+            box-shadow: 4px 4px 0px rgba(0, 0, 0, 1);
+        }
+        .btn-brutal {
+            background: #000;
+            color: #fff;
+            padding: 1rem 2rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0px #000;
+            transition: all 0.15s ease;
+        }
+        .btn-brutal:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px #000;
+        }
+        .btn-brutal:active {
+            transform: translate(0, 0);
+            box-shadow: 4px 4px 0px #000;
+        }
+        .pulse-shadow-animation {
+            animation: pulseShadow 3s infinite;
+        }
+        @keyframes pulseShadow {
+            0%, 100% {
+                box-shadow: 8px 8px 0px rgba(0, 0, 0, 1);
+            }
+            50% {
+                box-shadow: 12px 12px 0px rgba(0, 0, 0, 1);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-mono">
+    <!-- Navigation -->
+    <nav class="bg-white brutal-border mb-0">
+        <div class="max-w-7xl mx-auto px-6 py-6">
+            <div class="flex items-center justify-between">
+                <a href="/" class="text-3xl font-black text-black uppercase tracking-tight">
+                    StablePay
+                </a>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="/#features" class="font-bold text-black uppercase hover:underline text-sm">Features</a>
+                    <a href="/pricing.html" class="font-bold text-black uppercase hover:underline text-sm">Pricing</a>
+                    <a href="/developers.html" class="font-bold text-black uppercase hover:underline text-sm">Developers</a>
+                    <a href="/login.html" class="font-bold text-black uppercase hover:underline text-sm">Login</a>
+                    <a href="/signup.html" class="btn-brutal text-sm">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="bg-gradient-to-br from-cyan-100 via-blue-50 to-indigo-100 py-20 brutal-border">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center">
+                <h1 class="text-6xl md:text-7xl font-black text-black mb-6 uppercase leading-tight">
+                    Simple Pricing
+                </h1>
+                <p class="text-xl md:text-2xl text-gray-700 font-medium max-w-3xl mx-auto mb-8">
+                    Start free. Scale as you grow. No hidden fees.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="max-w-7xl mx-auto px-6 py-20">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-20">
+            <!-- Free Tier -->
+            <div class="bg-cyan-100 brutal-border p-8 brutal-shadow">
+                <h3 class="text-3xl font-black text-black mb-4 uppercase">Free</h3>
+                <div class="mb-6">
+                    <span class="text-5xl font-black text-black">$0</span>
+                    <span class="text-gray-600 font-medium">/mo</span>
+                </div>
+                <p class="text-sm font-medium text-gray-700 mb-6">Perfect for development and testing</p>
+                <ul class="space-y-3 mb-8 text-left text-sm">
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span><strong>Testnet:</strong> Unlimited</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span><strong>Mainnet:</strong> 10 transactions</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span><strong>Mainnet:</strong> $100 volume</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>1 blockchain</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>Refunds & webhooks</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>100 req/hour API limit</span>
+                    </li>
+                </ul>
+                <a href="/signup.html" class="block w-full bg-white border-4 border-black text-black py-3 font-bold text-center uppercase hover:bg-gray-100 brutal-shadow-sm">
+                    Get Started
+                </a>
+            </div>
+
+            <!-- Starter Tier -->
+            <div class="bg-white brutal-border p-8 brutal-shadow">
+                <h3 class="text-3xl font-black text-black mb-4 uppercase">Starter</h3>
+                <div class="mb-6">
+                    <span class="text-5xl font-black text-black">$29</span>
+                    <span class="text-gray-600 font-medium">/mo</span>
+                </div>
+                <p class="text-sm font-medium text-gray-700 mb-6">For growing businesses</p>
+                <ul class="space-y-3 mb-8 text-left text-sm">
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>$100,000/month volume</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>All 6 blockchains</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>0.5% transaction fee</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>Refunds & webhooks</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>1,000 req/hour API limit</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>Email support</span>
+                    </li>
+                </ul>
+                <a href="/signup.html" class="block w-full bg-white border-4 border-black text-black py-3 font-bold text-center uppercase hover:bg-gray-100 brutal-shadow-sm">
+                    Get Started
+                </a>
+            </div>
+
+            <!-- Pro Tier -->
+            <div class="bg-gradient-to-br from-indigo-100 to-purple-100 brutal-border p-8 pulse-shadow-animation relative">
+                <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-black text-white px-4 py-1 font-black uppercase text-xs border-4 border-black">
+                    Popular
+                </div>
+                <h3 class="text-3xl font-black text-black mb-4 uppercase">Pro</h3>
+                <div class="mb-6">
+                    <span class="text-5xl font-black text-black">$99</span>
+                    <span class="text-gray-600 font-medium">/mo</span>
+                </div>
+                <p class="text-sm font-medium text-gray-700 mb-6">For established companies</p>
+                <ul class="space-y-3 mb-8 text-left text-sm">
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>Unlimited volume</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>All 6 blockchains</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>0.3% transaction fee</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>Refunds & webhooks</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>10,000 req/hour API limit</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>Custom branding</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>Priority support</span>
+                    </li>
+                </ul>
+                <a href="/signup.html" class="block w-full btn-brutal text-center">
+                    Get Started
+                </a>
+            </div>
+
+            <!-- Enterprise Tier -->
+            <div class="bg-white brutal-border p-8 brutal-shadow">
+                <h3 class="text-3xl font-black text-black mb-4 uppercase">Enterprise</h3>
+                <div class="mb-6">
+                    <span class="text-5xl font-black text-black">Custom</span>
+                </div>
+                <p class="text-sm font-medium text-gray-700 mb-6">For large-scale operations</p>
+                <ul class="space-y-3 mb-8 text-left text-sm">
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>Unlimited volume</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>All 6 blockchains</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>0.2% transaction fee</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>Refunds & webhooks</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>100,000 req/hour API limit</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>White-label solution</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>Dedicated account manager</span>
+                    </li>
+                    <li class="flex items-start text-black font-medium">
+                        <span class="font-black mr-2">✓</span>
+                        <span>SLA guarantee</span>
+                    </li>
+                </ul>
+                <a href="mailto:sales@stablepay.io" class="block w-full bg-white border-4 border-black text-black py-3 font-bold text-center uppercase hover:bg-gray-100 brutal-shadow-sm">
+                    Contact Sales
+                </a>
+            </div>
+        </div>
+
+        <!-- Comparison Table -->
+        <div class="bg-white brutal-border brutal-shadow overflow-hidden">
+            <div class="px-8 py-6 bg-black">
+                <h2 class="text-3xl font-black text-white uppercase">Feature Comparison</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100 border-b-4 border-black">
+                        <tr>
+                            <th class="px-6 py-4 text-left font-black text-black uppercase text-sm">Feature</th>
+                            <th class="px-6 py-4 text-center font-black text-black uppercase text-sm">Free</th>
+                            <th class="px-6 py-4 text-center font-black text-black uppercase text-sm">Starter</th>
+                            <th class="px-6 py-4 text-center font-black text-black uppercase text-sm">Pro</th>
+                            <th class="px-6 py-4 text-center font-black text-black uppercase text-sm">Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y-4 divide-black">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">Testnet Limits</td>
+                            <td class="px-6 py-4 text-center font-medium">Unlimited</td>
+                            <td class="px-6 py-4 text-center font-medium">Unlimited</td>
+                            <td class="px-6 py-4 text-center font-medium">Unlimited</td>
+                            <td class="px-6 py-4 text-center font-medium">Unlimited</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">Mainnet Limits</td>
+                            <td class="px-6 py-4 text-center font-medium">10 txns / $100</td>
+                            <td class="px-6 py-4 text-center font-medium">$100,000</td>
+                            <td class="px-6 py-4 text-center font-medium">Unlimited</td>
+                            <td class="px-6 py-4 text-center font-medium">Unlimited</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">Transaction Fee</td>
+                            <td class="px-6 py-4 text-center font-medium">0.5%</td>
+                            <td class="px-6 py-4 text-center font-medium">0.5%</td>
+                            <td class="px-6 py-4 text-center font-medium">0.3%</td>
+                            <td class="px-6 py-4 text-center font-medium">0.2%</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">Blockchains</td>
+                            <td class="px-6 py-4 text-center font-medium">1</td>
+                            <td class="px-6 py-4 text-center font-medium">6</td>
+                            <td class="px-6 py-4 text-center font-medium">6</td>
+                            <td class="px-6 py-4 text-center font-medium">6</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">API Rate Limit</td>
+                            <td class="px-6 py-4 text-center font-medium">100/hour</td>
+                            <td class="px-6 py-4 text-center font-medium">1,000/hour</td>
+                            <td class="px-6 py-4 text-center font-medium">10,000/hour</td>
+                            <td class="px-6 py-4 text-center font-medium">100,000/hour</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">Refunds</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">Webhooks</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">Custom Branding</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">Priority Support</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">White-Label</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">Dedicated Account Manager</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-bold text-black">SLA Guarantee</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center text-gray-400">—</td>
+                            <td class="px-6 py-4 text-center font-black text-green-600">✓</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="mt-20">
+            <h2 class="text-4xl font-black text-black uppercase mb-8 text-center">Frequently Asked Questions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white brutal-border p-6 brutal-shadow-sm">
+                    <h3 class="text-xl font-black text-black mb-3 uppercase">How does billing work?</h3>
+                    <p class="text-gray-700 font-medium">For STARTER and PRO plans, you pay the greater of: monthly subscription fee OR transaction fees. For FREE and ENTERPRISE, you only pay transaction fees.</p>
+                </div>
+                <div class="bg-white brutal-border p-6 brutal-shadow-sm">
+                    <h3 class="text-xl font-black text-black mb-3 uppercase">Can I upgrade anytime?</h3>
+                    <p class="text-gray-700 font-medium">Yes! Upgrade or downgrade your plan at any time. Changes take effect immediately and billing is prorated.</p>
+                </div>
+                <div class="bg-white brutal-border p-6 brutal-shadow-sm">
+                    <h3 class="text-xl font-black text-black mb-3 uppercase">What happens if I exceed my volume limit?</h3>
+                    <p class="text-gray-700 font-medium">We'll notify you when you reach 75% and 90% of your limit. Once exceeded, you'll need to upgrade to continue processing payments.</p>
+                </div>
+                <div class="bg-white brutal-border p-6 brutal-shadow-sm">
+                    <h3 class="text-xl font-black text-black mb-3 uppercase">Which blockchains do you support?</h3>
+                    <p class="text-gray-700 font-medium">Base, Ethereum, Polygon, Arbitrum, Solana, and more. FREE tier lets you pick one; paid plans include all chains.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="mt-20 bg-gradient-to-br from-indigo-500 to-purple-600 brutal-border brutal-shadow p-12 text-center">
+            <h2 class="text-4xl font-black text-white uppercase mb-4">Ready to Get Started?</h2>
+            <p class="text-xl text-white font-medium mb-8">Start accepting USDC payments in minutes. No credit card required for Free tier.</p>
+            <div class="flex gap-4 justify-center">
+                <a href="/signup.html" class="bg-white text-black px-8 py-4 font-black uppercase border-4 border-black brutal-shadow-sm hover:bg-gray-100">
+                    Start Free
+                </a>
+                <a href="mailto:sales@stablepay.io" class="bg-black text-white px-8 py-4 font-black uppercase border-4 border-black brutal-shadow-sm hover:bg-gray-800">
+                    Contact Sales
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white brutal-border mt-0">
+        <div class="max-w-7xl mx-auto px-6 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="text-2xl font-black text-black mb-4 uppercase">StablePay</h3>
+                    <p class="text-gray-600 font-medium text-sm">Accept USDC payments on multiple blockchains.</p>
+                </div>
+                <div>
+                    <h4 class="font-black text-black uppercase mb-3 text-sm">Product</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/#features" class="text-gray-600 hover:text-black font-medium">Features</a></li>
+                        <li><a href="/pricing.html" class="text-gray-600 hover:text-black font-medium">Pricing</a></li>
+                        <li><a href="/developers.html" class="text-gray-600 hover:text-black font-medium">Documentation</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-black text-black uppercase mb-3 text-sm">Company</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-600 hover:text-black font-medium">About</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-black font-medium">Blog</a></li>
+                        <li><a href="mailto:sales@stablepay.io" class="text-gray-600 hover:text-black font-medium">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-black text-black uppercase mb-3 text-sm">Legal</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-600 hover:text-black font-medium">Terms</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-black font-medium">Privacy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t-4 border-black pt-6">
+                <p class="text-center text-gray-600 font-medium text-sm">© 2024 StablePay. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

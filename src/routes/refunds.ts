@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../config/database';
 import { PRICING_TIERS } from '../config/pricing';
+import { rateLimit } from '../middleware/rateLimit';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -9,17 +11,30 @@ const createRefundSchema = z.object({
   orderId: z.string().min(1),
   amount: z.string().min(1), // String to match Decimal in DB
   reason: z.string().min(1),
-  status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']).optional(),
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'PROCESSED']).optional(),
 });
 
 const updateRefundSchema = z.object({
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'PROCESSING', 'COMPLETED', 'FAILED']).optional(),
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'PROCESSED']).optional(),
   refundTxHash: z.string().optional(),
   approvedBy: z.string().optional(),
 });
 
 // Create refund
-router.post('/', async (req, res) => {
+router.post('/', rateLimit({
+  getMerchantId: async (req) => {
+    // Extract merchantId from the order
+    if (req.body.orderId) {
+      const order = await db.order.findUnique({
+        where: { id: req.body.orderId },
+        select: { merchantId: true }
+      });
+      return order?.merchantId || null;
+    }
+    return null;
+  },
+  limitAnonymous: false // Don't allow anonymous refund creation
+}), async (req, res) => {
   try {
     const data = createRefundSchema.parse(req.body);
 
@@ -52,6 +67,7 @@ router.post('/', async (req, res) => {
           error: 'Refunds not available',
           message: `Refunds are not available on ${tier?.name || 'FREE'} plan. Upgrade to STARTER or higher to process refunds.`,
           upgradeRequired: true,
+          upgradeUrl: '/pricing.html',
           currentPlan: merchantPlan,
           requiredFeature: 'refunds'
         });

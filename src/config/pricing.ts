@@ -4,6 +4,16 @@ export interface PricingTier {
   transactionFeePercent: number; // As decimal (0.5% = 0.005)
   monthlyVolumeLimit: number | null; // USD, null = unlimited
   transactionLimit: number | null; // Per month, null = unlimited
+  testnetLimits?: {
+    // Separate limits for testnet (only applies to FREE tier)
+    volumeLimit: number | null; // null = unlimited
+    transactionLimit: number | null; // null = unlimited
+  };
+  mainnetLimits?: {
+    // Separate limits for mainnet (only applies to FREE tier)
+    volumeLimit: number; // USD
+    transactionLimit: number; // Number of transactions
+  };
   features: {
     blockchains: number; // Number of chains allowed
     refunds: boolean;
@@ -19,15 +29,23 @@ export const PRICING_TIERS: Record<string, PricingTier> = {
     name: 'Free',
     monthlyFee: 0,
     transactionFeePercent: 0.005, // 0.5%
-    monthlyVolumeLimit: 1000, // $1,000/month
-    transactionLimit: null, // Unlimited transactions within volume
+    monthlyVolumeLimit: null, // No combined limit - use testnet/mainnet specific limits
+    transactionLimit: null,
+    testnetLimits: {
+      volumeLimit: null, // Unlimited testnet volume
+      transactionLimit: null, // Unlimited testnet transactions
+    },
+    mainnetLimits: {
+      volumeLimit: 100, // $100 mainnet volume
+      transactionLimit: 10, // 10 mainnet transactions
+    },
     features: {
-      blockchains: 1, // Pick one blockchain
-      refunds: false,
-      webhooks: false,
-      prioritySupport: false,
-      customBranding: false,
-      apiRateLimit: 100, // 100 req/hour
+      blockchains: 1, // Pick one blockchain - upgrade for multi-chain
+      refunds: true, // Allow refunds - merchants need to test complete flow
+      webhooks: true, // Allow webhooks - essential for integration testing
+      prioritySupport: false, // Upgrade for faster support
+      customBranding: false, // Upgrade for white-label
+      apiRateLimit: 100, // 100 req/hour - sufficient for development/testing
     },
   },
   STARTER: {
@@ -80,20 +98,55 @@ export const PRICING_TIERS: Record<string, PricingTier> = {
 export function canProcessPayment(
   plan: string,
   currentMonthlyVolume: number,
-  orderAmount: number
-): { allowed: boolean; reason?: string } {
+  orderAmount: number,
+  networkMode?: 'TESTNET' | 'MAINNET',
+  currentMonthlyTransactions?: number
+): { allowed: boolean; reason?: string; upgradeRequired?: boolean } {
   const tier = PRICING_TIERS[plan];
   if (!tier) {
     return { allowed: false, reason: 'Invalid pricing tier' };
   }
 
-  // Check volume limit
+  // Special handling for FREE tier with testnet/mainnet split
+  if (plan === 'FREE' && tier.testnetLimits && tier.mainnetLimits) {
+    if (networkMode === 'TESTNET') {
+      // Testnet is unlimited on FREE tier
+      return { allowed: true };
+    } else if (networkMode === 'MAINNET') {
+      // Check mainnet limits
+      const newVolume = currentMonthlyVolume + orderAmount;
+      const newTransactionCount = (currentMonthlyTransactions || 0) + 1;
+
+      // Check transaction count limit
+      if (newTransactionCount > tier.mainnetLimits.transactionLimit) {
+        return {
+          allowed: false,
+          reason: `Mainnet transaction limit reached (${tier.mainnetLimits.transactionLimit} transactions). Upgrade to STARTER for $100K/month volume.`,
+          upgradeRequired: true,
+        };
+      }
+
+      // Check volume limit
+      if (newVolume > tier.mainnetLimits.volumeLimit) {
+        return {
+          allowed: false,
+          reason: `Mainnet volume limit reached ($${tier.mainnetLimits.volumeLimit}). Upgrade to STARTER for $100K/month volume.`,
+          upgradeRequired: true,
+        };
+      }
+
+      return { allowed: true };
+    }
+  }
+
+  // Standard volume limit check for other tiers
   if (tier.monthlyVolumeLimit !== null) {
     const newVolume = currentMonthlyVolume + orderAmount;
     if (newVolume > tier.monthlyVolumeLimit) {
       return {
         allowed: false,
         reason: `Monthly volume limit exceeded. Upgrade to process this payment. Current: $${currentMonthlyVolume.toFixed(2)}, Limit: $${tier.monthlyVolumeLimit}`,
+        upgradeRequired: true,
       };
     }
   }

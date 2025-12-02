@@ -7,12 +7,16 @@ import { ordersRouter } from './routes/orders';
 import { refundsRouter } from './routes/refunds';
 import { adminRouter } from './routes/admin';
 import { authRouter } from './routes/auth';
+import { healthRouter } from './routes/health';
+import { validateEnv } from './utils/env';
 // import { BlockchainService } from './services/blockchainService';
 
+// Load and validate environment variables
 dotenv.config();
+const env = validateEnv();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = env.PORT || 3000;
 
 // Configure helmet with secure CSP
 app.use(helmet({
@@ -32,6 +36,10 @@ app.use(express.json());
 // Serve static files from public directory
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
+// Health checks (no /api prefix for Kubernetes/Docker health probes)
+app.use('/health', healthRouter);
+
+// API routes
 app.use('/api/orders', ordersRouter);
 app.use('/api/refunds', refundsRouter);
 app.use('/api/v1/admin', adminRouter);
@@ -164,7 +172,7 @@ app.put('/api/v1/orders', async (req, res) => {
           txHash: txHash,
           chain: order.chain,
           amount: order.amount,
-          fromAddress: order.customerEmail,
+          fromAddress: order.customerEmail || 'unknown',
           toAddress: order.paymentAddress,
           blockNumber: blockNumber ? BigInt(blockNumber) : null,
           status: 'CONFIRMED'
@@ -176,7 +184,8 @@ app.put('/api/v1/orders', async (req, res) => {
     return res.json({ success: true, order });
   } catch (error) {
     console.error('Update order error:', error);
-    res.status(500).json({ error: 'Internal server error', details: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: 'Internal server error', details: errorMessage });
   }
 });
 
@@ -203,7 +212,7 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
           txHash: txHash,
           chain: order.chain,
           amount: order.amount,
-          fromAddress: order.customerEmail,
+          fromAddress: order.customerEmail || 'unknown',
           toAddress: order.paymentAddress,
           blockNumber: blockNumber ? BigInt(blockNumber) : undefined,
           status: 'CONFIRMED'
