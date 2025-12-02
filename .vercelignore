@@ -7,3 +7,5 @@ npm-debug.log*
 dashboard/
 test-db-connection.js
 README-old.md
+api-backup/
+src/
