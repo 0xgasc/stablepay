@@ -199,8 +199,17 @@ router.post('/v1/signup', rateLimit({
       merchantId: merchant.id,
     });
   } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    const err = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Signup error', err, {
+      email: req.body.email,
+      ip: req.ip,
+      event: 'auth.signup_error'
+    });
+    console.error('Signup error details:', err.message, err.stack);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
