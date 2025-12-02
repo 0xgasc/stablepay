@@ -2,6 +2,7 @@ import { db } from '../config/database';
 import { CHAIN_CONFIGS } from '../config/chains';
 import { Chain, CreateOrderRequest, CreateOrderResponse, OrderDetailsResponse } from '../types';
 import { Decimal } from '@prisma/client/runtime/library';
+import { canProcessPayment } from '../config/pricing';
 
 export class OrderService {
   async createOrder(data: CreateOrderRequest): Promise<CreateOrderResponse> {
@@ -251,6 +252,58 @@ export class OrderService {
     return db.order.update({
       where: { id: orderId },
       data: { status: 'EXPIRED' },
+    });
+  }
+
+  async checkTierLimits(merchantId: string, orderAmount: number): Promise<{ allowed: boolean; reason?: string }> {
+    const merchant = await db.merchant.findUnique({
+      where: { id: merchantId },
+      select: {
+        plan: true,
+        monthlyVolumeUsed: true,
+        billingCycleStart: true,
+      },
+    });
+
+    if (!merchant) {
+      return { allowed: false, reason: 'Merchant not found' };
+    }
+
+    // Reset monthly volume if billing cycle has passed
+    const now = new Date();
+    const billingCycleStart = new Date(merchant.billingCycleStart);
+    const daysSinceStart = Math.floor((now.getTime() - billingCycleStart.getTime()) / (1000 * 60 * 60 * 24));
+
+    let currentMonthlyVolume = parseFloat(merchant.monthlyVolumeUsed.toString());
+
+    if (daysSinceStart >= 30) {
+      // Reset billing cycle
+      await db.merchant.update({
+        where: { id: merchantId },
+        data: {
+          monthlyVolumeUsed: 0,
+          monthlyTransactions: 0,
+          billingCycleStart: now,
+        },
+      });
+      currentMonthlyVolume = 0;
+    }
+
+    // Check tier limits
+    return canProcessPayment(merchant.plan, currentMonthlyVolume, orderAmount);
+  }
+
+  async updateMerchantVolume(merchantId: string, amount: number) {
+    await db.merchant.update({
+      where: { id: merchantId },
+      data: {
+        monthlyVolumeUsed: {
+          increment: amount,
+        },
+        monthlyTransactions: {
+          increment: 1,
+        },
+      },
     });
   }
 }

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { OrderService } from '../services/orderService';
+import { canProcessPayment } from '../config/pricing';
 
 const router = Router();
 const orderService = new OrderService();
@@ -18,6 +19,19 @@ router.post('/', async (req, res) => {
     console.log('Creating order with data:', req.body);
     const data = createOrderSchema.parse(req.body);
     console.log('Parsed order data:', data);
+
+    // Check tier limits if merchantId provided
+    if (req.body.merchantId) {
+      const limitCheck = await orderService.checkTierLimits(req.body.merchantId, data.amount);
+      if (!limitCheck.allowed) {
+        return res.status(403).json({
+          error: 'Tier limit exceeded',
+          message: limitCheck.reason,
+          upgradeRequired: true
+        });
+      }
+    }
+
     const order = await orderService.createOrder(data);
     console.log('Order created successfully:', order.orderId);
     res.status(201).json(order);
@@ -28,7 +42,7 @@ router.post('/', async (req, res) => {
     } else {
       console.error('Create order error:', error);
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
       });

@@ -49,8 +49,9 @@ enum UserRole {
 }
 
 enum PlanType {
+  FREE
   STARTER
-  GROWTH
+  PRO
   ENTERPRISE
 }
 
@@ -65,28 +66,33 @@ enum NetworkMode {
 }
 
 model Merchant {
-  id              String      @id @default(cuid())
-  email           String      @unique
-  companyName     String
-  contactName     String
-  role            UserRole    @default(MERCHANT)
-  plan            PlanType?
-  paymentMode     PaymentMode @default(DIRECT)
-  networkMode     NetworkMode @default(TESTNET)
-  isActive        Boolean     @default(false)
-  setupCompleted  Boolean     @default(false)
-  passwordHash    String?
-  loginToken      String?     @unique
-  tokenExpiresAt  DateTime?
-  website         String?
-  industry        String?
-  monthly_volume  Decimal?    @db.Decimal(18, 2) @map("monthly_volume")
-  notes           String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id                    String      @id @default(cuid())
+  email                 String      @unique
+  companyName           String
+  contactName           String
+  role                  UserRole    @default(MERCHANT)
+  plan                  PlanType    @default(FREE)
+  paymentMode           PaymentMode @default(DIRECT)
+  networkMode           NetworkMode @default(TESTNET)
+  isActive              Boolean     @default(false)
+  setupCompleted        Boolean     @default(false)
+  passwordHash          String?
+  loginToken            String?     @unique
+  tokenExpiresAt        DateTime?
+  website               String?
+  industry              String?
+  monthly_volume        Decimal?    @db.Decimal(18, 2) @map("monthly_volume")
+  monthlyVolumeUsed     Decimal     @default(0) @db.Decimal(18, 2)
+  monthlyTransactions   Int         @default(0)
+  billingCycleStart     DateTime    @default(now())
+  stripeCustomerId      String?     @unique
+  stripeSubscriptionId  String?     @unique
+  notes                 String?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
-  wallets         MerchantWallet[]
-  orders          Order[]
+  wallets               MerchantWallet[]
+  orders                Order[]
 
   @@map("merchants")
 }
