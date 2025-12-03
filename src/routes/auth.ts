@@ -139,6 +139,40 @@ router.get('/v1/test-db', async (req, res) => {
   }
 });
 
+// Simple signup test without rate limiting
+router.post('/v1/signup-test', async (req, res) => {
+  try {
+    const { email, companyName, contactName } = req.body;
+
+    if (!email || !companyName || !contactName) {
+      return res.status(400).json({ error: 'Email, company name, and contact name are required' });
+    }
+
+    const merchant = await db.merchant.create({
+      data: {
+        email,
+        companyName,
+        contactName,
+        plan: 'FREE',
+        networkMode: 'TESTNET',
+        paymentMode: 'DIRECT',
+        isActive: false,
+        setupCompleted: false,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Test signup successful',
+      merchantId: merchant.id,
+    });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error('Unknown error');
+    console.error('Test signup error:', err.message, err.stack);
+    res.status(500).json({ error: 'Test signup failed', details: err.message });
+  }
+});
+
 router.post('/v1/signup', rateLimit({
   getMerchantId: async () => null, // Anonymous endpoint
   limitAnonymous: true,
