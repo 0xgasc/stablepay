@@ -127,12 +127,25 @@ router.put('/merchant-profile', async (req, res) => {
 });
 
 // Merchant signup endpoint
+// Test endpoint to verify database connection
+router.get('/v1/test-db', async (req, res) => {
+  try {
+    await db.$queryRaw`SELECT 1`;
+    res.json({ success: true, message: 'Database connected' });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error('Unknown error');
+    console.error('DB test error:', err);
+    res.status(500).json({ error: 'Database connection failed', details: err.message });
+  }
+});
+
 router.post('/v1/signup', rateLimit({
   getMerchantId: async () => null, // Anonymous endpoint
   limitAnonymous: true,
   anonymousLimit: 10 // 10 signup attempts per hour per IP
 }), async (req, res) => {
   try {
+    console.log('Signup attempt:', { email: req.body.email, hasPassword: !!req.body.password });
     const { email, companyName, contactName, password, plan } = req.body;
 
     if (!email || !companyName || !contactName) {
