@@ -40,7 +40,7 @@ export const PRICING_TIERS: Record<string, PricingTier> = {
       transactionLimit: 10, // 10 mainnet transactions
     },
     features: {
-      blockchains: 1, // Pick one blockchain - upgrade for multi-chain
+      blockchains: 2, // 2 blockchains (testnet + mainnet for 1 chain, e.g., BASE_SEPOLIA + BASE_MAINNET)
       refunds: true, // Allow refunds - merchants need to test complete flow
       webhooks: true, // Allow webhooks - essential for integration testing
       prioritySupport: false, // Upgrade for faster support
