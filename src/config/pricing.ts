@@ -55,7 +55,7 @@ export const PRICING_TIERS: Record<string, PricingTier> = {
     monthlyVolumeLimit: 100000, // $100,000/month
     transactionLimit: null,
     features: {
-      blockchains: 6, // All blockchains
+      blockchains: 10, // All 10 chains (5 chains × mainnet+testnet)
       refunds: true,
       webhooks: true,
       prioritySupport: false,
@@ -70,7 +70,7 @@ export const PRICING_TIERS: Record<string, PricingTier> = {
     monthlyVolumeLimit: null, // Unlimited
     transactionLimit: null,
     features: {
-      blockchains: 6,
+      blockchains: 10, // All 10 chains
       refunds: true,
       webhooks: true,
       prioritySupport: true,
@@ -85,7 +85,7 @@ export const PRICING_TIERS: Record<string, PricingTier> = {
     monthlyVolumeLimit: null,
     transactionLimit: null,
     features: {
-      blockchains: 6,
+      blockchains: 10, // All 10 chains
       refunds: true,
       webhooks: true,
       prioritySupport: true,
