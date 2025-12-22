@@ -27,6 +27,14 @@ const envSchema = z.object({
   // Security
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').optional(),
   ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY must be at least 32 characters').optional(),
+
+  // Admin authentication (required for production)
+  ADMIN_EMAIL: z.string().email('ADMIN_EMAIL must be a valid email').optional(),
+  ADMIN_PASSWORD: z.string().min(8, 'ADMIN_PASSWORD must be at least 8 characters').optional(),
+  ADMIN_API_TOKEN: z.string().min(32, 'ADMIN_API_TOKEN must be at least 32 characters for security').optional(),
+
+  // CORS origins
+  ALLOWED_ORIGINS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -43,6 +51,28 @@ export function validateEnv(): Env {
     console.log(`   - NODE_ENV: ${env.NODE_ENV}`);
     console.log(`   - PORT: ${env.PORT}`);
     console.log(`   - DATABASE_URL: ${env.DATABASE_URL ? '✓ Set' : '✗ Missing'}`);
+
+    // Warn about missing admin credentials (critical for production)
+    const adminVars = {
+      ADMIN_EMAIL: env.ADMIN_EMAIL,
+      ADMIN_PASSWORD: env.ADMIN_PASSWORD,
+      ADMIN_API_TOKEN: env.ADMIN_API_TOKEN,
+    };
+
+    const missingAdminVars = Object.entries(adminVars)
+      .filter(([_, value]) => !value)
+      .map(([key]) => key);
+
+    if (missingAdminVars.length > 0) {
+      console.warn('⚠️  Missing admin authentication variables:');
+      missingAdminVars.forEach((key) => {
+        console.warn(`   - ${key}`);
+      });
+      console.warn('   Admin panel login will not work without these!');
+      console.warn('   Set these in your Vercel environment variables.');
+    } else {
+      console.log('   - Admin auth: ✓ Configured');
+    }
 
     return env;
   } catch (error) {

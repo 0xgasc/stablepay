@@ -10,10 +10,17 @@ function getPrisma() {
   return prisma;
 }
 
-// Admin authentication
+// Admin authentication - uses environment variable
 function checkAdminAuth(req) {
   const auth = req.headers.authorization;
-  return auth === 'Bearer admin-token';
+  const expectedToken = process.env.ADMIN_API_TOKEN;
+
+  if (!expectedToken) {
+    console.error('ADMIN_API_TOKEN environment variable is not set!');
+    return false;
+  }
+
+  return auth === `Bearer ${expectedToken}`;
 }
 
 // CORS setup
@@ -40,11 +47,16 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
+  const { resource, action } = req.query;
+
+  // Login endpoint doesn't require auth
+  if (resource === 'login' && req.method === 'POST') {
+    return handleAdminLogin(req, res);
+  }
+
   if (!checkAdminAuth(req)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-
-  const { resource, action } = req.query;
 
   try {
     const db = getPrisma();
@@ -443,4 +455,33 @@ async function handleWallets(req, res, prisma) {
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
+}
+
+// Admin login handler
+async function handleAdminLogin(req, res) {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+
+  // Check against environment variables
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminToken = process.env.ADMIN_API_TOKEN;
+
+  if (!adminEmail || !adminPassword || !adminToken) {
+    console.error('Admin credentials not configured in environment variables');
+    return res.status(500).json({ error: 'Admin authentication not configured' });
+  }
+
+  if (email === adminEmail && password === adminPassword) {
+    return res.status(200).json({
+      success: true,
+      token: adminToken,
+      message: 'Login successful'
+    });
+  }
+
+  return res.status(401).json({ error: 'Invalid credentials' });
 }
