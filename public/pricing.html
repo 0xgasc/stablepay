@@ -5,7 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pricing - StablePay</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body {
+            background: #FFFFFF;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        body.night-mode .bg-white,
+        body.night-mode .bg-gray-50 {
+            background: #000 !important;
+        }
+        body.night-mode .bg-cyan-100 {
+            background: #1e3a5f !important;
+        }
+        body.night-mode .bg-indigo-500 {
+            background: #4f46e5 !important;
+        }
+        body.night-mode .text-black {
+            color: #fff !important;
+        }
+        body.night-mode .text-gray-600,
+        body.night-mode .text-gray-700 {
+            color: #ccc !important;
+        }
+        body.night-mode .brutal-border,
+        body.night-mode .border-black {
+            border-color: #fff !important;
+        }
+        body.night-mode .brutal-shadow {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        body.night-mode .brutal-shadow-sm {
+            box-shadow: 4px 4px 0px #fff !important;
+        }
+        body.night-mode nav {
+            background: #000 !important;
+        }
+        body.night-mode a {
+            color: #fff;
+        }
         .brutal-border {
             border: 4px solid black;
         }
@@ -33,6 +80,15 @@
             transform: translate(0, 0);
             box-shadow: 4px 4px 0px #000;
         }
+        body.night-mode .btn-brutal {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+            box-shadow: 6px 6px 0px #fff;
+        }
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 8px 8px 0px #fff;
+        }
         .pulse-shadow-animation {
             animation: pulseShadow 3s infinite;
         }
@@ -46,7 +102,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 font-mono">
+<body class="bg-gray-50">
     <!-- Navigation -->
     <nav class="bg-white brutal-border mb-0">
         <div class="max-w-7xl mx-auto px-6 py-6">
@@ -59,6 +115,10 @@
                     <a href="/pricing.html" class="font-bold text-black uppercase hover:underline text-sm">Pricing</a>
                     <a href="/developers.html" class="font-bold text-black uppercase hover:underline text-sm">Developers</a>
                     <a href="/login.html" class="font-bold text-black uppercase hover:underline text-sm">Login</a>
+                    <button id="nightModeToggle" class="px-4 py-2 bg-white text-black font-bold text-sm brutal-border brutal-shadow-sm">
+                        <span class="night-icon">NIGHT</span>
+                        <span class="day-icon hidden">DAY</span>
+                    </button>
                     <a href="/signup.html" class="btn-brutal text-sm">Get Started</a>
                 </div>
             </div>
@@ -434,5 +494,27 @@
             </div>
         </div>
     </footer>
+
+    <script>
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const nightIcon = nightModeToggle.querySelector('.night-icon');
+        const dayIcon = nightModeToggle.querySelector('.day-icon');
+
+        // Check for saved preference
+        const savedMode = localStorage.getItem('nightMode');
+        if (savedMode === 'true') {
+            document.body.classList.add('night-mode');
+            nightIcon.classList.add('hidden');
+            dayIcon.classList.remove('hidden');
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            nightIcon.classList.toggle('hidden');
+            dayIcon.classList.toggle('hidden');
+            localStorage.setItem('nightMode', document.body.classList.contains('night-mode'));
+        });
+    </script>
 </body>
 </html>
