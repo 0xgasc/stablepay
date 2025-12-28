@@ -72,6 +72,7 @@ router.get('/merchant-profile', async (req, res) => {
         _count: {
           select: { orders: true },
         },
+        wallets: true,
       },
     });
 
@@ -91,6 +92,7 @@ router.get('/merchant-profile', async (req, res) => {
       setupCompleted: merchant.setupCompleted,
       createdAt: merchant.createdAt,
       orderCount: merchant._count.orders,
+      wallets: merchant.wallets || [],
     });
   } catch (error) {
     console.error('Profile fetch error:', error);
