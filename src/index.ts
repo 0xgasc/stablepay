@@ -172,8 +172,8 @@ app.put('/api/v1/orders', async (req, res) => {
     const order = await db.order.update({
       where: { id: orderId },
       data: {
-        status: status || 'CONFIRMED',
-        updatedAt: new Date()
+        status: status || 'CONFIRMED'
+        // updatedAt is auto-managed by Prisma @updatedAt
       }
     });
 
@@ -223,8 +223,8 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
     const order = await db.order.update({
       where: { id: orderId },
       data: {
-        status: status || 'CONFIRMED',
-        updatedAt: new Date()
+        status: status || 'CONFIRMED'
+        // updatedAt is auto-managed by Prisma @updatedAt
       }
     });
 
@@ -279,33 +279,41 @@ app.post('/api/orders-confirm', async (req, res) => {
     const order = await db.order.update({
       where: { id: orderId },
       data: {
-        status: 'CONFIRMED',
-        updatedAt: new Date()
+        status: 'CONFIRMED'
+        // updatedAt is auto-managed by Prisma @updatedAt
       }
     });
 
     // Create transaction record
     if (txHash) {
-      await db.transaction.create({
-        data: {
-          orderId: orderId,
-          txHash: txHash,
-          chain: order.chain,
-          amount: order.amount,
-          fromAddress: fromAddress || 'unknown',
-          toAddress: order.paymentAddress,
-          blockNumber: blockNumber ? BigInt(blockNumber) : undefined,
-          confirmations: confirmations || 1,
-          status: 'CONFIRMED'
-        }
+      // Check if transaction already exists
+      const existingTx = await db.transaction.findUnique({
+        where: { txHash: txHash }
       });
+
+      if (!existingTx) {
+        await db.transaction.create({
+          data: {
+            orderId: orderId,
+            txHash: txHash,
+            chain: order.chain,
+            amount: order.amount,
+            fromAddress: fromAddress || 'unknown',
+            toAddress: order.paymentAddress || 'unknown',
+            blockNumber: blockNumber ? BigInt(blockNumber) : null,
+            confirmations: confirmations || 1,
+            status: 'CONFIRMED'
+          }
+        });
+      }
     }
 
     console.log('Order confirmed successfully:', orderId);
     res.json({ success: true, order });
   } catch (error) {
     console.error('Confirm order error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: 'Internal server error', details: errorMessage });
   }
 });
 
