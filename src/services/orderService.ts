@@ -162,12 +162,21 @@ export class OrderService {
       });
     }
 
-    // Update order status to PAID
-    const updatedOrder = await db.order.update({
+    // Update order status to PAID using raw SQL to avoid Prisma @updatedAt issue
+    await db.$executeRawUnsafe(
+      `UPDATE orders SET status = $1 WHERE id = $2`,
+      'PAID',
+      orderId
+    );
+
+    const updatedOrder = await db.order.findUnique({
       where: { id: orderId },
-      data: { status: 'PAID' },
       include: { transactions: true }
     });
+
+    if (!updatedOrder) {
+      throw new Error('Order not found after update');
+    }
 
     // Convert BigInt values to numbers for JSON serialization
     return {
@@ -231,11 +240,21 @@ export class OrderService {
       }
     }
 
-    const confirmedOrder = await db.order.update({
+    // Use raw SQL to avoid Prisma @updatedAt issue
+    await db.$executeRawUnsafe(
+      `UPDATE orders SET status = $1 WHERE id = $2`,
+      'CONFIRMED',
+      orderId
+    );
+
+    const confirmedOrder = await db.order.findUnique({
       where: { id: orderId },
-      data: { status: 'CONFIRMED' },
       include: { transactions: true }
     });
+
+    if (!confirmedOrder) {
+      throw new Error('Order not found after update');
+    }
 
     // Convert BigInt values to numbers for JSON serialization
     return {
@@ -250,10 +269,12 @@ export class OrderService {
   }
 
   async expireOrder(orderId: string) {
-    return db.order.update({
-      where: { id: orderId },
-      data: { status: 'EXPIRED' },
-    });
+    await db.$executeRawUnsafe(
+      `UPDATE orders SET status = $1 WHERE id = $2`,
+      'EXPIRED',
+      orderId
+    );
+    return db.order.findUnique({ where: { id: orderId } });
   }
 
   async checkTierLimits(merchantId: string, orderAmount: number): Promise<{ allowed: boolean; reason?: string; upgradeRequired?: boolean }> {
