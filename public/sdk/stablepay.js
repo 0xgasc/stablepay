@@ -1,5 +1,5 @@
 /**
- * StablePay JavaScript SDK
+ * StablePay JavaScript SDK v1.1
  * Easy USDC payment integration for merchants
  *
  * Usage:
@@ -10,6 +10,9 @@
  *       apiKey: 'your-api-key', // Optional for authenticated requests
  *       environment: 'testnet' // or 'mainnet'
  *     });
+ *
+ *     // SDK will automatically fetch your configured wallets
+ *     await stablepay.init();
  *   </script>
  */
 
@@ -18,39 +21,63 @@
 
   const API_BASE = 'https://stablepay-nine.vercel.app';
 
-  // Chain configurations
-  const CHAINS = {
-    testnet: {
-      BASE_SEPOLIA: {
-        name: 'Base Sepolia',
-        chainId: 84532,
-        rpcUrl: 'https://sepolia.base.org',
-        usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-        explorerUrl: 'https://sepolia.basescan.org'
-      },
-      ETHEREUM_SEPOLIA: {
-        name: 'Ethereum Sepolia',
-        chainId: 11155111,
-        rpcUrl: 'https://rpc.sepolia.org',
-        usdcAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
-        explorerUrl: 'https://sepolia.etherscan.io'
-      }
+  // Chain configurations (fallback defaults)
+  const CHAIN_CONFIGS = {
+    BASE_SEPOLIA: {
+      name: 'Base Sepolia',
+      chainId: 84532,
+      rpcUrl: 'https://sepolia.base.org',
+      usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+      explorerUrl: 'https://sepolia.basescan.org',
+      network: 'testnet'
     },
-    mainnet: {
-      BASE: {
-        name: 'Base',
-        chainId: 8453,
-        rpcUrl: 'https://mainnet.base.org',
-        usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-        explorerUrl: 'https://basescan.org'
-      },
-      ETHEREUM: {
-        name: 'Ethereum',
-        chainId: 1,
-        rpcUrl: 'https://eth.llamarpc.com',
-        usdcAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-        explorerUrl: 'https://etherscan.io'
-      }
+    ETHEREUM_SEPOLIA: {
+      name: 'Ethereum Sepolia',
+      chainId: 11155111,
+      rpcUrl: 'https://rpc.sepolia.org',
+      usdcAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+      explorerUrl: 'https://sepolia.etherscan.io',
+      network: 'testnet'
+    },
+    BASE: {
+      name: 'Base',
+      chainId: 8453,
+      rpcUrl: 'https://mainnet.base.org',
+      usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      explorerUrl: 'https://basescan.org',
+      network: 'mainnet'
+    },
+    ETHEREUM: {
+      name: 'Ethereum',
+      chainId: 1,
+      rpcUrl: 'https://eth.llamarpc.com',
+      usdcAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      explorerUrl: 'https://etherscan.io',
+      network: 'mainnet'
+    },
+    POLYGON: {
+      name: 'Polygon',
+      chainId: 137,
+      rpcUrl: 'https://polygon-rpc.com',
+      usdcAddress: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+      explorerUrl: 'https://polygonscan.com',
+      network: 'mainnet'
+    },
+    ARBITRUM: {
+      name: 'Arbitrum',
+      chainId: 42161,
+      rpcUrl: 'https://arb1.arbitrum.io/rpc',
+      usdcAddress: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+      explorerUrl: 'https://arbiscan.io',
+      network: 'mainnet'
+    },
+    OPTIMISM: {
+      name: 'Optimism',
+      chainId: 10,
+      rpcUrl: 'https://mainnet.optimism.io',
+      usdcAddress: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
+      explorerUrl: 'https://optimistic.etherscan.io',
+      network: 'mainnet'
     }
   };
 
@@ -63,10 +90,76 @@
       this.onPaymentError = config.onPaymentError || null;
       this.onPaymentPending = config.onPaymentPending || null;
 
+      // Merchant data (loaded on init)
+      this.merchantProfile = null;
+      this.merchantWallets = [];
+      this.enabledChains = [];
+      this._initialized = false;
+
       // Validate config
       if (!this.merchantId) {
         console.warn('StablePay: merchantId is required for production use');
       }
+    }
+
+    /**
+     * Initialize the SDK and fetch merchant configuration
+     * Call this before using other methods for best results
+     * @returns {Promise<Object>} Merchant profile
+     */
+    async init() {
+      if (this._initialized) return this.merchantProfile;
+
+      try {
+        const response = await fetch(`${API_BASE}/api/merchant-profile?id=${this.merchantId}`);
+        if (response.ok) {
+          const data = await response.json();
+          this.merchantProfile = data;
+          this.merchantWallets = data.wallets || [];
+
+          // Build list of enabled chains from wallets
+          this.enabledChains = this.merchantWallets
+            .filter(w => w.isActive)
+            .map(w => ({
+              chain: w.chain,
+              address: w.address,
+              ...CHAIN_CONFIGS[w.chain]
+            }));
+
+          this._initialized = true;
+          console.log('StablePay: Initialized with', this.enabledChains.length, 'chains');
+        }
+      } catch (error) {
+        console.warn('StablePay: Could not fetch merchant profile, using defaults');
+      }
+
+      return this.merchantProfile;
+    }
+
+    /**
+     * Get merchant's enabled chains with their wallet addresses
+     * @returns {Array} List of enabled chains with addresses
+     */
+    getEnabledChains() {
+      if (this.enabledChains.length > 0) {
+        return this.enabledChains;
+      }
+
+      // Fallback to environment-based chains
+      const networkFilter = this.environment === 'mainnet' ? 'mainnet' : 'testnet';
+      return Object.entries(CHAIN_CONFIGS)
+        .filter(([_, config]) => config.network === networkFilter)
+        .map(([chain, config]) => ({ chain, ...config }));
+    }
+
+    /**
+     * Get wallet address for a specific chain
+     * @param {string} chain - Chain identifier
+     * @returns {string|null} Wallet address or null
+     */
+    getWalletForChain(chain) {
+      const wallet = this.merchantWallets.find(w => w.chain === chain && w.isActive);
+      return wallet ? wallet.address : null;
     }
 
     /**
@@ -81,14 +174,33 @@
      * @returns {Promise<Object>} Order details
      */
     async createPayment(options) {
-      const { amount, chain, customerEmail, productName, orderId, metadata } = options;
+      // Auto-init if not done
+      if (!this._initialized && this.merchantId) {
+        await this.init();
+      }
+
+      let { amount, chain, customerEmail, productName, orderId, metadata } = options;
 
       if (!amount || amount <= 0) {
         throw new Error('Invalid amount');
       }
 
+      // Auto-select chain if not provided
       if (!chain) {
-        throw new Error('Chain is required');
+        const enabledChains = this.getEnabledChains();
+        if (enabledChains.length > 0) {
+          chain = enabledChains[0].chain;
+          console.log('StablePay: Auto-selected chain:', chain);
+        } else {
+          throw new Error('No chains available. Please configure wallets in your dashboard.');
+        }
+      }
+
+      // Get payment address from merchant's wallets or use provided
+      let paymentAddress = options.paymentAddress || this.getWalletForChain(chain);
+
+      if (!paymentAddress) {
+        console.warn('StablePay: No wallet configured for chain', chain, '- order will use default');
       }
 
       const response = await fetch(`${API_BASE}/api/v1/orders`, {
@@ -103,6 +215,7 @@
           chain,
           customerEmail,
           productName,
+          paymentAddress,
           externalOrderId: orderId,
           metadata
         })
@@ -375,11 +488,70 @@
     }
 
     /**
+     * Create a chain selector dropdown
+     * @param {string} containerId - ID of the container element
+     * @param {Function} onChange - Callback when chain is selected
+     * @returns {HTMLSelectElement} The created select element
+     */
+    async createChainSelector(containerId, onChange) {
+      const container = document.getElementById(containerId);
+      if (!container) {
+        throw new Error(`Container element "${containerId}" not found`);
+      }
+
+      // Auto-init if not done
+      if (!this._initialized && this.merchantId) {
+        await this.init();
+      }
+
+      const select = document.createElement('select');
+      select.className = 'stablepay-chain-selector';
+      select.style.cssText = `
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        font-size: 14px;
+        cursor: pointer;
+        background: white;
+      `;
+
+      const chains = this.getEnabledChains();
+
+      if (chains.length === 0) {
+        const option = document.createElement('option');
+        option.textContent = 'No chains configured';
+        option.disabled = true;
+        select.appendChild(option);
+      } else {
+        chains.forEach(chain => {
+          const option = document.createElement('option');
+          option.value = chain.chain;
+          option.textContent = chain.name || chain.chain;
+          select.appendChild(option);
+        });
+      }
+
+      if (onChange) {
+        select.onchange = () => onChange(select.value, chains.find(c => c.chain === select.value));
+      }
+
+      container.appendChild(select);
+      return select;
+    }
+
+    /**
      * Get available chains for current environment
-     * @returns {Object} Available chains
+     * @returns {Object} Available chain configurations
      */
     getAvailableChains() {
-      return CHAINS[this.environment] || CHAINS.testnet;
+      const networkFilter = this.environment === 'mainnet' ? 'mainnet' : 'testnet';
+      const filtered = {};
+      Object.entries(CHAIN_CONFIGS).forEach(([key, config]) => {
+        if (config.network === networkFilter) {
+          filtered[key] = config;
+        }
+      });
+      return filtered;
     }
 
     /**
@@ -388,8 +560,7 @@
      * @returns {Object} Chain configuration
      */
     getChainConfig(chainId) {
-      const chains = this.getAvailableChains();
-      return chains[chainId];
+      return CHAIN_CONFIGS[chainId];
     }
   }
 
