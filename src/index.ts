@@ -209,6 +209,17 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
     const { orderId } = req.params;
     const { txHash, blockNumber, status } = req.body;
 
+    console.log('Confirming order:', orderId, 'with txHash:', txHash);
+
+    // First check if order exists
+    const existingOrder = await db.order.findUnique({
+      where: { id: orderId }
+    });
+
+    if (!existingOrder) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
     const order = await db.order.update({
       where: { id: orderId },
       data: {
@@ -217,26 +228,39 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
       }
     });
 
-    // Create transaction record
+    // Create transaction record if txHash provided
     if (txHash) {
-      await db.transaction.create({
-        data: {
-          orderId: orderId,
-          txHash: txHash,
-          chain: order.chain,
-          amount: order.amount,
-          fromAddress: order.customerEmail || 'unknown',
-          toAddress: order.paymentAddress,
-          blockNumber: blockNumber ? BigInt(blockNumber) : undefined,
-          status: 'CONFIRMED'
-        }
+      // Check if transaction already exists (avoid duplicate)
+      const existingTx = await db.transaction.findUnique({
+        where: { txHash: txHash }
       });
+
+      if (!existingTx) {
+        await db.transaction.create({
+          data: {
+            orderId: orderId,
+            txHash: txHash,
+            chain: order.chain,
+            amount: order.amount,
+            fromAddress: 'manual-confirmation',
+            toAddress: order.paymentAddress || 'unknown',
+            blockNumber: blockNumber ? BigInt(blockNumber) : null,
+            status: 'CONFIRMED',
+            confirmations: 1
+          }
+        });
+        console.log('Transaction record created for order:', orderId);
+      } else {
+        console.log('Transaction already exists, skipping creation');
+      }
     }
 
+    console.log('Order confirmed successfully:', orderId);
     res.json({ success: true, order });
   } catch (error) {
     console.error('Confirm order error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: 'Internal server error', details: errorMessage });
   }
 });
 
