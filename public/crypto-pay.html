@@ -102,6 +102,18 @@
         body.night-mode #walletModal button:hover {
             background: #333 !important;
         }
+        /* Success screen night mode */
+        body.night-mode #paymentSuccessScreen {
+            background: #1a1a1a !important;
+            border-color: #fff !important;
+        }
+        body.night-mode #paymentSuccessScreen h2,
+        body.night-mode #paymentSuccessScreen span {
+            color: #fff !important;
+        }
+        body.night-mode #paymentSuccessScreen .border-4 {
+            border-color: #fff !important;
+        }
         input, select {
             border: 4px solid #000;
             border-radius: 0;
@@ -296,6 +308,47 @@
 
         <div id="successMessage" class="hidden border-4 border-black p-4 mb-6" style="background: #E5FFE5;">
             <p class="text-black font-bold"></p>
+        </div>
+
+        <!-- Payment Success Screen (shown after successful payment) -->
+        <div id="paymentSuccessScreen" class="hidden bg-white border-4 border-black p-8 shadow-brutal text-center">
+            <div class="text-6xl mb-4">✅</div>
+            <h2 class="text-3xl font-bold text-black mb-2" style="text-transform: uppercase;">PAYMENT SUCCESSFUL!</h2>
+            <p class="text-gray-700 mb-6">Your transaction has been confirmed on the blockchain.</p>
+
+            <div class="border-4 border-black p-4 mb-6 text-left" style="background: #F0FFF0;">
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-700 font-bold">Product:</span>
+                    <span id="successProductName" class="text-black font-bold">-</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-700 font-bold">Amount:</span>
+                    <span id="successAmount" class="text-black font-bold">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-700 font-bold">Network:</span>
+                    <span id="successChain" class="text-black font-bold">-</span>
+                </div>
+            </div>
+
+            <a id="successTxLink" href="#" target="_blank"
+               class="block w-full px-6 py-4 font-bold tracking-wide btn-brutal text-black mb-4"
+               style="text-transform: uppercase; background: #E3F2FD; text-decoration: none;">
+                VIEW TRANSACTION ON EXPLORER →
+            </a>
+
+            <div class="flex gap-4">
+                <button onclick="buyAgain()"
+                        class="flex-1 px-6 py-4 font-bold tracking-wide btn-brutal text-black"
+                        style="text-transform: uppercase; background: #00E5FF;">
+                    BUY AGAIN
+                </button>
+                <button onclick="goBack()"
+                        class="flex-1 px-6 py-4 font-bold tracking-wide btn-brutal text-black"
+                        style="text-transform: uppercase; background: #FFF;">
+                    BACK TO STORE
+                </button>
+            </div>
         </div>
     </div>
 
@@ -891,18 +944,15 @@
             const receipt = await tx.wait();
             console.log('Transaction confirmed:', receipt);
 
-            showTxStatus('Payment successful! Transaction confirmed.');
-            showSuccess(`🎉 Payment completed! You purchased ${currentProduct.name} for ${currentProduct.price} USDC`);
-
-            // Update order status to confirmed
+            // Update order status to confirmed in database
             console.log('Confirming order in database...');
             console.log('Order ID:', order.id);
             console.log('TX Hash:', tx.hash);
-            
+
             try {
                 const confirmUrl = `/api/orders-confirm`;
                 console.log('Calling confirm API:', confirmUrl);
-                
+
                 const confirmResponse = await fetch(confirmUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -914,9 +964,9 @@
                         confirmations: receipt.confirmations
                     })
                 });
-                
+
                 console.log('Confirm API Response status:', confirmResponse.status);
-                
+
                 if (confirmResponse.ok) {
                     const confirmData = await confirmResponse.json();
                     console.log('[SUCCESS] Order confirmed in database:', confirmData);
@@ -928,9 +978,66 @@
                 console.error('[ERROR] Failed to confirm order in database:', err);
             }
 
-            // Disable pay button
+            // Show the success screen
+            showPaymentSuccess(currentProduct, chainKey, explorerUrl);
+        }
+
+        // Show full-page payment success screen
+        function showPaymentSuccess(product, chainKey, explorerUrl) {
+            // Hide all other sections
+            document.getElementById('productSummary').classList.add('hidden');
+            document.getElementById('walletSection').classList.add('hidden');
+            document.getElementById('customerSection').classList.add('hidden');
+            document.getElementById('paymentSection').classList.add('hidden');
+            document.getElementById('errorMessage').classList.add('hidden');
+            document.getElementById('successMessage').classList.add('hidden');
+
+            // Populate success screen details
+            document.getElementById('successProductName').textContent = product.name;
+            document.getElementById('successAmount').textContent = `$${product.price} USDC`;
+            document.getElementById('successChain').textContent = CHAIN_CONFIG[chainKey]?.chainName || chainKey;
+            document.getElementById('successTxLink').href = explorerUrl;
+
+            // Show success screen
+            document.getElementById('paymentSuccessScreen').classList.remove('hidden');
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Buy again - reload the same product
+        function buyAgain() {
+            // Reset UI
+            document.getElementById('paymentSuccessScreen').classList.add('hidden');
+            document.getElementById('productSummary').classList.remove('hidden');
+            document.getElementById('walletSection').classList.remove('hidden');
+
+            // Reset wallet connection UI
+            document.getElementById('connectWalletBtn').classList.remove('hidden');
+            document.getElementById('walletInfo').classList.add('hidden');
+            document.getElementById('customerSection').classList.add('hidden');
+            document.getElementById('paymentSection').classList.add('hidden');
+
+            // Clear form
+            document.getElementById('customerEmail').value = '';
+            document.getElementById('customerName').value = '';
+
+            // Uncheck chain selection
+            document.querySelectorAll('input[name="chain"]').forEach(r => r.checked = false);
             document.getElementById('payBtn').disabled = true;
-            document.getElementById('payBtn').textContent = 'Payment Completed';
+            document.getElementById('payBtn').textContent = 'PAY WITH USDC';
+
+            // Hide tx status
+            hideTxStatus();
+            document.getElementById('txLink').classList.add('hidden');
+
+            // Disconnect wallet so user can reconnect
+            provider = null;
+            signer = null;
+            connectedAddress = null;
+            selectedWalletProvider = null;
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // UI Helper functions
