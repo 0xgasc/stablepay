@@ -1072,11 +1072,16 @@
 
         // Listen for account changes
         if (window.ethereum) {
-            window.ethereum.on('accountsChanged', (accounts) => {
+            window.ethereum.on('accountsChanged', async (accounts) => {
                 if (accounts.length === 0) {
                     disconnectWallet();
-                } else {
-                    connectWallet();
+                } else if (connectedAddress) {
+                    // Only update if already connected - don't re-open modal
+                    connectedAddress = accounts[0];
+                    document.getElementById('walletAddress').textContent =
+                        connectedAddress.slice(0, 6) + '...' + connectedAddress.slice(-4);
+                    await updateUSDCBalance();
+                    console.log('Account changed to:', connectedAddress);
                 }
             });
 
