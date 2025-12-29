@@ -319,6 +319,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const merchantId = urlParams.get('merchantId');
         const storeName = urlParams.get('storeName');
+        const enabledChains = urlParams.get('chains'); // Comma-separated list of enabled chains
 
         // Update store name if provided
         if (storeName) {
@@ -329,7 +330,9 @@
         // Show merchant mode indicator if merchant ID provided
         if (merchantId) {
             console.log('Store loaded for merchant:', merchantId);
-            // Could customize UI based on merchant settings here
+            if (enabledChains) {
+                console.log('Enabled chains:', enabledChains);
+            }
         }
 
         // Handle card payment (placeholder)
@@ -351,6 +354,11 @@
             // Include merchant ID if available (critical for order tracking!)
             if (merchantId) {
                 params.set('merchantId', merchantId);
+            }
+
+            // Include enabled chains if specified
+            if (enabledChains) {
+                params.set('chains', enabledChains);
             }
 
             // Redirect to crypto payment page

@@ -378,16 +378,16 @@
         <div class="bg-slate-900 border border-slate-800 p-5 mb-8">
             <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-4">Quick Actions - Test Your Integration</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <a id="testStoreLink" href="#" target="_blank"
+                <button onclick="openTestStoreModal()"
                    class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-medium text-sm transition-colors">
                     <span>🛒</span>
                     <span>Open Test Store</span>
-                </a>
-                <a id="directCheckoutLink" href="#" target="_blank"
+                </button>
+                <button onclick="openDirectCheckoutModal()"
                    class="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 font-medium text-sm transition-colors">
                     <span>💳</span>
                     <span>Direct Checkout Link</span>
-                </a>
+                </button>
                 <button onclick="copyMerchantId()"
                    class="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 font-medium text-sm transition-colors">
                     <span>📋</span>
@@ -397,6 +397,81 @@
             <p class="text-xs text-slate-500 mt-3">
                 <strong>Tip:</strong> Use the Test Store to simulate customer payments. All orders will appear in your dashboard below.
             </p>
+        </div>
+
+        <!-- Test Store Chain Selection Modal -->
+        <div id="testStoreModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black bg-opacity-70" onclick="closeTestStoreModal()"></div>
+            <div class="relative bg-slate-900 border border-slate-700 p-6 max-w-md w-full mx-4 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-white">Configure Test Store</h3>
+                    <button onclick="closeTestStoreModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">Select which chains customers can pay with in your test store:</p>
+
+                <div id="testStoreChainList" class="space-y-2 mb-6 max-h-64 overflow-y-auto">
+                    <!-- Chain checkboxes populated by JS -->
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="closeTestStoreModal()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-sm">
+                        Cancel
+                    </button>
+                    <button onclick="launchTestStore()" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm">
+                        Open Store
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Direct Checkout Modal -->
+        <div id="directCheckoutModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black bg-opacity-70" onclick="closeDirectCheckoutModal()"></div>
+            <div class="relative bg-slate-900 border border-slate-700 p-6 max-w-md w-full mx-4 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-white">Generate Checkout Link</h3>
+                    <button onclick="closeDirectCheckoutModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+                </div>
+
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Product Name</label>
+                        <input type="text" id="checkoutProductName" placeholder="e.g. Premium Plan"
+                               class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Price (USDC)</label>
+                        <input type="number" id="checkoutPrice" placeholder="e.g. 9.99" step="0.01" min="0.01"
+                               class="w-full px-3 py-2 bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-2">Accepted Chains</label>
+                        <div id="checkoutChainList" class="space-y-2 max-h-40 overflow-y-auto">
+                            <!-- Chain checkboxes populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="generatedLinkSection" class="hidden mb-4">
+                    <label class="block text-sm text-slate-400 mb-1">Your Checkout Link</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="generatedCheckoutLink" readonly
+                               class="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 text-green-400 text-xs font-mono focus:outline-none">
+                        <button onclick="copyCheckoutLink()" class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="closeDirectCheckoutModal()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-sm">
+                        Cancel
+                    </button>
+                    <button onclick="generateCheckoutLink()" class="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm">
+                        Generate Link
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Main Content Tabs -->
@@ -3386,12 +3461,6 @@ onMounted(() => {
             }, 2000);
         }
 
-        function copyMerchantId() {
-            const merchantId = document.getElementById('apiMerchantId').textContent;
-            navigator.clipboard.writeText(merchantId);
-            alert('Merchant ID copied!');
-        }
-
         function showFramework(framework) {
             // Hide all framework content
             document.querySelectorAll('.framework-content').forEach(el => {
@@ -3447,24 +3516,142 @@ onMounted(() => {
             }
         }
 
-        // Update quick action links with merchant-specific URLs
-        function updateQuickActionLinks() {
-            if (currentMerchant && currentMerchant.id) {
-                const baseUrl = window.location.origin;
-                const storeName = encodeURIComponent(currentMerchant.companyName + ' Store');
+        // Chain display names
+        const CHAIN_DISPLAY_NAMES = {
+            'BASE_SEPOLIA': 'Base Sepolia (Testnet)',
+            'ETHEREUM_SEPOLIA': 'Ethereum Sepolia (Testnet)',
+            'POLYGON_MUMBAI': 'Polygon Amoy (Testnet)',
+            'ARBITRUM_SEPOLIA': 'Arbitrum Sepolia (Testnet)',
+            'SOLANA_DEVNET': 'Solana Devnet (Testnet)',
+            'BASE_MAINNET': 'Base',
+            'ETHEREUM_MAINNET': 'Ethereum',
+            'POLYGON_MAINNET': 'Polygon',
+            'ARBITRUM_MAINNET': 'Arbitrum One',
+            'SOLANA_MAINNET': 'Solana'
+        };
 
-                // Test store link (clean URL)
-                const testStoreLink = document.getElementById('testStoreLink');
-                if (testStoreLink) {
-                    testStoreLink.href = `${baseUrl}/store.html?merchantId=${currentMerchant.id}&storeName=${storeName}`;
-                }
-
-                // Direct checkout link (clean URL)
-                const directCheckoutLink = document.getElementById('directCheckoutLink');
-                if (directCheckoutLink) {
-                    directCheckoutLink.href = `${baseUrl}/checkout?merchantId=${currentMerchant.id}&productId=TEST&productName=Test+Product&price=0.1`;
-                }
+        // Open Test Store Modal
+        function openTestStoreModal() {
+            if (!currentMerchant || !merchantWallets || merchantWallets.length === 0) {
+                alert('Please configure at least one wallet first in the Wallets tab.');
+                return;
             }
+
+            const chainList = document.getElementById('testStoreChainList');
+            chainList.innerHTML = merchantWallets
+                .filter(w => w.isActive)
+                .map(w => `
+                    <label class="flex items-center gap-3 p-3 bg-slate-800 hover:bg-slate-700 cursor-pointer">
+                        <input type="checkbox" name="testStoreChain" value="${w.chain}" checked
+                               class="w-4 h-4 accent-blue-500">
+                        <div class="flex-1">
+                            <div class="text-white text-sm font-medium">${CHAIN_DISPLAY_NAMES[w.chain] || w.chain}</div>
+                            <div class="text-slate-500 text-xs font-mono">${w.address.slice(0,8)}...${w.address.slice(-6)}</div>
+                        </div>
+                    </label>
+                `).join('');
+
+            document.getElementById('testStoreModal').classList.remove('hidden');
+        }
+
+        function closeTestStoreModal() {
+            document.getElementById('testStoreModal').classList.add('hidden');
+        }
+
+        function launchTestStore() {
+            const selectedChains = Array.from(document.querySelectorAll('input[name="testStoreChain"]:checked'))
+                .map(cb => cb.value);
+
+            if (selectedChains.length === 0) {
+                alert('Please select at least one chain.');
+                return;
+            }
+
+            const baseUrl = window.location.origin;
+            const storeName = encodeURIComponent(currentMerchant.companyName + ' Store');
+            const chains = selectedChains.join(',');
+
+            const url = `${baseUrl}/store.html?merchantId=${currentMerchant.id}&storeName=${storeName}&chains=${chains}`;
+            window.open(url, '_blank');
+            closeTestStoreModal();
+        }
+
+        // Open Direct Checkout Modal
+        function openDirectCheckoutModal() {
+            if (!currentMerchant || !merchantWallets || merchantWallets.length === 0) {
+                alert('Please configure at least one wallet first in the Wallets tab.');
+                return;
+            }
+
+            const chainList = document.getElementById('checkoutChainList');
+            chainList.innerHTML = merchantWallets
+                .filter(w => w.isActive)
+                .map(w => `
+                    <label class="flex items-center gap-3 p-2 bg-slate-800 hover:bg-slate-700 cursor-pointer">
+                        <input type="checkbox" name="checkoutChain" value="${w.chain}" checked
+                               class="w-4 h-4 accent-purple-500">
+                        <span class="text-white text-sm">${CHAIN_DISPLAY_NAMES[w.chain] || w.chain}</span>
+                    </label>
+                `).join('');
+
+            // Reset form
+            document.getElementById('checkoutProductName').value = '';
+            document.getElementById('checkoutPrice').value = '';
+            document.getElementById('generatedLinkSection').classList.add('hidden');
+
+            document.getElementById('directCheckoutModal').classList.remove('hidden');
+        }
+
+        function closeDirectCheckoutModal() {
+            document.getElementById('directCheckoutModal').classList.add('hidden');
+        }
+
+        function generateCheckoutLink() {
+            const productName = document.getElementById('checkoutProductName').value.trim();
+            const price = document.getElementById('checkoutPrice').value.trim();
+            const selectedChains = Array.from(document.querySelectorAll('input[name="checkoutChain"]:checked'))
+                .map(cb => cb.value);
+
+            if (!productName) {
+                alert('Please enter a product name.');
+                return;
+            }
+            if (!price || parseFloat(price) <= 0) {
+                alert('Please enter a valid price.');
+                return;
+            }
+            if (selectedChains.length === 0) {
+                alert('Please select at least one chain.');
+                return;
+            }
+
+            const baseUrl = window.location.origin;
+            const params = new URLSearchParams({
+                merchantId: currentMerchant.id,
+                productId: 'CUSTOM',
+                productName: productName,
+                price: price,
+                chains: selectedChains.join(',')
+            });
+
+            const url = `${baseUrl}/checkout?${params.toString()}`;
+            document.getElementById('generatedCheckoutLink').value = url;
+            document.getElementById('generatedLinkSection').classList.remove('hidden');
+        }
+
+        function copyCheckoutLink() {
+            const linkInput = document.getElementById('generatedCheckoutLink');
+            navigator.clipboard.writeText(linkInput.value).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = originalText; }, 2000);
+            });
+        }
+
+        // Keep for backwards compatibility
+        function updateQuickActionLinks() {
+            // No longer needed - modals handle this now
         }
 
         // Copy merchant ID to clipboard

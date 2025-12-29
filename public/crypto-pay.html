@@ -806,7 +806,8 @@
                 id: urlParams.get('productId'),
                 name: urlParams.get('productName'),
                 price: parseFloat(urlParams.get('price')),
-                merchantId: urlParams.get('merchantId') || null // Get merchant ID from URL if provided
+                merchantId: urlParams.get('merchantId') || null,
+                enabledChains: urlParams.get('chains') ? urlParams.get('chains').split(',') : null // Specific chains to show
             };
 
             if (!currentProduct.id || !currentProduct.name || !currentProduct.price) {
@@ -820,6 +821,9 @@
             document.getElementById('productPrice').textContent = `$${currentProduct.price} (${currentProduct.price} USDC)`;
 
             console.log('Product loaded:', currentProduct);
+            if (currentProduct.enabledChains) {
+                console.log('Enabled chains from URL:', currentProduct.enabledChains);
+            }
 
             // Fetch merchant's enabled chains
             await loadMerchantChains();
@@ -832,9 +836,15 @@
             if (!currentProduct.merchantId) {
                 // No merchant ID - show default testnet chains
                 console.log('No merchant ID, showing default testnet chains');
-                merchantChains = Object.keys(CHAIN_CONFIG)
-                    .filter(key => CHAIN_CONFIG[key].network === 'testnet')
-                    .map(key => ({ chain: key, address: null }));
+                let defaultChains = Object.keys(CHAIN_CONFIG)
+                    .filter(key => CHAIN_CONFIG[key].network === 'testnet');
+
+                // Filter by URL param if provided
+                if (currentProduct.enabledChains) {
+                    defaultChains = defaultChains.filter(key => currentProduct.enabledChains.includes(key));
+                }
+
+                merchantChains = defaultChains.map(key => ({ chain: key, address: null }));
                 renderChainOptions();
                 return;
             }
@@ -859,10 +869,18 @@
                             address: w.address
                         }));
 
+                    // Further filter by URL-specified chains if provided
+                    if (currentProduct.enabledChains && currentProduct.enabledChains.length > 0) {
+                        merchantChains = merchantChains.filter(mc =>
+                            currentProduct.enabledChains.includes(mc.chain)
+                        );
+                        console.log('Filtered to specified chains:', currentProduct.enabledChains);
+                    }
+
                     if (merchantChains.length === 0) {
                         chainOptionsContainer.innerHTML = `
                             <div class="text-center py-4 text-red-600 font-bold">
-                                Merchant has no active payment chains configured.
+                                No payment chains available for this checkout.
                             </div>
                         `;
                         return;
