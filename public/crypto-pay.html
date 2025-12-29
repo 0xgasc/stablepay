@@ -749,7 +749,7 @@
                 try {
                     const apiUrl = '/api/v1/orders';
                     console.log('Calling API:', apiUrl);
-                    
+
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -760,7 +760,8 @@
                             productName: currentProduct.name,
                             customerEmail: customerEmail,
                             customerName: customerName || null,
-                            merchantId: currentProduct.merchantId || 'DEMO' // Use merchant ID from URL or default to DEMO
+                            merchantId: currentProduct.merchantId || 'DEMO',
+                            paymentAddress: chainConfig.paymentAddress // Required for order creation
                         })
                     });
                     
