@@ -63,12 +63,38 @@ app.use('/api', authRouter);
 app.post('/api/v1/orders', async (req, res) => {
   try {
     const { db } = await import('./config/database');
-    const { merchantId, productName, amount, chain, customerEmail, paymentAddress } = req.body;
+    const { merchantId, productName, amount, chain, customerEmail, paymentAddress: fallbackAddress } = req.body;
 
-    if (!merchantId || !amount || !chain || !paymentAddress) {
+    if (!merchantId || !amount || !chain) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['merchantId', 'amount', 'chain', 'paymentAddress']
+        required: ['merchantId', 'amount', 'chain']
+      });
+    }
+
+    // Look up merchant's configured wallet for this chain
+    let paymentAddress = fallbackAddress;
+
+    if (merchantId && merchantId !== 'DEMO') {
+      const merchantWallet = await db.merchantWallet.findFirst({
+        where: {
+          merchantId: merchantId,
+          chain: chain,
+          isActive: true
+        }
+      });
+
+      if (merchantWallet) {
+        paymentAddress = merchantWallet.address;
+        console.log(`Using merchant wallet for ${chain}: ${paymentAddress}`);
+      } else {
+        console.log(`No merchant wallet found for ${chain}, using fallback: ${fallbackAddress}`);
+      }
+    }
+
+    if (!paymentAddress) {
+      return res.status(400).json({
+        error: 'No payment address available. Merchant must configure a wallet for this chain.'
       });
     }
 

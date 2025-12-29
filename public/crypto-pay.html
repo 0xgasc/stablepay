@@ -769,9 +769,12 @@
                     console.log('API Response headers:', response.headers);
                     
                     if (response.ok) {
-                        orderData = await response.json();
+                        const apiResponse = await response.json();
+                        // Extract the order from the API response wrapper
+                        orderData = apiResponse.order || apiResponse;
+                        // Add chain config addresses
                         orderData.usdcAddress = chainConfig.usdcAddress;
-                        orderData.paymentAddress = chainConfig.paymentAddress;
+                        orderData.paymentAddress = orderData.paymentAddress || chainConfig.paymentAddress;
                         console.log('[SUCCESS] Order created via API:', orderData);
                     } else {
                         const errorText = await response.text();
