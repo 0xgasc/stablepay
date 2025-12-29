@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#FFFFFF">
     <title data-i18n="title">Crypto Payment - StablePay</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
@@ -134,6 +138,175 @@
             color: #fff;
             border-color: #fff;
         }
+
+        /* ===== MOBILE OPTIMIZATIONS ===== */
+
+        /* Safe area padding for notched devices (iPhone X+) */
+        body {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+
+        /* Prevent iOS zoom on input focus - minimum 16px */
+        input, select, textarea {
+            font-size: 16px !important;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        /* Touch-friendly button sizes (minimum 44px) */
+        .btn-brutal, button, .touch-target {
+            min-height: 48px;
+            min-width: 48px;
+        }
+
+        /* Better touch feedback */
+        .btn-brutal:active, button:active {
+            transform: translate(2px, 2px);
+            opacity: 0.9;
+        }
+
+        /* Remove tap highlight on mobile */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Smooth scrolling for iOS */
+        html {
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+
+        /* Fix for iOS input shadows */
+        input, textarea {
+            -webkit-appearance: none;
+            box-shadow: none;
+        }
+
+        /* Mobile modal improvements */
+        @media (max-width: 640px) {
+            /* Adjust shadow for smaller screens */
+            .shadow-brutal {
+                box-shadow: 4px 4px 0px #000;
+            }
+            body.night-mode .shadow-brutal {
+                box-shadow: 4px 4px 0px #fff !important;
+            }
+
+            /* Larger touch targets on mobile */
+            .btn-brutal {
+                padding: 16px 20px;
+                font-size: 14px;
+            }
+
+            /* Better header sizing */
+            nav .text-3xl {
+                font-size: 1.25rem;
+            }
+
+            /* Full-width modal on mobile */
+            #walletModal > div:nth-child(2) {
+                margin: 16px;
+                max-height: calc(100vh - 32px);
+                overflow-y: auto;
+            }
+
+            /* Larger wallet options for touch */
+            #walletOptions button {
+                padding: 16px;
+                min-height: 64px;
+            }
+
+            /* Stack success buttons on mobile */
+            #paymentSuccessScreen .flex.gap-4 {
+                flex-direction: column;
+            }
+
+            /* Adjust heading sizes */
+            h1.text-4xl {
+                font-size: 1.75rem;
+            }
+            h2.text-3xl {
+                font-size: 1.5rem;
+            }
+            h2.text-2xl {
+                font-size: 1.25rem;
+            }
+
+            /* Better spacing for cards */
+            .border-4 {
+                border-width: 3px;
+            }
+
+            /* Adjust container padding */
+            .container {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+        }
+
+        /* Extra small devices (iPhone SE, etc.) */
+        @media (max-width: 375px) {
+            nav .text-3xl {
+                font-size: 1.1rem;
+            }
+
+            h1.text-4xl {
+                font-size: 1.5rem;
+            }
+
+            .btn-brutal {
+                padding: 12px 16px;
+                font-size: 13px;
+            }
+
+            #languageSelector, #nightModeToggle {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+        }
+
+        /* Tablet (iPad) optimizations */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .container {
+                max-width: 600px;
+            }
+        }
+
+        /* Landscape mode on phones */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .container {
+                padding-top: 8px;
+                padding-bottom: 8px;
+            }
+
+            #walletModal > div:nth-child(2) {
+                max-height: 90vh;
+                margin: 8px;
+            }
+        }
+
+        /* Loading state animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Mobile wallet deep link button */
+        .mobile-wallet-link {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .mobile-wallet-link {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -262,24 +435,11 @@
         <div id="paymentSection" class="hidden bg-white border-4 border-black p-6 shadow-brutal mb-6">
             <h2 class="text-2xl font-bold mb-4 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="payment.heading">SELECT PAYMENT CHAIN</h2>
 
-            <div class="space-y-4 mb-6">
-                <label class="flex items-center space-x-3 p-4 border-4 border-black cursor-pointer hover:bg-gray-100">
-                    <input type="radio" name="chain" value="BASE_SEPOLIA" class="w-5 h-5">
-                    <div class="flex-1">
-                        <div class="font-bold text-black" data-i18n="payment.baseSepolia">BASE SEPOLIA</div>
-                        <div class="text-sm text-gray-700" data-i18n="payment.baseDesc">Recommended - Lower fees</div>
-                    </div>
-                    <div class="text-sm font-mono font-bold text-black" id="baseBalanceRadio">0.0 USDC</div>
-                </label>
-
-                <label class="flex items-center space-x-3 p-4 border-4 border-black cursor-pointer hover:bg-gray-100">
-                    <input type="radio" name="chain" value="ETHEREUM_SEPOLIA" class="w-5 h-5">
-                    <div class="flex-1">
-                        <div class="font-bold text-black" data-i18n="payment.ethSepolia">ETHEREUM SEPOLIA</div>
-                        <div class="text-sm text-gray-700" data-i18n="payment.ethDesc">Classic Ethereum testnet</div>
-                    </div>
-                    <div class="text-sm font-mono font-bold text-black" id="ethBalanceRadio">0.0 USDC</div>
-                </label>
+            <!-- Dynamic chain options - populated based on merchant's configured wallets -->
+            <div id="chainOptions" class="space-y-4 mb-6">
+                <div class="text-center py-4 text-gray-500">
+                    <span class="animate-pulse">Loading available chains...</span>
+                </div>
             </div>
 
             <button
@@ -368,27 +528,94 @@
     </div>
 
     <script>
-        // Chain configurations
+        // All supported chain configurations
         const CHAIN_CONFIG = {
+            // Testnets
             BASE_SEPOLIA: {
-                chainId: '0x14a34', // 84532 in hex
+                chainId: '0x14a34', // 84532
                 chainName: 'Base Sepolia',
                 rpcUrls: ['https://sepolia.base.org'],
                 blockExplorerUrls: ['https://sepolia.basescan.org'],
                 nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // Base Sepolia USDC (correct address)
-                paymentAddress: '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF' // Payment receiving address
+                usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+                network: 'testnet',
+                description: 'Base testnet - Lower fees'
             },
             ETHEREUM_SEPOLIA: {
-                chainId: '0xaa36a7', // 11155111 in hex
+                chainId: '0xaa36a7', // 11155111
                 chainName: 'Ethereum Sepolia',
-                rpcUrls: ['https://eth-sepolia.g.alchemy.com/v2/alcht_YbDiff1KAqK0fNAzBgycHfz7G0iz4n'],
+                rpcUrls: ['https://eth-sepolia.g.alchemy.com/v2/demo'],
                 blockExplorerUrls: ['https://sepolia.etherscan.io'],
                 nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                usdcAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // Ethereum Sepolia USDC (Circle)
-                paymentAddress: '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF' // Payment receiving address
+                usdcAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+                network: 'testnet',
+                description: 'Ethereum testnet'
+            },
+            POLYGON_MUMBAI: {
+                chainId: '0x13882', // 80002
+                chainName: 'Polygon Amoy',
+                rpcUrls: ['https://rpc-amoy.polygon.technology'],
+                blockExplorerUrls: ['https://amoy.polygonscan.com'],
+                nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+                usdcAddress: '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582',
+                network: 'testnet',
+                description: 'Polygon testnet'
+            },
+            ARBITRUM_SEPOLIA: {
+                chainId: '0x66eee', // 421614
+                chainName: 'Arbitrum Sepolia',
+                rpcUrls: ['https://sepolia-rollup.arbitrum.io/rpc'],
+                blockExplorerUrls: ['https://sepolia.arbiscan.io'],
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                usdcAddress: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+                network: 'testnet',
+                description: 'Arbitrum testnet'
+            },
+            // Mainnets
+            BASE_MAINNET: {
+                chainId: '0x2105', // 8453
+                chainName: 'Base',
+                rpcUrls: ['https://mainnet.base.org'],
+                blockExplorerUrls: ['https://basescan.org'],
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+                network: 'mainnet',
+                description: 'Base - Recommended, low fees'
+            },
+            ETHEREUM_MAINNET: {
+                chainId: '0x1', // 1
+                chainName: 'Ethereum',
+                rpcUrls: ['https://eth.llamarpc.com'],
+                blockExplorerUrls: ['https://etherscan.io'],
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                usdcAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+                network: 'mainnet',
+                description: 'Ethereum mainnet'
+            },
+            POLYGON_MAINNET: {
+                chainId: '0x89', // 137
+                chainName: 'Polygon',
+                rpcUrls: ['https://polygon-rpc.com'],
+                blockExplorerUrls: ['https://polygonscan.com'],
+                nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+                usdcAddress: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+                network: 'mainnet',
+                description: 'Polygon - Fast & cheap'
+            },
+            ARBITRUM_MAINNET: {
+                chainId: '0xa4b1', // 42161
+                chainName: 'Arbitrum One',
+                rpcUrls: ['https://arb1.arbitrum.io/rpc'],
+                blockExplorerUrls: ['https://arbiscan.io'],
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                usdcAddress: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                network: 'mainnet',
+                description: 'Arbitrum L2'
             }
         };
+
+        // Merchant's enabled chains (populated on load)
+        let merchantChains = [];
 
         // USDC ABI (minimal)
         const USDC_ABI = [
@@ -573,7 +800,7 @@
         }
 
         // Parse URL parameters to get product info
-        function loadProductInfo() {
+        async function loadProductInfo() {
             const urlParams = new URLSearchParams(window.location.search);
             currentProduct = {
                 id: urlParams.get('productId'),
@@ -593,6 +820,122 @@
             document.getElementById('productPrice').textContent = `$${currentProduct.price} (${currentProduct.price} USDC)`;
 
             console.log('Product loaded:', currentProduct);
+
+            // Fetch merchant's enabled chains
+            await loadMerchantChains();
+        }
+
+        // Fetch merchant's configured wallets and render chain options
+        async function loadMerchantChains() {
+            const chainOptionsContainer = document.getElementById('chainOptions');
+
+            if (!currentProduct.merchantId) {
+                // No merchant ID - show default testnet chains
+                console.log('No merchant ID, showing default testnet chains');
+                merchantChains = Object.keys(CHAIN_CONFIG)
+                    .filter(key => CHAIN_CONFIG[key].network === 'testnet')
+                    .map(key => ({ chain: key, address: null }));
+                renderChainOptions();
+                return;
+            }
+
+            try {
+                console.log('Fetching merchant wallets for:', currentProduct.merchantId);
+                const response = await fetch(`/api/merchant-profile?id=${currentProduct.merchantId}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch merchant profile');
+                }
+
+                const merchantData = await response.json();
+                console.log('Merchant data:', merchantData);
+
+                if (merchantData.wallets && merchantData.wallets.length > 0) {
+                    // Only show chains the merchant has configured
+                    merchantChains = merchantData.wallets
+                        .filter(w => w.isActive && CHAIN_CONFIG[w.chain])
+                        .map(w => ({
+                            chain: w.chain,
+                            address: w.address
+                        }));
+
+                    if (merchantChains.length === 0) {
+                        chainOptionsContainer.innerHTML = `
+                            <div class="text-center py-4 text-red-600 font-bold">
+                                Merchant has no active payment chains configured.
+                            </div>
+                        `;
+                        return;
+                    }
+                } else {
+                    // No wallets configured - show message
+                    chainOptionsContainer.innerHTML = `
+                        <div class="text-center py-4 text-red-600 font-bold">
+                            Merchant has not configured any payment wallets yet.
+                        </div>
+                    `;
+                    return;
+                }
+
+                renderChainOptions();
+            } catch (error) {
+                console.error('Error loading merchant chains:', error);
+                // Fallback to testnet chains
+                merchantChains = Object.keys(CHAIN_CONFIG)
+                    .filter(key => CHAIN_CONFIG[key].network === 'testnet')
+                    .map(key => ({ chain: key, address: null }));
+                renderChainOptions();
+            }
+        }
+
+        // Render chain options based on merchant's configured wallets
+        function renderChainOptions() {
+            const container = document.getElementById('chainOptions');
+
+            if (merchantChains.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-gray-500">
+                        No payment chains available
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = merchantChains.map((mc, index) => {
+                const config = CHAIN_CONFIG[mc.chain];
+                if (!config) return '';
+
+                const isFirst = index === 0;
+                return `
+                    <label class="flex items-center space-x-3 p-4 border-4 border-black cursor-pointer hover:bg-gray-100">
+                        <input type="radio" name="chain" value="${mc.chain}" class="w-5 h-5" ${isFirst ? 'checked' : ''}>
+                        <div class="flex-1">
+                            <div class="font-bold text-black">${config.chainName.toUpperCase()}</div>
+                            <div class="text-sm text-gray-700">${config.description || config.network}</div>
+                        </div>
+                        <div class="text-sm font-mono font-bold text-black" id="balance_${mc.chain}">-- USDC</div>
+                    </label>
+                `;
+            }).join('');
+
+            // Add event listeners to chain radios
+            setupChainListeners();
+
+            // If first chain is auto-selected, enable pay button
+            const firstRadio = document.querySelector('input[name="chain"]:checked');
+            if (firstRadio) {
+                document.getElementById('payBtn').disabled = false;
+            }
+        }
+
+        // Setup chain radio button listeners
+        function setupChainListeners() {
+            const chainRadios = document.querySelectorAll('input[name="chain"]');
+            chainRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    document.getElementById('payBtn').disabled = false;
+                });
+            });
         }
 
         // Go back to store
@@ -637,70 +980,63 @@
             showSuccess('Wallet disconnected. You can now connect a different wallet.');
         }
 
-        // Update USDC balance on all chains
+        // Update USDC balance on all merchant's enabled chains
         async function updateUSDCBalance() {
             if (!connectedAddress) return;
 
-            console.log('Checking USDC balance on all chains for:', connectedAddress);
+            console.log('Checking USDC balance on merchant chains for:', connectedAddress);
 
-            // Check Base Sepolia
-            checkBalanceOnChain('BASE_SEPOLIA', 'baseSepBalance');
-            
-            // Check Ethereum Sepolia  
-            checkBalanceOnChain('ETHEREUM_SEPOLIA', 'ethSepBalance');
+            // Check balance on each of the merchant's enabled chains
+            for (const mc of merchantChains) {
+                await checkBalanceOnChain(mc.chain);
+            }
         }
 
-        async function checkBalanceOnChain(chainKey, elementId) {
+        async function checkBalanceOnChain(chainKey) {
             try {
                 const config = CHAIN_CONFIG[chainKey];
+                if (!config) return;
+
                 console.log(`Checking ${config.chainName} balance...`);
-                
+
                 // Create provider for this specific chain
                 const chainProvider = new ethers.JsonRpcProvider(config.rpcUrls[0]);
                 const usdcContract = new ethers.Contract(config.usdcAddress, USDC_ABI, chainProvider);
-                
+
                 const balance = await usdcContract.balanceOf(connectedAddress);
                 const decimals = await usdcContract.decimals();
                 const formattedBalance = ethers.formatUnits(balance, decimals);
-                
-                const element = document.getElementById(elementId);
-                element.textContent = `${formattedBalance} USDC`;
-                
-                // Update radio button balance displays
-                const radioElement = document.getElementById(chainKey === 'BASE_SEPOLIA' ? 'baseBalanceRadio' : 'ethBalanceRadio');
-                if (radioElement) {
-                    radioElement.textContent = `${formattedBalance} USDC`;
-                }
-                
-                // Add color coding
-                if (parseFloat(formattedBalance) > 0) {
-                    element.classList.add('text-green-400');
-                    element.classList.remove('text-gray-400');
-                    if (radioElement) {
-                        radioElement.classList.add('text-green-400');
-                        radioElement.classList.remove('text-gray-400');
-                    }
-                } else {
-                    element.classList.add('text-gray-400');
-                    element.classList.remove('text-green-400');
-                    if (radioElement) {
-                        radioElement.classList.add('text-gray-400');
-                        radioElement.classList.remove('text-green-400');
+
+                // Update the balance display for this chain
+                const balanceElement = document.getElementById(`balance_${chainKey}`);
+                if (balanceElement) {
+                    balanceElement.textContent = `${parseFloat(formattedBalance).toFixed(2)} USDC`;
+
+                    // Add color coding
+                    if (parseFloat(formattedBalance) > 0) {
+                        balanceElement.classList.add('text-green-600');
+                        balanceElement.classList.remove('text-gray-400');
+                    } else {
+                        balanceElement.classList.add('text-gray-400');
+                        balanceElement.classList.remove('text-green-600');
                     }
                 }
-                
+
                 console.log(`${config.chainName}: ${formattedBalance} USDC`);
             } catch (error) {
                 console.error(`Error checking ${chainKey} balance:`, error);
-                
-                // Show 0 instead of error to be cleaner
-                const element = document.getElementById(elementId);
-                element.textContent = '0.0 USDC';
-                element.classList.add('text-gray-400');
-                element.classList.remove('text-green-400');
-                
+
+                // Show error state
+                const balanceElement = document.getElementById(`balance_${chainKey}`);
+                if (balanceElement) {
+                    balanceElement.textContent = '-- USDC';
+                    balanceElement.classList.add('text-gray-400');
+                }
+
                 const configObj = CHAIN_CONFIG[chainKey];
-                console.log(`${configObj.chainName}: Assuming 0 USDC (RPC error)`);
+                if (configObj) {
+                    console.log(`${configObj.chainName}: Unable to check balance`);
+                }
             }
         }
 
