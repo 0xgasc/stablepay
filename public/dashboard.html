@@ -3453,16 +3453,16 @@ onMounted(() => {
                 const baseUrl = window.location.origin;
                 const storeName = encodeURIComponent(currentMerchant.companyName + ' Store');
 
-                // Test store link
+                // Test store link (clean URL)
                 const testStoreLink = document.getElementById('testStoreLink');
                 if (testStoreLink) {
-                    testStoreLink.href = `${baseUrl}/public/store.html?merchantId=${currentMerchant.id}&storeName=${storeName}`;
+                    testStoreLink.href = `${baseUrl}/store.html?merchantId=${currentMerchant.id}&storeName=${storeName}`;
                 }
 
-                // Direct checkout link (example with $1 test product)
+                // Direct checkout link (clean URL)
                 const directCheckoutLink = document.getElementById('directCheckoutLink');
                 if (directCheckoutLink) {
-                    directCheckoutLink.href = `${baseUrl}/public/crypto-pay.html?merchantId=${currentMerchant.id}&productId=TEST&productName=Test+Product&price=0.1`;
+                    directCheckoutLink.href = `${baseUrl}/checkout?merchantId=${currentMerchant.id}&productId=TEST&productName=Test+Product&price=0.1`;
                 }
             }
         }

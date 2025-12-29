@@ -7,6 +7,18 @@
     {
       "source": "/health/:path*",
       "destination": "/api"
+    },
+    {
+      "source": "/store.html",
+      "destination": "/public/store.html"
+    },
+    {
+      "source": "/crypto-pay.html",
+      "destination": "/public/crypto-pay.html"
+    },
+    {
+      "source": "/checkout",
+      "destination": "/public/crypto-pay.html"
     }
   ]
 }
