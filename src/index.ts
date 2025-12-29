@@ -242,6 +242,10 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
       where: { id: orderId }
     });
 
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found after update' });
+    }
+
     // Create transaction record if txHash provided
     if (txHash) {
       // Check if transaction already exists (avoid duplicate)

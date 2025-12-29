@@ -54,3 +54,4 @@ dashboard/out/
 .cache/
 temp/
 tmp/bfg.jar
+.vercel
