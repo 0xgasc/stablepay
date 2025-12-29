@@ -747,7 +747,7 @@
                 console.log('Chain:', selectedChain.value);
                 
                 try {
-                    const apiUrl = '/api/orders';
+                    const apiUrl = '/api/v1/orders';
                     console.log('Calling API:', apiUrl);
                     
                     const response = await fetch(apiUrl, {
@@ -951,7 +951,7 @@
             console.log('TX Hash:', tx.hash);
 
             try {
-                const confirmUrl = `/api/orders-confirm`;
+                const confirmUrl = `/api/v1/orders/${order.id}/confirm`;
                 console.log('Calling confirm API:', confirmUrl);
 
                 const confirmResponse = await fetch(confirmUrl, {
