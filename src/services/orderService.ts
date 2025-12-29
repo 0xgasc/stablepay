@@ -162,8 +162,9 @@ export class OrderService {
       });
     }
 
-    // Update order status to PAID using raw SQL to avoid Prisma @updatedAt issue
-    await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus" WHERE id = ${orderId}`;
+    // Update order status to PAID using raw SQL
+    const now = new Date();
+    await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId}`;
 
     const updatedOrder = await db.order.findUnique({
       where: { id: orderId },
@@ -236,9 +237,9 @@ export class OrderService {
       }
     }
 
-    // Use raw SQL to avoid Prisma @updatedAt issue
-    // Cast status to the OrderStatus enum type in PostgreSQL
-    await db.$executeRaw`UPDATE orders SET status = 'CONFIRMED'::"OrderStatus" WHERE id = ${orderId}`;
+    // Use raw SQL to update status and updatedAt
+    const confirmNow = new Date();
+    await db.$executeRaw`UPDATE orders SET status = 'CONFIRMED'::"OrderStatus", "updatedAt" = ${confirmNow} WHERE id = ${orderId}`;
 
     const confirmedOrder = await db.order.findUnique({
       where: { id: orderId },
@@ -262,7 +263,8 @@ export class OrderService {
   }
 
   async expireOrder(orderId: string) {
-    await db.$executeRaw`UPDATE orders SET status = 'EXPIRED'::"OrderStatus" WHERE id = ${orderId}`;
+    const now = new Date();
+    await db.$executeRaw`UPDATE orders SET status = 'EXPIRED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId}`;
     return db.order.findUnique({ where: { id: orderId } });
   }
 

@@ -133,7 +133,8 @@ export class BlockchainService {
       const requiredConfirms = CHAIN_CONFIGS[chain].requiredConfirms;
 
       if (confirmations >= requiredConfirms) {
-        await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus" WHERE id = ${matchedOrder.id}`;
+        const now = new Date();
+        await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${matchedOrder.id}`;
       }
     }
 
@@ -170,7 +171,8 @@ export class BlockchainService {
         tx.order &&
         tx.order.status === 'PENDING'
       ) {
-        await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus" WHERE id = ${tx.orderId}`;
+        const now = new Date();
+        await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${tx.orderId}`;
       }
     }
   }

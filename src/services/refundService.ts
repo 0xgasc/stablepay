@@ -122,7 +122,8 @@ export class RefundService {
         },
       });
 
-      await db.$executeRaw`UPDATE orders SET status = 'REFUNDED'::"OrderStatus" WHERE id = ${refund.orderId}`;
+      const now = new Date();
+      await db.$executeRaw`UPDATE orders SET status = 'REFUNDED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${refund.orderId}`;
 
       console.log(`Refund processed: ${refundId}, tx: ${refundTxHash}`);
     } catch (error) {
