@@ -2788,9 +2788,9 @@ onMounted(() => {
                     },
                     body: JSON.stringify({
                         orderId: orderId,
-                        amount: amount,
+                        amount: amount.toString(),
                         reason: reason,
-                        status: 'PROCESSING'
+                        status: 'PENDING'
                     })
                 });
 
@@ -2816,7 +2816,7 @@ onMounted(() => {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        status: 'COMPLETED',
+                        status: 'PROCESSED',
                         refundTxHash: txHash
                     })
                 });
@@ -3051,7 +3051,7 @@ onMounted(() => {
                                 orderId: order.id,
                                 amount: order.amount.toString(),
                                 reason: `Batch refund (tx: ${txHash})`,
-                                status: 'COMPLETED'
+                                status: 'PROCESSED'
                             })
                         });
 
@@ -3063,7 +3063,7 @@ onMounted(() => {
                                 method: 'PATCH',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                    status: 'COMPLETED',
+                                    status: 'PROCESSED',
                                     refundTxHash: txHash
                                 })
                             });

@@ -240,6 +240,51 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
   }
 });
 
+// Alias for crypto-pay.html confirm endpoint
+app.post('/api/orders-confirm', async (req, res) => {
+  try {
+    const { db } = await import('./config/database');
+    const { orderId, txHash, fromAddress, blockNumber, confirmations } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ error: 'orderId is required' });
+    }
+
+    console.log('Confirming order via /api/orders-confirm:', orderId, 'txHash:', txHash);
+
+    const order = await db.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'CONFIRMED',
+        updatedAt: new Date()
+      }
+    });
+
+    // Create transaction record
+    if (txHash) {
+      await db.transaction.create({
+        data: {
+          orderId: orderId,
+          txHash: txHash,
+          chain: order.chain,
+          amount: order.amount,
+          fromAddress: fromAddress || 'unknown',
+          toAddress: order.paymentAddress,
+          blockNumber: blockNumber ? BigInt(blockNumber) : undefined,
+          confirmations: confirmations || 1,
+          status: 'CONFIRMED'
+        }
+      });
+    }
+
+    console.log('Order confirmed successfully:', orderId);
+    res.json({ success: true, order });
+  } catch (error) {
+    console.error('Confirm order error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
