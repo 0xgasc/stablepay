@@ -337,6 +337,28 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
           }
         });
         console.log('Transaction record created for order:', orderId);
+
+        // Update merchant volume tracking (only if order wasn't already confirmed)
+        if (existingOrder.status !== 'CONFIRMED' && existingOrder.status !== 'PAID' && order.merchantId) {
+          const orderAmount = parseFloat(order.amount.toString());
+          const isMainnet = order.chain.includes('MAINNET');
+
+          await db.merchant.update({
+            where: { id: order.merchantId },
+            data: {
+              monthlyVolumeUsed: { increment: orderAmount },
+              monthlyTransactions: { increment: 1 },
+              ...(isMainnet ? {
+                mainnetVolumeUsed: { increment: orderAmount },
+                mainnetTransactions: { increment: 1 }
+              } : {
+                testnetVolumeUsed: { increment: orderAmount },
+                testnetTransactions: { increment: 1 }
+              })
+            }
+          });
+          console.log(`Updated merchant volume: +$${orderAmount} (${isMainnet ? 'mainnet' : 'testnet'})`);
+        }
       } else {
         console.log('Transaction already exists, skipping creation');
       }
