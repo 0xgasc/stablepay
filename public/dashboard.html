@@ -374,6 +374,31 @@
             </div>
         </div>
 
+        <!-- Quick Actions -->
+        <div class="bg-slate-900 border border-slate-800 p-5 mb-8">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-4">Quick Actions - Test Your Integration</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a id="testStoreLink" href="#" target="_blank"
+                   class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-medium text-sm transition-colors">
+                    <span>🛒</span>
+                    <span>Open Test Store</span>
+                </a>
+                <a id="directCheckoutLink" href="#" target="_blank"
+                   class="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 font-medium text-sm transition-colors">
+                    <span>💳</span>
+                    <span>Direct Checkout Link</span>
+                </a>
+                <button onclick="copyMerchantId()"
+                   class="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 font-medium text-sm transition-colors">
+                    <span>📋</span>
+                    <span id="copyMerchantBtn">Copy Merchant ID</span>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 mt-3">
+                <strong>Tip:</strong> Use the Test Store to simulate customer payments. All orders will appear in your dashboard below.
+            </p>
+        </div>
+
         <!-- Main Content Tabs -->
         <div class="bg-slate-900 border border-slate-800">
             <!-- Tab Navigation -->
@@ -1425,6 +1450,9 @@ onMounted(() => {
 
                 // Update widget code with merchant ID
                 updateWidgetCode();
+
+                // Update quick action links with merchant ID
+                updateQuickActionLinks();
 
                 // Load current tab content after merchant data is ready
                 if (currentTab === 'orders') {
@@ -3417,6 +3445,47 @@ onMounted(() => {
                     walletsList.innerHTML = '<div class="text-slate-400 text-sm">No wallets configured. Go to Wallets tab to add wallets.</div>';
                 }
             }
+        }
+
+        // Update quick action links with merchant-specific URLs
+        function updateQuickActionLinks() {
+            if (currentMerchant && currentMerchant.id) {
+                const baseUrl = window.location.origin;
+                const storeName = encodeURIComponent(currentMerchant.companyName + ' Store');
+
+                // Test store link
+                const testStoreLink = document.getElementById('testStoreLink');
+                if (testStoreLink) {
+                    testStoreLink.href = `${baseUrl}/public/store.html?merchantId=${currentMerchant.id}&storeName=${storeName}`;
+                }
+
+                // Direct checkout link (example with $1 test product)
+                const directCheckoutLink = document.getElementById('directCheckoutLink');
+                if (directCheckoutLink) {
+                    directCheckoutLink.href = `${baseUrl}/public/crypto-pay.html?merchantId=${currentMerchant.id}&productId=TEST&productName=Test+Product&price=0.1`;
+                }
+            }
+        }
+
+        // Copy merchant ID to clipboard
+        function copyMerchantId() {
+            if (!currentMerchant || !currentMerchant.id) {
+                alert('Merchant ID not available');
+                return;
+            }
+
+            navigator.clipboard.writeText(currentMerchant.id).then(() => {
+                const btn = document.getElementById('copyMerchantBtn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                // Fallback for older browsers
+                prompt('Copy your Merchant ID:', currentMerchant.id);
+            });
         }
 
         // Show React framework by default when Developer tab loads

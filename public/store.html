@@ -315,6 +315,23 @@
             'Special': { name: 'Special Edition', price: 0.5 }
         };
 
+        // Get merchant ID from URL (for merchant-specific stores)
+        const urlParams = new URLSearchParams(window.location.search);
+        const merchantId = urlParams.get('merchantId');
+        const storeName = urlParams.get('storeName');
+
+        // Update store name if provided
+        if (storeName) {
+            document.querySelector('h1[data-i18n="heading"]').textContent = decodeURIComponent(storeName);
+            document.title = decodeURIComponent(storeName);
+        }
+
+        // Show merchant mode indicator if merchant ID provided
+        if (merchantId) {
+            console.log('Store loaded for merchant:', merchantId);
+            // Could customize UI based on merchant settings here
+        }
+
         // Handle card payment (placeholder)
         function selectProduct(id, name, price) {
             alert(`Card payments for ${name} ($${price}) coming soon!\n\nFor now, please use "Pay with Stablecoins" to complete your purchase.`);
@@ -331,6 +348,11 @@
                 price: price
             });
 
+            // Include merchant ID if available (critical for order tracking!)
+            if (merchantId) {
+                params.set('merchantId', merchantId);
+            }
+
             // Redirect to crypto payment page
             window.location.href = `crypto-pay.html?${params.toString()}`;
         }
@@ -338,6 +360,11 @@
         // Add event listeners when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Store page loaded');
+            if (merchantId) {
+                console.log('Merchant ID:', merchantId);
+            } else {
+                console.log('No merchant ID - orders will use demo mode');
+            }
 
             // Add event listeners for all products
             Object.keys(products).forEach(productId => {
