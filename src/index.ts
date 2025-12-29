@@ -169,29 +169,45 @@ app.put('/api/v1/orders', async (req, res) => {
 
     console.log('Confirming order:', orderId, 'with txHash:', txHash);
 
-    const order = await db.order.update({
-      where: { id: orderId },
-      data: {
-        status: status || 'CONFIRMED'
-        // updatedAt is auto-managed by Prisma @updatedAt
-      }
+    // Use raw SQL to update status (avoids Prisma @updatedAt column mismatch)
+    const newStatus = status || 'CONFIRMED';
+    await db.$executeRawUnsafe(
+      `UPDATE orders SET status = $1 WHERE id = $2`,
+      newStatus,
+      orderId
+    );
+
+    // Fetch the updated order
+    const order = await db.order.findUnique({
+      where: { id: orderId }
     });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
 
     // Create transaction record
     if (txHash) {
-      const transaction = await db.transaction.create({
-        data: {
-          orderId: orderId,
-          txHash: txHash,
-          chain: order.chain,
-          amount: order.amount,
-          fromAddress: order.customerEmail || 'unknown',
-          toAddress: order.paymentAddress,
-          blockNumber: blockNumber ? BigInt(blockNumber) : null,
-          status: 'CONFIRMED'
-        }
+      const existingTx = await db.transaction.findUnique({
+        where: { txHash: txHash }
       });
-      console.log('Transaction record created:', transaction.id);
+
+      if (!existingTx) {
+        const transaction = await db.transaction.create({
+          data: {
+            orderId: orderId,
+            txHash: txHash,
+            chain: order.chain,
+            amount: order.amount,
+            fromAddress: order.customerEmail || 'unknown',
+            toAddress: order.paymentAddress || 'unknown',
+            blockNumber: blockNumber ? BigInt(blockNumber) : null,
+            status: 'CONFIRMED',
+            confirmations: 1
+          }
+        });
+        console.log('Transaction record created:', transaction.id);
+      }
     }
 
     return res.json({ success: true, order });
@@ -220,12 +236,17 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    const order = await db.order.update({
-      where: { id: orderId },
-      data: {
-        status: status || 'CONFIRMED'
-        // updatedAt is auto-managed by Prisma @updatedAt
-      }
+    // Use raw SQL to update status (avoids Prisma @updatedAt column mismatch)
+    const newStatus = status || 'CONFIRMED';
+    await db.$executeRawUnsafe(
+      `UPDATE orders SET status = $1 WHERE id = $2`,
+      newStatus,
+      orderId
+    );
+
+    // Fetch the updated order
+    const order = await db.order.findUnique({
+      where: { id: orderId }
     });
 
     // Create transaction record if txHash provided
@@ -276,13 +297,21 @@ app.post('/api/orders-confirm', async (req, res) => {
 
     console.log('Confirming order via /api/orders-confirm:', orderId, 'txHash:', txHash);
 
-    const order = await db.order.update({
-      where: { id: orderId },
-      data: {
-        status: 'CONFIRMED'
-        // updatedAt is auto-managed by Prisma @updatedAt
-      }
+    // Use raw SQL to update status (avoids Prisma @updatedAt column mismatch)
+    await db.$executeRawUnsafe(
+      `UPDATE orders SET status = $1 WHERE id = $2`,
+      'CONFIRMED',
+      orderId
+    );
+
+    // Fetch the updated order
+    const order = await db.order.findUnique({
+      where: { id: orderId }
     });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
 
     // Create transaction record
     if (txHash) {
