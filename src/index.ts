@@ -172,11 +172,7 @@ app.put('/api/v1/orders', async (req, res) => {
 
     // Use raw SQL to update status (avoids Prisma @updatedAt column mismatch)
     const newStatus = status || 'CONFIRMED';
-    await db.$executeRawUnsafe(
-      `UPDATE orders SET status = $1 WHERE id = $2`,
-      newStatus,
-      orderId
-    );
+    await db.$executeRaw`UPDATE orders SET status = ${newStatus}::"OrderStatus" WHERE id = ${orderId}`;
 
     // Fetch the updated order
     const order = await db.order.findUnique({
@@ -239,11 +235,7 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
 
     // Use raw SQL to update status (avoids Prisma @updatedAt column mismatch)
     const newStatus = status || 'CONFIRMED';
-    await db.$executeRawUnsafe(
-      `UPDATE orders SET status = $1 WHERE id = $2`,
-      newStatus,
-      orderId
-    );
+    await db.$executeRaw`UPDATE orders SET status = ${newStatus}::"OrderStatus" WHERE id = ${orderId}`;
 
     // Fetch the updated order
     const order = await db.order.findUnique({
@@ -299,11 +291,7 @@ app.post('/api/orders-confirm', async (req, res) => {
     console.log('Confirming order via /api/orders-confirm:', orderId, 'txHash:', txHash);
 
     // Use raw SQL to update status (avoids Prisma @updatedAt column mismatch)
-    await db.$executeRawUnsafe(
-      `UPDATE orders SET status = $1 WHERE id = $2`,
-      'CONFIRMED',
-      orderId
-    );
+    await db.$executeRaw`UPDATE orders SET status = 'CONFIRMED'::"OrderStatus" WHERE id = ${orderId}`;
 
     // Fetch the updated order
     const order = await db.order.findUnique({
