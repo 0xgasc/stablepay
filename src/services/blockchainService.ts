@@ -133,10 +133,7 @@ export class BlockchainService {
       const requiredConfirms = CHAIN_CONFIGS[chain].requiredConfirms;
 
       if (confirmations >= requiredConfirms) {
-        await db.order.update({
-          where: { id: matchedOrder.id },
-          data: { status: 'PAID' },
-        });
+        await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus" WHERE id = ${matchedOrder.id}`;
       }
     }
 
@@ -173,10 +170,7 @@ export class BlockchainService {
         tx.order &&
         tx.order.status === 'PENDING'
       ) {
-        await db.order.update({
-          where: { id: tx.orderId },
-          data: { status: 'PAID' },
-        });
+        await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus" WHERE id = ${tx.orderId}`;
       }
     }
   }

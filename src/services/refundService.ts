@@ -122,10 +122,7 @@ export class RefundService {
         },
       });
 
-      await db.order.update({
-        where: { id: refund.orderId },
-        data: { status: 'REFUNDED' },
-      });
+      await db.$executeRaw`UPDATE orders SET status = 'REFUNDED'::"OrderStatus" WHERE id = ${refund.orderId}`;
 
       console.log(`Refund processed: ${refundId}, tx: ${refundTxHash}`);
     } catch (error) {
