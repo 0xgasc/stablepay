@@ -880,7 +880,19 @@
 
         // Manually confirm an order (for testing without blockchain detection)
         window.confirmOrder = async function(orderId) {
-            if (!confirm('Manually confirm this order? This should only be used for testing or when payment has been verified externally.')) {
+            // Prompt for transaction hash
+            const txHash = prompt(
+                'Enter the transaction hash (tx ID) to confirm this order:\n\n' +
+                'You can find this in the blockchain explorer or wallet transaction history.\n' +
+                'Example: 0x1234...abcd\n\n' +
+                'Leave empty to confirm without tx hash (not recommended):'
+            );
+
+            if (txHash === null) {
+                return; // User cancelled
+            }
+
+            if (!txHash && !confirm('No transaction hash provided. Are you sure you want to confirm without blockchain verification?')) {
                 return;
             }
 
@@ -891,7 +903,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        // For manual confirmation, we don't have blockchain data
+                        txHash: txHash || undefined,
                         confirmations: 1
                     })
                 });
