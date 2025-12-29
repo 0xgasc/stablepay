@@ -76,19 +76,24 @@ app.post('/api/v1/orders', async (req, res) => {
     let paymentAddress = fallbackAddress;
 
     if (merchantId && merchantId !== 'DEMO') {
-      const merchantWallet = await db.merchantWallet.findFirst({
-        where: {
-          merchantId: merchantId,
-          chain: chain,
-          isActive: true
-        }
-      });
+      try {
+        const merchantWallet = await db.merchantWallet.findFirst({
+          where: {
+            merchantId: merchantId,
+            chain: chain as any, // Cast to handle enum type
+            isActive: true
+          }
+        });
 
-      if (merchantWallet) {
-        paymentAddress = merchantWallet.address;
-        console.log(`Using merchant wallet for ${chain}: ${paymentAddress}`);
-      } else {
-        console.log(`No merchant wallet found for ${chain}, using fallback: ${fallbackAddress}`);
+        if (merchantWallet) {
+          paymentAddress = merchantWallet.address;
+          console.log(`Using merchant wallet for ${chain}: ${paymentAddress}`);
+        } else {
+          console.log(`No merchant wallet found for ${chain}, using fallback: ${fallbackAddress}`);
+        }
+      } catch (walletError) {
+        console.error('Error looking up merchant wallet:', walletError);
+        // Continue with fallback address
       }
     }
 
