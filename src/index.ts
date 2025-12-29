@@ -249,6 +249,40 @@ app.put('/api/v1/orders', async (req, res) => {
   }
 });
 
+// DELETE - Delete order (for cleanup)
+app.delete('/api/v1/orders/:orderId', async (req, res) => {
+  try {
+    const { db } = await import('./config/database');
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({ error: 'orderId is required' });
+    }
+
+    // First delete related transactions
+    await db.transaction.deleteMany({
+      where: { orderId }
+    });
+
+    // Then delete related refunds
+    await db.refund.deleteMany({
+      where: { orderId }
+    });
+
+    // Finally delete the order
+    const deletedOrder = await db.order.delete({
+      where: { id: orderId }
+    });
+
+    console.log('Order deleted:', orderId);
+    return res.json({ success: true, deleted: deletedOrder.id });
+  } catch (error) {
+    console.error('Delete order error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: 'Internal server error', details: errorMessage });
+  }
+});
+
 // POST - Confirm order
 app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
   try {
