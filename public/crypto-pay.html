@@ -535,8 +535,7 @@
                 network: 'testnet',
                 description: 'Base testnet - Lower fees',
                 tokens: {
-                    USDC: { address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', decimals: 6, name: 'USD Coin' },
-                    EURC: { address: '0x08210F9170F89Ab7658F0B5E3fF39b0E03C594D4', decimals: 6, name: 'Euro Coin' }
+                    USDC: { address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', decimals: 6, name: 'USD Coin' }
                 }
             },
             ETHEREUM_SEPOLIA: {
@@ -549,8 +548,7 @@
                 network: 'testnet',
                 description: 'Ethereum testnet',
                 tokens: {
-                    USDC: { address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', decimals: 6, name: 'USD Coin' },
-                    EURC: { address: '0x08210F9170F89Ab7658F0B5E3fF39b0E03C594D4', decimals: 6, name: 'Euro Coin' }
+                    USDC: { address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', decimals: 6, name: 'USD Coin' }
                 }
             },
             POLYGON_MUMBAI: {
@@ -686,6 +684,7 @@
         let provider = null;
         let signer = null;
         let connectedAddress = null;
+        let connectedWalletType = null; // 'evm' or 'solana'
         let currentProduct = null;
         let selectedWalletProvider = null;
         let solanaConnection = null;
@@ -893,6 +892,7 @@
             provider = new ethers.BrowserProvider(wallet.provider);
             signer = await provider.getSigner();
             connectedAddress = await signer.getAddress();
+            connectedWalletType = 'evm';
             console.log('Connected EVM address:', connectedAddress);
 
             updateWalletUI(connectedAddress, 'evm');
@@ -906,6 +906,7 @@
             // Request connection
             const response = await wallet.provider.connect();
             connectedAddress = response.publicKey.toString();
+            connectedWalletType = 'solana';
             console.log('Connected Solana address:', connectedAddress);
 
             // Initialize Solana connection
@@ -1217,10 +1218,10 @@
             provider = null;
             signer = null;
             connectedAddress = null;
+            connectedWalletType = null;
             selectedWalletProvider = null;
             solanaConnection = null;
             solanaWallet = null;
-            window.connectedWalletType = null;
 
             // Update UI
             document.getElementById('connectWalletBtn').classList.remove('hidden');
@@ -1236,12 +1237,22 @@
 
         // Update token balances on all merchant's enabled chains
         async function updateTokenBalances() {
-            if (!connectedAddress) return;
+            if (!connectedAddress || !connectedWalletType) return;
 
-            console.log('Checking token balances for:', connectedAddress);
+            console.log('Checking token balances for:', connectedAddress, '(wallet type:', connectedWalletType + ')');
 
-            // Check balance on each of the merchant's enabled chains
+            // Only check chains that match the connected wallet type
             for (const mc of merchantChains) {
+                const chainConfig = CHAIN_CONFIG[mc.chain];
+                if (!chainConfig) continue;
+
+                // Skip chains that don't match connected wallet type
+                const chainType = chainConfig.type || 'evm';
+                if (chainType !== connectedWalletType) {
+                    console.log(`Skipping ${mc.chain} - chain type ${chainType} doesn't match wallet type ${connectedWalletType}`);
+                    continue;
+                }
+
                 await checkAllTokensOnChain(mc.chain);
             }
         }
@@ -1376,11 +1387,15 @@
 
                 let orderData;
                 const chainConfig = CHAIN_CONFIG[selectedChain.value];
-                
+                const selectedChainData = merchantChains.find(mc => mc.chain === selectedChain.value);
+                const tokenConfig = chainConfig.tokens[selectedToken];
+
                 // Try API first for database persistence
                 console.log('Attempting to create order via API...');
                 console.log('Product:', currentProduct);
                 console.log('Chain:', selectedChain.value);
+                console.log('Token:', selectedToken);
+                console.log('Payment Address:', selectedChainData?.address);
                 
                 try {
                     const apiUrl = '/api/v1/orders';
@@ -1392,12 +1407,13 @@
                         body: JSON.stringify({
                             amount: currentProduct.price,
                             chain: selectedChain.value,
+                            token: selectedToken, // Which stablecoin to pay with
                             productId: currentProduct.id,
                             productName: currentProduct.name,
                             customerEmail: customerEmail,
                             customerName: customerName || null,
                             merchantId: currentProduct.merchantId || 'DEMO',
-                            paymentAddress: chainConfig.paymentAddress // Required for order creation
+                            paymentAddress: selectedChainData?.address || null // Merchant's wallet for this chain
                         })
                     });
                     
@@ -1408,9 +1424,9 @@
                         const apiResponse = await response.json();
                         // Extract the order from the API response wrapper
                         orderData = apiResponse.order || apiResponse;
-                        // Add chain config addresses
-                        orderData.usdcAddress = chainConfig.usdcAddress;
-                        orderData.paymentAddress = orderData.paymentAddress || chainConfig.paymentAddress;
+                        // Add chain config addresses for the selected token
+                        orderData.usdcAddress = tokenConfig.address; // Token contract address
+                        orderData.paymentAddress = orderData.paymentAddress || selectedChainData?.address;
                         console.log('[SUCCESS] Order created via API:', orderData);
                     } else {
                         const errorText = await response.text();
@@ -1427,8 +1443,9 @@
                         orderId: mockOrderId,
                         amount: currentProduct.price,
                         chain: selectedChain.value,
-                        paymentAddress: chainConfig.paymentAddress,
-                        usdcAddress: chainConfig.usdcAddress,
+                        token: selectedToken,
+                        paymentAddress: selectedChainData?.address,
+                        usdcAddress: tokenConfig.address, // Token contract address
                         productId: currentProduct.id,
                         productName: currentProduct.name,
                         createdAt: new Date().toISOString(),
