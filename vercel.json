@@ -9,16 +9,12 @@
       "destination": "/api"
     },
     {
-      "source": "/store.html",
-      "destination": "/public/store.html"
-    },
-    {
-      "source": "/crypto-pay.html",
-      "destination": "/public/crypto-pay.html"
+      "source": "/public/:path*",
+      "destination": "/:path*"
     },
     {
       "source": "/checkout",
-      "destination": "/public/crypto-pay.html"
+      "destination": "/crypto-pay.html"
     }
   ]
 }
