@@ -166,7 +166,8 @@
             color: #0f172a;
         }
 
-        body.day-mode .bg-slate-900 {
+        body.day-mode .bg-slate-900,
+        body.day-mode .bg-slate-950 {
             background: #fff !important;
             border-color: #e2e8f0 !important;
         }
@@ -175,7 +176,8 @@
             background: #f1f5f9 !important;
         }
 
-        body.day-mode .border-slate-800 {
+        body.day-mode .border-slate-800,
+        body.day-mode .border-slate-700 {
             border-color: #e2e8f0 !important;
         }
 
@@ -184,7 +186,8 @@
         }
 
         body.day-mode .text-slate-400,
-        body.day-mode .text-slate-500 {
+        body.day-mode .text-slate-500,
+        body.day-mode .text-slate-300 {
             color: #64748b !important;
         }
 
@@ -196,12 +199,71 @@
             color: #16a34a !important;
         }
 
-        body.day-mode .text-yellow-500 {
+        body.day-mode .text-yellow-500,
+        body.day-mode .text-yellow-400 {
             color: #d97706 !important;
         }
 
         body.day-mode .text-purple-400 {
             color: #9333ea !important;
+        }
+
+        body.day-mode .text-red-400 {
+            color: #dc2626 !important;
+        }
+
+        /* Table styles in day mode */
+        body.day-mode tbody tr:hover {
+            background: rgba(241, 245, 249, 0.8) !important;
+        }
+
+        body.day-mode .divide-slate-800 > * + * {
+            border-color: #e2e8f0 !important;
+        }
+
+        /* Status badges in day mode */
+        body.day-mode .status-pending {
+            background: #fef3c7 !important;
+            color: #92400e !important;
+        }
+
+        body.day-mode .status-paid {
+            background: #dbeafe !important;
+            color: #1e3a8a !important;
+        }
+
+        body.day-mode .status-confirmed {
+            background: #d1fae5 !important;
+            color: #065f46 !important;
+        }
+
+        body.day-mode .status-failed {
+            background: #fee2e2 !important;
+            color: #991b1b !important;
+        }
+
+        /* Tab styling in day mode */
+        body.day-mode .tab-btn {
+            color: #64748b !important;
+        }
+
+        body.day-mode .tab-btn.active,
+        body.day-mode .tab-btn[class*="border-blue"] {
+            color: #2563eb !important;
+            border-color: #2563eb !important;
+        }
+
+        /* Form inputs in day mode */
+        body.day-mode input,
+        body.day-mode select,
+        body.day-mode textarea {
+            background: #fff !important;
+            color: #0f172a !important;
+            border-color: #e2e8f0 !important;
+        }
+
+        body.day-mode .bg-gradient-to-r {
+            opacity: 0.9;
         }
 
         #pendingBanner {
