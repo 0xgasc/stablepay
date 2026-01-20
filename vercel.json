@@ -20,11 +20,5 @@
       "source": "/checkout",
       "destination": "/crypto-pay.html"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/webhooks",
-      "schedule": "0 * * * *"
-    }
   ]
 }
