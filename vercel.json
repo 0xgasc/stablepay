@@ -1,32 +1,29 @@
 {
+  "outputDirectory": "public",
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/public/index.html"
-    },
-    {
       "source": "/dashboard",
-      "destination": "/public/dashboard.html"
+      "destination": "/dashboard.html"
     },
     {
       "source": "/login",
-      "destination": "/public/login.html"
+      "destination": "/login.html"
     },
     {
       "source": "/signup",
-      "destination": "/public/signup.html"
+      "destination": "/signup.html"
     },
     {
       "source": "/pricing",
-      "destination": "/public/pricing.html"
+      "destination": "/pricing.html"
     },
     {
       "source": "/enterprise-admin",
-      "destination": "/public/enterprise-admin.html"
+      "destination": "/enterprise-admin.html"
     },
     {
       "source": "/checkout",
-      "destination": "/public/crypto-pay.html"
+      "destination": "/crypto-pay.html"
     },
     {
       "source": "/api/cron/:path*",
