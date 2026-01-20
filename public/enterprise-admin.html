@@ -352,6 +352,9 @@
                     <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="settings">
                         System Settings
                     </button>
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="wallets">
+                        Fee Wallets
+                    </button>
                 </nav>
             </div>
 
@@ -535,6 +538,65 @@
                             <button id="saveSystemSettings" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 font-medium transition-colors">
                                 💾 Save Settings
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fee Wallets Tab -->
+            <div id="walletsTab" class="tab-content hidden">
+                <div class="bg-slate-950 border shadow-sm border">
+                    <div class="p-6 border-b flex justify-between items-center">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Platform Fee Wallets</h2>
+                            <p class="text-sm text-slate-400 mt-1">Configure wallets for collecting merchant fee payments (one per chain)</p>
+                        </div>
+                        <button id="addWalletBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 border font-medium">
+                            Add Wallet
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-950 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Chain</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Wallet Address</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Label</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Added</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="walletsTableBody" class="divide-y divide-slate-800">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-8 text-center text-slate-400">
+                                        Loading wallets...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Wallet Info -->
+                <div class="mt-6 bg-slate-950 border shadow-sm border p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">Fee Collection Info</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                        <div>
+                            <h4 class="font-medium text-slate-300 mb-2">How it works</h4>
+                            <ul class="text-slate-400 space-y-1">
+                                <li>- Merchants receive 100% of customer payments directly</li>
+                                <li>- Fees accumulate and are invoiced based on billing cycle</li>
+                                <li>- Merchants pay fees to your platform wallets</li>
+                                <li>- One wallet per chain for fee collection</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-slate-300 mb-2">Supported Tokens</h4>
+                            <ul class="text-slate-400 space-y-1">
+                                <li>- USDC (primary)</li>
+                                <li>- USDT</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -778,11 +840,56 @@
         </div>
     </div>
 
+    <!-- Add/Edit Platform Wallet Modal -->
+    <div id="walletModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-slate-950 border shadow-xl p-8 max-w-lg w-full mx-4">
+            <h2 class="text-2xl font-bold text-white mb-6" id="walletModalTitle">Add Platform Wallet</h2>
+
+            <form id="walletForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Chain *</label>
+                    <select id="walletChain" required class="w-full px-3 py-2 bg-black border border-slate-800 text-white">
+                        <option value="">Select a chain...</option>
+                        <option value="BASE_SEPOLIA">Base Sepolia (Testnet)</option>
+                        <option value="BASE_MAINNET">Base Mainnet</option>
+                        <option value="ETHEREUM_SEPOLIA">Ethereum Sepolia (Testnet)</option>
+                        <option value="ETHEREUM_MAINNET">Ethereum Mainnet</option>
+                        <option value="POLYGON_MAINNET">Polygon Mainnet</option>
+                        <option value="POLYGON_MUMBAI">Polygon Mumbai (Testnet)</option>
+                        <option value="ARBITRUM_MAINNET">Arbitrum Mainnet</option>
+                        <option value="ARBITRUM_SEPOLIA">Arbitrum Sepolia (Testnet)</option>
+                    </select>
+                    <p class="text-xs text-slate-500 mt-1">Only one wallet per chain is allowed</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Wallet Address *</label>
+                    <input type="text" id="walletAddress" required placeholder="0x..." class="w-full px-3 py-2 bg-black border border-slate-800 text-white font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Label (Optional)</label>
+                    <input type="text" id="walletLabel" placeholder="e.g., Treasury, Main, Operations" class="w-full px-3 py-2 bg-black border border-slate-800 text-white">
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="cancelWallet" class="px-4 py-2 border border-slate-800 text-slate-300 hover:bg-slate-950">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700">
+                        Save Wallet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.location.origin;
         let merchants = [];
         let orders = [];
         let merchantWallets = {}; // Store wallets by merchantId
+        let platformWallets = []; // Store platform wallets for fee collection
 
         // Chain configuration
         const CHAINS = [
@@ -866,6 +973,11 @@
                     content.classList.add('hidden');
                 });
                 document.getElementById(tab + 'Tab').classList.remove('hidden');
+
+                // Load wallets when switching to wallets tab
+                if (tab === 'wallets') {
+                    loadPlatformWallets();
+                }
             });
         });
 
@@ -873,7 +985,8 @@
         async function loadDashboard() {
             await Promise.all([
                 loadMerchants(),
-                loadOrders()
+                loadOrders(),
+                loadPlatformWallets()
             ]);
             updateStats();
         }
@@ -1735,6 +1848,221 @@
             localStorage.setItem('enableInvoices', enableInvoices.toString());
             alert('System settings saved! Changes will apply when merchants reload their dashboards.');
         });
+
+        // =====================
+        // Platform Wallets
+        // =====================
+
+        // Load platform wallets
+        async function loadPlatformWallets() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/platform-wallets`, {
+                    headers: { 'Authorization': getAuthHeader() }
+                });
+
+                if (response.ok) {
+                    platformWallets = await response.json();
+                    renderPlatformWallets();
+                } else {
+                    platformWallets = [];
+                    renderPlatformWallets();
+                }
+            } catch (error) {
+                console.error('Error loading platform wallets:', error);
+                platformWallets = [];
+                renderPlatformWallets();
+            }
+        }
+
+        // Render platform wallets table
+        function renderPlatformWallets() {
+            const tbody = document.getElementById('walletsTableBody');
+
+            if (!platformWallets || platformWallets.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-slate-400">
+                            No platform wallets configured yet. Click "Add Wallet" to add your first fee collection wallet.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const chainIcons = {
+                'BASE_SEPOLIA': '🔵',
+                'BASE_MAINNET': '🔵',
+                'ETHEREUM_SEPOLIA': '⟠',
+                'ETHEREUM_MAINNET': '⟠',
+                'POLYGON_MAINNET': '🟣',
+                'POLYGON_MUMBAI': '🟣',
+                'ARBITRUM_MAINNET': '🔷',
+                'ARBITRUM_SEPOLIA': '🔷',
+                'SOLANA_MAINNET': '🌞',
+                'SOLANA_DEVNET': '🌞'
+            };
+
+            const chainNames = {
+                'BASE_SEPOLIA': 'Base Sepolia',
+                'BASE_MAINNET': 'Base Mainnet',
+                'ETHEREUM_SEPOLIA': 'Ethereum Sepolia',
+                'ETHEREUM_MAINNET': 'Ethereum Mainnet',
+                'POLYGON_MAINNET': 'Polygon Mainnet',
+                'POLYGON_MUMBAI': 'Polygon Mumbai',
+                'ARBITRUM_MAINNET': 'Arbitrum Mainnet',
+                'ARBITRUM_SEPOLIA': 'Arbitrum Sepolia',
+                'SOLANA_MAINNET': 'Solana Mainnet',
+                'SOLANA_DEVNET': 'Solana Devnet'
+            };
+
+            tbody.innerHTML = platformWallets.map(w => `
+                <tr class="hover:bg-slate-950">
+                    <td class="px-6 py-4">
+                        <span class="mr-2">${chainIcons[w.chain] || '🔗'}</span>
+                        <span class="font-medium text-white">${chainNames[w.chain] || w.chain}</span>
+                    </td>
+                    <td class="px-6 py-4 font-mono text-sm text-slate-300">
+                        <span title="${w.address}">${w.address.substring(0, 10)}...${w.address.substring(w.address.length - 8)}</span>
+                        <button onclick="navigator.clipboard.writeText('${w.address}'); alert('Address copied!');" class="ml-2 text-blue-400 hover:text-blue-300 text-xs">Copy</button>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-400">${w.label || '-'}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs font-medium ${w.isActive ? 'bg-green-900/20 text-green-400' : 'bg-slate-900/20 text-slate-400'}">
+                            ${w.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-400">${new Date(w.createdAt).toLocaleDateString()}</td>
+                    <td class="px-6 py-4 text-right text-sm">
+                        <button onclick="editPlatformWallet('${w.chain}')" class="text-blue-400 hover:text-blue-300 mr-3">Edit</button>
+                        ${w.isActive
+                            ? `<button onclick="deactivatePlatformWallet('${w.chain}')" class="text-orange-400 hover:text-orange-300">Deactivate</button>`
+                            : `<button onclick="activatePlatformWallet('${w.chain}', '${w.address}')" class="text-green-400 hover:text-green-300">Activate</button>`
+                        }
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Show add wallet modal
+        document.getElementById('addWalletBtn')?.addEventListener('click', () => {
+            document.getElementById('walletModalTitle').textContent = 'Add Platform Wallet';
+            document.getElementById('walletChain').value = '';
+            document.getElementById('walletChain').disabled = false;
+            document.getElementById('walletAddress').value = '';
+            document.getElementById('walletLabel').value = '';
+            document.getElementById('walletModal').classList.remove('hidden');
+        });
+
+        // Cancel wallet modal
+        document.getElementById('cancelWallet')?.addEventListener('click', () => {
+            document.getElementById('walletModal').classList.add('hidden');
+        });
+
+        // Edit platform wallet
+        window.editPlatformWallet = function(chain) {
+            const wallet = platformWallets.find(w => w.chain === chain);
+            if (!wallet) return;
+
+            document.getElementById('walletModalTitle').textContent = 'Edit Platform Wallet';
+            document.getElementById('walletChain').value = wallet.chain;
+            document.getElementById('walletChain').disabled = true;
+            document.getElementById('walletAddress').value = wallet.address;
+            document.getElementById('walletLabel').value = wallet.label || '';
+            document.getElementById('walletModal').classList.remove('hidden');
+        };
+
+        // Save platform wallet (add or update)
+        document.getElementById('walletForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const chain = document.getElementById('walletChain').value;
+            const address = document.getElementById('walletAddress').value.trim();
+            const label = document.getElementById('walletLabel').value.trim();
+
+            if (!chain || !address) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            // Basic address validation
+            if (!address.startsWith('0x') || address.length !== 42) {
+                alert('Please enter a valid Ethereum address (0x followed by 40 hex characters)');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/platform-wallets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthHeader()
+                    },
+                    body: JSON.stringify({ chain, address, label: label || null })
+                });
+
+                if (response.ok) {
+                    document.getElementById('walletModal').classList.add('hidden');
+                    await loadPlatformWallets();
+                    alert('Platform wallet saved successfully!');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to save wallet'));
+                }
+            } catch (error) {
+                console.error('Error saving wallet:', error);
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Deactivate platform wallet
+        window.deactivatePlatformWallet = async function(chain) {
+            if (!confirm(`Are you sure you want to deactivate the ${chain} wallet? Merchants will no longer be able to pay fees on this chain.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/platform-wallets/${chain}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': getAuthHeader() }
+                });
+
+                if (response.ok) {
+                    await loadPlatformWallets();
+                    alert('Wallet deactivated successfully');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to deactivate wallet'));
+                }
+            } catch (error) {
+                console.error('Error deactivating wallet:', error);
+                alert('Error: ' + error.message);
+            }
+        };
+
+        // Re-activate platform wallet
+        window.activatePlatformWallet = async function(chain, address) {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/platform-wallets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthHeader()
+                    },
+                    body: JSON.stringify({ chain, address, isActive: true })
+                });
+
+                if (response.ok) {
+                    await loadPlatformWallets();
+                    alert('Wallet activated successfully');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to activate wallet'));
+                }
+            } catch (error) {
+                console.error('Error activating wallet:', error);
+                alert('Error: ' + error.message);
+            }
+        };
 
         // Refresh
         document.getElementById('refreshBtn').addEventListener('click', loadDashboard);

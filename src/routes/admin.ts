@@ -386,13 +386,14 @@ const requireAdminKey = (req: any, res: any, next: any) => {
 };
 
 // Get all platform wallets (for fee collection)
+// Admin view returns ALL wallets (including inactive) so admin can reactivate them
 router.get('/platform-wallets', requireAdminKey, async (_req, res) => {
   try {
+    // @ts-ignore - platformWallet will exist after Prisma regeneration
     const wallets = await db.platformWallet.findMany({
-      where: { isActive: true },
       orderBy: { chain: 'asc' }
     });
-    res.json({ wallets });
+    res.json(wallets); // Return array directly for easier frontend handling
   } catch (error) {
     logger.error('Error fetching platform wallets', error as Error, {});
     res.status(500).json({ error: 'Failed to fetch wallets' });
@@ -408,6 +409,7 @@ router.post('/platform-wallets', requireAdminKey, async (req, res) => {
       return res.status(400).json({ error: 'Chain and address required' });
     }
 
+    // @ts-ignore - platformWallet will exist after Prisma regeneration
     const wallet = await db.platformWallet.upsert({
       where: { chain },
       update: { address, label, isActive: true, updatedAt: new Date() },
@@ -426,6 +428,7 @@ router.post('/platform-wallets', requireAdminKey, async (req, res) => {
 router.delete('/platform-wallets/:chain', requireAdminKey, async (req, res) => {
   try {
     const { chain } = req.params;
+    // @ts-ignore - platformWallet will exist after Prisma regeneration
     await db.platformWallet.update({
       where: { chain: chain as any },
       data: { isActive: false }
