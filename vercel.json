@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/cron/:path*",
+      "destination": "/api/cron/:path*"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api"
     },
@@ -15,6 +19,12 @@
     {
       "source": "/checkout",
       "destination": "/crypto-pay.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/webhooks",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

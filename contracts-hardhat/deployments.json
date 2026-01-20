@@ -1,0 +1,13 @@
+{
+  "baseSepolia": {
+    "network": "baseSepolia",
+    "chainId": 84532,
+    "contractAddress": "0xCf6A9F0dA89aA829ACB49Ff3A853df196D4E322d",
+    "feeRecipient": "0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF",
+    "whitelistedTokens": {
+      "USDC": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+    },
+    "deployedAt": "2026-01-05T23:10:57.606Z",
+    "deployer": "0x23de198F1520ad386565fc98AEE6abb3Ae5052BE"
+  }
+}

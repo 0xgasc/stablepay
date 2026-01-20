@@ -1,0 +1,20 @@
+{
+  "name": "stablepay-contracts",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:base-sepolia": "hardhat run scripts/deploy-splitter.js --network baseSepolia",
+    "deploy:eth-sepolia": "hardhat run scripts/deploy-splitter.js --network ethereumSepolia",
+    "deploy:base": "hardhat run scripts/deploy-splitter.js --network base",
+    "deploy:ethereum": "hardhat run scripts/deploy-splitter.js --network ethereum",
+    "deploy:polygon": "hardhat run scripts/deploy-splitter.js --network polygon"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "dotenv": "^16.3.1",
+    "hardhat": "^2.22.0"
+  }
+}

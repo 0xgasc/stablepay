@@ -1,12 +1,14 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-arm64-openssl-3.0.x", "rhel-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "linux-arm64-openssl-3.0.x", "rhel-openssl-3.0.x"]
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+  schemas   = ["public", "auth"]
 }
 
 enum Chain {
@@ -20,6 +22,8 @@ enum Chain {
   ARBITRUM_SEPOLIA
   SOLANA_MAINNET
   SOLANA_DEVNET
+
+  @@schema("public")
 }
 
 enum OrderStatus {
@@ -29,12 +33,16 @@ enum OrderStatus {
   REFUNDED
   EXPIRED
   CANCELLED
+
+  @@schema("public")
 }
 
 enum TransactionStatus {
   PENDING
   CONFIRMED
   FAILED
+
+  @@schema("public")
 }
 
 enum RefundStatus {
@@ -42,28 +50,39 @@ enum RefundStatus {
   APPROVED
   REJECTED
   PROCESSED
+
+  @@schema("public")
 }
 
 enum UserRole {
   ADMIN
   MERCHANT
+
+  @@schema("public")
 }
 
 enum PlanType {
   FREE
   STARTER
+  GROWTH
   PRO
   ENTERPRISE
+
+  @@schema("public")
 }
 
 enum PaymentMode {
   DIRECT
   ESCROW
+
+  @@schema("public")
 }
 
 enum NetworkMode {
   TESTNET
   MAINNET
+
+  @@schema("public")
 }
 
 model Merchant {
@@ -76,6 +95,8 @@ model Merchant {
   paymentMode           PaymentMode @default(DIRECT)
   networkMode           NetworkMode @default(TESTNET)
   isActive              Boolean     @default(false)
+  isSuspended           Boolean     @default(false)  // Suspended for unpaid fees
+  suspendedAt           DateTime?
   setupCompleted        Boolean     @default(false)
   passwordHash          String?
   loginToken            String?     @unique
@@ -89,35 +110,50 @@ model Merchant {
   mainnetTransactions   Int         @default(0)
   testnetVolumeUsed     Decimal     @default(0) @db.Decimal(18, 2)
   testnetTransactions   Int         @default(0)
+  feesDue               Decimal     @default(0) @db.Decimal(18, 6)  // Running balance of fees owed
+  lastFeeCalculation    DateTime    @default(now())  // When fees were last calculated
   billingCycleStart     DateTime    @default(now())
   stripeCustomerId      String?     @unique
   stripeSubscriptionId  String?     @unique
+  customFeePercent      Decimal?    @db.Decimal(5, 4)  // For enterprise custom rates (e.g., 0.0020 = 0.2%)
   notes                 String?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
+  // Webhook configuration
+  webhookUrl            String?                    // HTTPS URL for webhook delivery
+  webhookSecret         String?                    // HMAC secret for signing payloads
+  webhookEnabled        Boolean     @default(false)
+  webhookEvents         String[]    @default([])   // Array of event types to send
+
   wallets               MerchantWallet[]
   orders                Order[]
+  feePayments           FeePayment[]
+  webhookLogs           WebhookLog[]
 
   @@index([plan])
   @@index([networkMode])
   @@index([billingCycleStart])
+  @@index([isSuspended])
   @@map("merchants")
+  @@schema("public")
 }
 
 model MerchantWallet {
-  id          String    @id @default(cuid())
-  merchantId  String
-  chain       Chain
-  address     String
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  merchantId      String
+  chain           Chain
+  address         String
+  supportedTokens String[]  @default(["USDC"])
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  merchant    Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchant        Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@unique([merchantId, chain])
   @@map("merchant_wallets")
+  @@schema("public")
 }
 
 model Order {
@@ -126,6 +162,9 @@ model Order {
   customerEmail   String?
   customerName    String?
   amount          Decimal     @db.Decimal(18, 6)
+  token           String      @default("USDC")  // USDC, USDT, EURC
+  feePercent      Decimal     @default(0.005) @db.Decimal(5, 4)  // 0.005 = 0.5%
+  feeAmount       Decimal     @default(0) @db.Decimal(18, 6)  // Calculated fee for this order
   chain           Chain
   status          OrderStatus @default(PENDING)
   paymentAddress  String
@@ -139,6 +178,7 @@ model Order {
 
   @@index([merchantId])
   @@map("orders")
+  @@schema("public")
 }
 
 model Transaction {
@@ -159,6 +199,7 @@ model Transaction {
   order           Order             @relation(fields: [orderId], references: [id])
 
   @@map("transactions")
+  @@schema("public")
 }
 
 model Refund {
@@ -175,6 +216,7 @@ model Refund {
   order           Order        @relation(fields: [orderId], references: [id])
 
   @@map("refunds")
+  @@schema("public")
 }
 
 
@@ -189,5 +231,73 @@ model ChainConfig {
   lastScannedBlock  BigInt @default(0)
 
   @@map("chain_configs")
+  @@schema("public")
+}
+
+enum FeePaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+
+  @@schema("public")
+}
+
+model FeePayment {
+  id              String           @id @default(cuid())
+  merchantId      String
+  amount          Decimal          @db.Decimal(18, 6)  // Amount paid in USD
+  token           String           @default("USDC")     // Token used for payment
+  chain           Chain                                 // Chain used for payment
+  txHash          String?          @unique              // Transaction hash
+  status          FeePaymentStatus @default(PENDING)
+  periodStart     DateTime                              // Start of billing period covered
+  periodEnd       DateTime                              // End of billing period covered
+  verifiedBy      String?                               // Admin who verified (null = auto or pending)
+  verifiedAt      DateTime?                             // When admin verified
+  createdAt       DateTime         @default(now())
+  confirmedAt     DateTime?
+
+  merchant        Merchant         @relation(fields: [merchantId], references: [id])
+
+  @@index([merchantId])
+  @@index([status])
+  @@map("fee_payments")
+  @@schema("public")
+}
+
+// Platform wallets for collecting fees from merchants
+model PlatformWallet {
+  id              String    @id @default(cuid())
+  chain           Chain     @unique                    // One wallet per chain
+  address         String                               // Wallet address
+  label           String?                              // Optional label (e.g., "Main", "Treasury")
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("platform_wallets")
+  @@schema("public")
+}
+
+model WebhookLog {
+  id              String      @id @default(cuid())
+  merchantId      String
+  event           String                          // e.g., "order.created", "order.confirmed"
+  payload         Json                            // The webhook payload that was sent
+  url             String                          // The URL it was sent to
+  httpStatus      Int?                            // Response status code (null if failed to connect)
+  response        String?                         // Response body (truncated to 1000 chars)
+  attempts        Int         @default(1)         // Number of delivery attempts
+  nextRetryAt     DateTime?                       // When to retry (null if succeeded or max retries)
+  deliveredAt     DateTime?                       // When successfully delivered
+  createdAt       DateTime    @default(now())
+
+  merchant        Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@index([event])
+  @@index([nextRetryAt])
+  @@map("webhook_logs")
+  @@schema("public")
 }
 

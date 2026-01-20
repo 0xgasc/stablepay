@@ -429,13 +429,14 @@ async function handleWallets(req, res, prisma) {
         where: { merchantId }
       });
 
-      // Create new wallets
+      // Create new wallets with supported tokens
       if (wallets.length > 0) {
         await prisma.merchantWallet.createMany({
           data: wallets.map(w => ({
             merchantId,
             chain: w.chain,
             address: w.address,
+            supportedTokens: w.supportedTokens || ['USDC'],
             isActive: true
           }))
         });

@@ -310,9 +310,9 @@
                         <option value="fr">FR</option>
                         <option value="pt">PT</option>
                     </select>
-                    <button id="nightModeToggle" class="px-2 py-1 border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">
-                        <span class="night-icon" data-i18n="nav.night">🌙</span>
-                        <span class="day-icon hidden" data-i18n="nav.day">☀️</span>
+                    <button id="nightModeToggle" class="px-3 py-1 border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium uppercase">
+                        <span class="night-icon">Dark</span>
+                        <span class="day-icon hidden">Light</span>
                     </button>
                     <button
                         id="logoutBtn"
@@ -442,17 +442,14 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button onclick="openTestStoreModal()"
                    class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-medium text-sm transition-colors">
-                    <span>🛒</span>
                     <span>Open Test Store</span>
                 </button>
                 <button onclick="openDirectCheckoutModal()"
                    class="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 font-medium text-sm transition-colors">
-                    <span>💳</span>
                     <span>Direct Checkout Link</span>
                 </button>
                 <button onclick="copyMerchantId()"
                    class="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 font-medium text-sm transition-colors">
-                    <span>📋</span>
                     <span id="copyMerchantBtn">Copy Merchant ID</span>
                 </button>
             </div>
@@ -544,6 +541,10 @@
                     <button class="tab-btn border-blue-500 text-blue-400 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="orders">
                         Orders
                     </button>
+                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="refunds">
+                        <span>Refunds</span>
+                        <span id="refundsAlertBadge" class="hidden ml-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">0</span>
+                    </button>
                     <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="wallets">
                         Wallets
                     </button>
@@ -552,6 +553,10 @@
                     </button>
                     <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="payments">
                         Payment Links
+                    </button>
+                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="fees">
+                        <span id="feesTabLabel">Fees</span>
+                        <span id="feesAlertBadge" class="hidden ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">!</span>
                     </button>
                     <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="settings">
                         Settings
@@ -659,6 +664,41 @@
                     </div>
                 </div>
 
+                <!-- Refunds Tab -->
+                <div id="refundsTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-white">Refund Requests</h3>
+                        <button id="refreshRefundsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 border font-medium transition-colors text-sm">
+                            Refresh
+                        </button>
+                    </div>
+
+                    <!-- Pending Refunds -->
+                    <div class="bg-slate-950 border border-slate-800 p-6 mb-6">
+                        <h4 class="text-md font-semibold text-white mb-4">Pending Approval</h4>
+                        <div id="pendingRefundsContainer">
+                            <p class="text-slate-400 text-center py-4">Loading...</p>
+                        </div>
+                    </div>
+
+                    <!-- Approved Refunds (need processing) -->
+                    <div class="bg-slate-950 border border-slate-800 p-6 mb-6">
+                        <h4 class="text-md font-semibold text-white mb-4">Approved - Awaiting Payment</h4>
+                        <p class="text-slate-400 text-sm mb-4">Send funds to the customer wallet and submit the transaction hash</p>
+                        <div id="approvedRefundsContainer">
+                            <p class="text-slate-400 text-center py-4">Loading...</p>
+                        </div>
+                    </div>
+
+                    <!-- Processed Refunds -->
+                    <div class="bg-slate-950 border border-slate-800 p-6">
+                        <h4 class="text-md font-semibold text-white mb-4">Completed Refunds</h4>
+                        <div id="processedRefundsContainer">
+                            <p class="text-slate-400 text-center py-4">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Wallets Tab -->
                 <div id="walletsTab" class="tab-content hidden">
                     <div class="flex justify-between items-center mb-6">
@@ -710,16 +750,21 @@
                                         <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold mr-3">2</div>
                                         <h3 class="text-white font-semibold">Add Checkout Widget</h3>
                                     </div>
-                                    <p class="text-sm text-slate-400 mb-3">Paste this where you want the payment button:</p>
+                                    <p class="text-sm text-slate-400 mb-3">Paste this where you want the checkout to appear:</p>
                                     <div class="bg-gray-900 p-3 rounded border border-slate-700 relative">
                                         <pre class="text-xs text-green-400 font-mono overflow-x-auto" id="widgetCode">&lt;div class="stablepay-checkout"
      data-merchant="<span id="widgetMerchantId" class="text-yellow-400">YOUR_MERCHANT_ID</span>"
      data-amount="10.00"
-     data-chain="BASE_MAINNET"&gt;
+     data-product="Product Name"&gt;
 &lt;/div&gt;</pre>
                                         <button onclick="copyToClipboard(this, document.getElementById('widgetCode').textContent)" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-xs">
                                             Copy
                                         </button>
+                                    </div>
+                                    <div class="mt-3 text-xs text-slate-500">
+                                        <div class="font-medium text-slate-400 mb-1">Optional attributes:</div>
+                                        <code class="text-green-400">data-theme="dark"</code> - Dark mode<br>
+                                        <code class="text-green-400">data-accent="#ff6600"</code> - Custom accent color
                                     </div>
                                 </div>
 
@@ -727,9 +772,9 @@
                                 <div class="bg-slate-950 border border-slate-800 p-4">
                                     <div class="flex items-center mb-3">
                                         <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold mr-3">3</div>
-                                        <h3 class="text-white font-semibold">Test & Go Live!</h3>
+                                        <h3 class="text-white font-semibold">That's It!</h3>
                                     </div>
-                                    <p class="text-sm text-slate-400 mb-3">That's it! Your customers can now pay with USDC.</p>
+                                    <p class="text-sm text-slate-400 mb-3">The widget loads your configured chains and tokens automatically. Customers can connect their wallet and pay directly on your site.</p>
                                     <div class="flex space-x-3">
                                         <a href="/docs/GETTING_STARTED.md" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">
                                             Full Guide
@@ -971,6 +1016,233 @@ onMounted(() => {
                         <p class="text-sm text-slate-400 mt-3">
                             Create a demo store with your configured wallets or test a payment flow
                         </p>
+                    </div>
+                </div>
+
+                <!-- Fees Tab -->
+                <div id="feesTab" class="tab-content hidden">
+                    <div class="space-y-6">
+                        <!-- Suspended Account Warning -->
+                        <div id="suspendedWarning" class="hidden bg-red-900/50 border border-red-600 p-4 mb-6">
+                            <div class="flex items-center gap-3">
+                                <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                                <div>
+                                    <h4 class="text-red-400 font-semibold">Account Suspended</h4>
+                                    <p class="text-red-300 text-sm">Your account has been suspended due to unpaid fees. Please pay your outstanding balance to reactivate your account.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fee Balance Card -->
+                        <div class="bg-slate-950 border border-slate-800 p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Fee Balance</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="bg-black p-4 border border-slate-800">
+                                    <p class="text-slate-400 text-sm">Previous Balance</p>
+                                    <p id="previousFeeBalance" class="text-2xl font-bold text-white">$0.00</p>
+                                </div>
+                                <div class="bg-black p-4 border border-slate-800">
+                                    <p class="text-slate-400 text-sm">Current Period Fees</p>
+                                    <p id="currentPeriodFees" class="text-2xl font-bold text-white">$0.00</p>
+                                </div>
+                                <div class="bg-black p-4 border border-blue-600">
+                                    <p class="text-slate-400 text-sm">Total Owed</p>
+                                    <p id="totalFeesOwed" class="text-2xl font-bold text-blue-400">$0.00</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Billing Cycle Info -->
+                        <div class="bg-slate-950 border border-slate-800 p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-lg font-semibold text-white">Billing Cycle</h3>
+                                <span id="billingCycleLabel" class="px-3 py-1 bg-blue-600/20 text-blue-400 text-sm font-medium rounded-full">Monthly</span>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div>
+                                    <p class="text-slate-400 text-sm">Your Plan</p>
+                                    <p id="currentPlanName" class="text-white font-medium">Starter</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-400 text-sm">Next Invoice</p>
+                                    <p id="nextBillingDate" class="text-white font-medium">-</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-400 text-sm">Grace Period</p>
+                                    <p id="gracePeriodDays" class="text-white font-medium">3 days</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-400 text-sm">Min Invoice</p>
+                                    <p id="minInvoiceAmount" class="text-white font-medium">$5.00</p>
+                                </div>
+                            </div>
+                            <!-- Overdue Warning -->
+                            <div id="overdueWarning" class="hidden mt-4 p-3 bg-yellow-900/30 border border-yellow-600/50 rounded">
+                                <p class="text-yellow-400 text-sm flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    </svg>
+                                    <span id="overdueMessage">Payment overdue by X days. Please pay to avoid suspension.</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Current Period Summary -->
+                        <div class="bg-slate-950 border border-slate-800 p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Current Period</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div>
+                                    <p class="text-slate-400 text-sm">Period Start</p>
+                                    <p id="periodStart" class="text-white font-medium">-</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-400 text-sm">Transactions</p>
+                                    <p id="periodTransactions" class="text-white font-medium">0</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-400 text-sm">Volume</p>
+                                    <p id="periodVolume" class="text-white font-medium">$0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-400 text-sm">Your Fee Rate</p>
+                                    <p id="feeRate" class="text-white font-medium">0.50%</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pay Fees Section -->
+                        <div class="bg-slate-950 border border-slate-800 p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Pay Fees</h3>
+                            <div id="noFeesMessage" class="text-center py-8 text-slate-400">
+                                <svg class="w-12 h-12 mx-auto mb-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <p>You have no outstanding fees</p>
+                            </div>
+                            <div id="payFeesSection" class="hidden">
+                                <!-- Amount Summary -->
+                                <div class="bg-black p-4 border border-slate-800 mb-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-slate-400">Amount Due:</span>
+                                        <span id="feeAmountToPay" class="text-2xl font-bold text-white">$0.00</span>
+                                    </div>
+                                </div>
+
+                                <!-- Chain & Wallet Selection -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Select Chain</label>
+                                        <select id="feePaymentChain" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500" onchange="updateFeeWalletDisplay()">
+                                            <option value="BASE_SEPOLIA">Base Sepolia (Testnet)</option>
+                                            <option value="BASE_MAINNET">Base Mainnet</option>
+                                            <option value="ETHEREUM_MAINNET">Ethereum Mainnet</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Select Token</label>
+                                        <select id="feePaymentToken" class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500">
+                                            <option value="USDC">USDC</option>
+                                            <option value="USDT">USDT</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Wallet Address Display -->
+                                <div class="bg-black p-4 border border-slate-800 mb-4">
+                                    <p class="text-slate-400 text-sm mb-2">Send payment to:</p>
+                                    <div class="flex items-center justify-between">
+                                        <code id="feeWalletAddress" class="text-blue-400 break-all text-sm">-</code>
+                                        <button onclick="copyFeeWallet()" class="ml-2 text-slate-400 hover:text-white">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Payment Options Tabs -->
+                                <div class="border-b border-slate-800 mb-4">
+                                    <div class="flex">
+                                        <button id="payMethodWallet" onclick="setPayMethod('wallet')" class="px-4 py-2 text-sm font-medium text-blue-400 border-b-2 border-blue-400">
+                                            Pay with Wallet
+                                        </button>
+                                        <button id="payMethodManual" onclick="setPayMethod('manual')" class="px-4 py-2 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-300">
+                                            Submit TX Hash
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Option 1: MetaMask Payment -->
+                                <div id="walletPaySection">
+                                    <button id="payFeesBtn" onclick="payFeesWithWallet()" class="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-6 py-3 font-medium transition-all flex items-center justify-center gap-2">
+                                        <svg class="w-5 h-5" viewBox="0 0 35 33" fill="currentColor">
+                                            <path d="M32.9,1.5L19.9,11.1l2.4-5.8L32.9,1.5z M2.1,1.5l12.9,9.7l-2.3-5.9L2.1,1.5z M28.1,23.5l-3.5,5.3l7.4,2l2.1-7.2L28.1,23.5z M1,23.7l2.1,7.2l7.4-2l-3.5-5.3L1,23.7z"/>
+                                        </svg>
+                                        Connect Wallet & Pay
+                                    </button>
+                                    <p class="text-xs text-slate-500 mt-2 text-center">Supports MetaMask, WalletConnect, and more</p>
+                                </div>
+
+                                <!-- Option 2: Manual TX Hash -->
+                                <div id="manualPaySection" class="hidden">
+                                    <p class="text-slate-400 text-sm mb-3">Already sent payment? Enter the transaction hash below:</p>
+                                    <input type="text" id="manualTxHash" placeholder="0x..." class="w-full px-3 py-2 bg-black text-white border border-slate-800 focus:ring-2 focus:ring-blue-500 mb-3">
+                                    <button onclick="submitManualPayment()" class="w-full bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 font-medium transition-all">
+                                        Submit Payment
+                                    </button>
+                                    <p class="text-xs text-slate-500 mt-2 text-center">Payment will be verified by admin</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment History -->
+                        <div class="bg-slate-950 border border-slate-800 p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Payment History</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-black">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Date</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Amount</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Chain</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Status</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">Transaction</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="feePaymentHistory" class="divide-y divide-slate-800">
+                                        <tr>
+                                            <td colspan="5" class="px-4 py-8 text-center text-slate-400">No payment history yet</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Fee Tier Info -->
+                        <div class="bg-slate-950 border border-slate-800 p-6">
+                            <h3 class="text-lg font-semibold text-white mb-4">Fee Tiers</h3>
+                            <p class="text-slate-400 text-sm mb-4">Your fee rate is based on your 30-day rolling volume. Higher volume means lower fees.</p>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="bg-black p-3 border border-slate-800 text-center">
+                                    <p class="text-blue-400 font-bold">0.50%</p>
+                                    <p class="text-slate-500 text-xs">$0 - $10k</p>
+                                </div>
+                                <div class="bg-black p-3 border border-slate-800 text-center">
+                                    <p class="text-blue-400 font-bold">0.40%</p>
+                                    <p class="text-slate-500 text-xs">$10k - $50k</p>
+                                </div>
+                                <div class="bg-black p-3 border border-slate-800 text-center">
+                                    <p class="text-blue-400 font-bold">0.30%</p>
+                                    <p class="text-slate-500 text-xs">$50k - $250k</p>
+                                </div>
+                                <div class="bg-black p-3 border border-slate-800 text-center">
+                                    <p class="text-blue-400 font-bold">0.20%</p>
+                                    <p class="text-slate-500 text-xs">$250k+</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1322,7 +1594,7 @@ onMounted(() => {
         const CHAIN_GROUPS = [
             {
                 name: 'Base',
-                icon: '🔵',
+                color: '#0052FF',
                 networks: [
                     { id: 'BASE_MAINNET', label: 'Mainnet', type: 'mainnet' },
                     { id: 'BASE_SEPOLIA', label: 'Sepolia (Testnet)', type: 'testnet' }
@@ -1330,7 +1602,7 @@ onMounted(() => {
             },
             {
                 name: 'Ethereum',
-                icon: '⟠',
+                color: '#627EEA',
                 networks: [
                     { id: 'ETHEREUM_MAINNET', label: 'Mainnet', type: 'mainnet' },
                     { id: 'ETHEREUM_SEPOLIA', label: 'Sepolia (Testnet)', type: 'testnet' }
@@ -1338,7 +1610,7 @@ onMounted(() => {
             },
             {
                 name: 'Polygon',
-                icon: '🟣',
+                color: '#8247E5',
                 networks: [
                     { id: 'POLYGON_MAINNET', label: 'Mainnet', type: 'mainnet' },
                     { id: 'POLYGON_MUMBAI', label: 'Mumbai (Testnet)', type: 'testnet' }
@@ -1346,7 +1618,7 @@ onMounted(() => {
             },
             {
                 name: 'Arbitrum',
-                icon: '🔷',
+                color: '#28A0F0',
                 networks: [
                     { id: 'ARBITRUM_MAINNET', label: 'Mainnet', type: 'mainnet' },
                     { id: 'ARBITRUM_SEPOLIA', label: 'Sepolia (Testnet)', type: 'testnet' }
@@ -1354,7 +1626,7 @@ onMounted(() => {
             },
             {
                 name: 'Solana',
-                icon: '🌞',
+                color: '#9945FF',
                 networks: [
                     { id: 'SOLANA_MAINNET', label: 'Mainnet', type: 'mainnet' },
                     { id: 'SOLANA_DEVNET', label: 'Devnet (Testnet)', type: 'testnet' }
@@ -1368,7 +1640,7 @@ onMounted(() => {
                 id: net.id,
                 name: `${group.name} ${net.label}`,
                 network: net.type,
-                icon: group.icon
+                color: group.color
             }))
         );
 
@@ -1400,104 +1672,157 @@ onMounted(() => {
                 loadWallets();
             } else if (tabName === 'settings') {
                 loadSettings();
+            } else if (tabName === 'fees') {
+                loadFeeBalance();
+            } else if (tabName === 'refunds') {
+                loadRefunds();
             }
         }
 
 
-        // Load merchant data
-        const PRICING_TIERS = {
-            FREE: {
-                name: 'Free',
-                limit: null, // No combined limit
-                testnetLimit: null, // Unlimited testnet
-                mainnetLimit: 100, // $100 mainnet
-                mainnetTxLimit: 10, // 10 mainnet transactions
-                blockchains: 1,
-                fee: '0.5%',
-                refunds: true,
-                webhooks: true
-            },
-            STARTER: { name: 'Starter', limit: 100000, blockchains: 6, fee: '0.5%', refunds: true, webhooks: true },
-            PRO: { name: 'Pro', limit: null, blockchains: 6, fee: '0.3%', refunds: true, webhooks: true },
-            ENTERPRISE: { name: 'Enterprise', limit: null, blockchains: 6, fee: '0.2%', refunds: true, webhooks: true }
+        // Volume-based pricing tiers (automatic based on 30-day volume)
+        const VOLUME_TIERS = [
+            { name: 'Starter', minVolume: 0, maxVolume: 10000, feePercent: 0.5 },
+            { name: 'Growth', minVolume: 10000, maxVolume: 50000, feePercent: 0.4 },
+            { name: 'Scale', minVolume: 50000, maxVolume: 250000, feePercent: 0.3 },
+            { name: 'Volume', minVolume: 250000, maxVolume: Infinity, feePercent: 0.2 }
+        ];
+
+        // Test mode limits
+        const TEST_MODE_LIMITS = {
+            mainnetVolume: 100,
+            mainnetTxns: 10
         };
+
+        // Legacy tier mapping for backwards compatibility
+        const PRICING_TIERS = {
+            FREE: { name: 'Test Mode', blockchains: 6, refunds: true, webhooks: true },
+            STARTER: { name: 'Live', blockchains: 6, refunds: true, webhooks: true },
+            PRO: { name: 'Live', blockchains: 6, refunds: true, webhooks: true },
+            ENTERPRISE: { name: 'Enterprise', blockchains: 6, refunds: true, webhooks: true }
+        };
+
+        // Tokens available per chain (must match crypto-pay.html CHAIN_CONFIG)
+        const CHAIN_TOKENS = {
+            // Testnets - only USDC
+            BASE_SEPOLIA: ['USDC'],
+            ETHEREUM_SEPOLIA: ['USDC'],
+            POLYGON_MUMBAI: ['USDC'],
+            ARBITRUM_SEPOLIA: ['USDC'],
+            SOLANA_DEVNET: ['USDC'],
+            // Mainnets - multiple tokens
+            BASE_MAINNET: ['USDC', 'EURC'],
+            ETHEREUM_MAINNET: ['USDC', 'USDT', 'EURC'],
+            POLYGON_MAINNET: ['USDC', 'USDT'],
+            ARBITRUM_MAINNET: ['USDC', 'USDT'],
+            SOLANA_MAINNET: ['USDC', 'USDT']
+        };
+
+        function getVolumeTier(monthlyVolume) {
+            for (let i = VOLUME_TIERS.length - 1; i >= 0; i--) {
+                if (monthlyVolume >= VOLUME_TIERS[i].minVolume) {
+                    return VOLUME_TIERS[i];
+                }
+            }
+            return VOLUME_TIERS[0];
+        }
 
         function updatePricingTierDisplay(merchant) {
             const plan = merchant.plan || 'FREE';
-            const tier = PRICING_TIERS[plan];
-            if (!tier) return;
+            const accountType = PRICING_TIERS[plan] || PRICING_TIERS.FREE;
+            const monthlyVolume = parseFloat(merchant.monthlyVolumeUsed || 0);
+            const volumeTier = getVolumeTier(monthlyVolume);
 
-            // Update plan name
-            document.getElementById('currentPlanName').textContent = tier.name.toUpperCase() + ' TIER';
+            // Get custom enterprise rate if set
+            const customFee = merchant.customFeePercent ? parseFloat(merchant.customFeePercent) * 100 : null;
+            const currentFee = customFee || volumeTier.feePercent;
 
-            // Update usage - special handling for FREE tier with mainnet/testnet split
+            // Update plan name based on mode
             if (plan === 'FREE') {
+                document.getElementById('currentPlanName').textContent = 'TEST MODE';
+            } else if (plan === 'ENTERPRISE') {
+                document.getElementById('currentPlanName').textContent = 'ENTERPRISE';
+            } else {
+                document.getElementById('currentPlanName').textContent = volumeTier.name.toUpperCase() + ' TIER';
+            }
+
+            // Update usage display
+            if (plan === 'FREE') {
+                // Test mode - show mainnet limits
                 const mainnetVolumeUsed = parseFloat(merchant.mainnetVolumeUsed || 0);
                 const mainnetTxns = merchant.mainnetTransactions || 0;
                 const testnetVolumeUsed = parseFloat(merchant.testnetVolumeUsed || 0);
                 const testnetTxns = merchant.testnetTransactions || 0;
 
-                // Show mainnet usage (what matters for FREE tier)
-                const volumePercentage = Math.min((mainnetVolumeUsed / tier.mainnetLimit) * 100, 100);
-                const txnPercentage = Math.min((mainnetTxns / tier.mainnetTxLimit) * 100, 100);
+                const volumePercentage = Math.min((mainnetVolumeUsed / TEST_MODE_LIMITS.mainnetVolume) * 100, 100);
+                const txnPercentage = Math.min((mainnetTxns / TEST_MODE_LIMITS.mainnetTxns) * 100, 100);
                 const maxPercentage = Math.max(volumePercentage, txnPercentage);
 
                 document.getElementById('volumeUsageBar').style.width = maxPercentage + '%';
                 document.getElementById('volumeUsageText').innerHTML = `
                     <div class="text-sm">
-                        <div><strong>Mainnet:</strong> ${mainnetTxns}/${tier.mainnetTxLimit} txns | $${mainnetVolumeUsed.toFixed(2)}/$${tier.mainnetLimit}</div>
-                        <div class="text-xs text-gray-600 mt-1"><strong>Testnet:</strong> ${testnetTxns} txns | $${testnetVolumeUsed.toFixed(2)} (unlimited)</div>
+                        <div><strong>Mainnet:</strong> ${mainnetTxns}/${TEST_MODE_LIMITS.mainnetTxns} txns | $${mainnetVolumeUsed.toFixed(2)}/$${TEST_MODE_LIMITS.mainnetVolume}</div>
+                        <div class="text-xs text-gray-500 mt-1"><strong>Testnet:</strong> ${testnetTxns} txns | $${testnetVolumeUsed.toFixed(2)} (unlimited)</div>
                     </div>
                 `;
 
-                // Change color based on usage
                 const bar = document.getElementById('volumeUsageBar');
-                if (maxPercentage >= 90) bar.style.background = '#EF4444'; // Red
-                else if (maxPercentage >= 75) bar.style.background = '#F59E0B'; // Orange
-                else bar.style.background = '#7C4DFF'; // Indigo
+                if (maxPercentage >= 90) bar.style.background = '#EF4444';
+                else if (maxPercentage >= 75) bar.style.background = '#F59E0B';
+                else bar.style.background = '#7C4DFF';
+
+                document.getElementById('billingCycleText').innerHTML = `
+                    <span class="text-yellow-400">Test Mode:</span> Go live to accept unlimited payments
+                `;
             } else {
-                // Standard volume tracking for other tiers
-                const volumeUsed = parseFloat(merchant.monthlyVolumeUsed || 0);
-                const volumeLimit = tier.limit;
+                // Live mode - show volume toward next tier
+                const nextTier = VOLUME_TIERS.find(t => t.minVolume > monthlyVolume);
 
-                if (volumeLimit) {
-                    const percentage = Math.min((volumeUsed / volumeLimit) * 100, 100);
-                    document.getElementById('volumeUsageBar').style.width = percentage + '%';
-                    document.getElementById('volumeUsageText').textContent = `$${volumeUsed.toFixed(2)} / $${volumeLimit.toLocaleString()}`;
-
-                    // Change color based on usage
-                    const bar = document.getElementById('volumeUsageBar');
-                    if (percentage >= 90) bar.style.background = '#EF4444'; // Red
-                    else if (percentage >= 75) bar.style.background = '#F59E0B'; // Orange
-                    else bar.style.background = '#7C4DFF'; // Indigo
+                if (nextTier) {
+                    const progressToNext = ((monthlyVolume - volumeTier.minVolume) / (nextTier.minVolume - volumeTier.minVolume)) * 100;
+                    document.getElementById('volumeUsageBar').style.width = Math.min(progressToNext, 100) + '%';
+                    document.getElementById('volumeUsageText').innerHTML = `
+                        <span>$${monthlyVolume.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} / $${nextTier.minVolume.toLocaleString()}</span>
+                        <span class="text-green-400 ml-2">→ ${nextTier.feePercent}% fee</span>
+                    `;
+                    document.getElementById('volumeUsageBar').style.background = '#10B981';
                 } else {
-                    document.getElementById('volumeUsageBar').style.width = '0%';
-                    document.getElementById('volumeUsageText').textContent = `$${volumeUsed.toFixed(2)} / Unlimited`;
+                    // Already at highest tier
+                    document.getElementById('volumeUsageBar').style.width = '100%';
+                    document.getElementById('volumeUsageText').textContent = `$${monthlyVolume.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} - Best rate!`;
+                    document.getElementById('volumeUsageBar').style.background = '#10B981';
+                }
+
+                // Calculate days until reset
+                if (merchant.billingCycleStart) {
+                    const cycleStart = new Date(merchant.billingCycleStart);
+                    const now = new Date();
+                    const daysPassed = Math.floor((now - cycleStart) / (1000 * 60 * 60 * 24));
+                    const daysRemaining = Math.max(30 - daysPassed, 0);
+                    document.getElementById('billingCycleText').textContent = `Volume resets in ${daysRemaining} days`;
                 }
             }
 
-            // Calculate days until reset
-            if (merchant.billingCycleStart) {
-                const cycleStart = new Date(merchant.billingCycleStart);
-                const now = new Date();
-                const daysPassed = Math.floor((now - cycleStart) / (1000 * 60 * 60 * 24));
-                const daysRemaining = Math.max(30 - daysPassed, 0);
-                document.getElementById('billingCycleText').textContent = `Billing cycle resets in ${daysRemaining} days`;
-            }
-
             // Update features
-            document.getElementById('planBlockchains').textContent = tier.blockchains;
-            document.getElementById('planFee').textContent = tier.fee;
-            document.getElementById('planRefunds').textContent = tier.refunds ? 'Yes' : 'No';
-            document.getElementById('planWebhooks').textContent = tier.webhooks ? 'Yes' : 'No';
+            document.getElementById('planBlockchains').textContent = accountType.blockchains;
+            document.getElementById('planFee').textContent = currentFee.toFixed(1) + '%';
+            document.getElementById('planRefunds').textContent = accountType.refunds ? 'Yes' : 'No';
+            document.getElementById('planWebhooks').textContent = accountType.webhooks ? 'Yes' : 'No';
 
-            // Show/hide upgrade button
+            // Update upgrade button
             const upgradeBtn = document.getElementById('upgradeBtn');
             if (plan === 'ENTERPRISE') {
-                upgradeBtn.style.display = 'none';
+                upgradeBtn.textContent = 'Contact Support';
+                upgradeBtn.onclick = () => window.location.href = 'mailto:enterprise@stablepay.io';
+            } else if (plan === 'FREE') {
+                upgradeBtn.textContent = 'Go Live';
+                upgradeBtn.onclick = () => {
+                    // Switch to mainnet mode
+                    alert('Switch to Mainnet mode in your network settings to start accepting live payments!');
+                };
             } else {
-                upgradeBtn.style.display = 'block';
-                upgradeBtn.onclick = () => window.location.href = '/pricing.html';
+                upgradeBtn.textContent = 'See Tiers';
+                upgradeBtn.onclick = () => window.location.href = '/pricing.html#volume-tiers';
             }
         }
 
@@ -1591,17 +1916,659 @@ onMounted(() => {
                 // Update quick action links with merchant ID
                 updateQuickActionLinks();
 
+                // Populate merchantWallets immediately so Quick Actions work
+                if (currentMerchant.wallets) {
+                    merchantWallets = currentMerchant.wallets;
+                    console.log('Loaded', merchantWallets.length, 'wallets from merchant profile');
+                }
+
                 // Load current tab content after merchant data is ready
                 if (currentTab === 'orders') {
                     loadOrders();
                 } else if (currentTab === 'wallets') {
                     loadWallets();
+                } else if (currentTab === 'fees') {
+                    loadFeeBalance();
                 }
+
+                // Always check for fees to show alert badge
+                checkFeeBalance();
             } catch (error) {
                 console.error('Error loading merchant data:', error);
                 // Show error to user
                 document.getElementById('merchantName').textContent = 'Error Loading Data';
                 alert('Failed to load merchant data. Please check console for details.');
+            }
+        }
+
+        // Fee Balance Management
+        let currentFeeData = null;
+        let currentFeeWallets = []; // Stores per-chain fee wallets from API
+
+        async function checkFeeBalance() {
+            try {
+                const merchantId = sessionStorage.getItem('merchantId');
+                const merchantToken = sessionStorage.getItem('merchantToken');
+                if (!merchantId || !merchantToken) return;
+
+                const response = await fetch(`/api/fees/balance?merchantId=${merchantId}`, {
+                    headers: { 'Authorization': `Bearer ${merchantToken}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Show alert badge if fees owed
+                    const badge = document.getElementById('feesAlertBadge');
+                    if (data.totalOwed > 0) {
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking fee balance:', error);
+            }
+        }
+
+        async function loadFeeBalance() {
+            try {
+                const merchantId = sessionStorage.getItem('merchantId');
+                const merchantToken = sessionStorage.getItem('merchantToken');
+
+                if (!merchantId || !merchantToken) {
+                    console.error('No merchant authentication for fee balance');
+                    return;
+                }
+
+                const response = await fetch(`/api/fees/balance?merchantId=${merchantId}`, {
+                    headers: { 'Authorization': `Bearer ${merchantToken}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch fee balance');
+                }
+
+                currentFeeData = await response.json();
+                console.log('Fee data:', currentFeeData);
+
+                // Update UI
+                document.getElementById('previousFeeBalance').textContent = `$${currentFeeData.previousBalance.toFixed(2)}`;
+                document.getElementById('currentPeriodFees').textContent = `$${currentFeeData.currentFees.toFixed(2)}`;
+                document.getElementById('totalFeesOwed').textContent = `$${currentFeeData.totalOwed.toFixed(2)}`;
+
+                // Current period info
+                if (currentFeeData.currentPeriod) {
+                    const startDate = new Date(currentFeeData.currentPeriod.start);
+                    document.getElementById('periodStart').textContent = startDate.toLocaleDateString();
+                    document.getElementById('periodTransactions').textContent = currentFeeData.currentPeriod.transactions;
+                    document.getElementById('periodVolume').textContent = `$${currentFeeData.currentPeriod.volume.toFixed(2)}`;
+                    document.getElementById('feeRate').textContent = `${currentFeeData.currentPeriod.feePercent}%`;
+                }
+
+                // Billing cycle info
+                if (currentFeeData.billing) {
+                    const billing = currentFeeData.billing;
+                    document.getElementById('billingCycleLabel').textContent = billing.cycleLabel || 'N/A';
+                    document.getElementById('currentPlanName').textContent = currentFeeData.plan || 'Starter';
+                    document.getElementById('gracePeriodDays').textContent = billing.gracePeriodDays ? `${billing.gracePeriodDays} days` : 'N/A';
+                    document.getElementById('minInvoiceAmount').textContent = billing.minInvoiceAmount ? `$${billing.minInvoiceAmount.toFixed(2)}` : 'N/A';
+
+                    if (billing.nextBillingDate) {
+                        const nextDate = new Date(billing.nextBillingDate);
+                        document.getElementById('nextBillingDate').textContent = nextDate.toLocaleDateString();
+                    } else {
+                        document.getElementById('nextBillingDate').textContent = 'N/A';
+                    }
+
+                    // Show overdue warning if in grace period
+                    if (billing.inGracePeriod && billing.daysOverdue > 0) {
+                        document.getElementById('overdueWarning').classList.remove('hidden');
+                        document.getElementById('overdueMessage').textContent = `Payment overdue by ${billing.daysOverdue} days. Please pay to avoid suspension.`;
+                    } else {
+                        document.getElementById('overdueWarning').classList.add('hidden');
+                    }
+                }
+
+                // Store fee wallets for chain selection
+                currentFeeWallets = currentFeeData.feeWallets || [];
+
+                // Update pay fees section
+                if (currentFeeData.totalOwed > 0) {
+                    document.getElementById('noFeesMessage').classList.add('hidden');
+                    document.getElementById('payFeesSection').classList.remove('hidden');
+                    updateFeeWalletDisplay(); // Update wallet based on selected chain
+                    document.getElementById('feeAmountToPay').textContent = `$${currentFeeData.totalOwed.toFixed(2)}`;
+                } else {
+                    document.getElementById('noFeesMessage').classList.remove('hidden');
+                    document.getElementById('payFeesSection').classList.add('hidden');
+                }
+
+                // Suspended warning
+                if (currentFeeData.isSuspended) {
+                    document.getElementById('suspendedWarning').classList.remove('hidden');
+                } else {
+                    document.getElementById('suspendedWarning').classList.add('hidden');
+                }
+
+                // Payment history
+                updateFeePaymentHistory(currentFeeData.paymentHistory || []);
+
+            } catch (error) {
+                console.error('Error loading fee balance:', error);
+            }
+        }
+
+        function updateFeePaymentHistory(payments) {
+            const tbody = document.getElementById('feePaymentHistory');
+            if (payments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">No payment history yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = payments.map(p => {
+                const date = new Date(p.date).toLocaleDateString();
+                const statusColor = p.status === 'CONFIRMED' ? 'text-green-400' : p.status === 'PENDING' ? 'text-yellow-400' : 'text-red-400';
+                const txLink = p.txHash ? getExplorerLink(p.chain, p.txHash) : '-';
+                return `
+                    <tr>
+                        <td class="px-4 py-3 text-sm text-slate-300">${date}</td>
+                        <td class="px-4 py-3 text-sm text-white font-medium">$${p.amount.toFixed(2)}</td>
+                        <td class="px-4 py-3 text-sm text-slate-300">${formatChainName(p.chain)}</td>
+                        <td class="px-4 py-3 text-sm ${statusColor}">${p.status}</td>
+                        <td class="px-4 py-3 text-sm">
+                            ${p.txHash ? `<a href="${txLink}" target="_blank" class="text-blue-400 hover:underline">${p.txHash.slice(0, 10)}...</a>` : '-'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getExplorerLink(chain, txHash) {
+            const explorers = {
+                'BASE_SEPOLIA': 'https://sepolia.basescan.org/tx/',
+                'BASE_MAINNET': 'https://basescan.org/tx/',
+                'ETHEREUM_MAINNET': 'https://etherscan.io/tx/',
+                'ETHEREUM_SEPOLIA': 'https://sepolia.etherscan.io/tx/'
+            };
+            return (explorers[chain] || 'https://basescan.org/tx/') + txHash;
+        }
+
+        function formatChainName(chain) {
+            const names = {
+                'BASE_SEPOLIA': 'Base Sepolia',
+                'BASE_MAINNET': 'Base',
+                'ETHEREUM_MAINNET': 'Ethereum',
+                'ETHEREUM_SEPOLIA': 'Ethereum Sepolia'
+            };
+            return names[chain] || chain;
+        }
+
+        // Update fee wallet display based on selected chain
+        function updateFeeWalletDisplay() {
+            const selectedChain = document.getElementById('feePaymentChain').value;
+            const wallet = currentFeeWallets.find(w => w.chain === selectedChain);
+            const walletAddress = wallet ? wallet.address : (currentFeeData?.feeWallet || '-');
+            document.getElementById('feeWalletAddress').textContent = walletAddress;
+        }
+
+        // Copy fee wallet address to clipboard
+        function copyFeeWallet() {
+            const walletAddress = document.getElementById('feeWalletAddress').textContent;
+            if (walletAddress && walletAddress !== '-') {
+                navigator.clipboard.writeText(walletAddress).then(() => {
+                    // Show brief feedback
+                    const btn = event.target.closest('button');
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                    setTimeout(() => btn.innerHTML = originalHTML, 1500);
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    alert('Failed to copy address');
+                });
+            }
+        }
+
+        // Toggle between wallet and manual payment methods
+        function setPayMethod(method) {
+            const walletBtn = document.getElementById('payMethodWallet');
+            const manualBtn = document.getElementById('payMethodManual');
+            const walletSection = document.getElementById('walletPaySection');
+            const manualSection = document.getElementById('manualPaySection');
+
+            if (method === 'wallet') {
+                walletBtn.classList.add('text-blue-400', 'border-blue-400');
+                walletBtn.classList.remove('text-slate-400', 'border-transparent');
+                manualBtn.classList.remove('text-blue-400', 'border-blue-400');
+                manualBtn.classList.add('text-slate-400', 'border-transparent');
+                walletSection.classList.remove('hidden');
+                manualSection.classList.add('hidden');
+            } else {
+                manualBtn.classList.add('text-blue-400', 'border-blue-400');
+                manualBtn.classList.remove('text-slate-400', 'border-transparent');
+                walletBtn.classList.remove('text-blue-400', 'border-blue-400');
+                walletBtn.classList.add('text-slate-400', 'border-transparent');
+                manualSection.classList.remove('hidden');
+                walletSection.classList.add('hidden');
+            }
+        }
+
+        // Submit manual TX hash payment
+        async function submitManualPayment() {
+            const txHash = document.getElementById('manualTxHash').value.trim();
+            if (!txHash || !txHash.startsWith('0x')) {
+                alert('Please enter a valid transaction hash (starts with 0x)');
+                return;
+            }
+
+            if (!currentFeeData || currentFeeData.totalOwed <= 0) {
+                alert('No fees to pay');
+                return;
+            }
+
+            const chain = document.getElementById('feePaymentChain').value;
+            const token = document.getElementById('feePaymentToken').value;
+            const amount = currentFeeData.totalOwed;
+
+            try {
+                await recordFeePayment(txHash, chain, token, amount);
+                alert('Payment submitted! It will be verified by admin shortly.');
+                document.getElementById('manualTxHash').value = '';
+                loadFeeBalance(); // Refresh
+            } catch (error) {
+                console.error('Manual payment error:', error);
+                alert('Failed to submit payment: ' + error.message);
+            }
+        }
+
+        // Pay fees with crypto wallet (MetaMask)
+        async function payFeesWithWallet() {
+            if (!currentFeeData || currentFeeData.totalOwed <= 0) {
+                alert('No fees to pay');
+                return;
+            }
+
+            const chain = document.getElementById('feePaymentChain').value;
+            const token = document.getElementById('feePaymentToken').value;
+            const amount = currentFeeData.totalOwed;
+
+            // Get fee wallet for selected chain
+            const walletInfo = currentFeeWallets.find(w => w.chain === chain);
+            const feeWallet = walletInfo ? walletInfo.address : currentFeeData.feeWallet;
+
+            if (!feeWallet) {
+                alert('No fee wallet configured for this chain. Please select a different chain.');
+                return;
+            }
+
+            // Check if wallet is connected
+            if (typeof window.ethereum === 'undefined') {
+                alert('Please install MetaMask or another Web3 wallet to pay fees');
+                return;
+            }
+
+            try {
+                const payBtn = document.getElementById('payFeesBtn');
+                payBtn.disabled = true;
+                payBtn.textContent = 'Connecting wallet...';
+
+                // Connect wallet
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const userAddress = accounts[0];
+
+                // Get chain config with both USDC and USDT addresses
+                const chainConfigs = {
+                    'BASE_SEPOLIA': {
+                        chainId: '0x14a34',
+                        name: 'Base Sepolia',
+                        usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+                        usdt: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' // Use USDC for testnet
+                    },
+                    'BASE_MAINNET': {
+                        chainId: '0x2105',
+                        name: 'Base',
+                        usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+                        usdt: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2' // USDT on Base
+                    },
+                    'ETHEREUM_MAINNET': {
+                        chainId: '0x1',
+                        name: 'Ethereum',
+                        usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+                        usdt: '0xdAC17F958D2ee523a2206206994597C13D831ec7' // USDT on Ethereum
+                    }
+                };
+
+                const config = chainConfigs[chain];
+                if (!config) {
+                    throw new Error('Unsupported chain');
+                }
+
+                // Get correct token contract based on selection
+                const tokenAddress = token === 'USDT' ? config.usdt : config.usdc;
+
+                // Switch to correct chain
+                payBtn.textContent = 'Switching network...';
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: config.chainId }]
+                    });
+                } catch (switchError) {
+                    console.error('Failed to switch chain:', switchError);
+                    throw new Error(`Please switch to ${config.name} in your wallet`);
+                }
+
+                // Use ethers if available, otherwise basic web3
+                payBtn.textContent = 'Preparing transaction...';
+                const amountWei = BigInt(Math.floor(amount * 1e6)); // USDC has 6 decimals
+
+                // ERC20 transfer ABI
+                const erc20Abi = ['function transfer(address to, uint256 amount) returns (bool)'];
+
+                if (typeof ethers !== 'undefined') {
+                    const provider = new ethers.BrowserProvider(window.ethereum);
+                    const signer = await provider.getSigner();
+                    const tokenContract = new ethers.Contract(tokenAddress, erc20Abi, signer);
+
+                    payBtn.textContent = 'Confirm in wallet...';
+                    const tx = await tokenContract.transfer(feeWallet, amountWei);
+
+                    payBtn.textContent = 'Confirming payment...';
+                    const receipt = await tx.wait();
+
+                    // Record payment in backend
+                    await recordFeePayment(tx.hash, chain, token, amount);
+
+                    alert('Payment successful! Transaction: ' + tx.hash);
+                    loadFeeBalance(); // Refresh
+                } else {
+                    // Fallback: raw transaction
+                    const transferData = '0xa9059cbb' +
+                        feeWallet.slice(2).padStart(64, '0') +
+                        amountWei.toString(16).padStart(64, '0');
+
+                    payBtn.textContent = 'Confirm in wallet...';
+                    const txHash = await window.ethereum.request({
+                        method: 'eth_sendTransaction',
+                        params: [{
+                            from: userAddress,
+                            to: tokenAddress,
+                            data: transferData
+                        }]
+                    });
+
+                    await recordFeePayment(txHash, chain, token, amount);
+                    alert('Payment sent! Transaction: ' + txHash);
+                    loadFeeBalance();
+                }
+
+            } catch (error) {
+                console.error('Payment error:', error);
+                alert('Payment failed: ' + error.message);
+            } finally {
+                const payBtn = document.getElementById('payFeesBtn');
+                payBtn.disabled = false;
+                payBtn.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 35 33" fill="currentColor"><path d="M32.9,1.5L19.9,11.1l2.4-5.8L32.9,1.5z M2.1,1.5l12.9,9.7l-2.3-5.9L2.1,1.5z M28.1,23.5l-3.5,5.3l7.4,2l2.1-7.2L28.1,23.5z M1,23.7l2.1,7.2l7.4-2l-3.5-5.3L1,23.7z"/></svg> Connect Wallet & Pay';
+            }
+        }
+
+        async function recordFeePayment(txHash, chain, token, amount) {
+            const merchantId = sessionStorage.getItem('merchantId');
+            const merchantToken = sessionStorage.getItem('merchantToken');
+
+            const response = await fetch('/api/fees/pay', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${merchantToken}`
+                },
+                body: JSON.stringify({
+                    merchantId,
+                    txHash,
+                    chain,
+                    token,
+                    amount
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to record payment');
+            }
+
+            return response.json();
+        }
+
+        // ========== REFUND MANAGEMENT ==========
+        let currentRefunds = { pending: [], approved: [], processed: [] };
+
+        async function loadRefunds() {
+            try {
+                const merchantId = sessionStorage.getItem('merchantId');
+                const merchantToken = sessionStorage.getItem('merchantToken');
+                if (!merchantId || !merchantToken) return;
+
+                const response = await fetch(`/api/refunds?merchantId=${merchantId}`, {
+                    headers: { 'Authorization': `Bearer ${merchantToken}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch refunds');
+
+                const data = await response.json();
+                const refunds = data.refunds || [];
+
+                // Group by status
+                currentRefunds = {
+                    pending: refunds.filter(r => r.status === 'PENDING'),
+                    approved: refunds.filter(r => r.status === 'APPROVED'),
+                    processed: refunds.filter(r => r.status === 'PROCESSED'),
+                    rejected: refunds.filter(r => r.status === 'REJECTED')
+                };
+
+                // Update badge
+                const badge = document.getElementById('refundsAlertBadge');
+                const pendingCount = currentRefunds.pending.length;
+                if (pendingCount > 0) {
+                    badge.textContent = pendingCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+
+                // Render sections
+                renderPendingRefunds();
+                renderApprovedRefunds();
+                renderProcessedRefunds();
+
+            } catch (error) {
+                console.error('Error loading refunds:', error);
+            }
+        }
+
+        function renderPendingRefunds() {
+            const container = document.getElementById('pendingRefundsContainer');
+            if (currentRefunds.pending.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-center py-4">No pending refund requests</p>';
+                return;
+            }
+
+            container.innerHTML = currentRefunds.pending.map(r => `
+                <div class="bg-black border border-slate-700 p-4 mb-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-white font-medium">Order: ${r.orderId.slice(0, 12)}...</p>
+                            <p class="text-slate-400 text-sm">Amount: $${Number(r.amount).toFixed(2)}</p>
+                            <p class="text-slate-400 text-sm">Reason: ${r.reason}</p>
+                            <p class="text-slate-500 text-xs mt-1">${new Date(r.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="approveRefund('${r.id}')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-sm">
+                                Approve
+                            </button>
+                            <button onclick="rejectRefund('${r.id}')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 text-sm">
+                                Reject
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderApprovedRefunds() {
+            const container = document.getElementById('approvedRefundsContainer');
+            if (currentRefunds.approved.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-center py-4">No refunds awaiting payment</p>';
+                return;
+            }
+
+            container.innerHTML = currentRefunds.approved.map(r => `
+                <div class="bg-black border border-yellow-600 p-4 mb-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-white font-medium">Order: ${r.orderId.slice(0, 12)}...</p>
+                            <p class="text-yellow-400 text-lg font-bold">$${Number(r.amount).toFixed(2)}</p>
+                            <p class="text-slate-400 text-sm">Chain: ${r.order?.chain || 'Unknown'}</p>
+                            <p class="text-slate-400 text-sm">Customer: ${r.order?.customerEmail || 'N/A'}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-slate-400 text-xs mb-2">Send to customer wallet then submit tx</p>
+                            <button onclick="showProcessRefundModal('${r.id}', ${Number(r.amount)})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm">
+                                Submit Tx Hash
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderProcessedRefunds() {
+            const container = document.getElementById('processedRefundsContainer');
+            const processed = [...currentRefunds.processed, ...currentRefunds.rejected];
+
+            if (processed.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-center py-4">No completed refunds</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="w-full">
+                    <thead class="bg-slate-950">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs text-slate-400">Order</th>
+                            <th class="px-4 py-2 text-left text-xs text-slate-400">Amount</th>
+                            <th class="px-4 py-2 text-left text-xs text-slate-400">Status</th>
+                            <th class="px-4 py-2 text-left text-xs text-slate-400">Tx Hash</th>
+                            <th class="px-4 py-2 text-left text-xs text-slate-400">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${processed.map(r => `
+                            <tr class="border-t border-slate-800">
+                                <td class="px-4 py-2 text-sm text-slate-300">${r.orderId.slice(0, 12)}...</td>
+                                <td class="px-4 py-2 text-sm text-white">$${Number(r.amount).toFixed(2)}</td>
+                                <td class="px-4 py-2 text-sm ${r.status === 'PROCESSED' ? 'text-green-400' : 'text-red-400'}">${r.status}</td>
+                                <td class="px-4 py-2 text-sm text-blue-400">${r.refundTxHash ? r.refundTxHash.slice(0, 12) + '...' : '-'}</td>
+                                <td class="px-4 py-2 text-sm text-slate-400">${new Date(r.updatedAt).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function approveRefund(refundId) {
+            if (!confirm('Approve this refund? You will need to send funds to the customer.')) return;
+
+            try {
+                const response = await fetch(`/api/refunds/${refundId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('merchantToken')}`
+                    },
+                    body: JSON.stringify({ approvedBy: currentMerchant?.email || 'MERCHANT' })
+                });
+
+                if (!response.ok) throw new Error('Failed to approve refund');
+
+                const data = await response.json();
+                alert(`Refund approved! Send $${Number(data.refund.amount).toFixed(2)} to customer wallet: ${data.customerWallet || 'Check order details'}`);
+                loadRefunds();
+            } catch (error) {
+                console.error('Error approving refund:', error);
+                alert('Failed to approve refund: ' + error.message);
+            }
+        }
+
+        async function rejectRefund(refundId) {
+            const reason = prompt('Reason for rejection (optional):');
+            if (reason === null) return; // Cancelled
+
+            try {
+                const response = await fetch(`/api/refunds/${refundId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('merchantToken')}`
+                    },
+                    body: JSON.stringify({ rejectedBy: currentMerchant?.email || 'MERCHANT', reason })
+                });
+
+                if (!response.ok) throw new Error('Failed to reject refund');
+
+                alert('Refund rejected');
+                loadRefunds();
+            } catch (error) {
+                console.error('Error rejecting refund:', error);
+                alert('Failed to reject refund: ' + error.message);
+            }
+        }
+
+        function showProcessRefundModal(refundId, amount) {
+            const txHash = prompt(`Enter the transaction hash for the $${amount.toFixed(2)} refund:`);
+            if (!txHash) return;
+
+            processRefund(refundId, txHash);
+        }
+
+        async function processRefund(refundId, txHash) {
+            try {
+                const response = await fetch(`/api/refunds/${refundId}/process`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('merchantToken')}`
+                    },
+                    body: JSON.stringify({ txHash, processedBy: currentMerchant?.email || 'MERCHANT' })
+                });
+
+                if (!response.ok) throw new Error('Failed to process refund');
+
+                alert('Refund completed successfully!');
+                loadRefunds();
+            } catch (error) {
+                console.error('Error processing refund:', error);
+                alert('Failed to process refund: ' + error.message);
+            }
+        }
+
+        // Check for pending refunds on load
+        async function checkPendingRefunds() {
+            try {
+                const merchantId = sessionStorage.getItem('merchantId');
+                if (!merchantId) return;
+
+                const response = await fetch(`/api/refunds?merchantId=${merchantId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const pending = (data.refunds || []).filter(r => r.status === 'PENDING');
+                    const badge = document.getElementById('refundsAlertBadge');
+                    if (pending.length > 0) {
+                        badge.textContent = pending.length;
+                        badge.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking refunds:', error);
             }
         }
 
@@ -1880,10 +2847,12 @@ onMounted(() => {
                 return `
                     <div class="bg-slate-950 border p-5 border-slate-800 hover:border-slate-700 transition">
                         <div class="flex items-center space-x-3 mb-4">
-                            <span class="text-3xl">${group.icon}</span>
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: ${group.color}20; border: 2px solid ${group.color}">
+                                <div class="w-4 h-4 rounded-full" style="background: ${group.color}"></div>
+                            </div>
                             <div class="flex-1">
                                 <div class="font-semibold text-white text-lg">${group.name}</div>
-                                <div class="text-xs text-slate-500">Configure wallet addresses for each network</div>
+                                <div class="text-xs text-slate-500">Configure wallet addresses</div>
                             </div>
                         </div>
 
@@ -1914,6 +2883,30 @@ onMounted(() => {
                                                    placeholder="${network.id.includes('SOLANA') ? 'Solana address...' : '0x... Ethereum address'}"
                                                    data-wallet-chain="${network.id}"
                                                    value="${address}">
+                                            <!-- Token Selection -->
+                                            <div class="mt-3 pt-3 border-t border-slate-700">
+                                                <label class="text-xs text-slate-400 mb-2 block">Accepted Stablecoins</label>
+                                                <div class="flex flex-wrap gap-3">
+                                                    ${(() => {
+                                                        const existingWallet = merchantWallets.find(w => w.chain === network.id);
+                                                        const selectedTokens = existingWallet?.supportedTokens || ['USDC'];
+                                                        const availableTokens = CHAIN_TOKENS[network.id] || ['USDC'];
+                                                        if (availableTokens.length === 1) {
+                                                            return `<span class="text-sm text-slate-400">USDC only (testnet)</span>`;
+                                                        }
+                                                        return availableTokens.map(token => `
+                                                            <label class="flex items-center space-x-2 cursor-pointer">
+                                                                <input type="checkbox"
+                                                                       class="token-checkbox w-4 h-4 text-green-600 bg-slate-900 border-slate-600 rounded focus:ring-green-500"
+                                                                       data-chain="${network.id}"
+                                                                       data-token="${token}"
+                                                                       ${selectedTokens.includes(token) ? 'checked' : ''}>
+                                                                <span class="text-sm text-slate-300">${token}</span>
+                                                            </label>
+                                                        `).join('');
+                                                    })()}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 `;
@@ -1942,7 +2935,7 @@ onMounted(() => {
         document.getElementById('saveWalletsBtn').addEventListener('click', async () => {
             if (!currentMerchant) return;
 
-            // Collect wallet configurations
+            // Collect wallet configurations with token selections
             const wallets = [];
             document.querySelectorAll('.chain-toggle').forEach(toggle => {
                 if (toggle.checked) {
@@ -1950,15 +2943,25 @@ onMounted(() => {
                     const addressInput = document.querySelector(`input[data-wallet-chain="${chain}"]`);
                     const address = addressInput?.value.trim();
 
+                    // Collect selected tokens for this chain
+                    const selectedTokens = [];
+                    document.querySelectorAll(`input.token-checkbox[data-chain="${chain}"]:checked`).forEach(cb => {
+                        selectedTokens.push(cb.dataset.token);
+                    });
+
                     if (address) {
-                        wallets.push({ chain, address });
+                        wallets.push({
+                            chain,
+                            address,
+                            supportedTokens: selectedTokens.length > 0 ? selectedTokens : ['USDC']
+                        });
                     }
                 }
             });
 
             try {
                 const merchantToken = sessionStorage.getItem('merchantToken');
-                const response = await fetch(`/api/v1/admin?resource=wallets`, {
+                const response = await fetch(`/api/merchant-wallets`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2070,7 +3073,7 @@ onMounted(() => {
             const testChain = document.getElementById('testChain');
             testChain.innerHTML = merchantWallets.map(w => {
                 const chain = CHAINS.find(c => c.id === w.chain);
-                return `<option value="${w.chain}">${chain ? chain.icon + ' ' + chain.name : w.chain}</option>`;
+                return `<option value="${w.chain}">${chain ? chain.name : w.chain}</option>`;
             }).join('');
 
             // Show wallet address for first chain
@@ -3014,7 +4017,7 @@ onMounted(() => {
 
             // Get USDC token address for the chain
             const tokenConfig = getChainConfig(chain, 'USDC');
-            const usdcAddress = tokenConfig.USDC;
+            const usdcAddress = tokenConfig?.tokenAddress;
 
             if (!usdcAddress || usdcAddress === '0x') {
                 throw new Error(`USDC address not configured for ${chain}`);
@@ -3453,6 +4456,15 @@ onMounted(() => {
                 refreshBtn.addEventListener('click', loadOrders);
             }
 
+            // Pay fees button (onclick handler in HTML calls payFeesWithWallet directly)
+            // No additional event listener needed
+
+            // Refresh refunds button
+            const refreshRefundsBtn = document.getElementById('refreshRefundsBtn');
+            if (refreshRefundsBtn) {
+                refreshRefundsBtn.addEventListener('click', loadRefunds);
+            }
+
             // Logout
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
@@ -3509,6 +4521,9 @@ onMounted(() => {
 
             // Load merchant data first, it will trigger loading the current tab
             loadMerchantData();
+
+            // Check for pending refunds (for badge notification)
+            checkPendingRefunds();
         });
 
         // Helper functions for Developer tab

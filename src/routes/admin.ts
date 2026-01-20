@@ -255,7 +255,7 @@ router.post('/wallets', async (req, res) => {
       where: { merchantId },
     });
 
-    // Create new wallets
+    // Create new wallets with supported tokens
     const created = await Promise.all(
       wallets.map(wallet =>
         db.merchantWallet.create({
@@ -263,6 +263,7 @@ router.post('/wallets', async (req, res) => {
             merchantId,
             chain: wallet.chain,
             address: wallet.address,
+            supportedTokens: wallet.supportedTokens || ['USDC'],
             isActive: true,
           },
         })
@@ -368,6 +369,203 @@ router.delete('/', async (req, res) => {
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
+  }
+});
+
+// ============================================================================
+// PLATFORM WALLETS (Fee Collection) - Protected by ADMIN_KEY
+// ============================================================================
+
+// Middleware to check admin key
+const requireAdminKey = (req: any, res: any, next: any) => {
+  const adminKey = req.headers['x-admin-key'] || req.body?.adminKey;
+  if (adminKey !== process.env.ADMIN_KEY) {
+    return res.status(401).json({ error: 'Unauthorized - Admin key required' });
+  }
+  next();
+};
+
+// Get all platform wallets (for fee collection)
+router.get('/platform-wallets', requireAdminKey, async (_req, res) => {
+  try {
+    const wallets = await db.platformWallet.findMany({
+      where: { isActive: true },
+      orderBy: { chain: 'asc' }
+    });
+    res.json({ wallets });
+  } catch (error) {
+    logger.error('Error fetching platform wallets', error as Error, {});
+    res.status(500).json({ error: 'Failed to fetch wallets' });
+  }
+});
+
+// Add or update a platform wallet
+router.post('/platform-wallets', requireAdminKey, async (req, res) => {
+  try {
+    const { chain, address, label } = req.body;
+
+    if (!chain || !address) {
+      return res.status(400).json({ error: 'Chain and address required' });
+    }
+
+    const wallet = await db.platformWallet.upsert({
+      where: { chain },
+      update: { address, label, isActive: true, updatedAt: new Date() },
+      create: { chain, address, label, isActive: true }
+    });
+
+    logger.info('Platform wallet updated', { chain, address, event: 'admin.platform_wallet_updated' });
+    res.json({ success: true, wallet });
+  } catch (error) {
+    logger.error('Error updating platform wallet', error as Error, {});
+    res.status(500).json({ error: 'Failed to update wallet' });
+  }
+});
+
+// Deactivate a platform wallet
+router.delete('/platform-wallets/:chain', requireAdminKey, async (req, res) => {
+  try {
+    const { chain } = req.params;
+    await db.platformWallet.update({
+      where: { chain: chain as any },
+      data: { isActive: false }
+    });
+    logger.info('Platform wallet deactivated', { chain, event: 'admin.platform_wallet_deactivated' });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Error deactivating platform wallet', error as Error, {});
+    res.status(500).json({ error: 'Failed to deactivate wallet' });
+  }
+});
+
+// ============================================================================
+// FEE PAYMENT VERIFICATION
+// ============================================================================
+
+// Get pending fee payments for admin review
+router.get('/fee-payments', requireAdminKey, async (req, res) => {
+  try {
+    const { status = 'PENDING' } = req.query;
+    const payments = await db.feePayment.findMany({
+      where: { status: status as any },
+      include: {
+        merchant: {
+          select: { id: true, email: true, companyName: true, plan: true, feesDue: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+    res.json({ payments });
+  } catch (error) {
+    logger.error('Error fetching fee payments', error as Error, {});
+    res.status(500).json({ error: 'Failed to fetch fee payments' });
+  }
+});
+
+// Verify a fee payment (admin confirms tx is valid)
+router.post('/fee-payments/:id/verify', requireAdminKey, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminId = 'admin' } = req.body;
+
+    const payment = await db.feePayment.findUnique({
+      where: { id },
+      include: { merchant: true }
+    });
+
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    if (payment.status === 'CONFIRMED') {
+      return res.status(400).json({ error: 'Payment already confirmed' });
+    }
+
+    // Update payment as verified
+    await db.feePayment.update({
+      where: { id },
+      data: {
+        status: 'CONFIRMED',
+        verifiedBy: adminId,
+        verifiedAt: new Date(),
+        confirmedAt: new Date()
+      }
+    });
+
+    // Update merchant's fee balance
+    const paidAmount = Number(payment.amount);
+    const currentFeesDue = Number(payment.merchant.feesDue) || 0;
+    const newFeesDue = Math.max(0, currentFeesDue - paidAmount);
+
+    await db.merchant.update({
+      where: { id: payment.merchantId },
+      data: {
+        feesDue: newFeesDue,
+        lastFeeCalculation: new Date(),
+        isSuspended: newFeesDue > 0 ? payment.merchant.isSuspended : false,
+        suspendedAt: newFeesDue > 0 ? payment.merchant.suspendedAt : null
+      }
+    });
+
+    logger.info('Fee payment verified by admin', {
+      paymentId: id, merchantId: payment.merchantId, amount: paidAmount, adminId,
+      event: 'admin.fee_payment_verified'
+    });
+
+    res.json({
+      success: true,
+      payment: { id, status: 'CONFIRMED' },
+      merchant: { id: payment.merchantId, previousBalance: currentFeesDue, newBalance: newFeesDue }
+    });
+  } catch (error) {
+    logger.error('Error verifying fee payment', error as Error, {});
+    res.status(500).json({ error: 'Failed to verify payment' });
+  }
+});
+
+// Reject a fee payment
+router.post('/fee-payments/:id/reject', requireAdminKey, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason, adminId = 'admin' } = req.body;
+
+    await db.feePayment.update({
+      where: { id },
+      data: { status: 'FAILED', verifiedBy: adminId, verifiedAt: new Date() }
+    });
+
+    logger.info('Fee payment rejected', { paymentId: id, reason, adminId, event: 'admin.fee_payment_rejected' });
+    res.json({ success: true, reason });
+  } catch (error) {
+    logger.error('Error rejecting fee payment', error as Error, {});
+    res.status(500).json({ error: 'Failed to reject payment' });
+  }
+});
+
+// Admin dashboard stats
+router.get('/stats', requireAdminKey, async (_req, res) => {
+  try {
+    const [totalMerchants, activeMerchants, suspendedMerchants, pendingFeePayments, totalFeesCollected, feesOwed] = await Promise.all([
+      db.merchant.count(),
+      db.merchant.count({ where: { isActive: true, isSuspended: false } }),
+      db.merchant.count({ where: { isSuspended: true } }),
+      db.feePayment.count({ where: { status: 'PENDING' } }),
+      db.feePayment.aggregate({ where: { status: 'CONFIRMED' }, _sum: { amount: true } }),
+      db.merchant.aggregate({ _sum: { feesDue: true } })
+    ]);
+
+    res.json({
+      merchants: { total: totalMerchants, active: activeMerchants, suspended: suspendedMerchants },
+      fees: {
+        pendingPayments: pendingFeePayments,
+        totalCollected: Number(totalFeesCollected._sum.amount) || 0,
+        totalOwed: Number(feesOwed._sum.feesDue) || 0
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching admin stats', error as Error, {});
+    res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 

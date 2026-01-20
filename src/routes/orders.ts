@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { OrderService } from '../services/orderService';
 import { canProcessPayment } from '../config/pricing';
 import { rateLimit } from '../middleware/rateLimit';
+import { db } from '../config/database';
 
 const router = Router();
 const orderService = new OrderService();
@@ -117,12 +118,37 @@ router.post('/:orderId/confirm', async (req, res) => {
   try {
     const { orderId } = req.params;
     const { txHash, blockNumber, confirmations } = req.body;
-    
+
+    // Check if merchant is suspended
+    const existingOrder = await db.order.findUnique({
+      where: { id: orderId },
+      include: {
+        merchant: {
+          select: { isSuspended: true, id: true }
+        }
+      }
+    });
+
+    if (!existingOrder) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (existingOrder.merchant?.isSuspended) {
+      return res.status(403).json({
+        error: 'Merchant account suspended',
+        message: 'Payment processing is suspended due to unpaid fees.',
+        suspended: true
+      });
+    }
+
     const order = await orderService.confirmOrder(orderId, {
       txHash,
       blockNumber: blockNumber ? parseInt(blockNumber) : undefined,
       confirmations
     });
+
+    // Volume is now updated atomically inside confirmOrder
+
     res.json({ message: 'Order confirmed', order });
   } catch (error) {
     console.error('Confirm order error:', error);

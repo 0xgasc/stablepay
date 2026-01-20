@@ -9,7 +9,11 @@ import { refundsRouter } from './routes/refunds';
 import { adminRouter } from './routes/admin';
 import { authRouter } from './routes/auth';
 import { healthRouter } from './routes/health';
+import { feesRouter } from './routes/fees';
+import { webhooksRouter } from './routes/webhooks';
 import { validateEnv } from './utils/env';
+import { OrderService } from './services/orderService';
+import { logger } from './utils/logger';
 // import { BlockchainService } from './services/blockchainService';
 
 // Load and validate environment variables
@@ -57,6 +61,8 @@ app.use('/health', healthRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/refunds', refundsRouter);
 app.use('/api/v1/admin', adminRouter);
+app.use('/api/fees', feesRouter);
+app.use('/api/webhooks', webhooksRouter);
 app.use('/api', authRouter);
 
 // Simple orders endpoint for test payments
@@ -89,12 +95,12 @@ app.post('/api/v1/orders', async (req, res) => {
 
         if (matchingWallet) {
           paymentAddress = matchingWallet.address;
-          console.log(`Using merchant wallet for ${chain}: ${paymentAddress}`);
+          logger.debug('Using merchant wallet', { chain, paymentAddress, merchantId });
         } else {
-          console.log(`No merchant wallet found for ${chain} (checked ${merchantWallets.length} wallets), using fallback: ${fallbackAddress}`);
+          logger.debug('No merchant wallet found, using fallback', { chain, merchantId, walletCount: merchantWallets.length, fallbackAddress });
         }
       } catch (walletError) {
-        console.error('Error looking up merchant wallet:', walletError);
+        logger.error('Error looking up merchant wallet', walletError as Error, { merchantId, chain });
         // Continue with fallback address
       }
     }
@@ -201,7 +207,7 @@ app.put('/api/v1/orders', async (req, res) => {
       return res.status(400).json({ error: 'orderId is required' });
     }
 
-    console.log('Confirming order:', orderId, 'with txHash:', txHash);
+    logger.debug('Confirming order', { orderId, txHash });
 
     // Use raw SQL to update status and updatedAt
     const newStatus = status || 'CONFIRMED';
@@ -283,88 +289,49 @@ app.delete('/api/v1/orders/:orderId', async (req, res) => {
   }
 });
 
-// POST - Confirm order
+// POST - Confirm order (uses orderService for proper fee calculation)
 app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
   try {
     const { db } = await import('./config/database');
     const { orderId } = req.params;
-    const { txHash, blockNumber, status } = req.body;
+    const { txHash, blockNumber, confirmations } = req.body;
 
     console.log('Confirming order:', orderId, 'with txHash:', txHash);
 
-    // First check if order exists
+    // First check if order exists and merchant status
     const existingOrder = await db.order.findUnique({
-      where: { id: orderId }
+      where: { id: orderId },
+      include: { merchant: { select: { isSuspended: true, id: true } } }
     });
 
     if (!existingOrder) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Use raw SQL to update status and updatedAt
-    const newStatus = status || 'CONFIRMED';
-    const now = new Date();
-    await db.$executeRaw`UPDATE orders SET status = ${newStatus}::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId}`;
+    // Check if merchant is suspended
+    if (existingOrder.merchant?.isSuspended) {
+      return res.status(403).json({
+        error: 'Merchant account suspended',
+        message: 'Payment processing is suspended due to unpaid fees. Please pay outstanding fees to continue.',
+        suspended: true
+      });
+    }
 
-    // Fetch the updated order
-    const order = await db.order.findUnique({
-      where: { id: orderId }
+    // Skip if already confirmed (avoid double-counting fees/volume)
+    if (existingOrder.status === 'CONFIRMED' || existingOrder.status === 'PAID') {
+      console.log('Order already confirmed, returning existing state:', orderId);
+      return res.json({ success: true, order: existingOrder, alreadyConfirmed: true });
+    }
+
+    // Use orderService.confirmOrder for proper fee calculation and volume tracking
+    const orderService = new OrderService();
+    const order = await orderService.confirmOrder(orderId, {
+      txHash,
+      blockNumber: blockNumber ? parseInt(blockNumber) : undefined,
+      confirmations: confirmations || 1
     });
 
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found after update' });
-    }
-
-    // Create transaction record if txHash provided
-    if (txHash) {
-      // Check if transaction already exists (avoid duplicate)
-      const existingTx = await db.transaction.findUnique({
-        where: { txHash: txHash }
-      });
-
-      if (!existingTx) {
-        await db.transaction.create({
-          data: {
-            orderId: orderId,
-            txHash: txHash,
-            chain: order.chain,
-            amount: order.amount,
-            fromAddress: 'manual-confirmation',
-            toAddress: order.paymentAddress || 'unknown',
-            blockNumber: blockNumber ? BigInt(blockNumber) : null,
-            status: 'CONFIRMED',
-            confirmations: 1
-          }
-        });
-        console.log('Transaction record created for order:', orderId);
-
-        // Update merchant volume tracking (only if order wasn't already confirmed)
-        if (existingOrder.status !== 'CONFIRMED' && existingOrder.status !== 'PAID' && order.merchantId) {
-          const orderAmount = parseFloat(order.amount.toString());
-          const isMainnet = order.chain.includes('MAINNET');
-
-          await db.merchant.update({
-            where: { id: order.merchantId },
-            data: {
-              monthlyVolumeUsed: { increment: orderAmount },
-              monthlyTransactions: { increment: 1 },
-              ...(isMainnet ? {
-                mainnetVolumeUsed: { increment: orderAmount },
-                mainnetTransactions: { increment: 1 }
-              } : {
-                testnetVolumeUsed: { increment: orderAmount },
-                testnetTransactions: { increment: 1 }
-              })
-            }
-          });
-          console.log(`Updated merchant volume: +$${orderAmount} (${isMainnet ? 'mainnet' : 'testnet'})`);
-        }
-      } else {
-        console.log('Transaction already exists, skipping creation');
-      }
-    }
-
-    console.log('Order confirmed successfully:', orderId);
+    console.log('Order confirmed successfully with fees:', orderId);
     res.json({ success: true, order });
   } catch (error) {
     console.error('Confirm order error:', error);
@@ -373,11 +340,11 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
   }
 });
 
-// Alias for crypto-pay.html confirm endpoint
+// Alias for crypto-pay.html confirm endpoint (uses orderService for proper fee calculation)
 app.post('/api/orders-confirm', async (req, res) => {
   try {
     const { db } = await import('./config/database');
-    const { orderId, txHash, fromAddress, blockNumber, confirmations } = req.body;
+    const { orderId, txHash, blockNumber, confirmations } = req.body;
 
     if (!orderId) {
       return res.status(400).json({ error: 'orderId is required' });
@@ -385,44 +352,40 @@ app.post('/api/orders-confirm', async (req, res) => {
 
     console.log('Confirming order via /api/orders-confirm:', orderId, 'txHash:', txHash);
 
-    // Use raw SQL to update status and updatedAt
-    const now = new Date();
-    await db.$executeRaw`UPDATE orders SET status = 'CONFIRMED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId}`;
-
-    // Fetch the updated order
-    const order = await db.order.findUnique({
-      where: { id: orderId }
+    // First check if order exists and merchant is not suspended
+    const existingOrder = await db.order.findUnique({
+      where: { id: orderId },
+      include: { merchant: { select: { isSuspended: true, id: true } } }
     });
 
-    if (!order) {
+    if (!existingOrder) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Create transaction record
-    if (txHash) {
-      // Check if transaction already exists
-      const existingTx = await db.transaction.findUnique({
-        where: { txHash: txHash }
+    // Check if merchant is suspended
+    if (existingOrder.merchant?.isSuspended) {
+      return res.status(403).json({
+        error: 'Merchant account suspended',
+        message: 'Payment processing is suspended due to unpaid fees.',
+        suspended: true
       });
-
-      if (!existingTx) {
-        await db.transaction.create({
-          data: {
-            orderId: orderId,
-            txHash: txHash,
-            chain: order.chain,
-            amount: order.amount,
-            fromAddress: fromAddress || 'unknown',
-            toAddress: order.paymentAddress || 'unknown',
-            blockNumber: blockNumber ? BigInt(blockNumber) : null,
-            confirmations: confirmations || 1,
-            status: 'CONFIRMED'
-          }
-        });
-      }
     }
 
-    console.log('Order confirmed successfully:', orderId);
+    // Skip if already confirmed (avoid double-counting fees/volume)
+    if (existingOrder.status === 'CONFIRMED' || existingOrder.status === 'PAID') {
+      console.log('Order already confirmed, returning existing state:', orderId);
+      return res.json({ success: true, order: existingOrder, alreadyConfirmed: true });
+    }
+
+    // Use orderService.confirmOrder for proper fee calculation and volume tracking
+    const orderService = new OrderService();
+    const order = await orderService.confirmOrder(orderId, {
+      txHash,
+      blockNumber: blockNumber ? parseInt(blockNumber) : undefined,
+      confirmations: confirmations || 1
+    });
+
+    console.log('Order confirmed successfully with fees:', orderId);
     res.json({ success: true, order });
   } catch (error) {
     console.error('Confirm order error:', error);

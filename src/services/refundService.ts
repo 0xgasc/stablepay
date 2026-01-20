@@ -1,31 +1,35 @@
 import { db } from '../config/database';
 import { Decimal } from '@prisma/client/runtime/library';
+import { logger } from '../utils/logger';
 
 export interface CreateRefundRequest {
   orderId: string;
   amount?: number;
   reason: string;
+  customerWallet?: string; // Customer's wallet address for refund
 }
 
 export interface RefundPolicy {
   maxRefundDays: number;
   allowPartialRefunds: boolean;
-  requireApproval: boolean;
-  autoRefundThreshold: number;
+  autoApproveThreshold: number; // Auto-approve small refunds
 }
 
 export class RefundService {
   private policy: RefundPolicy = {
     maxRefundDays: 30,
     allowPartialRefunds: true,
-    requireApproval: true,
-    autoRefundThreshold: 100,
+    autoApproveThreshold: 50, // Auto-approve refunds under $50
   };
 
   async createRefund(data: CreateRefundRequest): Promise<any> {
     const order = await db.order.findUnique({
       where: { id: data.orderId },
-      include: { transactions: true, refunds: true },
+      include: {
+        transactions: true,
+        refunds: true,
+        merchant: { select: { id: true, companyName: true, email: true } }
+      },
     });
 
     if (!order) {
@@ -61,7 +65,8 @@ export class RefundService {
       throw new Error('Total refund amount would exceed paid amount');
     }
 
-    const shouldAutoApprove = !this.policy.requireApproval || refundAmount <= this.policy.autoRefundThreshold;
+    // Auto-approve small refunds, otherwise PENDING for merchant review
+    const shouldAutoApprove = refundAmount <= this.policy.autoApproveThreshold;
 
     const refund = await db.refund.create({
       data: {
@@ -69,15 +74,29 @@ export class RefundService {
         amount: new Decimal(refundAmount),
         reason: data.reason,
         status: shouldAutoApprove ? 'APPROVED' : 'PENDING',
-        approvedBy: shouldAutoApprove ? 'SYSTEM' : undefined,
+        approvedBy: shouldAutoApprove ? 'AUTO' : undefined,
       },
     });
 
-    if (shouldAutoApprove) {
-      await this.processRefund(refund.id);
-    }
+    logger.info('Refund request created', {
+      refundId: refund.id,
+      orderId: data.orderId,
+      amount: refundAmount,
+      status: refund.status,
+      merchantId: order.merchantId || undefined,
+      event: 'refund.created'
+    });
 
-    return refund;
+    return {
+      ...refund,
+      order: {
+        id: order.id,
+        amount: Number(order.amount),
+        chain: order.chain,
+        customerEmail: order.customerEmail
+      },
+      merchant: order.merchant
+    };
   }
 
   async approveRefund(refundId: string, approvedBy: string): Promise<any> {
@@ -87,53 +106,113 @@ export class RefundService {
         status: 'APPROVED',
         approvedBy,
       },
+      include: {
+        order: {
+          include: { merchant: true }
+        }
+      }
     });
 
-    await this.processRefund(refundId);
+    logger.info('Refund approved', {
+      refundId,
+      approvedBy,
+      event: 'refund.approved'
+    });
+
+    // Don't auto-process - merchant must send funds and submit tx hash
     return refund;
   }
 
-  async rejectRefund(refundId: string, approvedBy: string): Promise<any> {
-    return db.refund.update({
+  async rejectRefund(refundId: string, rejectedBy: string, reason?: string): Promise<any> {
+    const refund = await db.refund.update({
       where: { id: refundId },
       data: {
         status: 'REJECTED',
-        approvedBy,
+        approvedBy: rejectedBy,
       },
     });
+
+    logger.info('Refund rejected', {
+      refundId,
+      rejectedBy,
+      reason,
+      event: 'refund.rejected'
+    });
+
+    return refund;
   }
 
-  private async processRefund(refundId: string): Promise<void> {
+  // Called when merchant submits the tx hash after sending funds
+  async processRefund(refundId: string, txHash: string, processedBy: string): Promise<any> {
     const refund = await db.refund.findUnique({
       where: { id: refundId },
       include: { order: true },
     });
 
-    if (!refund || refund.status !== 'APPROVED') return;
-
-    try {
-      const refundTxHash = await this.executeRefundTransaction(refund);
-
-      await db.refund.update({
-        where: { id: refundId },
-        data: {
-          status: 'PROCESSED',
-          refundTxHash,
-        },
-      });
-
-      const now = new Date();
-      await db.$executeRaw`UPDATE orders SET status = 'REFUNDED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${refund.orderId}`;
-
-      console.log(`Refund processed: ${refundId}, tx: ${refundTxHash}`);
-    } catch (error) {
-      console.error(`Failed to process refund ${refundId}:`, error);
+    if (!refund) {
+      throw new Error('Refund not found');
     }
+
+    if (refund.status !== 'APPROVED') {
+      throw new Error('Refund must be approved before processing');
+    }
+
+    // Update refund with tx hash
+    const updatedRefund = await db.refund.update({
+      where: { id: refundId },
+      data: {
+        status: 'PROCESSED',
+        refundTxHash: txHash,
+      },
+    });
+
+    // Update order status to REFUNDED
+    const now = new Date();
+    await db.$executeRaw`UPDATE orders SET status = 'REFUNDED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${refund.orderId}`;
+
+    logger.info('Refund processed', {
+      refundId,
+      txHash,
+      processedBy,
+      orderId: refund.orderId,
+      amount: Number(refund.amount),
+      event: 'refund.processed'
+    });
+
+    return updatedRefund;
   }
 
-  private async executeRefundTransaction(refund: any): Promise<string> {
-    console.log(`Mock refund transaction for ${refund.amount} USDC`);
-    return `0x${Math.random().toString(16).substr(2, 64)}`;
+  // Get refund details with customer wallet info from transaction
+  async getRefundDetails(refundId: string): Promise<any> {
+    const refund = await db.refund.findUnique({
+      where: { id: refundId },
+      include: {
+        order: {
+          include: {
+            transactions: true,
+            merchant: {
+              select: { id: true, companyName: true, email: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!refund) return null;
+
+    // Get customer wallet from the payment transaction
+    const paymentTx = refund.order.transactions.find(tx => tx.status === 'CONFIRMED');
+    const customerWallet = paymentTx?.fromAddress;
+
+    return {
+      ...refund,
+      amount: Number(refund.amount),
+      customerWallet,
+      order: {
+        ...refund.order,
+        amount: Number(refund.order.amount)
+      }
+    };
   }
 
   async getPendingRefunds(): Promise<any[]> {

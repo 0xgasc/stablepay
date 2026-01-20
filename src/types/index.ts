@@ -8,6 +8,7 @@ export type RefundStatus = PrismaRefundStatus;
 export interface CreateOrderRequest {
   amount: number;
   chain: Chain;
+  merchantId?: string;
   customerEmail?: string;
   customerName?: string;
   expiryMinutes?: number;

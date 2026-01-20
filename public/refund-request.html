@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Refund - StablePay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body {
+            background: #FFFFFF;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body.night-mode {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        body.night-mode .bg-white {
+            background: #000 !important;
+        }
+        body.night-mode .text-black {
+            color: #fff !important;
+        }
+        body.night-mode header .text-black,
+        body.night-mode nav .text-black,
+        body.night-mode header a,
+        body.night-mode nav a,
+        body.night-mode header span,
+        body.night-mode nav span {
+            color: #fff !important;
+        }
+        body.night-mode .text-gray-700 {
+            color: #ccc !important;
+        }
+        body.night-mode .text-gray-400 {
+            color: #999 !important;
+        }
+        body.night-mode .text-gray-500 {
+            color: #888 !important;
+        }
+        body.night-mode .brutal-border,
+        body.night-mode .border-black {
+            border-color: #fff !important;
+        }
+        body.night-mode .border-gray-300 {
+            border-color: #666 !important;
+        }
+        body.night-mode .shadow-brutal {
+            box-shadow: 8px 8px 0px #fff !important;
+        }
+        .brutal-border {
+            border: 4px solid #000;
+        }
+        .shadow-brutal {
+            box-shadow: 8px 8px 0px #000;
+        }
+        .btn-brutal {
+            border: 4px solid #000;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        .btn-brutal:hover {
+            transform: translate(4px, 4px);
+            box-shadow: 4px 4px 0px #000;
+        }
+        body.night-mode .btn-brutal {
+            border-color: #fff;
+        }
+        body.night-mode .btn-brutal:hover {
+            box-shadow: 4px 4px 0px #fff;
+        }
+        input, select, textarea {
+            border: 4px solid #000;
+            border-radius: 0;
+        }
+        body.night-mode input,
+        body.night-mode select,
+        body.night-mode textarea {
+            border-color: #fff;
+            background: #000;
+            color: #fff;
+        }
+        body.night-mode input::placeholder,
+        body.night-mode textarea::placeholder {
+            color: #666;
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-approved {
+            background: #dbeafe;
+            color: #1e3a8a;
+        }
+        .status-processed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <header class="bg-white brutal-border border-t-0 border-l-0 border-r-0">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="/" class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-black flex items-center justify-center">
+                        <span class="text-white font-bold text-xl">$</span>
+                    </div>
+                    <span class="text-2xl font-bold text-black">StablePay</span>
+                </a>
+                <div class="flex items-center gap-4">
+                    <button id="nightModeToggle" class="p-2 brutal-border bg-white hover:bg-gray-100">
+                        <span id="sunIcon">&#9788;</span>
+                        <span id="moonIcon" class="hidden">&#9789;</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-2xl mx-auto px-4 py-12">
+        <!-- Request Form -->
+        <div id="requestForm" class="bg-white brutal-border shadow-brutal p-8">
+            <h1 class="text-3xl font-bold text-black mb-2">Request a Refund</h1>
+            <p class="text-gray-500 mb-8">Fill out the form below to submit a refund request. The merchant will review and process your request.</p>
+
+            <form id="refundForm" class="space-y-6">
+                <div>
+                    <label for="orderId" class="block text-sm font-bold text-black mb-2">ORDER ID</label>
+                    <input type="text" id="orderId" name="orderId" required
+                           class="w-full px-4 py-3 text-black"
+                           placeholder="Enter your order ID (e.g., clx123abc...)">
+                    <p class="text-gray-400 text-xs mt-1">You can find this in your payment confirmation email</p>
+                </div>
+
+                <div>
+                    <label for="email" class="block text-sm font-bold text-black mb-2">EMAIL ADDRESS</label>
+                    <input type="email" id="email" name="email" required
+                           class="w-full px-4 py-3 text-black"
+                           placeholder="Email used during payment">
+                    <p class="text-gray-400 text-xs mt-1">Must match the email from your original order</p>
+                </div>
+
+                <div>
+                    <label for="amount" class="block text-sm font-bold text-black mb-2">REFUND AMOUNT (USD)</label>
+                    <input type="number" id="amount" name="amount" step="0.01" min="0.01" required
+                           class="w-full px-4 py-3 text-black"
+                           placeholder="0.00">
+                    <p class="text-gray-400 text-xs mt-1">Enter the amount you wish to refund (partial refunds allowed)</p>
+                </div>
+
+                <div>
+                    <label for="reason" class="block text-sm font-bold text-black mb-2">REASON FOR REFUND</label>
+                    <textarea id="reason" name="reason" rows="4" required
+                              class="w-full px-4 py-3 text-black resize-none"
+                              placeholder="Please explain why you're requesting a refund..."></textarea>
+                </div>
+
+                <div id="errorMessage" class="hidden bg-red-100 border-4 border-red-500 text-red-700 px-4 py-3">
+                </div>
+
+                <button type="submit" id="submitBtn"
+                        class="w-full btn-brutal bg-black text-white py-4 shadow-brutal">
+                    SUBMIT REFUND REQUEST
+                </button>
+            </form>
+        </div>
+
+        <!-- Success State -->
+        <div id="successState" class="hidden bg-white brutal-border shadow-brutal p-8">
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 bg-green-100 brutal-border mx-auto mb-4 flex items-center justify-center">
+                    <span class="text-4xl text-green-600">&#10003;</span>
+                </div>
+                <h2 class="text-2xl font-bold text-black mb-2">Refund Request Submitted</h2>
+                <p class="text-gray-500">Your request has been sent to the merchant for review.</p>
+            </div>
+
+            <div class="bg-gray-50 brutal-border p-4 mb-6">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">Refund ID</span>
+                        <p id="refundId" class="font-bold text-black font-mono">-</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Status</span>
+                        <p><span id="refundStatus" class="px-2 py-1 text-xs font-bold status-pending">PENDING</span></p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Amount</span>
+                        <p id="refundAmount" class="font-bold text-black">-</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Submitted</span>
+                        <p id="refundDate" class="font-bold text-black">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 brutal-border border-blue-500 p-4 mb-6">
+                <h3 class="font-bold text-blue-800 mb-2">What happens next?</h3>
+                <ol class="text-sm text-blue-700 space-y-2">
+                    <li>1. The merchant will review your request</li>
+                    <li>2. If approved, they will send the refund to your wallet</li>
+                    <li>3. You'll receive the funds at the same wallet address you paid from</li>
+                </ol>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="checkStatus()" class="flex-1 btn-brutal bg-white text-black py-3">
+                    CHECK STATUS
+                </button>
+                <button onclick="submitAnother()" class="flex-1 btn-brutal bg-black text-white py-3 shadow-brutal">
+                    NEW REQUEST
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Check -->
+        <div id="statusCheck" class="mt-8 bg-white brutal-border shadow-brutal p-6">
+            <h3 class="text-lg font-bold text-black mb-4">Check Existing Request</h3>
+            <div class="flex gap-2">
+                <input type="text" id="checkRefundId"
+                       class="flex-1 px-4 py-2 text-black"
+                       placeholder="Enter refund ID to check status">
+                <button onclick="checkRefundStatus()" class="btn-brutal bg-black text-white px-6 py-2 shadow-brutal">
+                    CHECK
+                </button>
+            </div>
+            <div id="statusResult" class="hidden mt-4"></div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto px-4 py-8 text-center text-gray-400 text-sm">
+        <p>Powered by StablePay - Crypto Payments Made Simple</p>
+    </footer>
+
+    <script>
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('nightModeToggle');
+        const sunIcon = document.getElementById('sunIcon');
+        const moonIcon = document.getElementById('moonIcon');
+
+        function applyNightMode(isNight) {
+            if (isNight) {
+                document.body.classList.add('night-mode');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            } else {
+                document.body.classList.remove('night-mode');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            }
+        }
+
+        // Check saved preference
+        const savedMode = localStorage.getItem('nightMode');
+        if (savedMode === 'true') {
+            applyNightMode(true);
+        }
+
+        nightModeToggle.addEventListener('click', () => {
+            const isNight = !document.body.classList.contains('night-mode');
+            applyNightMode(isNight);
+            localStorage.setItem('nightMode', isNight);
+        });
+
+        // Current refund data
+        let currentRefund = null;
+
+        // Form submission
+        document.getElementById('refundForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const errorMessage = document.getElementById('errorMessage');
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'SUBMITTING...';
+            errorMessage.classList.add('hidden');
+
+            const orderId = document.getElementById('orderId').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const amount = document.getElementById('amount').value;
+            const reason = document.getElementById('reason').value.trim();
+
+            try {
+                const response = await fetch('/api/refunds', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderId,
+                        amount,
+                        reason,
+                        customerEmail: email
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    currentRefund = data.refund;
+                    showSuccess(data.refund);
+                } else {
+                    throw new Error(data.error || 'Failed to submit refund request');
+                }
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                errorMessage.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'SUBMIT REFUND REQUEST';
+            }
+        });
+
+        function showSuccess(refund) {
+            document.getElementById('requestForm').classList.add('hidden');
+            document.getElementById('successState').classList.remove('hidden');
+
+            document.getElementById('refundId').textContent = refund.id;
+            document.getElementById('refundAmount').textContent = '$' + parseFloat(refund.amount).toFixed(2);
+            document.getElementById('refundDate').textContent = new Date(refund.createdAt).toLocaleDateString();
+
+            updateStatusBadge(refund.status);
+        }
+
+        function updateStatusBadge(status) {
+            const badge = document.getElementById('refundStatus');
+            badge.textContent = status;
+            badge.className = 'px-2 py-1 text-xs font-bold ';
+
+            switch(status) {
+                case 'PENDING':
+                    badge.classList.add('status-pending');
+                    break;
+                case 'APPROVED':
+                    badge.classList.add('status-approved');
+                    break;
+                case 'PROCESSED':
+                    badge.classList.add('status-processed');
+                    break;
+                case 'REJECTED':
+                    badge.classList.add('status-rejected');
+                    break;
+            }
+        }
+
+        function submitAnother() {
+            document.getElementById('requestForm').classList.remove('hidden');
+            document.getElementById('successState').classList.add('hidden');
+            document.getElementById('refundForm').reset();
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').textContent = 'SUBMIT REFUND REQUEST';
+            document.getElementById('errorMessage').classList.add('hidden');
+        }
+
+        function checkStatus() {
+            if (currentRefund) {
+                document.getElementById('checkRefundId').value = currentRefund.id;
+                checkRefundStatus();
+            }
+        }
+
+        async function checkRefundStatus() {
+            const refundId = document.getElementById('checkRefundId').value.trim();
+            const statusResult = document.getElementById('statusResult');
+
+            if (!refundId) {
+                statusResult.innerHTML = '<p class="text-red-600">Please enter a refund ID</p>';
+                statusResult.classList.remove('hidden');
+                return;
+            }
+
+            statusResult.innerHTML = '<p class="text-gray-500">Checking...</p>';
+            statusResult.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`/api/refunds/${refundId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    const statusClass = `status-${data.status.toLowerCase()}`;
+                    statusResult.innerHTML = `
+                        <div class="bg-gray-50 brutal-border p-4">
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span class="text-gray-500">Status</span>
+                                    <p><span class="px-2 py-1 text-xs font-bold ${statusClass}">${data.status}</span></p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Amount</span>
+                                    <p class="font-bold text-black">$${parseFloat(data.amount).toFixed(2)}</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Reason</span>
+                                    <p class="font-bold text-black">${data.reason}</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Submitted</span>
+                                    <p class="font-bold text-black">${new Date(data.createdAt).toLocaleDateString()}</p>
+                                </div>
+                                ${data.refundTxHash ? `
+                                    <div class="col-span-2">
+                                        <span class="text-gray-500">Refund Transaction</span>
+                                        <p class="font-mono text-xs text-blue-600 break-all">${data.refundTxHash}</p>
+                                    </div>
+                                ` : ''}
+                                ${data.customerWallet ? `
+                                    <div class="col-span-2">
+                                        <span class="text-gray-500">Refund Destination</span>
+                                        <p class="font-mono text-xs text-black break-all">${data.customerWallet}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            ${data.status === 'PROCESSED' ? `
+                                <div class="mt-4 bg-green-100 brutal-border border-green-500 p-3 text-center">
+                                    <p class="text-green-700 font-bold">Refund Complete!</p>
+                                    <p class="text-green-600 text-sm">Funds have been sent to your wallet</p>
+                                </div>
+                            ` : ''}
+                            ${data.status === 'REJECTED' ? `
+                                <div class="mt-4 bg-red-100 brutal-border border-red-500 p-3 text-center">
+                                    <p class="text-red-700 font-bold">Refund Rejected</p>
+                                    <p class="text-red-600 text-sm">Contact the merchant for more information</p>
+                                </div>
+                            ` : ''}
+                            ${data.status === 'APPROVED' ? `
+                                <div class="mt-4 bg-blue-100 brutal-border border-blue-500 p-3 text-center">
+                                    <p class="text-blue-700 font-bold">Refund Approved</p>
+                                    <p class="text-blue-600 text-sm">The merchant is processing your refund</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    statusResult.innerHTML = `<p class="text-red-600">${data.error || 'Refund not found'}</p>`;
+                }
+            } catch (error) {
+                statusResult.innerHTML = `<p class="text-red-600">Error checking status: ${error.message}</p>`;
+            }
+        }
+
+        // Check for refund ID in URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const refundIdParam = urlParams.get('refundId');
+        const orderIdParam = urlParams.get('orderId');
+
+        if (refundIdParam) {
+            document.getElementById('checkRefundId').value = refundIdParam;
+            checkRefundStatus();
+        }
+
+        if (orderIdParam) {
+            document.getElementById('orderId').value = orderIdParam;
+        }
+    </script>
+</body>
+</html>

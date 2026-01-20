@@ -93,6 +93,10 @@ router.get('/merchant-profile', async (req, res) => {
       createdAt: merchant.createdAt,
       orderCount: merchant._count.orders,
       wallets: merchant.wallets || [],
+      // Volume tracking fields
+      monthlyVolumeUsed: merchant.monthlyVolumeUsed,
+      monthlyTransactions: merchant.monthlyTransactions,
+      billingCycleStart: merchant.billingCycleStart,
     });
   } catch (error) {
     console.error('Profile fetch error:', error);
@@ -125,6 +129,66 @@ router.put('/merchant-profile', async (req, res) => {
   } catch (error) {
     console.error('Profile update error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update merchant wallets (authenticated by merchant token)
+router.post('/merchant-wallets', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const { merchantId, wallets } = req.body;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Authorization token required' });
+    }
+
+    if (!merchantId || !Array.isArray(wallets)) {
+      return res.status(400).json({ error: 'merchantId and wallets array required' });
+    }
+
+    // Verify token belongs to this merchant
+    const merchant = await db.merchant.findFirst({
+      where: {
+        id: merchantId,
+        loginToken: token,
+      },
+    });
+
+    if (!merchant) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Check if token is expired
+    if (merchant.tokenExpiresAt && new Date() > merchant.tokenExpiresAt) {
+      return res.status(401).json({ error: 'Token expired' });
+    }
+
+    // Delete existing wallets for this merchant
+    await db.merchantWallet.deleteMany({
+      where: { merchantId }
+    });
+
+    // Create new wallets with supported tokens
+    if (wallets.length > 0) {
+      await db.merchantWallet.createMany({
+        data: wallets.map((w: { chain: string; address: string; supportedTokens?: string[] }) => ({
+          merchantId,
+          chain: w.chain as any,
+          address: w.address,
+          supportedTokens: w.supportedTokens || ['USDC'],
+          isActive: true
+        }))
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Updated ${wallets.length} wallet(s)`
+    });
+  } catch (error) {
+    console.error('Wallet update error:', error);
+    res.status(500).json({ error: 'Failed to update wallets' });
   }
 });
 
