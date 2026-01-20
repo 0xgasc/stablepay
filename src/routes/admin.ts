@@ -389,14 +389,14 @@ const requireAdminKey = (req: any, res: any, next: any) => {
 // Admin view returns ALL wallets (including inactive) so admin can reactivate them
 router.get('/platform-wallets', requireAdminKey, async (_req, res) => {
   try {
-    // @ts-ignore - platformWallet will exist after Prisma regeneration
     const wallets = await db.platformWallet.findMany({
       orderBy: { chain: 'asc' }
     });
     res.json(wallets); // Return array directly for easier frontend handling
   } catch (error) {
+    console.error('Platform wallets GET error:', error);
     logger.error('Error fetching platform wallets', error as Error, {});
-    res.status(500).json({ error: 'Failed to fetch wallets' });
+    res.status(500).json({ error: 'Failed to fetch wallets', details: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -409,7 +409,6 @@ router.post('/platform-wallets', requireAdminKey, async (req, res) => {
       return res.status(400).json({ error: 'Chain and address required' });
     }
 
-    // @ts-ignore - platformWallet will exist after Prisma regeneration
     const wallet = await db.platformWallet.upsert({
       where: { chain },
       update: { address, label, isActive: true, updatedAt: new Date() },
@@ -419,8 +418,9 @@ router.post('/platform-wallets', requireAdminKey, async (req, res) => {
     logger.info('Platform wallet updated', { chain, address, event: 'admin.platform_wallet_updated' });
     res.json({ success: true, wallet });
   } catch (error) {
+    console.error('Platform wallets POST error:', error);
     logger.error('Error updating platform wallet', error as Error, {});
-    res.status(500).json({ error: 'Failed to update wallet' });
+    res.status(500).json({ error: 'Failed to update wallet', details: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -428,7 +428,6 @@ router.post('/platform-wallets', requireAdminKey, async (req, res) => {
 router.delete('/platform-wallets/:chain', requireAdminKey, async (req, res) => {
   try {
     const { chain } = req.params;
-    // @ts-ignore - platformWallet will exist after Prisma regeneration
     await db.platformWallet.update({
       where: { chain: chain as any },
       data: { isActive: false }
@@ -436,8 +435,9 @@ router.delete('/platform-wallets/:chain', requireAdminKey, async (req, res) => {
     logger.info('Platform wallet deactivated', { chain, event: 'admin.platform_wallet_deactivated' });
     res.json({ success: true });
   } catch (error) {
+    console.error('Platform wallets DELETE error:', error);
     logger.error('Error deactivating platform wallet', error as Error, {});
-    res.status(500).json({ error: 'Failed to deactivate wallet' });
+    res.status(500).json({ error: 'Failed to deactivate wallet', details: error instanceof Error ? error.message : String(error) });
   }
 });
 
