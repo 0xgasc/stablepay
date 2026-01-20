@@ -1,6 +1,34 @@
 {
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/public/index.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/public/dashboard.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/public/login.html"
+    },
+    {
+      "source": "/signup",
+      "destination": "/public/signup.html"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/public/pricing.html"
+    },
+    {
+      "source": "/enterprise-admin",
+      "destination": "/public/enterprise-admin.html"
+    },
+    {
+      "source": "/checkout",
+      "destination": "/public/crypto-pay.html"
+    },
+    {
       "source": "/api/cron/:path*",
       "destination": "/api/cron/:path*"
     },
@@ -11,14 +39,6 @@
     {
       "source": "/health/:path*",
       "destination": "/api"
-    },
-    {
-      "source": "/public/:path*",
-      "destination": "/:path*"
-    },
-    {
-      "source": "/checkout",
-      "destination": "/crypto-pay.html"
     }
   ]
 }
