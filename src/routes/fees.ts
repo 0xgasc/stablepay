@@ -16,7 +16,7 @@ const router = Router();
 const DEFAULT_FEE_WALLET = process.env.STABLEPAY_FEE_WALLET || '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF';
 
 // Get platform fee wallets (per-chain) from database
-async function getFeeWallets(): Promise<{ chain: string; address: string; label?: string }[]> {
+async function getFeeWallets(): Promise<{ chain: string; address: string; label?: string | null }[]> {
   try {
     // @ts-ignore - platformWallet will exist after Prisma regeneration
     const wallets = await db.platformWallet?.findMany({
