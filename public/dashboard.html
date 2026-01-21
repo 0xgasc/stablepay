@@ -587,30 +587,30 @@
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="w-full">
+                        <table class="w-full table-fixed">
                             <thead class="bg-slate-950">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('id')">
-                                        Order ID <span class="ml-1">⇅</span>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200 w-20" onclick="sortOrders('id')">
+                                        Order ID
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('amount')">
-                                        Amount <span class="ml-1">⇅</span>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200 w-20" onclick="sortOrders('amount')">
+                                        Amount
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('chain')">
-                                        Chain <span class="ml-1">⇅</span>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200 w-24" onclick="sortOrders('chain')">
+                                        Chain
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('status')">
-                                        Status <span class="ml-1">⇅</span>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200 w-20" onclick="sortOrders('status')">
+                                        Status
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Transaction</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Receipt</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('customer')">
-                                        Customer <span class="ml-1">⇅</span>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider w-24">TX</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider w-16">Receipt</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200 w-28" onclick="sortOrders('customer')">
+                                        Customer
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200" onclick="sortOrders('created')">
-                                        Created <span class="ml-1">⇅</span>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200 w-20" onclick="sortOrders('created')">
+                                        Date
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Actions</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider w-20">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="ordersTableBody" class="bg-slate-950 divide-y divide-slate-800">
@@ -2683,56 +2683,54 @@ onMounted(() => {
                     : null;
                 const explorerUrl = txHash ? getExplorerUrl(order.chain, txHash) : null;
 
+                // Truncate customer email
+                const customerDisplay = order.customerEmail
+                    ? (order.customerEmail.length > 15 ? order.customerEmail.slice(0, 12) + '...' : order.customerEmail)
+                    : 'Anon';
+
                 return `
-                    <tr class="hover:bg-slate-950">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-white">${shortId}</div>
+                    <tr class="hover:bg-slate-900/50">
+                        <td class="px-3 py-3 whitespace-nowrap">
+                            <div class="text-xs font-medium text-white font-mono">${shortId}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-semibold text-white">${amount} USDC</div>
+                        <td class="px-3 py-3 whitespace-nowrap">
+                            <div class="text-xs font-semibold text-white">${amount}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-slate-400">${order.chain.replace('_', ' ')}</div>
+                        <td class="px-3 py-3 whitespace-nowrap">
+                            <div class="text-xs text-slate-400">${order.chain.replace('_', ' ')}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                        <td class="px-3 py-3 whitespace-nowrap">
+                            <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
                                 ${order.status}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-3 py-3 whitespace-nowrap">
                             ${txHash ? `
                                 <a href="${explorerUrl}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs font-mono">
-                                    ${txHash.slice(0, 6)}...${txHash.slice(-4)}
-                                    <span class="ml-1">↗</span>
+                                    ${txHash.slice(0, 6)}...
                                 </a>
-                            ` : '<span class="text-slate-500 text-xs">Pending</span>'}
+                            ` : '<span class="text-slate-500 text-xs">-</span>'}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-3 py-3 whitespace-nowrap">
                             ${(order.status === 'CONFIRMED' || order.status === 'PAID') ? `
                                 <button onclick="viewReceipt('${order.id}')" class="text-blue-400 hover:text-blue-300 text-xs">
-                                    View Receipt
+                                    View
                                 </button>
                             ` : '<span class="text-slate-500 text-xs">-</span>'}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-slate-400">${order.customerEmail || 'Anonymous'}</div>
+                        <td class="px-3 py-3 whitespace-nowrap overflow-hidden">
+                            <div class="text-xs text-slate-400 truncate" title="${order.customerEmail || ''}">${customerDisplay}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
+                        <td class="px-3 py-3 whitespace-nowrap text-xs text-slate-400">
                             ${createdAt}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-3 py-3 whitespace-nowrap">
                             ${(order.status === 'CONFIRMED' || order.status === 'PAID') ? `
-                                <div class="flex gap-2">
+                                <div class="flex gap-1">
                                     <button onclick="openRefundModal('${order.id}', '${amount}', '${order.chain}')"
-                                            class="text-orange-400 hover:text-orange-300 text-xs font-medium">
+                                            class="text-orange-400 hover:text-orange-300 text-xs">
                                         Refund
                                     </button>
-                                    ${!order.chain.includes('SOLANA') ? `
-                                        <button onclick="addToBatchRefund('${order.id}')"
-                                                class="text-blue-400 hover:text-blue-300 text-xs font-medium">
-                                            + Batch
-                                        </button>
-                                    ` : ''}
                                 </div>
                             ` : '<span class="text-slate-600 text-xs">-</span>'}
                         </td>

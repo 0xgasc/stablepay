@@ -21,17 +21,22 @@ router.get('/', rateLimit({
 
     switch (resource) {
       case 'orders':
-        if (!merchantId || typeof merchantId !== 'string') {
-          return res.status(400).json({ error: 'merchantId is required for orders' });
-        }
+        // If merchantId provided, filter by merchant; otherwise return all orders (admin view)
+        const ordersWhere = merchantId && typeof merchantId === 'string'
+          ? { merchantId }
+          : {};
 
         const orders = await db.order.findMany({
-          where: { merchantId },
+          where: ordersWhere,
           include: {
+            merchant: {
+              select: { companyName: true, email: true },
+            },
             transactions: true,
             refunds: true,
           },
           orderBy: { createdAt: 'desc' },
+          take: 100,
         });
 
         return res.json({ orders });
