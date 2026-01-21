@@ -1223,8 +1223,8 @@
             }
 
             tbody.innerHTML = data.map(o => {
-                const feePercent = o.feePercent || 0.5;
-                const feeAmount = o.feeAmount || 0;
+                const feePercent = Number(o.feePercent) || 0.5;
+                const feeAmount = Number(o.feeAmount) || 0;
                 const showFee = o.status === 'CONFIRMED';
 
                 return `
@@ -1236,7 +1236,7 @@
                     <td class="px-4 py-4 text-sm font-medium text-white">$${Number(o.amount).toFixed(2)}</td>
                     <td class="px-4 py-4 text-sm text-slate-400">${feePercent.toFixed(2)}%</td>
                     <td class="px-4 py-4 text-sm ${showFee ? 'text-green-400 font-medium' : 'text-slate-500'}">
-                        ${showFee ? '$' + Number(feeAmount).toFixed(4) : '-'}
+                        ${showFee ? '$' + feeAmount.toFixed(4) : '-'}
                     </td>
                     <td class="px-4 py-4 text-sm text-slate-400">${o.chain}</td>
                     <td class="px-4 py-4">
