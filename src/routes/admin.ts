@@ -30,7 +30,7 @@ router.get('/', rateLimit({
           where: ordersWhere,
           include: {
             merchant: {
-              select: { companyName: true, email: true },
+              select: { companyName: true, email: true, plan: true },
             },
             transactions: true,
             refunds: true,
@@ -39,7 +39,15 @@ router.get('/', rateLimit({
           take: 100,
         });
 
-        return res.json({ orders });
+        // Format orders with fee info for display
+        const ordersWithFees = orders.map(order => ({
+          ...order,
+          amount: Number(order.amount),
+          feePercent: Number(order.feePercent) * 100, // Convert to percentage for display (0.005 -> 0.5%)
+          feeAmount: Number(order.feeAmount),
+        }));
+
+        return res.json({ orders: ordersWithFees });
 
       case 'wallets':
         if (merchantId && typeof merchantId === 'string') {

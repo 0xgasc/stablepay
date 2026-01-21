@@ -1112,6 +1112,50 @@ onMounted(() => {
                             </div>
                         </div>
 
+                        <!-- Fee Projection Card -->
+                        <div class="bg-slate-950 border border-slate-800 p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-lg font-semibold text-white">End of Period Projection</h3>
+                                <span id="projectionBadge" class="px-3 py-1 bg-purple-600/20 text-purple-400 text-sm font-medium rounded-full">Estimate</span>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div>
+                                    <p class="text-slate-400 text-sm">Days Elapsed</p>
+                                    <p id="daysElapsed" class="text-white font-medium">0</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-400 text-sm">Days Remaining</p>
+                                    <p id="daysRemaining" class="text-white font-medium">0</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-400 text-sm">Daily Avg Volume</p>
+                                    <p id="dailyAvgVolume" class="text-white font-medium">$0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-slate-400 text-sm">Daily Avg Fees</p>
+                                    <p id="dailyAvgFees" class="text-white font-medium">$0.00</p>
+                                </div>
+                            </div>
+                            <!-- Projection Summary -->
+                            <div class="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-600/30 p-4 rounded">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-slate-400 text-sm">Projected Volume</p>
+                                        <p id="projectedVolume" class="text-xl font-bold text-white">$0.00</p>
+                                        <p class="text-slate-500 text-xs">at end of billing period</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-sm">Projected Fees</p>
+                                        <p id="projectedFees" class="text-xl font-bold text-purple-400">$0.00</p>
+                                        <p class="text-slate-500 text-xs">based on current pace</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-slate-500 text-xs mt-3 text-center">
+                                * Projection based on daily average from current billing period
+                            </p>
+                        </div>
+
                         <!-- Pay Fees Section -->
                         <div class="bg-slate-950 border border-slate-800 p-6">
                             <h3 class="text-lg font-semibold text-white mb-4">Pay Fees</h3>
@@ -2025,6 +2069,9 @@ onMounted(() => {
                     }
                 }
 
+                // Calculate fee projections
+                calculateFeeProjections(currentFeeData);
+
                 // Store fee wallets for chain selection
                 currentFeeWallets = currentFeeData.feeWallets || [];
 
@@ -2097,6 +2144,59 @@ onMounted(() => {
                 'ETHEREUM_SEPOLIA': 'Ethereum Sepolia'
             };
             return names[chain] || chain;
+        }
+
+        // Calculate and display fee projections
+        function calculateFeeProjections(feeData) {
+            const now = new Date();
+
+            // Get period start date
+            let periodStart = now;
+            if (feeData.currentPeriod && feeData.currentPeriod.start) {
+                periodStart = new Date(feeData.currentPeriod.start);
+            }
+
+            // Get next billing date
+            let periodEnd = now;
+            if (feeData.billing && feeData.billing.nextBillingDate) {
+                periodEnd = new Date(feeData.billing.nextBillingDate);
+            }
+
+            // Calculate days
+            const msPerDay = 24 * 60 * 60 * 1000;
+            const daysElapsed = Math.max(1, Math.ceil((now - periodStart) / msPerDay));
+            const daysRemaining = Math.max(0, Math.ceil((periodEnd - now) / msPerDay));
+            const totalPeriodDays = daysElapsed + daysRemaining;
+
+            // Get current volume and fees
+            const currentVolume = feeData.currentPeriod?.volume || 0;
+            const currentFees = feeData.currentFees || 0;
+
+            // Calculate daily averages
+            const dailyAvgVolume = currentVolume / daysElapsed;
+            const dailyAvgFees = currentFees / daysElapsed;
+
+            // Project to end of period
+            const projectedVolume = dailyAvgVolume * totalPeriodDays;
+            const projectedFees = dailyAvgFees * totalPeriodDays;
+
+            // Update UI
+            document.getElementById('daysElapsed').textContent = daysElapsed;
+            document.getElementById('daysRemaining').textContent = daysRemaining;
+            document.getElementById('dailyAvgVolume').textContent = `$${dailyAvgVolume.toFixed(2)}`;
+            document.getElementById('dailyAvgFees').textContent = `$${dailyAvgFees.toFixed(2)}`;
+            document.getElementById('projectedVolume').textContent = `$${projectedVolume.toFixed(2)}`;
+            document.getElementById('projectedFees').textContent = `$${projectedFees.toFixed(2)}`;
+
+            // Update badge color based on projected fees (red if high)
+            const badge = document.getElementById('projectionBadge');
+            if (projectedFees > 100) {
+                badge.classList.remove('bg-purple-600/20', 'text-purple-400');
+                badge.classList.add('bg-yellow-600/20', 'text-yellow-400');
+            } else {
+                badge.classList.remove('bg-yellow-600/20', 'text-yellow-400');
+                badge.classList.add('bg-purple-600/20', 'text-purple-400');
+            }
         }
 
         // Update fee wallet display based on selected chain
