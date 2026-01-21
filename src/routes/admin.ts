@@ -97,10 +97,28 @@ router.get('/', rateLimit({
   }
 });
 
-// POST create merchant
+// POST create merchant or admin login
 router.post('/', async (req, res) => {
   try {
     const { resource } = req.query;
+
+    // Admin login - validates against ADMIN_KEY env var
+    if (resource === 'login') {
+      const { email, password } = req.body;
+      const adminKey = process.env.ADMIN_KEY;
+
+      // Simple validation: check if password matches ADMIN_KEY
+      if (password === adminKey) {
+        logger.info('Admin login successful', { email, event: 'admin.login_success' });
+        return res.json({
+          success: true,
+          token: adminKey // Return the key as the token for x-admin-key header
+        });
+      } else {
+        logger.warn('Admin login failed', { email, event: 'admin.login_failed' });
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+    }
 
     if (resource === 'merchants') {
       const { email, companyName, contactName, plan, networkMode, paymentMode, isActive } = req.body;
