@@ -382,10 +382,25 @@ export const PRICING_TIERS: Record<string, PricingTier> = {
     },
   },
   STARTER: {
-    name: 'Live',
+    name: 'Starter',
     monthlyFee: 0, // No subscription!
-    transactionFeePercent: 0.005, // 0.5% (Starter tier)
-    monthlyVolumeLimit: null, // Unlimited
+    transactionFeePercent: 0.01, // 1.0%
+    monthlyVolumeLimit: 10000, // Up to $10k/month
+    transactionLimit: null,
+    features: {
+      blockchains: 10,
+      refunds: true,
+      webhooks: true,
+      prioritySupport: false,
+      customBranding: true,
+      apiRateLimit: 10000,
+    },
+  },
+  GROWTH: {
+    name: 'Growth',
+    monthlyFee: 0,
+    transactionFeePercent: 0.008, // 0.8%
+    monthlyVolumeLimit: 50000, // Up to $50k/month
     transactionLimit: null,
     features: {
       blockchains: 10,
@@ -397,10 +412,10 @@ export const PRICING_TIERS: Record<string, PricingTier> = {
     },
   },
   PRO: {
-    name: 'Live',
+    name: 'Pro',
     monthlyFee: 0, // No subscription!
-    transactionFeePercent: 0.003, // 0.3% (Scale tier equivalent)
-    monthlyVolumeLimit: null,
+    transactionFeePercent: 0.005, // 0.5%
+    monthlyVolumeLimit: 250000, // Up to $250k/month
     transactionLimit: null,
     features: {
       blockchains: 10,
@@ -414,8 +429,8 @@ export const PRICING_TIERS: Record<string, PricingTier> = {
   ENTERPRISE: {
     name: 'Enterprise',
     monthlyFee: 0,
-    transactionFeePercent: 0.002, // 0.2% default, but custom rates apply
-    monthlyVolumeLimit: null,
+    transactionFeePercent: 0.003, // 0.3% (or custom)
+    monthlyVolumeLimit: null, // Unlimited
     transactionLimit: null,
     features: {
       blockchains: 10,
