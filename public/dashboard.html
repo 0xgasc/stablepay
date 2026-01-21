@@ -1422,15 +1422,11 @@ onMounted(() => {
                     <div class="text-xs text-blue-400 mb-4">
                         Connect the wallet that will send the refund to the customer
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button id="refundConnectMetaMask" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 px-4 py-3 rounded transition-colors">
-                            <div class="text-2xl mb-1">🦊</div>
-                            <div class="text-sm text-white">MetaMask</div>
-                        </button>
-                        <button id="refundConnectPhantom" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 px-4 py-3 rounded transition-colors">
-                            <div class="text-2xl mb-1">👻</div>
-                            <div class="text-sm text-white">Phantom</div>
-                        </button>
+                    <div id="refundWalletOptions" class="grid grid-cols-2 gap-3">
+                        <!-- Wallets will be populated dynamically -->
+                        <div class="col-span-2 text-center text-slate-400 text-sm py-4">
+                            Detecting wallets...
+                        </div>
                     </div>
                 </div>
 
@@ -3796,8 +3792,109 @@ onMounted(() => {
         // Refund State
         let refundWalletConnected = false;
         let refundWalletAddress = null;
-        let refundWalletType = null; // 'metamask' or 'phantom'
+        let refundWalletType = null; // 'evm' or 'solana'
+        let refundWalletProvider = null;
         let currentRefundOrder = null;
+        let detectedRefundWallets = [];
+
+        // EIP-6963 wallet detection for refunds
+        const refundEip6963Providers = new Map();
+        window.addEventListener('eip6963:announceProvider', (event) => {
+            const { info, provider } = event.detail;
+            refundEip6963Providers.set(info.rdns, { info, provider });
+        });
+        window.dispatchEvent(new Event('eip6963:requestProvider'));
+
+        // Detect wallets for refund modal
+        function detectRefundWallets() {
+            const wallets = [];
+
+            // EIP-6963 wallets (preferred)
+            refundEip6963Providers.forEach(({ info, provider }) => {
+                let icon = '🔗';
+                if (info.rdns?.includes('metamask')) icon = '🦊';
+                else if (info.rdns?.includes('phantom')) icon = '👻';
+                else if (info.rdns?.includes('coinbase')) icon = '🔵';
+                else if (info.rdns?.includes('rabby')) icon = '🐰';
+
+                wallets.push({
+                    name: info.name,
+                    icon: icon,
+                    provider: provider,
+                    type: 'evm',
+                    rdns: info.rdns
+                });
+            });
+
+            // Legacy fallback if no EIP-6963 wallets
+            if (!wallets.some(w => w.type === 'evm')) {
+                if (window.ethereum?.isMetaMask && !window.ethereum?.isPhantom) {
+                    wallets.push({ name: 'MetaMask', icon: '🦊', provider: window.ethereum, type: 'evm', rdns: 'io.metamask' });
+                }
+                if (window.phantom?.ethereum) {
+                    wallets.push({ name: 'Phantom (EVM)', icon: '👻', provider: window.phantom.ethereum, type: 'evm', rdns: 'app.phantom.evm' });
+                }
+            }
+
+            // Solana wallets
+            if (window.phantom?.solana || window.solana?.isPhantom) {
+                wallets.push({ name: 'Phantom (Solana)', icon: '👻', provider: window.phantom?.solana || window.solana, type: 'solana', rdns: 'app.phantom.solana' });
+            }
+
+            return wallets;
+        }
+
+        // Render wallet options in refund modal
+        function renderRefundWalletOptions() {
+            const container = document.getElementById('refundWalletOptions');
+            detectedRefundWallets = detectRefundWallets();
+
+            if (detectedRefundWallets.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-2 text-center text-slate-400 text-sm py-4">
+                        No wallets detected. Please install <a href="https://metamask.io" target="_blank" class="text-blue-400 underline">MetaMask</a> or <a href="https://phantom.app" target="_blank" class="text-blue-400 underline">Phantom</a>.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = detectedRefundWallets.map((wallet, index) => `
+                <button onclick="connectRefundWallet(${index})" class="bg-slate-900 hover:bg-slate-800 border border-slate-700 px-4 py-3 rounded transition-colors">
+                    <div class="text-2xl mb-1">${wallet.icon}</div>
+                    <div class="text-sm text-white">${wallet.name}</div>
+                </button>
+            `).join('');
+        }
+
+        // Connect a specific wallet for refund
+        window.connectRefundWallet = async function(walletIndex) {
+            const wallet = detectedRefundWallets[walletIndex];
+            if (!wallet) return;
+
+            try {
+                let address;
+                if (wallet.type === 'evm') {
+                    const accounts = await wallet.provider.request({ method: 'eth_requestAccounts' });
+                    address = accounts[0];
+                } else if (wallet.type === 'solana') {
+                    const resp = await wallet.provider.connect();
+                    address = resp.publicKey.toString();
+                }
+
+                refundWalletConnected = true;
+                refundWalletAddress = address;
+                refundWalletType = wallet.type;
+                refundWalletProvider = wallet.provider;
+
+                document.getElementById('refundConnectedAddress').textContent = address;
+                document.getElementById('refundWalletNotConnected').classList.add('hidden');
+                document.getElementById('refundWalletConnected').classList.remove('hidden');
+                document.getElementById('executeRefundBtn').disabled = false;
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                alert('Failed to connect wallet: ' + error.message);
+            }
+        };
 
         // Refund Functions
         window.openRefundModal = function(orderId, amount, chain) {
@@ -3821,69 +3918,24 @@ onMounted(() => {
             // Reset wallet connection state
             refundWalletConnected = false;
             refundWalletAddress = null;
+            refundWalletProvider = null;
             document.getElementById('refundWalletNotConnected').classList.remove('hidden');
             document.getElementById('refundWalletConnected').classList.add('hidden');
             document.getElementById('executeRefundBtn').disabled = true;
 
+            // Detect and render wallet options
+            renderRefundWalletOptions();
+
             // Show modal
             document.getElementById('refundModal').classList.remove('hidden');
         };
-
-        // Connect MetaMask for refund
-        document.getElementById('refundConnectMetaMask').addEventListener('click', async () => {
-            if (!window.ethereum) {
-                alert('MetaMask is not installed. Please install MetaMask to continue.');
-                return;
-            }
-
-            try {
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                const address = accounts[0];
-
-                refundWalletConnected = true;
-                refundWalletAddress = address;
-                refundWalletType = 'metamask';
-
-                document.getElementById('refundConnectedAddress').textContent = address;
-                document.getElementById('refundWalletNotConnected').classList.add('hidden');
-                document.getElementById('refundWalletConnected').classList.remove('hidden');
-                document.getElementById('executeRefundBtn').disabled = false;
-            } catch (error) {
-                console.error('MetaMask connection error:', error);
-                alert('Failed to connect MetaMask: ' + error.message);
-            }
-        });
-
-        // Connect Phantom for refund
-        document.getElementById('refundConnectPhantom').addEventListener('click', async () => {
-            if (!window.solana || !window.solana.isPhantom) {
-                alert('Phantom wallet is not installed. Please install Phantom to continue.');
-                return;
-            }
-
-            try {
-                const resp = await window.solana.connect();
-                const address = resp.publicKey.toString();
-
-                refundWalletConnected = true;
-                refundWalletAddress = address;
-                refundWalletType = 'phantom';
-
-                document.getElementById('refundConnectedAddress').textContent = address;
-                document.getElementById('refundWalletNotConnected').classList.add('hidden');
-                document.getElementById('refundWalletConnected').classList.remove('hidden');
-                document.getElementById('executeRefundBtn').disabled = false;
-            } catch (error) {
-                console.error('Phantom connection error:', error);
-                alert('Failed to connect Phantom: ' + error.message);
-            }
-        });
 
         // Disconnect refund wallet
         document.getElementById('refundDisconnectWallet').addEventListener('click', () => {
             refundWalletConnected = false;
             refundWalletAddress = null;
             refundWalletType = null;
+            refundWalletProvider = null;
 
             document.getElementById('refundWalletNotConnected').classList.remove('hidden');
             document.getElementById('refundWalletConnected').classList.add('hidden');
@@ -3969,10 +4021,10 @@ onMounted(() => {
 
                 // Step 2: Execute blockchain transaction
                 let txHash;
-                if (refundWalletType === 'metamask') {
-                    txHash = await executeEVMRefund(chain, customerWallet, amount);
-                } else if (refundWalletType === 'phantom') {
-                    txHash = await executeSolanaRefund(customerWallet, amount);
+                if (refundWalletType === 'evm') {
+                    txHash = await executeEVMRefund(chain, customerWallet, amount, refundWalletProvider);
+                } else if (refundWalletType === 'solana') {
+                    txHash = await executeSolanaRefund(customerWallet, amount, refundWalletProvider);
                 }
 
                 // Step 3: Update refund with transaction hash
@@ -4004,13 +4056,13 @@ onMounted(() => {
             }
         });
 
-        // Execute EVM refund (MetaMask)
-        async function executeEVMRefund(chain, recipientAddress, amount) {
-            if (!window.ethereum) {
-                throw new Error('MetaMask not found');
+        // Execute EVM refund
+        async function executeEVMRefund(chain, recipientAddress, amount, walletProvider) {
+            if (!walletProvider) {
+                throw new Error('No EVM wallet connected');
             }
 
-            const provider = new ethers.BrowserProvider(window.ethereum);
+            const provider = new ethers.BrowserProvider(walletProvider);
             const signer = await provider.getSigner();
 
             // Get USDC token address for the chain
@@ -4043,10 +4095,10 @@ onMounted(() => {
             return tx.hash;
         }
 
-        // Execute Solana refund (Phantom)
-        async function executeSolanaRefund(recipientAddress, amount) {
-            if (!window.solana || !window.solana.isPhantom) {
-                throw new Error('Phantom wallet not found');
+        // Execute Solana refund
+        async function executeSolanaRefund(recipientAddress, amount, walletProvider) {
+            if (!walletProvider) {
+                throw new Error('No Solana wallet connected');
             }
 
             const connection = new solanaWeb3.Connection(
@@ -4054,7 +4106,7 @@ onMounted(() => {
                 'confirmed'
             );
 
-            const fromWallet = window.solana.publicKey;
+            const fromWallet = walletProvider.publicKey;
             const toWallet = new solanaWeb3.PublicKey(recipientAddress);
 
             // USDC Mint on Solana (Devnet)
