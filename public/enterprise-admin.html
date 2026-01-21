@@ -1139,7 +1139,8 @@
                 const response = await fetch(`${API_BASE}/api/v1/admin?resource=orders`, { headers: { 'Authorization': getAuthHeader() } });
 
                 if (response.ok) {
-                    orders = await response.json();
+                    const data = await response.json();
+                    orders = data.orders || [];
                     renderOrders();
                 } else {
                     orders = [];
