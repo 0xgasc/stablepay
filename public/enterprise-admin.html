@@ -2210,7 +2210,7 @@
                 const statsResponse = await fetch(`${API_BASE}/api/v1/admin/stats`, {
                     headers: {
                         'Authorization': getAuthHeader(),
-                        'x-admin-key': localStorage.getItem('adminToken')
+                        'x-admin-key': sessionStorage.getItem('adminToken')
                     }
                 });
 
@@ -2225,7 +2225,7 @@
                 const paymentsResponse = await fetch(`${API_BASE}/api/v1/admin/fee-payments?status=PENDING`, {
                     headers: {
                         'Authorization': getAuthHeader(),
-                        'x-admin-key': localStorage.getItem('adminToken')
+                        'x-admin-key': sessionStorage.getItem('adminToken')
                     }
                 });
 
@@ -2348,7 +2348,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': getAuthHeader(),
-                        'x-admin-key': localStorage.getItem('adminToken')
+                        'x-admin-key': sessionStorage.getItem('adminToken')
                     }
                 });
 
@@ -2376,7 +2376,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': getAuthHeader(),
-                        'x-admin-key': localStorage.getItem('adminToken')
+                        'x-admin-key': sessionStorage.getItem('adminToken')
                     },
                     body: JSON.stringify({ reason })
                 });
