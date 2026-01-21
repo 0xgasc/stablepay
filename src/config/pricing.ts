@@ -28,7 +28,7 @@ export const PLAN_CONFIG = {
   STARTER: {
     name: 'Starter',
     description: 'Up to $10k/month',
-    feePercent: 0.005,           // 0.5%
+    feePercent: 0.01,            // 1.0%
     volumeLimit: 10000,
     billingCycleDays: 7,         // Weekly billing
     gracePeriodDays: 3,
@@ -37,7 +37,7 @@ export const PLAN_CONFIG = {
   GROWTH: {
     name: 'Growth',
     description: 'Up to $50k/month',
-    feePercent: 0.004,           // 0.4%
+    feePercent: 0.008,           // 0.8%
     volumeLimit: 50000,
     billingCycleDays: 14,        // Bi-weekly billing
     gracePeriodDays: 5,
@@ -46,7 +46,7 @@ export const PLAN_CONFIG = {
   PRO: {
     name: 'Pro',
     description: 'Up to $250k/month',
-    feePercent: 0.003,           // 0.3%
+    feePercent: 0.005,           // 0.5%
     volumeLimit: 250000,
     billingCycleDays: 30,        // Monthly billing
     gracePeriodDays: 7,
@@ -55,7 +55,7 @@ export const PLAN_CONFIG = {
   ENTERPRISE: {
     name: 'Enterprise',
     description: 'Unlimited volume',
-    feePercent: 0.002,           // 0.2% (or custom)
+    feePercent: 0.003,           // 0.3% (or custom)
     volumeLimit: null,           // Unlimited
     billingCycleDays: 30,        // Monthly (or Net-30)
     gracePeriodDays: 14,
@@ -133,10 +133,10 @@ export function shouldSuspend(
 
 // Volume-based fee tiers (for automatic tier progression display)
 export const VOLUME_TIERS = [
-  { name: 'Starter', minVolume: 0, maxVolume: 10000, feePercent: 0.005, plan: 'STARTER' },
-  { name: 'Growth', minVolume: 10000, maxVolume: 50000, feePercent: 0.004, plan: 'GROWTH' },
-  { name: 'Pro', minVolume: 50000, maxVolume: 250000, feePercent: 0.003, plan: 'PRO' },
-  { name: 'Enterprise', minVolume: 250000, maxVolume: Infinity, feePercent: 0.002, plan: 'ENTERPRISE' },
+  { name: 'Starter', minVolume: 0, maxVolume: 10000, feePercent: 0.01, plan: 'STARTER' },
+  { name: 'Growth', minVolume: 10000, maxVolume: 50000, feePercent: 0.008, plan: 'GROWTH' },
+  { name: 'Pro', minVolume: 50000, maxVolume: 250000, feePercent: 0.005, plan: 'PRO' },
+  { name: 'Enterprise', minVolume: 250000, maxVolume: Infinity, feePercent: 0.003, plan: 'ENTERPRISE' },
 ] as const;
 
 // Test mode limits (FREE plan)
