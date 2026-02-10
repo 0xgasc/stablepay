@@ -126,10 +126,15 @@ model Merchant {
   webhookEnabled        Boolean     @default(false)
   webhookEvents         String[]    @default([])   // Array of event types to send
 
+  // Receipt settings
+  autoSendReceipts      Boolean     @default(false)   // Auto-email receipts to customers
+
   wallets               MerchantWallet[]
   orders                Order[]
   feePayments           FeePayment[]
   webhookLogs           WebhookLog[]
+  invoices              Invoice[]
+  receipts              Receipt[]
 
   @@index([plan])
   @@index([networkMode])
@@ -175,6 +180,8 @@ model Order {
   merchant        Merchant?   @relation(fields: [merchantId], references: [id])
   transactions    Transaction[]
   refunds         Refund[]
+  invoice         Invoice?
+  receipt         Receipt?
 
   @@index([merchantId])
   @@map("orders")
@@ -242,6 +249,26 @@ enum FeePaymentStatus {
   @@schema("public")
 }
 
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PAID
+  OVERDUE
+  CANCELLED
+
+  @@schema("public")
+}
+
+enum ReceiptDeliveryStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+
+  @@schema("public")
+}
+
 model FeePayment {
   id              String           @id @default(cuid())
   merchantId      String
@@ -298,6 +325,108 @@ model WebhookLog {
   @@index([event])
   @@index([nextRetryAt])
   @@map("webhook_logs")
+  @@schema("public")
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  merchantId        String
+  invoiceNumber     String        @unique           // e.g., "INV-2026-0001"
+
+  // Customer info
+  customerEmail     String?
+  customerName      String?
+  customerAddress   String?
+
+  // Financial
+  subtotal          Decimal       @db.Decimal(18, 6)
+  taxPercent        Decimal       @default(0) @db.Decimal(5, 4)
+  taxAmount         Decimal       @default(0) @db.Decimal(18, 6)
+  discountPercent   Decimal       @default(0) @db.Decimal(5, 4)
+  discountAmount    Decimal       @default(0) @db.Decimal(18, 6)
+  total             Decimal       @db.Decimal(18, 6)
+
+  // Payment preferences
+  chain             Chain?                          // Preferred chain (optional)
+  token             String        @default("USDC")
+  paymentAddress    String?                         // Merchant's wallet for this chain
+
+  // Status tracking
+  status            InvoiceStatus @default(DRAFT)
+  dueDate           DateTime?
+  sentAt            DateTime?
+  viewedAt          DateTime?
+  paidAt            DateTime?
+
+  // Linking to order when paid
+  orderId           String?       @unique
+
+  // Notes
+  notes             String?                         // Internal notes
+  customerNotes     String?                         // Notes visible to customer
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  merchant          Merchant      @relation(fields: [merchantId], references: [id])
+  order             Order?        @relation(fields: [orderId], references: [id])
+  lineItems         InvoiceLineItem[]
+
+  @@index([merchantId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("invoices")
+  @@schema("public")
+}
+
+model InvoiceLineItem {
+  id              String    @id @default(cuid())
+  invoiceId       String
+  description     String
+  quantity        Int       @default(1)
+  unitPrice       Decimal   @db.Decimal(18, 6)
+  amount          Decimal   @db.Decimal(18, 6)      // quantity * unitPrice
+  createdAt       DateTime  @default(now())
+
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_line_items")
+  @@schema("public")
+}
+
+model Receipt {
+  id                  String                @id @default(cuid())
+  orderId             String                @unique
+  merchantId          String
+  receiptNumber       String                @unique   // e.g., "RCP-2026-0001"
+
+  // Payment details (denormalized for historical record)
+  amount              Decimal               @db.Decimal(18, 6)
+  token               String                @default("USDC")
+  chain               Chain
+  txHash              String?
+
+  // Merchant info (denormalized)
+  merchantName        String
+
+  // Customer info
+  customerEmail       String?
+  customerName        String?
+
+  // Email delivery
+  emailStatus         ReceiptDeliveryStatus @default(PENDING)
+  emailSentAt         DateTime?
+
+  // Timestamps
+  paymentDate         DateTime                        // When payment was confirmed
+  createdAt           DateTime              @default(now())
+
+  order               Order                 @relation(fields: [orderId], references: [id])
+  merchant            Merchant              @relation(fields: [merchantId], references: [id])
+
+  @@index([merchantId])
+  @@index([paymentDate])
+  @@map("receipts")
   @@schema("public")
 }
 

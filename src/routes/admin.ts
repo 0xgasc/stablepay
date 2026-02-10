@@ -6,8 +6,20 @@ import { rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 
+// Middleware to check admin key - accepts x-admin-key header, Authorization Bearer, or body.adminKey
+const requireAdminKey = (req: any, res: any, next: any) => {
+  const authHeader = req.headers['authorization'];
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const adminKey = req.headers['x-admin-key'] || bearerToken || req.body?.adminKey;
+
+  if (adminKey !== process.env.ADMIN_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+};
+
 // GET admin resources (orders, wallets, merchants)
-router.get('/', rateLimit({
+router.get('/', requireAdminKey, rateLimit({
   getMerchantId: async (req) => req.query.merchantId as string || null,
   limitAnonymous: true,
   anonymousLimit: 20
@@ -102,7 +114,7 @@ router.post('/', async (req, res) => {
   try {
     const { resource } = req.query;
 
-    // Admin login - validates against ADMIN_KEY env var
+    // Admin login - validates against ADMIN_KEY env var (no auth required for login)
     if (resource === 'login') {
       const { email, password } = req.body;
       const adminKey = process.env.ADMIN_KEY;
@@ -118,6 +130,14 @@ router.post('/', async (req, res) => {
         logger.warn('Admin login failed', { email, event: 'admin.login_failed' });
         return res.status(401).json({ error: 'Invalid credentials' });
       }
+    }
+
+    // For non-login resources, verify admin key
+    const authHeader = req.headers['authorization'] as string | undefined;
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const adminKey = req.headers['x-admin-key'] || bearerToken || req.body?.adminKey;
+    if (adminKey !== process.env.ADMIN_KEY) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     if (resource === 'merchants') {
@@ -242,7 +262,7 @@ router.post('/', async (req, res) => {
 });
 
 // POST/PUT wallets
-router.post('/wallets', async (req, res) => {
+router.post('/wallets', requireAdminKey, async (req, res) => {
   try {
     const { merchantId, wallets } = req.body;
 
@@ -322,7 +342,7 @@ router.post('/wallets', async (req, res) => {
 });
 
 // PUT update merchant
-router.put('/', async (req, res) => {
+router.put('/', requireAdminKey, async (req, res) => {
   try {
     const { resource } = req.query;
 
@@ -380,7 +400,7 @@ router.put('/', async (req, res) => {
 });
 
 // DELETE merchant
-router.delete('/', async (req, res) => {
+router.delete('/', requireAdminKey, async (req, res) => {
   try {
     const { resource } = req.query;
     const { merchantId } = req.body;
@@ -406,15 +426,6 @@ router.delete('/', async (req, res) => {
 // ============================================================================
 // PLATFORM WALLETS (Fee Collection) - Protected by ADMIN_KEY
 // ============================================================================
-
-// Middleware to check admin key
-const requireAdminKey = (req: any, res: any, next: any) => {
-  const adminKey = req.headers['x-admin-key'] || req.body?.adminKey;
-  if (adminKey !== process.env.ADMIN_KEY) {
-    return res.status(401).json({ error: 'Unauthorized - Admin key required' });
-  }
-  next();
-};
 
 // Get all platform wallets (for fee collection)
 // Admin view returns ALL wallets (including inactive) so admin can reactivate them

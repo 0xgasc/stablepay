@@ -5,6 +5,8 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { canProcessPayment, calculateFee, getVolumeTier, getTransactionFeePercent } from '../config/pricing';
 import { logger } from '../utils/logger';
 import { webhookService } from './webhookService';
+import { receiptService } from './receiptService';
+import { emailService } from './emailService';
 
 export class OrderService {
   async createOrder(data: CreateOrderRequest): Promise<CreateOrderResponse> {
@@ -331,6 +333,40 @@ export class OrderService {
       }).catch(err => {
         logger.error('Failed to send order.confirmed webhook', err as Error, { orderId });
       });
+
+      // Auto-create receipt
+      try {
+        const receipt = await receiptService.createReceipt(orderId);
+
+        // Send receipt.created webhook
+        webhookService.sendWebhook(confirmedOrder.merchantId, 'receipt.created', {
+          receiptId: receipt.id,
+          receiptNumber: receipt.receiptNumber,
+          orderId,
+          amount: orderAmount,
+          customerEmail: confirmedOrder.customerEmail,
+        }).catch(err => {
+          logger.error('Failed to send receipt.created webhook', err as Error, { orderId });
+        });
+
+        // Auto-send email if merchant has it enabled
+        if (confirmedOrder.merchant.autoSendReceipts && receipt.customerEmail) {
+          emailService.sendReceipt(receipt.id).catch(err => {
+            logger.error('Failed to auto-send receipt email', err as Error, { receiptId: receipt.id });
+          });
+        }
+
+        logger.info('Receipt auto-created for order', {
+          receiptId: receipt.id,
+          receiptNumber: receipt.receiptNumber,
+          orderId,
+          merchantId: confirmedOrder.merchantId,
+          event: 'receipt.auto_created'
+        });
+      } catch (receiptError) {
+        // Don't fail the order confirmation if receipt creation fails
+        logger.error('Failed to auto-create receipt', receiptError as Error, { orderId });
+      }
     }
 
     // Convert BigInt values to numbers for JSON serialization

@@ -1,9 +1,18 @@
-import { Chain as PrismaChain, OrderStatus as PrismaOrderStatus, TransactionStatus as PrismaTransactionStatus, RefundStatus as PrismaRefundStatus } from '@prisma/client';
+import {
+  Chain as PrismaChain,
+  OrderStatus as PrismaOrderStatus,
+  TransactionStatus as PrismaTransactionStatus,
+  RefundStatus as PrismaRefundStatus,
+  InvoiceStatus as PrismaInvoiceStatus,
+  ReceiptDeliveryStatus as PrismaReceiptDeliveryStatus
+} from '@prisma/client';
 
 export type Chain = PrismaChain;
 export type OrderStatus = PrismaOrderStatus;
 export type TransactionStatus = PrismaTransactionStatus;
 export type RefundStatus = PrismaRefundStatus;
+export type InvoiceStatus = PrismaInvoiceStatus;
+export type ReceiptDeliveryStatus = PrismaReceiptDeliveryStatus;
 
 export interface CreateOrderRequest {
   amount: number;
@@ -47,4 +56,118 @@ export interface TransactionInfo {
   confirmations: number;
   blockNumber?: number;
   blockTimestamp?: string;
+}
+
+// Invoice types
+export interface LineItemInput {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface CreateInvoiceRequest {
+  merchantId: string;
+  customerEmail?: string;
+  customerName?: string;
+  customerAddress?: string;
+  chain?: Chain;
+  token?: string;
+  dueDate?: string;
+  notes?: string;
+  customerNotes?: string;
+  taxPercent?: number;
+  discountPercent?: number;
+  lineItems: LineItemInput[];
+}
+
+export interface UpdateInvoiceRequest {
+  customerEmail?: string;
+  customerName?: string;
+  customerAddress?: string;
+  chain?: Chain;
+  token?: string;
+  dueDate?: string;
+  notes?: string;
+  customerNotes?: string;
+  taxPercent?: number;
+  discountPercent?: number;
+  lineItems?: LineItemInput[];
+}
+
+export interface InvoiceLineItemResponse {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface InvoiceResponse {
+  id: string;
+  invoiceNumber: string;
+  merchantId: string;
+  customerEmail?: string;
+  customerName?: string;
+  customerAddress?: string;
+  subtotal: number;
+  taxPercent: number;
+  taxAmount: number;
+  discountPercent: number;
+  discountAmount: number;
+  total: number;
+  chain?: Chain;
+  token: string;
+  paymentAddress?: string;
+  status: InvoiceStatus;
+  dueDate?: string;
+  sentAt?: string;
+  viewedAt?: string;
+  paidAt?: string;
+  orderId?: string;
+  notes?: string;
+  customerNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  lineItems: InvoiceLineItemResponse[];
+  paymentUrl?: string;
+}
+
+export interface InvoiceFilters {
+  status?: InvoiceStatus;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface InvoiceStats {
+  total: number;
+  draft: number;
+  sent: number;
+  paid: number;
+  overdue: number;
+  totalAmount: number;
+  paidAmount: number;
+}
+
+// Receipt types
+export interface ReceiptResponse {
+  id: string;
+  receiptNumber: string;
+  orderId: string;
+  merchantId: string;
+  merchantName: string;
+  amount: number;
+  token: string;
+  chain: Chain;
+  txHash?: string;
+  customerEmail?: string;
+  customerName?: string;
+  emailStatus: ReceiptDeliveryStatus;
+  emailSentAt?: string;
+  paymentDate: string;
+  createdAt: string;
+}
+
+export interface ReceiptFilters {
+  startDate?: string;
+  endDate?: string;
 }

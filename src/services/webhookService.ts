@@ -7,7 +7,15 @@ export type WebhookEventType =
   | 'order.confirmed'
   | 'order.expired'
   | 'refund.requested'
-  | 'refund.processed';
+  | 'refund.processed'
+  | 'invoice.created'
+  | 'invoice.sent'
+  | 'invoice.viewed'
+  | 'invoice.paid'
+  | 'invoice.overdue'
+  | 'invoice.cancelled'
+  | 'receipt.created'
+  | 'receipt.sent';
 
 interface WebhookPayload {
   event: WebhookEventType;

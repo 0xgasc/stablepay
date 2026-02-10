@@ -13,6 +13,14 @@ const VALID_EVENTS: WebhookEventType[] = [
   'order.expired',
   'refund.requested',
   'refund.processed',
+  'invoice.created',
+  'invoice.sent',
+  'invoice.viewed',
+  'invoice.paid',
+  'invoice.overdue',
+  'invoice.cancelled',
+  'receipt.created',
+  'receipt.sent',
 ];
 
 // Middleware to verify merchant auth token

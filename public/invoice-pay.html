@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#FFFFFF">
+    <title>Pay Invoice - StablePay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        body { background: #FFFFFF; }
+        body.night-mode { background: #1a1a1a; color: #fff; }
+        body.night-mode .bg-white { background: #000 !important; }
+        body.night-mode .text-black { color: #fff !important; }
+        body.night-mode .text-gray-600 { color: #aaa !important; }
+        body.night-mode .text-gray-500 { color: #888 !important; }
+        body.night-mode .border-black { border-color: #fff !important; }
+        body.night-mode .shadow-brutal { box-shadow: 8px 8px 0px #fff !important; }
+        .brutal-border { border: 4px solid #000; }
+        .shadow-brutal { box-shadow: 8px 8px 0px #000; }
+        .btn-brutal {
+            border: 4px solid #000;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        .btn-brutal:hover {
+            transform: translate(4px, 4px);
+            box-shadow: 4px 4px 0px #000;
+        }
+        body.night-mode .btn-brutal { border-color: #fff; }
+        body.night-mode .btn-brutal:hover { box-shadow: 4px 4px 0px #fff; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border: 2px solid #000;
+        }
+        .status-sent { background: #3B82F6; color: white; }
+        .status-viewed { background: #8B5CF6; color: white; }
+        .status-paid { background: #10B981; color: white; }
+        .status-overdue { background: #EF4444; color: white; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .loading { animation: pulse 2s ease-in-out infinite; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <header class="bg-white brutal-border border-t-0 border-l-0 border-r-0 p-4">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="text-2xl font-bold text-black tracking-tight">STABLEPAY</div>
+            <button onclick="toggleTheme()" class="p-2 brutal-border bg-white hover:bg-gray-100">
+                <span id="themeIcon">🌙</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-2xl mx-auto p-4 mt-8">
+        <!-- Loading State -->
+        <div id="loadingState" class="bg-white brutal-border shadow-brutal p-8 text-center">
+            <div class="text-6xl mb-4 loading">📄</div>
+            <p class="text-black font-bold text-xl">Loading Invoice...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden bg-white brutal-border shadow-brutal p-8 text-center">
+            <div class="text-6xl mb-4">❌</div>
+            <p class="text-black font-bold text-xl mb-2">Invoice Not Found</p>
+            <p id="errorMessage" class="text-gray-600">The invoice you're looking for doesn't exist or has been cancelled.</p>
+        </div>
+
+        <!-- Already Paid State -->
+        <div id="paidState" class="hidden bg-white brutal-border shadow-brutal p-8 text-center">
+            <div class="text-6xl mb-4">✅</div>
+            <p class="text-black font-bold text-xl mb-2">Already Paid</p>
+            <p class="text-gray-600 mb-4">This invoice has already been paid. Thank you!</p>
+            <a href="/" class="btn-brutal bg-black text-white px-6 py-3 inline-block">Go Home</a>
+        </div>
+
+        <!-- Invoice Display -->
+        <div id="invoiceState" class="hidden">
+            <!-- Invoice Header -->
+            <div class="bg-white brutal-border shadow-brutal p-6 mb-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h1 class="text-3xl font-bold text-black">INVOICE</h1>
+                        <p id="invoiceNumber" class="text-gray-600 font-mono mt-1"></p>
+                    </div>
+                    <span id="invoiceStatus" class="status-badge"></span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <p class="text-sm text-gray-500 uppercase font-bold mb-1">From</p>
+                        <p id="merchantName" class="text-black font-bold"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 uppercase font-bold mb-1">Bill To</p>
+                        <p id="customerName" class="text-black font-bold"></p>
+                        <p id="customerEmail" class="text-gray-600 text-sm"></p>
+                    </div>
+                </div>
+
+                <div id="dueDate" class="text-sm text-gray-600 mb-4 hidden">
+                    <span class="font-bold">Due Date:</span> <span id="dueDateValue"></span>
+                </div>
+            </div>
+
+            <!-- Line Items -->
+            <div class="bg-white brutal-border shadow-brutal p-6 mb-6">
+                <h2 class="font-bold text-black mb-4 uppercase">Items</h2>
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="text-left py-2 font-bold">Description</th>
+                            <th class="text-center py-2 font-bold w-20">Qty</th>
+                            <th class="text-right py-2 font-bold w-24">Price</th>
+                            <th class="text-right py-2 font-bold w-24">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lineItems"></tbody>
+                </table>
+
+                <!-- Totals -->
+                <div class="mt-6 pt-4 border-t-2 border-black">
+                    <div class="flex justify-between py-1">
+                        <span class="text-gray-600">Subtotal</span>
+                        <span id="subtotal" class="font-bold"></span>
+                    </div>
+                    <div id="taxRow" class="hidden flex justify-between py-1">
+                        <span class="text-gray-600">Tax (<span id="taxPercent"></span>%)</span>
+                        <span id="taxAmount" class="font-bold"></span>
+                    </div>
+                    <div id="discountRow" class="hidden flex justify-between py-1">
+                        <span class="text-gray-600">Discount (<span id="discountPercent"></span>%)</span>
+                        <span id="discountAmount" class="font-bold text-green-600">-</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-t-2 border-black mt-2">
+                        <span class="text-xl font-bold">TOTAL</span>
+                        <span id="total" class="text-xl font-bold"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Notes -->
+            <div id="notesSection" class="hidden bg-yellow-50 brutal-border p-4 mb-6">
+                <p class="font-bold text-black mb-1">Note from merchant:</p>
+                <p id="customerNotes" class="text-gray-700"></p>
+            </div>
+
+            <!-- Payment Section -->
+            <div class="bg-white brutal-border shadow-brutal p-6">
+                <h2 class="font-bold text-black mb-4 uppercase">Payment</h2>
+
+                <!-- Chain Selection -->
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-600 mb-2">Select Network</label>
+                    <select id="chainSelect" class="w-full p-3 brutal-border bg-white text-black font-bold">
+                        <option value="">Loading chains...</option>
+                    </select>
+                </div>
+
+                <!-- Connect Wallet -->
+                <div id="connectSection">
+                    <button id="connectWalletBtn" onclick="connectWallet()" class="w-full btn-brutal bg-black text-white py-4 shadow-brutal">
+                        CONNECT WALLET
+                    </button>
+                </div>
+
+                <!-- Payment Ready -->
+                <div id="paymentSection" class="hidden">
+                    <div class="bg-gray-100 p-4 brutal-border mb-4">
+                        <p class="text-sm text-gray-600 mb-1">Connected Wallet</p>
+                        <p id="walletAddress" class="font-mono text-sm text-black truncate"></p>
+                    </div>
+                    <button id="payNowBtn" onclick="payInvoice()" class="w-full btn-brutal bg-green-500 text-white py-4 shadow-brutal">
+                        PAY NOW
+                    </button>
+                </div>
+
+                <!-- Processing -->
+                <div id="processingSection" class="hidden text-center py-8">
+                    <div class="text-4xl mb-4 loading">⏳</div>
+                    <p class="text-black font-bold">Processing Payment...</p>
+                    <p class="text-gray-600 text-sm mt-2">Please confirm the transaction in your wallet</p>
+                </div>
+
+                <!-- Success -->
+                <div id="successSection" class="hidden text-center py-8">
+                    <div class="text-6xl mb-4">✅</div>
+                    <p class="text-black font-bold text-xl mb-2">Payment Successful!</p>
+                    <p class="text-gray-600 mb-4">Your payment has been confirmed.</p>
+                    <a id="txLink" href="#" target="_blank" class="text-blue-600 underline text-sm">View Transaction</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-8 mt-8">
+        <p class="text-gray-500 text-sm">Powered by <span class="font-bold">StablePay</span></p>
+    </footer>
+
+    <script>
+        // State
+        let invoice = null;
+        let order = null;
+        let provider = null;
+        let signer = null;
+        let connectedAddress = null;
+
+        // USDC Contract Addresses (6 decimals)
+        const USDC_ADDRESSES = {
+            'BASE_SEPOLIA': '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+            'BASE_MAINNET': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+            'ETHEREUM_SEPOLIA': '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+            'ETHEREUM_MAINNET': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+        };
+
+        // Chain configs
+        const CHAIN_CONFIGS = {
+            'BASE_SEPOLIA': { chainId: '0x14a34', name: 'Base Sepolia', rpc: 'https://sepolia.base.org', explorer: 'https://sepolia.basescan.org' },
+            'BASE_MAINNET': { chainId: '0x2105', name: 'Base', rpc: 'https://mainnet.base.org', explorer: 'https://basescan.org' },
+            'ETHEREUM_SEPOLIA': { chainId: '0xaa36a7', name: 'Ethereum Sepolia', rpc: 'https://sepolia.infura.io/v3/public', explorer: 'https://sepolia.etherscan.io' },
+            'ETHEREUM_MAINNET': { chainId: '0x1', name: 'Ethereum', rpc: 'https://eth.llamarpc.com', explorer: 'https://etherscan.io' },
+        };
+
+        // Get invoice ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const invoiceId = window.location.pathname.split('/').pop() || urlParams.get('id');
+
+        // Theme toggle
+        function toggleTheme() {
+            document.body.classList.toggle('night-mode');
+            const icon = document.getElementById('themeIcon');
+            icon.textContent = document.body.classList.contains('night-mode') ? '☀️' : '🌙';
+            localStorage.setItem('theme', document.body.classList.contains('night-mode') ? 'night' : 'day');
+        }
+
+        // Load saved theme
+        if (localStorage.getItem('theme') === 'night') {
+            document.body.classList.add('night-mode');
+            document.getElementById('themeIcon').textContent = '☀️';
+        }
+
+        // Load invoice
+        async function loadInvoice() {
+            if (!invoiceId) {
+                showError('No invoice ID provided');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/pay/${invoiceId}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    if (data.alreadyPaid) {
+                        showPaid();
+                        return;
+                    }
+                    throw new Error(data.error || 'Invoice not found');
+                }
+
+                invoice = data.invoice;
+                renderInvoice(data.availableChains || []);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function showPaid() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('paidState').classList.remove('hidden');
+        }
+
+        function renderInvoice(availableChains) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('invoiceState').classList.remove('hidden');
+
+            // Header info
+            document.getElementById('invoiceNumber').textContent = invoice.invoiceNumber;
+            document.getElementById('merchantName').textContent = invoice.merchantName || 'Merchant';
+            document.getElementById('customerName').textContent = invoice.customerName || 'Customer';
+            document.getElementById('customerEmail').textContent = invoice.customerEmail || '';
+
+            // Status badge
+            const statusEl = document.getElementById('invoiceStatus');
+            statusEl.textContent = invoice.status;
+            statusEl.className = 'status-badge status-' + invoice.status.toLowerCase();
+
+            // Due date
+            if (invoice.dueDate) {
+                document.getElementById('dueDate').classList.remove('hidden');
+                document.getElementById('dueDateValue').textContent = new Date(invoice.dueDate).toLocaleDateString();
+            }
+
+            // Line items
+            const lineItemsEl = document.getElementById('lineItems');
+            lineItemsEl.innerHTML = invoice.lineItems.map(item => `
+                <tr class="border-b border-gray-200">
+                    <td class="py-2">${item.description}</td>
+                    <td class="text-center py-2">${item.quantity}</td>
+                    <td class="text-right py-2">$${item.unitPrice.toFixed(2)}</td>
+                    <td class="text-right py-2">$${item.amount.toFixed(2)}</td>
+                </tr>
+            `).join('');
+
+            // Totals
+            document.getElementById('subtotal').textContent = `$${invoice.subtotal.toFixed(2)}`;
+            document.getElementById('total').textContent = `$${invoice.total.toFixed(2)} ${invoice.token}`;
+
+            if (invoice.taxAmount > 0) {
+                document.getElementById('taxRow').classList.remove('hidden');
+                document.getElementById('taxPercent').textContent = (invoice.taxPercent * 100).toFixed(1);
+                document.getElementById('taxAmount').textContent = `$${invoice.taxAmount.toFixed(2)}`;
+            }
+
+            if (invoice.discountAmount > 0) {
+                document.getElementById('discountRow').classList.remove('hidden');
+                document.getElementById('discountPercent').textContent = (invoice.discountPercent * 100).toFixed(1);
+                document.getElementById('discountAmount').textContent = `-$${invoice.discountAmount.toFixed(2)}`;
+            }
+
+            // Notes
+            if (invoice.customerNotes) {
+                document.getElementById('notesSection').classList.remove('hidden');
+                document.getElementById('customerNotes').textContent = invoice.customerNotes;
+            }
+
+            // Chain selection
+            const chainSelect = document.getElementById('chainSelect');
+            chainSelect.innerHTML = availableChains.map(chain => {
+                const config = CHAIN_CONFIGS[chain];
+                return `<option value="${chain}">${config?.name || chain}</option>`;
+            }).join('');
+
+            if (availableChains.length === 0) {
+                chainSelect.innerHTML = '<option value="">No payment networks available</option>';
+            }
+        }
+
+        async function connectWallet() {
+            if (!window.ethereum) {
+                alert('Please install MetaMask to make payments');
+                return;
+            }
+
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send('eth_requestAccounts', []);
+                signer = await provider.getSigner();
+                connectedAddress = await signer.getAddress();
+
+                document.getElementById('walletAddress').textContent = connectedAddress;
+                document.getElementById('connectSection').classList.add('hidden');
+                document.getElementById('paymentSection').classList.remove('hidden');
+            } catch (error) {
+                console.error('Failed to connect wallet:', error);
+                alert('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        async function payInvoice() {
+            const selectedChain = document.getElementById('chainSelect').value;
+            if (!selectedChain) {
+                alert('Please select a payment network');
+                return;
+            }
+
+            const chainConfig = CHAIN_CONFIGS[selectedChain];
+            if (!chainConfig) {
+                alert('Invalid chain selected');
+                return;
+            }
+
+            try {
+                // Show processing
+                document.getElementById('paymentSection').classList.add('hidden');
+                document.getElementById('processingSection').classList.remove('hidden');
+
+                // Switch to correct network
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: chainConfig.chainId }],
+                    });
+                } catch (switchError) {
+                    if (switchError.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: chainConfig.chainId,
+                                chainName: chainConfig.name,
+                                rpcUrls: [chainConfig.rpc],
+                                blockExplorerUrls: [chainConfig.explorer],
+                            }],
+                        });
+                    } else {
+                        throw switchError;
+                    }
+                }
+
+                // Refresh provider after network switch
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+
+                // Create order from invoice
+                const orderResponse = await fetch(`/api/pay/${invoiceId}/order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chain: selectedChain })
+                });
+
+                if (!orderResponse.ok) {
+                    const error = await orderResponse.json();
+                    throw new Error(error.error || 'Failed to create order');
+                }
+
+                const orderData = await orderResponse.json();
+                order = orderData.order;
+
+                // Get USDC contract
+                const usdcAddress = USDC_ADDRESSES[selectedChain];
+                if (!usdcAddress) {
+                    throw new Error('USDC not supported on this network');
+                }
+
+                const usdcAbi = [
+                    'function transfer(address to, uint256 amount) returns (bool)',
+                    'function balanceOf(address account) view returns (uint256)',
+                    'function decimals() view returns (uint8)'
+                ];
+
+                const usdc = new ethers.Contract(usdcAddress, usdcAbi, signer);
+                const decimals = await usdc.decimals();
+                const amount = ethers.parseUnits(order.amount.toString(), decimals);
+
+                // Check balance
+                const balance = await usdc.balanceOf(connectedAddress);
+                if (balance < amount) {
+                    throw new Error(`Insufficient USDC balance. You have ${ethers.formatUnits(balance, decimals)} USDC`);
+                }
+
+                // Send payment
+                const tx = await usdc.transfer(order.paymentAddress, amount);
+                console.log('Transaction sent:', tx.hash);
+
+                // Wait for confirmation
+                const receipt = await tx.wait();
+                console.log('Transaction confirmed:', receipt);
+
+                // Confirm order
+                await fetch('/api/orders-confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orderId: order.id,
+                        txHash: tx.hash,
+                        blockNumber: receipt.blockNumber
+                    })
+                });
+
+                // Show success
+                document.getElementById('processingSection').classList.add('hidden');
+                document.getElementById('successSection').classList.remove('hidden');
+                document.getElementById('txLink').href = `${chainConfig.explorer}/tx/${tx.hash}`;
+
+            } catch (error) {
+                console.error('Payment failed:', error);
+                document.getElementById('processingSection').classList.add('hidden');
+                document.getElementById('paymentSection').classList.remove('hidden');
+                alert('Payment failed: ' + error.message);
+            }
+        }
+
+        // Load invoice on page load
+        loadInvoice();
+    </script>
+</body>
+</html>

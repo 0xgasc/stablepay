@@ -11,6 +11,9 @@ import { authRouter } from './routes/auth';
 import { healthRouter } from './routes/health';
 import { feesRouter } from './routes/fees';
 import { webhooksRouter } from './routes/webhooks';
+import { invoicesRouter, invoicePayRouter } from './routes/invoices';
+import { receiptsRouter } from './routes/receipts';
+import { embedRouter } from './routes/embed';
 import { validateEnv } from './utils/env';
 import { OrderService } from './services/orderService';
 import { logger } from './utils/logger';
@@ -54,15 +57,24 @@ app.use(express.json());
 // Serve static files from public directory
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
+// Serve invoice payment page at /pay/:invoiceId
+app.get('/pay/:invoiceId', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'invoice-pay.html'));
+});
+
 // Health checks (no /api prefix for Kubernetes/Docker health probes)
 app.use('/health', healthRouter);
 
 // API routes
 app.use('/api/orders', ordersRouter);
 app.use('/api/refunds', refundsRouter);
+app.use('/api/invoices', invoicesRouter);
+app.use('/api/receipts', receiptsRouter);
+app.use('/api/pay', invoicePayRouter);  // Public invoice payment endpoint
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/fees', feesRouter);
 app.use('/api/webhooks', webhooksRouter);
+app.use('/api/embed', embedRouter);  // Embeddable widget endpoints
 app.use('/api', authRouter);
 
 // Simple orders endpoint for test payments
