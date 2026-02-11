@@ -6,8 +6,8 @@ import { rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 
-// Get the admin key from environment (support both ADMIN_KEY and ADMIN_PASSWORD)
-const getAdminKey = () => process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD;
+// Get the admin key from environment (support ADMIN_KEY, ADMIN_PASSWORD, or ADMIN_API_TOKEN)
+const getAdminKey = () => process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN;
 
 // Middleware to check admin key - accepts x-admin-key header, Authorization Bearer, or body.adminKey
 const requireAdminKey = (req: any, res: any, next: any) => {
