@@ -6,13 +6,16 @@ import { rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 
+// Get the admin key from environment (support both ADMIN_KEY and ADMIN_PASSWORD)
+const getAdminKey = () => process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD;
+
 // Middleware to check admin key - accepts x-admin-key header, Authorization Bearer, or body.adminKey
 const requireAdminKey = (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  const adminKey = req.headers['x-admin-key'] || bearerToken || req.body?.adminKey;
+  const providedKey = req.headers['x-admin-key'] || bearerToken || req.body?.adminKey;
 
-  if (adminKey !== process.env.ADMIN_KEY) {
+  if (providedKey !== getAdminKey()) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
@@ -114,17 +117,17 @@ router.post('/', async (req, res) => {
   try {
     const { resource } = req.query;
 
-    // Admin login - validates against ADMIN_KEY env var (no auth required for login)
+    // Admin login - validates against ADMIN_KEY/ADMIN_PASSWORD env var (no auth required for login)
     if (resource === 'login') {
       const { email, password } = req.body;
-      const adminKey = process.env.ADMIN_KEY;
+      const expectedKey = getAdminKey();
 
-      // Simple validation: check if password matches ADMIN_KEY
-      if (password === adminKey) {
+      // Simple validation: check if password matches admin key
+      if (password === expectedKey) {
         logger.info('Admin login successful', { email, event: 'admin.login_success' });
         return res.json({
           success: true,
-          token: adminKey // Return the key as the token for x-admin-key header
+          token: expectedKey // Return the key as the token for x-admin-key header
         });
       } else {
         logger.warn('Admin login failed', { email, event: 'admin.login_failed' });
@@ -135,8 +138,8 @@ router.post('/', async (req, res) => {
     // For non-login resources, verify admin key
     const authHeader = req.headers['authorization'] as string | undefined;
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    const adminKey = req.headers['x-admin-key'] || bearerToken || req.body?.adminKey;
-    if (adminKey !== process.env.ADMIN_KEY) {
+    const providedKey = req.headers['x-admin-key'] || bearerToken || req.body?.adminKey;
+    if (providedKey !== getAdminKey()) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
