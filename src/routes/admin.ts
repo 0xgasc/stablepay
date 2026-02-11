@@ -9,6 +9,13 @@ const router = Router();
 // Get the admin key from environment (support ADMIN_KEY, ADMIN_PASSWORD, or ADMIN_API_TOKEN)
 const getAdminKey = () => process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN;
 
+// Helper to serialize BigInt values to strings for JSON
+const serializeBigInt = (obj: any): any => {
+  return JSON.parse(JSON.stringify(obj, (_, value) =>
+    typeof value === 'bigint' ? value.toString() : value
+  ));
+};
+
 // Middleware to check admin key - accepts x-admin-key header, Authorization Bearer, or body.adminKey
 const requireAdminKey = (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
@@ -54,7 +61,7 @@ router.get('/', requireAdminKey, rateLimit({
           take: 100,
         });
 
-        // Format orders with fee info for display
+        // Format orders with fee info for display and serialize BigInt
         const ordersWithFees = orders.map(order => ({
           ...order,
           amount: Number(order.amount),
@@ -62,7 +69,7 @@ router.get('/', requireAdminKey, rateLimit({
           feeAmount: Number(order.feeAmount),
         }));
 
-        return res.json({ orders: ordersWithFees });
+        return res.json({ orders: serializeBigInt(ordersWithFees) });
 
       case 'wallets':
         if (merchantId && typeof merchantId === 'string') {
