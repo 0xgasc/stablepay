@@ -381,6 +381,20 @@ class InvoiceService {
       orderId
     });
 
+    // Fire invoice.paid webhook
+    if (updated.merchantId) {
+      try {
+        const { webhookService } = await import('./webhookService');
+        webhookService.sendWebhook(updated.merchantId, 'invoice.paid', {
+          invoiceId,
+          invoiceNumber: invoice.invoiceNumber,
+          orderId,
+          amount: Number(updated.total),
+          paidAt: new Date().toISOString(),
+        }).catch(() => {});
+      } catch {}
+    }
+
     return this.formatInvoiceResponse(updated);
   }
 

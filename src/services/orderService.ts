@@ -243,7 +243,7 @@ export class OrderService {
             txHash: txData.txHash,
             chain: orderDetails.chain,
             amount: orderDetails.amount,
-            fromAddress: orderDetails.customerName || 'Unknown', // Use customer name as placeholder
+            fromAddress: 'Unknown', // Actual wallet address not available at confirmation time
             toAddress: orderDetails.paymentAddress,
             status: 'CONFIRMED',
             blockNumber: txData.blockNumber ? BigInt(txData.blockNumber) : undefined,

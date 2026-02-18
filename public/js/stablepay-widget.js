@@ -385,11 +385,20 @@
     }
 
     async pay() {
+      // Prevent double-pay: disable button immediately
+      const payBtn = document.getElementById('stablepay-pay-btn');
+      if (payBtn) {
+        if (payBtn.disabled) return; // Already processing
+        payBtn.disabled = true;
+        payBtn.textContent = 'PROCESSING...';
+      }
+
       const selectedChain = document.getElementById('stablepay-chain').value;
       const chainConfig = CHAINS[selectedChain];
 
       if (!chainConfig) {
         this.showError('Invalid network selected');
+        if (payBtn) { payBtn.disabled = false; payBtn.textContent = `Pay $${this.options.amount.toFixed(2)} ${this.options.token}`; }
         return;
       }
 

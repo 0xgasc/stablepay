@@ -17,6 +17,7 @@ import { embedRouter } from './routes/embed';
 import { validateEnv } from './utils/env';
 import { OrderService } from './services/orderService';
 import { logger } from './utils/logger';
+import cron from 'node-cron';
 // import { BlockchainService } from './services/blockchainService';
 
 // Load and validate environment variables
@@ -329,6 +330,14 @@ app.post('/api/v1/orders/:orderId/confirm', async (req, res) => {
       });
     }
 
+    // Block expired or cancelled orders from being confirmed
+    if (existingOrder.status === 'EXPIRED' || existingOrder.status === 'CANCELLED') {
+      return res.status(400).json({
+        error: `Order is ${existingOrder.status.toLowerCase()}`,
+        message: `Cannot confirm an order with status ${existingOrder.status}.`,
+      });
+    }
+
     // Skip if already confirmed (avoid double-counting fees/volume)
     if (existingOrder.status === 'CONFIRMED' || existingOrder.status === 'PAID') {
       console.log('Order already confirmed, returning existing state:', orderId);
@@ -380,6 +389,14 @@ app.post('/api/orders-confirm', async (req, res) => {
         error: 'Merchant account suspended',
         message: 'Payment processing is suspended due to unpaid fees.',
         suspended: true
+      });
+    }
+
+    // Block expired or cancelled orders from being confirmed
+    if (existingOrder.status === 'EXPIRED' || existingOrder.status === 'CANCELLED') {
+      return res.status(400).json({
+        error: `Order is ${existingOrder.status.toLowerCase()}`,
+        message: `Cannot confirm an order with status ${existingOrder.status}.`,
       });
     }
 
@@ -450,6 +467,43 @@ app.get('/api/chains', (req, res) => {
   res.json(chains);
 });
 
+// Cancel an order
+app.post('/api/v1/orders/:orderId/cancel', async (req, res) => {
+  try {
+    const { db } = await import('./config/database');
+    const { orderId } = req.params;
+    const { reason } = req.body;
+
+    const order = await db.order.findUnique({ where: { id: orderId } });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (order.status === 'CONFIRMED' || order.status === 'PAID') {
+      return res.status(400).json({
+        error: 'Cannot cancel a completed order',
+        message: `Order has status ${order.status}. Use refund instead.`,
+      });
+    }
+
+    if (order.status === 'CANCELLED') {
+      return res.json({ success: true, order, alreadyCancelled: true });
+    }
+
+    const now = new Date();
+    await db.$executeRaw`UPDATE orders SET status = 'CANCELLED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId}`;
+
+    const updated = await db.order.findUnique({ where: { id: orderId } });
+
+    logger.info('Order cancelled', { orderId, reason, event: 'order.cancelled' });
+    res.json({ success: true, order: updated });
+  } catch (error) {
+    console.error('Cancel order error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
@@ -463,16 +517,36 @@ async function startServer() {
       console.log(`Health check: http://localhost:${port}/api/health`);
     });
 
-    // Try to start blockchain scanner (non-blocking)
-    // Temporarily disabled due to Prisma prepared statement errors
-    // try {
-    //   const blockchainService = new BlockchainService();
-    //   await blockchainService.startScanning();
-    //   console.log('✅ Blockchain scanner started successfully!');
-    // } catch (scannerError) {
-    //   console.warn('⚠️  Blockchain scanner failed to start:', scannerError.message);
-    //   console.warn('   API will work but payments won\'t be detected automatically');
-    // }
+    // Cron: Check for overdue fees every 6 hours
+    cron.schedule('0 */6 * * *', async () => {
+      try {
+        logger.info('Running scheduled fee overdue check', { event: 'cron.fee_check_start' });
+        const response = await fetch(`http://localhost:${port}/api/fees/check-overdue`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminKey: process.env.ADMIN_KEY }),
+        });
+        const result = await response.json() as Record<string, any>;
+        logger.info('Fee overdue check completed', { result, event: 'cron.fee_check_done' });
+      } catch (error) {
+        logger.error('Cron fee check failed', error as Error, { event: 'cron.fee_check_error' });
+      }
+    });
+
+    // Cron: Process webhook retries every 5 minutes
+    cron.schedule('*/5 * * * *', async () => {
+      try {
+        const { webhookService } = await import('./services/webhookService');
+        const processed = await webhookService.processRetries();
+        if (processed > 0) {
+          logger.info('Webhook retries processed', { count: processed, event: 'cron.webhook_retries' });
+        }
+      } catch (error) {
+        logger.error('Cron webhook retry failed', error as Error, { event: 'cron.webhook_retry_error' });
+      }
+    });
+
+    console.log('Cron jobs scheduled: fee check (every 6h), webhook retries (every 5m)');
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

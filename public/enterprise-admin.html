@@ -280,6 +280,7 @@
                         type="password"
                         id="adminPassword"
                         required
+                        autocomplete="current-password"
                         class="w-full px-4 py-3 bg-black border border-slate-800 text-white focus:border-blue-600 focus:outline-none"
                     >
                 </div>
@@ -345,6 +346,12 @@
                     </button>
                     <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="orders">
                         All Orders
+                    </button>
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="refunds">
+                        Refunds
+                    </button>
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="receipts">
+                        Receipts
                     </button>
                     <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="analytics">
                         Platform Analytics
@@ -489,6 +496,184 @@
                                 <tr>
                                     <td colspan="9" class="px-6 py-8 text-center text-slate-400">
                                         Loading orders...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Refunds Tab -->
+            <div id="refundsTab" class="tab-content hidden">
+                <!-- Refund Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-slate-950 border border-slate-800 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-slate-400">Pending Refunds</p>
+                                <p class="text-2xl font-bold text-orange-400" id="pendingRefundsCount">0</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-orange-900/30 border border-orange-700 flex items-center justify-center">
+                                <span class="text-orange-400">!</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-slate-400">Total Refunded</p>
+                                <p class="text-2xl font-bold text-green-400" id="totalRefunded">$0.00</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-green-900/30 border border-green-700 flex items-center justify-center">
+                                <span class="text-green-400">$</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-slate-400">Rejected</p>
+                                <p class="text-2xl font-bold text-red-400" id="rejectedRefundsCount">0</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-red-900/30 border border-red-700 flex items-center justify-center">
+                                <span class="text-red-400">X</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Refunds Table -->
+                <div class="bg-slate-950 border shadow-sm border">
+                    <div class="p-6 border-b">
+                        <h2 class="text-xl font-bold text-white">Refund Requests</h2>
+                        <p class="text-sm text-slate-400 mt-1">Review, approve, and process customer refund requests</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-950 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Order</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Merchant</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Customer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Reason</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="refundsTableBody" class="divide-y divide-slate-800">
+                                <tr>
+                                    <td colspan="8" class="px-6 py-8 text-center text-slate-400">
+                                        Loading refunds...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Refund Process Instructions -->
+                <div class="mt-6 bg-slate-950 border shadow-sm border p-6">
+                    <h3 class="text-lg font-semibold text-white mb-4">How Refunds Work</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 rounded-full bg-orange-900/30 border border-orange-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-orange-400 text-xs font-bold">1</span>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-slate-300">Review & Approve</h4>
+                                <p class="text-slate-400 mt-1">Review the refund request and click Approve or Reject</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-900/30 border border-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-blue-400 text-xs font-bold">2</span>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-slate-300">Send Crypto Manually</h4>
+                                <p class="text-slate-400 mt-1">Send USDC to the customer's wallet on the correct chain</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 rounded-full bg-green-900/30 border border-green-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span class="text-green-400 text-xs font-bold">3</span>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-slate-300">Record TX Hash</h4>
+                                <p class="text-slate-400 mt-1">Click Process and paste the transaction hash to complete the refund</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Receipts Tab -->
+            <div id="receiptsTab" class="tab-content hidden">
+                <!-- Receipt Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-slate-950 border border-slate-800 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-slate-400">Total Receipts</p>
+                                <p class="text-2xl font-bold text-blue-400" id="totalReceiptsCount">0</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-blue-900/30 border border-blue-700 flex items-center justify-center">
+                                <span class="text-blue-400">#</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-slate-400">Emails Sent</p>
+                                <p class="text-2xl font-bold text-green-400" id="emailsSentCount">0</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-green-900/30 border border-green-700 flex items-center justify-center">
+                                <span class="text-green-400">@</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-slate-400">Emails Pending</p>
+                                <p class="text-2xl font-bold text-yellow-400" id="emailsPendingCount">0</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-yellow-900/30 border border-yellow-700 flex items-center justify-center">
+                                <span class="text-yellow-400">...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Receipts Table -->
+                <div class="bg-slate-950 border shadow-sm border">
+                    <div class="p-6 border-b flex justify-between items-center">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Payment Receipts</h2>
+                            <p class="text-sm text-slate-400 mt-1">View all receipts, download PDFs, and resend emails</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-950 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Receipt #</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Order</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Customer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Chain</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Email Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="receiptsTableBody" class="divide-y divide-slate-800">
+                                <tr>
+                                    <td colspan="8" class="px-6 py-8 text-center text-slate-400">
+                                        Loading receipts...
                                     </td>
                                 </tr>
                             </tbody>
@@ -1088,14 +1273,11 @@
                 });
                 document.getElementById(tab + 'Tab').classList.remove('hidden');
 
-                // Load wallets when switching to wallets tab
-                if (tab === 'wallets') {
-                    loadPlatformWallets();
-                }
-                // Load billing when switching to billing tab
-                if (tab === 'billing') {
-                    loadBillingData();
-                }
+                // Load data when switching tabs
+                if (tab === 'wallets') loadPlatformWallets();
+                if (tab === 'billing') loadBillingData();
+                if (tab === 'refunds') loadRefunds();
+                if (tab === 'receipts') loadReceipts();
             });
         });
 
@@ -2222,9 +2404,9 @@
 
                 if (statsResponse.ok) {
                     const stats = await statsResponse.json();
-                    document.getElementById('totalFeesOwed').textContent = '$' + (stats.fees?.totalOwed || 0).toFixed(2);
+                    document.getElementById('totalFeesOwed').textContent = '$' + Number(stats.fees?.totalOwed || 0).toFixed(2);
                     document.getElementById('pendingPayments').textContent = stats.fees?.pendingPayments || 0;
-                    document.getElementById('totalCollected').textContent = '$' + (stats.fees?.totalCollected || 0).toFixed(2);
+                    document.getElementById('totalCollected').textContent = '$' + Number(stats.fees?.totalCollected || 0).toFixed(2);
                 }
 
                 // Load pending fee payments
@@ -2254,7 +2436,7 @@
             if (!tbody) return;
 
             // Filter merchants with fees due or suspended
-            const merchantsWithFees = merchants.filter(m => (m.feesDue && m.feesDue > 0) || m.isSuspended);
+            const merchantsWithFees = merchants.filter(m => (m.feesDue && Number(m.feesDue) > 0) || m.isSuspended);
 
             if (merchantsWithFees.length === 0) {
                 tbody.innerHTML = `
@@ -2267,7 +2449,9 @@
                 return;
             }
 
-            tbody.innerHTML = merchantsWithFees.map(m => `
+            tbody.innerHTML = merchantsWithFees.map(m => {
+                const feesDue = Number(m.feesDue || 0);
+                return `
                 <tr class="hover:bg-slate-900/50">
                     <td class="px-6 py-4">
                         <div class="font-medium text-white">${m.companyName}</div>
@@ -2277,14 +2461,14 @@
                         <span class="px-2 py-1 text-xs font-medium bg-slate-800 text-slate-300 rounded">${m.plan || 'STARTER'}</span>
                     </td>
                     <td class="px-6 py-4">
-                        <span class="text-lg font-bold ${m.feesDue > 0 ? 'text-yellow-400' : 'text-green-400'}">
-                            $${(m.feesDue || 0).toFixed(2)}
+                        <span class="text-lg font-bold ${feesDue > 0 ? 'text-yellow-400' : 'text-green-400'}">
+                            $${feesDue.toFixed(2)}
                         </span>
                     </td>
                     <td class="px-6 py-4">
                         ${m.isSuspended
                             ? '<span class="px-2 py-1 text-xs font-medium bg-red-900/50 text-red-400 rounded">Suspended</span>'
-                            : m.feesDue > 0
+                            : feesDue > 0
                                 ? '<span class="px-2 py-1 text-xs font-medium bg-yellow-900/50 text-yellow-400 rounded">Due</span>'
                                 : '<span class="px-2 py-1 text-xs font-medium bg-green-900/50 text-green-400 rounded">Paid</span>'
                         }
@@ -2293,7 +2477,7 @@
                         ${m.lastFeeCalculation ? new Date(m.lastFeeCalculation).toLocaleDateString() : 'Never'}
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         function renderPendingPayments() {
@@ -2402,6 +2586,339 @@
 
         // Refresh
         document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+
+        // ============================================================================
+        // REFUNDS
+        // ============================================================================
+        let refunds = [];
+
+        async function loadRefunds() {
+            try {
+                // Load stats and refunds in parallel
+                const [statsRes, refundsRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/v1/admin/refunds/stats`, {
+                        headers: { 'Authorization': getAuthHeader(), 'x-admin-key': sessionStorage.getItem('adminToken') }
+                    }),
+                    fetch(`${API_BASE}/api/v1/admin/refunds`, {
+                        headers: { 'Authorization': getAuthHeader(), 'x-admin-key': sessionStorage.getItem('adminToken') }
+                    })
+                ]);
+
+                if (statsRes.ok) {
+                    const stats = await statsRes.json();
+                    document.getElementById('pendingRefundsCount').textContent = stats.pending || 0;
+                    document.getElementById('totalRefunded').textContent = '$' + Number(stats.totalRefunded || 0).toFixed(2);
+                    document.getElementById('rejectedRefundsCount').textContent = stats.rejected || 0;
+                }
+
+                if (refundsRes.ok) {
+                    const data = await refundsRes.json();
+                    refunds = data.refunds || [];
+                    renderRefunds();
+                }
+            } catch (error) {
+                console.error('Error loading refunds:', error);
+            }
+        }
+
+        function renderRefunds() {
+            const tbody = document.getElementById('refundsTableBody');
+            if (!tbody) return;
+
+            if (refunds.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-slate-400">
+                            No refund requests found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = refunds.map(r => {
+                const amount = Number(r.amount || 0);
+                const orderAmount = Number(r.order?.amount || 0);
+                const statusColors = {
+                    PENDING: 'bg-yellow-900/50 text-yellow-400',
+                    APPROVED: 'bg-blue-900/50 text-blue-400',
+                    PROCESSED: 'bg-green-900/50 text-green-400',
+                    REJECTED: 'bg-red-900/50 text-red-400'
+                };
+                const statusClass = statusColors[r.status] || 'bg-slate-800 text-slate-300';
+
+                let actions = '';
+                if (r.status === 'PENDING') {
+                    actions = `
+                        <button onclick="approveRefund('${r.id}')" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded mr-1">
+                            Approve
+                        </button>
+                        <button onclick="rejectRefund('${r.id}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded">
+                            Reject
+                        </button>
+                    `;
+                } else if (r.status === 'APPROVED') {
+                    actions = `
+                        <button onclick="processRefund('${r.id}', '${r.order?.chain || ''}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded">
+                            Process
+                        </button>
+                    `;
+                } else if (r.status === 'PROCESSED' && r.refundTxHash) {
+                    const explorer = getExplorerUrl(r.order?.chain, r.refundTxHash);
+                    actions = `<a href="${explorer}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm font-mono">${r.refundTxHash.slice(0, 10)}...</a>`;
+                } else if (r.status === 'REJECTED') {
+                    actions = '<span class="text-sm text-slate-500">Closed</span>';
+                }
+
+                return `
+                <tr class="hover:bg-slate-900/50">
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-mono text-slate-300">${r.orderId?.slice(0, 8)}...</span>
+                        <div class="text-xs text-slate-500">$${orderAmount.toFixed(2)}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-white">${r.order?.merchant?.companyName || 'Unknown'}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-slate-300">${r.order?.customerEmail || 'N/A'}</div>
+                        ${r.order?.transactions?.[0]?.fromAddress ? `<div class="text-xs text-slate-500 font-mono">${r.order.transactions[0].fromAddress.slice(0, 10)}...</div>` : ''}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-lg font-bold text-white">$${amount.toFixed(2)}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm text-slate-400">${r.reason || '-'}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs font-medium rounded ${statusClass}">${r.status}</span>
+                    </td>
+                    <td class="px-6 py-4 text-slate-400 text-sm">
+                        ${new Date(r.createdAt).toLocaleDateString()}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        ${actions}
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        function getExplorerUrl(chain, txHash) {
+            const explorers = {
+                'BASE_MAINNET': 'https://basescan.org/tx/',
+                'BASE_SEPOLIA': 'https://sepolia.basescan.org/tx/',
+                'ETHEREUM_MAINNET': 'https://etherscan.io/tx/',
+                'ETHEREUM_SEPOLIA': 'https://sepolia.etherscan.io/tx/',
+                'POLYGON_MAINNET': 'https://polygonscan.com/tx/',
+                'ARBITRUM_MAINNET': 'https://arbiscan.io/tx/',
+            };
+            const base = explorers[chain] || 'https://basescan.org/tx/';
+            return base + txHash;
+        }
+
+        window.approveRefund = async function(refundId) {
+            if (!confirm('Approve this refund? You will need to send the crypto manually next.')) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/refunds/${refundId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthHeader(),
+                        'x-admin-key': sessionStorage.getItem('adminToken')
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const wallet = data.customerWallet || 'Not available';
+                    alert(`Refund approved!\n\nCustomer wallet: ${wallet}\n\nSend the refund amount to this wallet, then click "Process" to record the transaction hash.`);
+                    await loadRefunds();
+                } else {
+                    const err = await response.json();
+                    alert('Error: ' + (err.error || 'Failed to approve'));
+                }
+            } catch (error) {
+                console.error('Error approving refund:', error);
+                alert('Error: ' + error.message);
+            }
+        };
+
+        window.rejectRefund = async function(refundId) {
+            const reason = prompt('Enter rejection reason:');
+            if (reason === null) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/refunds/${refundId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthHeader(),
+                        'x-admin-key': sessionStorage.getItem('adminToken')
+                    },
+                    body: JSON.stringify({ reason })
+                });
+                if (response.ok) {
+                    alert('Refund rejected.');
+                    await loadRefunds();
+                } else {
+                    const err = await response.json();
+                    alert('Error: ' + (err.error || 'Failed to reject'));
+                }
+            } catch (error) {
+                console.error('Error rejecting refund:', error);
+                alert('Error: ' + error.message);
+            }
+        };
+
+        window.processRefund = async function(refundId, chain) {
+            const txHash = prompt(`Enter the transaction hash for the refund you sent on ${chain || 'chain'}:`);
+            if (!txHash) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/refunds/${refundId}/process`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthHeader(),
+                        'x-admin-key': sessionStorage.getItem('adminToken')
+                    },
+                    body: JSON.stringify({ txHash })
+                });
+                if (response.ok) {
+                    alert('Refund processed successfully! The order has been marked as REFUNDED.');
+                    await loadRefunds();
+                } else {
+                    const err = await response.json();
+                    alert('Error: ' + (err.error || 'Failed to process'));
+                }
+            } catch (error) {
+                console.error('Error processing refund:', error);
+                alert('Error: ' + error.message);
+            }
+        };
+
+        // ============================================================================
+        // RECEIPTS
+        // ============================================================================
+        let receipts = [];
+
+        async function loadReceipts() {
+            try {
+                const [statsRes, receiptsRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/v1/admin/receipts/stats`, {
+                        headers: { 'Authorization': getAuthHeader(), 'x-admin-key': sessionStorage.getItem('adminToken') }
+                    }),
+                    fetch(`${API_BASE}/api/v1/admin/receipts`, {
+                        headers: { 'Authorization': getAuthHeader(), 'x-admin-key': sessionStorage.getItem('adminToken') }
+                    })
+                ]);
+
+                if (statsRes.ok) {
+                    const stats = await statsRes.json();
+                    document.getElementById('totalReceiptsCount').textContent = stats.total || 0;
+                    document.getElementById('emailsSentCount').textContent = stats.sent || 0;
+                    document.getElementById('emailsPendingCount').textContent = stats.pending || 0;
+                }
+
+                if (receiptsRes.ok) {
+                    const data = await receiptsRes.json();
+                    receipts = data.receipts || [];
+                    renderReceipts();
+                }
+            } catch (error) {
+                console.error('Error loading receipts:', error);
+            }
+        }
+
+        function renderReceipts() {
+            const tbody = document.getElementById('receiptsTableBody');
+            if (!tbody) return;
+
+            if (receipts.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-slate-400">
+                            No receipts found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = receipts.map(r => {
+                const amount = Number(r.amount || 0);
+                const emailColors = {
+                    SENT: 'bg-green-900/50 text-green-400',
+                    DELIVERED: 'bg-green-900/50 text-green-400',
+                    PENDING: 'bg-yellow-900/50 text-yellow-400',
+                    FAILED: 'bg-red-900/50 text-red-400'
+                };
+                const emailClass = emailColors[r.emailStatus] || 'bg-slate-800 text-slate-300';
+
+                return `
+                <tr class="hover:bg-slate-900/50">
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-medium text-white">${r.receiptNumber}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-mono text-slate-300">${r.orderId?.slice(0, 8)}...</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-white">${r.customerName || r.customerEmail || 'N/A'}</div>
+                        ${r.customerName && r.customerEmail ? `<div class="text-xs text-slate-400">${r.customerEmail}</div>` : ''}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-lg font-bold text-white">$${amount.toFixed(2)}</span>
+                        <div class="text-xs text-slate-500">${r.token || 'USDC'}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm text-slate-300">${(r.chain || '').replace('_', ' ')}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs font-medium rounded ${emailClass}">${r.emailStatus}</span>
+                    </td>
+                    <td class="px-6 py-4 text-slate-400 text-sm">
+                        ${new Date(r.paymentDate || r.createdAt).toLocaleDateString()}
+                    </td>
+                    <td class="px-6 py-4 text-right space-x-2">
+                        <button onclick="downloadReceipt('${r.id}')" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded">
+                            PDF
+                        </button>
+                        ${r.customerEmail ? `
+                        <button onclick="resendReceipt('${r.id}')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded">
+                            Resend
+                        </button>
+                        ` : ''}
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        window.downloadReceipt = function(receiptId) {
+            window.open(`${API_BASE}/api/v1/receipts/${receiptId}/pdf`, '_blank');
+        };
+
+        window.resendReceipt = async function(receiptId) {
+            if (!confirm('Resend receipt email to customer?')) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/receipts/${receiptId}/resend`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthHeader(),
+                        'x-admin-key': sessionStorage.getItem('adminToken')
+                    }
+                });
+                if (response.ok) {
+                    alert('Receipt email sent!');
+                    await loadReceipts();
+                } else {
+                    const err = await response.json();
+                    alert('Error: ' + (err.error || 'Failed to resend'));
+                }
+            } catch (error) {
+                console.error('Error resending receipt:', error);
+                alert('Error: ' + error.message);
+            }
+        };
 
         // i18n functionality
         let currentLang = localStorage.getItem('preferredLanguage') || 'en';

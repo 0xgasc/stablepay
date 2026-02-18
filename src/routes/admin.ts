@@ -105,7 +105,7 @@ router.get('/', requireAdminKey, rateLimit({
           },
           orderBy: { createdAt: 'desc' },
         });
-        return res.json({ merchants });
+        return res.json(merchants);
 
       default:
         return res.status(400).json({ error: `Unknown resource: ${resource}` });
@@ -392,6 +392,56 @@ router.put('/', requireAdminKey, async (req, res) => {
         data: updateData,
       });
 
+      // Auto-send activation email when merchant is activated with a new token
+      if (updateData.loginToken && updatedMerchant.email) {
+        try {
+          const { emailService } = await import('../services/emailService');
+          if (emailService.isConfigured()) {
+            // Send activation notification (uses Resend)
+            const { Resend } = await import('resend');
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const BASE_URL = process.env.BASE_URL || 'https://stablepay-nine.vercel.app';
+            const FROM_EMAIL = process.env.FROM_EMAIL || 'StablePay <onboarding@resend.dev>';
+
+            await resend.emails.send({
+              from: FROM_EMAIL,
+              to: updatedMerchant.email,
+              subject: 'Your StablePay account has been activated!',
+              html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                  <div style="background: #000; color: #fff; padding: 30px; text-align: center;">
+                    <h1 style="margin: 0;">Welcome to StablePay</h1>
+                  </div>
+                  <div style="padding: 30px;">
+                    <p>Hi ${updatedMerchant.contactName || 'there'},</p>
+                    <p>Your StablePay merchant account for <strong>${updatedMerchant.companyName}</strong> has been activated.</p>
+                    <p>You can now log in to your dashboard:</p>
+                    <p style="margin: 20px 0;">
+                      <a href="${BASE_URL}/login.html" style="background: #000; color: #fff; padding: 14px 28px; text-decoration: none; font-weight: bold;">
+                        Log In to Dashboard
+                      </a>
+                    </p>
+                    <p style="margin-top: 20px;"><strong>Your credentials:</strong></p>
+                    <p>Email: <code>${updatedMerchant.email}</code><br>
+                    Token: <code>${updateData.loginToken}</code></p>
+                    <p style="color: #666; font-size: 12px; margin-top: 30px;">
+                      Powered by StablePay - Stablecoin Payment Infrastructure
+                    </p>
+                  </div>
+                </div>
+              `,
+            });
+
+            logger.info('Activation email sent', {
+              merchantId, email: updatedMerchant.email, event: 'merchant.activation_email_sent',
+            });
+          }
+        } catch (emailError) {
+          logger.error('Failed to send activation email', emailError as Error, { merchantId });
+          // Don't fail the activation if email fails
+        }
+      }
+
       return res.json({
         success: true,
         merchant: updatedMerchant,
@@ -621,6 +671,345 @@ router.get('/stats', requireAdminKey, async (_req, res) => {
   } catch (error) {
     logger.error('Error fetching admin stats', error as Error, {});
     res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// ============================================================================
+// REFUNDS (Admin manages all refunds across merchants)
+// ============================================================================
+
+// List all refunds
+router.get('/refunds', requireAdminKey, async (req, res) => {
+  try {
+    const { status } = req.query;
+    const where: any = {};
+    if (status && typeof status === 'string') {
+      where.status = status;
+    }
+
+    const refunds = await db.refund.findMany({
+      where,
+      include: {
+        order: {
+          include: {
+            merchant: { select: { companyName: true, email: true } },
+            transactions: { select: { fromAddress: true }, take: 1 },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    const formatted = refunds.map(r => ({
+      ...r,
+      amount: Number(r.amount),
+      order: {
+        ...r.order,
+        amount: Number(r.order.amount),
+      },
+    }));
+
+    res.json({ refunds: serializeBigInt(formatted) });
+  } catch (error) {
+    logger.error('Error fetching refunds', error as Error, {});
+    res.status(500).json({ error: 'Failed to fetch refunds' });
+  }
+});
+
+// Refund stats
+router.get('/refunds/stats', requireAdminKey, async (_req, res) => {
+  try {
+    const [pending, processed, rejected, totalRefunded] = await Promise.all([
+      db.refund.count({ where: { status: 'PENDING' } }),
+      db.refund.count({ where: { status: 'PROCESSED' } }),
+      db.refund.count({ where: { status: 'REJECTED' } }),
+      db.refund.aggregate({ where: { status: 'PROCESSED' }, _sum: { amount: true } }),
+    ]);
+
+    res.json({
+      pending,
+      processed,
+      rejected,
+      totalRefunded: Number(totalRefunded._sum.amount) || 0,
+    });
+  } catch (error) {
+    logger.error('Error fetching refund stats', error as Error, {});
+    res.status(500).json({ error: 'Failed to fetch refund stats' });
+  }
+});
+
+// Approve refund
+router.post('/refunds/:id/approve', requireAdminKey, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const refund = await db.refund.findUnique({ where: { id } });
+    if (!refund) return res.status(404).json({ error: 'Refund not found' });
+    if (refund.status !== 'PENDING') return res.status(400).json({ error: `Cannot approve refund with status ${refund.status}` });
+
+    // Use $queryRawUnsafe to avoid Prisma @updatedAt trigger conflict with Supabase moddatetime
+    await db.$queryRawUnsafe(
+      `UPDATE refunds SET status = 'APPROVED', "approvedBy" = 'admin' WHERE id = $1`,
+      id
+    );
+
+    const updated = await db.refund.findUnique({
+      where: { id },
+      include: { order: { include: { transactions: { select: { fromAddress: true }, take: 1 } } } },
+    });
+
+    const customerWallet = updated?.order?.transactions[0]?.fromAddress || null;
+
+    res.json({
+      success: true,
+      refund: updated ? { ...updated, amount: Number(updated.amount) } : null,
+      customerWallet,
+      nextStep: 'Send funds to customer wallet and submit tx hash via process endpoint',
+    });
+  } catch (error) {
+    logger.error('Error approving refund', error as Error, {});
+    res.status(500).json({ error: 'Failed to approve refund', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+// Reject refund
+router.post('/refunds/:id/reject', requireAdminKey, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const refund = await db.refund.findUnique({ where: { id } });
+    if (!refund) return res.status(404).json({ error: 'Refund not found' });
+    if (refund.status !== 'PENDING') return res.status(400).json({ error: `Cannot reject refund with status ${refund.status}` });
+
+    await db.$queryRawUnsafe(`UPDATE refunds SET status = 'REJECTED', "approvedBy" = 'admin' WHERE id = $1`, id);
+    const updated = await db.refund.findUnique({ where: { id } });
+
+    res.json({ success: true, refund: updated ? { ...updated, amount: Number(updated.amount) } : null, reason });
+  } catch (error) {
+    logger.error('Error rejecting refund', error as Error, {});
+    res.status(500).json({ error: 'Failed to reject refund' });
+  }
+});
+
+// Process refund (record tx hash) - includes fee reversal
+router.post('/refunds/:id/process', requireAdminKey, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { txHash } = req.body;
+    if (!txHash) return res.status(400).json({ error: 'txHash is required' });
+
+    const refund = await db.refund.findUnique({
+      where: { id },
+      include: { order: { select: { id: true, amount: true, feeAmount: true, merchantId: true } } },
+    });
+    if (!refund) return res.status(404).json({ error: 'Refund not found' });
+    if (refund.status !== 'APPROVED') return res.status(400).json({ error: `Cannot process refund with status ${refund.status}` });
+
+    await db.$queryRawUnsafe(`UPDATE refunds SET status = 'PROCESSED', "refundTxHash" = $1 WHERE id = $2`, txHash, id);
+    const processNow = new Date();
+    await db.$executeRaw`UPDATE orders SET status = 'REFUNDED'::"OrderStatus", "updatedAt" = ${processNow} WHERE id = ${refund.orderId}`;
+    const updated = await db.refund.findUnique({ where: { id } });
+
+    // Proportional fee reversal (match merchant refund route logic)
+    let feeReversed = 0;
+    if (refund.order?.merchantId && refund.order?.feeAmount) {
+      const orderAmount = Number(refund.order.amount);
+      const refundAmount = Number(refund.amount);
+      const originalFee = Number(refund.order.feeAmount);
+      feeReversed = (refundAmount / orderAmount) * originalFee;
+
+      await db.merchant.update({
+        where: { id: refund.order.merchantId },
+        data: { feesDue: { decrement: feeReversed } },
+      });
+
+      logger.info('Fee reversed on admin refund', {
+        refundId: id, orderId: refund.orderId, merchantId: refund.order.merchantId,
+        refundAmount, feeReversed, event: 'admin.refund.fee_reversed',
+      });
+    }
+
+    // Fire webhook
+    if (refund.order?.merchantId) {
+      try {
+        const { webhookService } = await import('../services/webhookService');
+        webhookService.sendWebhook(refund.order.merchantId, 'refund.processed', {
+          refundId: id, orderId: refund.orderId, amount: Number(refund.amount), txHash,
+        }).catch(() => {});
+      } catch {}
+    }
+
+    res.json(serializeBigInt({ success: true, refund: updated ? { ...updated, amount: Number(updated.amount) } : null, feeReversed, message: 'Refund completed successfully' }));
+  } catch (error) {
+    logger.error('Error processing refund', error as Error, {});
+    res.status(500).json({ error: 'Failed to process refund' });
+  }
+});
+
+// ============================================================================
+// RECEIPTS (Admin views all receipts across merchants)
+// ============================================================================
+
+// List all receipts
+router.get('/receipts', requireAdminKey, async (req, res) => {
+  try {
+    const { page = '1', limit = '50' } = req.query;
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [receipts, total] = await Promise.all([
+      db.receipt.findMany({
+        include: {
+          merchant: { select: { companyName: true, email: true } },
+          order: { select: { id: true, status: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum,
+      }),
+      db.receipt.count(),
+    ]);
+
+    const formatted = receipts.map(r => ({
+      ...r,
+      amount: Number(r.amount),
+    }));
+
+    res.json({
+      receipts: formatted,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
+    });
+  } catch (error) {
+    logger.error('Error fetching receipts', error as Error, {});
+    res.status(500).json({ error: 'Failed to fetch receipts', details: String(error) });
+  }
+});
+
+// Receipt stats
+router.get('/receipts/stats', requireAdminKey, async (_req, res) => {
+  try {
+    const [total, sent, pending, failed] = await Promise.all([
+      db.receipt.count(),
+      db.receipt.count({ where: { emailStatus: 'SENT' } }),
+      db.receipt.count({ where: { emailStatus: 'PENDING' } }),
+      db.receipt.count({ where: { emailStatus: 'FAILED' } }),
+    ]);
+
+    res.json({ total, sent, pending, failed });
+  } catch (error) {
+    logger.error('Error fetching receipt stats', error as Error, {});
+    res.status(500).json({ error: 'Failed to fetch receipt stats', details: String(error) });
+  }
+});
+
+// Resend receipt email
+router.post('/receipts/:id/resend', requireAdminKey, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const receipt = await db.receipt.findUnique({ where: { id } });
+    if (!receipt) return res.status(404).json({ error: 'Receipt not found' });
+    if (!receipt.customerEmail) return res.status(400).json({ error: 'No customer email on this receipt' });
+
+    // Try to use the email service if available
+    try {
+      const { emailService } = await import('../services/emailService');
+      await emailService.sendReceipt(id);
+      res.json({ success: true, message: 'Receipt email sent' });
+    } catch {
+      // If email service not configured, just update the status
+      await db.receipt.update({ where: { id }, data: { emailStatus: 'SENT', emailSentAt: new Date() } });
+      res.json({ success: true, message: 'Receipt marked as sent' });
+    }
+  } catch (error) {
+    logger.error('Error resending receipt', error as Error, {});
+    res.status(500).json({ error: 'Failed to resend receipt' });
+  }
+});
+
+// One-time fix: drop broken Supabase moddatetime triggers on tables with camelCase columns
+router.post('/fix-triggers', requireAdminKey, async (_req, res) => {
+  try {
+    // List triggers on refunds table
+    const triggers: any[] = await db.$queryRaw`
+      SELECT trigger_name, event_manipulation, action_statement
+      FROM information_schema.triggers
+      WHERE event_object_table = 'refunds'
+    `;
+
+    // Drop any moddatetime triggers that reference updated_at (snake_case)
+    const dropped: string[] = [];
+    for (const t of triggers) {
+      if (t.action_statement?.includes('updated_at') || t.trigger_name?.includes('moddatetime')) {
+        await db.$queryRawUnsafe(`DROP TRIGGER IF EXISTS "${t.trigger_name}" ON refunds`);
+        dropped.push(t.trigger_name);
+      }
+    }
+
+    res.json({ success: true, triggers, dropped });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+// One-time migration: create receipts table if missing
+router.post('/migrate-receipts', requireAdminKey, async (_req, res) => {
+  try {
+    // Create ReceiptDeliveryStatus enum if not exists
+    await db.$executeRaw`
+      DO $$ BEGIN
+        CREATE TYPE "ReceiptDeliveryStatus" AS ENUM ('PENDING', 'SENT', 'DELIVERED', 'FAILED');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `;
+
+    // Create receipts table
+    await db.$executeRaw`
+      CREATE TABLE IF NOT EXISTS "receipts" (
+        "id" TEXT NOT NULL,
+        "orderId" TEXT NOT NULL,
+        "merchantId" TEXT NOT NULL,
+        "receiptNumber" TEXT NOT NULL,
+        "amount" DECIMAL(18,6) NOT NULL,
+        "token" TEXT NOT NULL DEFAULT 'USDC',
+        "chain" "Chain" NOT NULL,
+        "txHash" TEXT,
+        "merchantName" TEXT NOT NULL,
+        "customerEmail" TEXT,
+        "customerName" TEXT,
+        "emailStatus" "ReceiptDeliveryStatus" NOT NULL DEFAULT 'PENDING',
+        "emailSentAt" TIMESTAMP(3),
+        "paymentDate" TIMESTAMP(3) NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "receipts_pkey" PRIMARY KEY ("id")
+      );
+    `;
+
+    // Create unique constraints and indexes
+    await db.$executeRaw`CREATE UNIQUE INDEX IF NOT EXISTS "receipts_orderId_key" ON "receipts"("orderId")`;
+    await db.$executeRaw`CREATE UNIQUE INDEX IF NOT EXISTS "receipts_receiptNumber_key" ON "receipts"("receiptNumber")`;
+    await db.$executeRaw`CREATE INDEX IF NOT EXISTS "receipts_merchantId_idx" ON "receipts"("merchantId")`;
+    await db.$executeRaw`CREATE INDEX IF NOT EXISTS "receipts_paymentDate_idx" ON "receipts"("paymentDate")`;
+
+    // Add foreign keys if not exist
+    await db.$executeRaw`
+      DO $$ BEGIN
+        ALTER TABLE "receipts" ADD CONSTRAINT "receipts_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `;
+    await db.$executeRaw`
+      DO $$ BEGIN
+        ALTER TABLE "receipts" ADD CONSTRAINT "receipts_merchantId_fkey" FOREIGN KEY ("merchantId") REFERENCES "merchants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `;
+
+    res.json({ success: true, message: 'Receipts table created/verified' });
+  } catch (error) {
+    res.status(500).json({ error: 'Migration failed', details: String(error) });
   }
 });
 

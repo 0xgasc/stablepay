@@ -223,34 +223,25 @@ router.post('/pay', async (req, res) => {
       }
     });
 
-    // Update merchant - reset fees due and update last calculation
-    const currentFeesDue = Number(merchant.feesDue) || 0;
-    const paidAmount = parseFloat(amount);
-    const newFeesDue = Math.max(0, currentFeesDue - paidAmount);
+    // NOTE: Do NOT update merchant feesDue here. Balance is only adjusted
+    // after admin verifies the payment via /admin/fee-payments/:id/verify.
+    // This prevents merchants from getting credit for unverified/fake payments.
 
-    await db.merchant.update({
-      where: { id: merchant.id },
-      data: {
-        feesDue: newFeesDue,
-        lastFeeCalculation: new Date(),
-        // Unsuspend if fully paid
-        isSuspended: newFeesDue > 0 ? merchant.isSuspended : false,
-        suspendedAt: newFeesDue > 0 ? merchant.suspendedAt : null
-      }
-    });
-
-    logger.info('Fee payment recorded', {
+    logger.info('Fee payment submitted (pending verification)', {
       merchantId: merchant.id,
-      amount: paidAmount,
+      amount: parseFloat(amount),
       txHash,
-      event: 'fees.payment_recorded'
+      event: 'fees.payment_submitted'
     });
+
+    const currentFeesDue = Number(merchant.feesDue) || 0;
 
     res.json({
       success: true,
       paymentId: feePayment.id,
-      remainingBalance: newFeesDue,
-      message: newFeesDue === 0 ? 'Account fully paid' : `$${newFeesDue.toFixed(2)} remaining`
+      status: 'PENDING',
+      remainingBalance: currentFeesDue,
+      message: 'Payment submitted. Balance will be updated after admin verification.'
     });
 
   } catch (error) {

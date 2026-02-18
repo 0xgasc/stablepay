@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StablePay - Full Platform Testing Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Space Grotesk', sans-serif; background: #fafafa; color: #111; line-height: 1.7; }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+        h1 { font-size: 36px; font-weight: 700; border-bottom: 4px solid #000; padding-bottom: 16px; margin-bottom: 32px; }
+        h2 { font-size: 24px; font-weight: 700; margin: 48px 0 16px; padding: 12px 16px; background: #000; color: #fff; }
+        h3 { font-size: 18px; font-weight: 600; margin: 28px 0 12px; color: #333; border-left: 4px solid #000; padding-left: 12px; }
+        h4 { font-size: 15px; font-weight: 600; margin: 20px 0 8px; color: #555; }
+        p, li { font-size: 15px; margin-bottom: 8px; }
+        ul, ol { padding-left: 24px; margin-bottom: 16px; }
+        code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #f0f0f0; padding: 2px 6px; border-radius: 3px; }
+        pre { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; background: #1a1a1a; color: #e0e0e0; padding: 16px; margin: 12px 0 20px; overflow-x: auto; border: 2px solid #000; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+        pre .comment { color: #6a9955; }
+        pre .string { color: #ce9178; }
+        pre .keyword { color: #569cd6; }
+        .badge { display: inline-block; padding: 3px 10px; font-size: 12px; font-weight: 600; border-radius: 3px; margin-right: 6px; }
+        .badge-critical { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+        .badge-high { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+        .badge-medium { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+        .badge-pass { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .badge-method { background: #000; color: #fff; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px; }
+        .expect { background: #f0fdf4; border: 2px solid #86efac; padding: 10px 14px; margin: 8px 0 16px; font-size: 14px; }
+        .expect::before { content: "EXPECT: "; font-weight: 700; color: #16a34a; }
+        .warn { background: #fefce8; border: 2px solid #fde047; padding: 10px 14px; margin: 8px 0 16px; font-size: 14px; }
+        .warn::before { content: "NOTE: "; font-weight: 700; color: #a16207; }
+        .toc { background: #fff; border: 3px solid #000; padding: 24px; margin-bottom: 32px; }
+        .toc h3 { margin: 0 0 12px; border: none; padding: 0; }
+        .toc a { color: #111; text-decoration: none; border-bottom: 1px dashed #999; }
+        .toc a:hover { border-bottom-color: #000; }
+        .toc ol { counter-reset: section; list-style: none; padding: 0; }
+        .toc > ol > li { margin-bottom: 6px; }
+        .toc > ol > li::before { counter-increment: section; content: counter(section) ". "; font-weight: 600; }
+        .checklist { list-style: none; padding: 0; }
+        .checklist li { padding: 6px 0 6px 28px; position: relative; }
+        .checklist li::before { content: "[ ]"; position: absolute; left: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 14px; }
+        th, td { border: 2px solid #000; padding: 10px 12px; text-align: left; }
+        th { background: #000; color: #fff; font-weight: 600; }
+        .section-num { opacity: 0.4; margin-right: 4px; }
+        hr { border: none; border-top: 2px dashed #ccc; margin: 40px 0; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h1>StablePay - Full Platform Testing Guide</h1>
+<p style="font-size: 16px; color: #555; margin-bottom: 24px;">
+    Comprehensive test plan covering all workflows, endpoints, and the 10 audit fixes deployed on Feb 2026.
+</p>
+
+<!-- ====================== TABLE OF CONTENTS ====================== -->
+<div class="toc">
+    <h3>Table of Contents</h3>
+    <ol>
+        <li><a href="#prereqs">Prerequisites &amp; Test Credentials</a></li>
+        <li><a href="#health">Health &amp; Connectivity Checks</a></li>
+        <li><a href="#merchant-onboarding">Merchant Onboarding &amp; Activation (Fix 7)</a></li>
+        <li><a href="#wallet-setup">Wallet Configuration</a></li>
+        <li><a href="#order-lifecycle">Order Lifecycle (Create &rarr; Pay &rarr; Confirm)</a></li>
+        <li><a href="#expired-orders">Expired &amp; Cancelled Orders (Fixes 3 &amp; 9)</a></li>
+        <li><a href="#refund-flow">Refund Flow (Fixes 1 &amp; 2)</a></li>
+        <li><a href="#fee-collection">Fee Collection &amp; Payment (Fix 4)</a></li>
+        <li><a href="#invoices">Invoices &amp; Receipts (Fix 8)</a></li>
+        <li><a href="#widget">Embeddable Widget (Fix 10)</a></li>
+        <li><a href="#admin-panel">Admin Panel UI Testing</a></li>
+        <li><a href="#webhooks">Webhooks</a></li>
+        <li><a href="#cron">Cron Jobs (Fix 6)</a></li>
+        <li><a href="#checklist">Final Checklist</a></li>
+    </ol>
+</div>
+
+<!-- ====================== SECTION 1: PREREQS ====================== -->
+<h2 id="prereqs"><span class="section-num">1.</span> Prerequisites &amp; Test Credentials</h2>
+
+<h3>Base URL</h3>
+<pre>https://stablepay-nine.vercel.app</pre>
+
+<h3>Admin Credentials</h3>
+<table>
+    <tr><th>Variable</th><th>Value</th></tr>
+    <tr><td>ADMIN_KEY / ADMIN_PASSWORD</td><td><code>admin123</code></td></tr>
+</table>
+<p>Admin auth accepts: <code>x-admin-key</code> header, <code>Authorization: Bearer</code>, or <code>body.adminKey</code>.</p>
+
+<h3>Test Merchant (UnlockRiver)</h3>
+<table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Merchant ID</td><td><code>cmhkjckgi0000qut5wxmtsw1f</code></td></tr>
+    <tr><td>Email</td><td><code>unlock@unlock.com</code></td></tr>
+    <tr><td>Login Token</td><td><code>78luhzxlf8r2h7aztu15sl</code></td></tr>
+    <tr><td>Base Sepolia Wallet</td><td><code>0x9e9Ebf31018EAeddB50E52085f4CCB4367235f2D</code></td></tr>
+</table>
+
+<h3>Test Faucets (for real on-chain tests)</h3>
+<ul>
+    <li>Base Sepolia ETH: <a href="https://www.alchemy.com/faucets/base-sepolia">Alchemy Faucet</a></li>
+    <li>Base Sepolia USDC: <a href="https://faucet.circle.com/">Circle Faucet</a></li>
+</ul>
+
+<h3>Shell Variable Setup</h3>
+<pre><span class="comment"># Paste into terminal to set up all variables for the tests below</span>
+API="https://stablepay-nine.vercel.app"
+ADMIN_KEY="admin123"
+MERCHANT_ID="cmhkjckgi0000qut5wxmtsw1f"
+MERCHANT_TOKEN="78luhzxlf8r2h7aztu15sl"</pre>
+
+<!-- ====================== SECTION 2: HEALTH ====================== -->
+<h2 id="health"><span class="section-num">2.</span> Health &amp; Connectivity Checks</h2>
+
+<h3>2.1 API Health</h3>
+<pre>curl -s $API/api/health | python3 -m json.tool</pre>
+<div class="expect">Status 200, <code>{"status":"ok","timestamp":"..."}</code></div>
+
+<h3>2.2 Database Health</h3>
+<pre>curl -s $API/api/db-health | python3 -m json.tool</pre>
+<div class="expect">Status 200, <code>{"status":"database connected","orderCount":N}</code></div>
+
+<h3>2.3 Chains Available</h3>
+<pre>curl -s $API/api/chains | python3 -m json.tool</pre>
+<div class="expect">Array with BASE_SEPOLIA and ETHEREUM_SEPOLIA</div>
+
+<h3>2.4 Admin Stats</h3>
+<pre>curl -s -H "x-admin-key: $ADMIN_KEY" $API/api/v1/admin/stats | python3 -m json.tool</pre>
+<div class="expect">Merchant counts, fee totals, pending payment counts</div>
+
+<!-- ====================== SECTION 3: MERCHANT ONBOARDING ====================== -->
+<h2 id="merchant-onboarding"><span class="section-num">3.</span> Merchant Onboarding &amp; Activation <span class="badge badge-high">Fix 7</span></h2>
+
+<h3>3.1 Self-Signup (creates inactive merchant)</h3>
+<pre>curl -s -X POST $API/api/v1/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "testmerchant_'$(date +%s)'@test.com",
+    "companyName": "Test Corp",
+    "contactName": "Tester"
+  }' | python3 -m json.tool</pre>
+<div class="expect">Status 200, <code>success: true</code>, returns <code>merchantId</code>. Merchant is NOT active yet.</div>
+<div class="warn">Save the returned <code>merchantId</code> for the next step: <code>NEW_MID="..."</code></div>
+
+<h3>3.2 Admin Activates Merchant (Fix 7: sends activation email)</h3>
+<pre>curl -s -X PUT "$API/api/v1/admin?resource=merchants" \
+  -H "x-admin-key: $ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantId": "'$NEW_MID'",
+    "isActive": true,
+    "plan": "STARTER"
+  }' | python3 -m json.tool</pre>
+<div class="expect">
+    Returns <code>loginToken</code> in response.<br>
+    <span class="badge badge-high">Fix 7</span> Activation email sent to merchant's email (check Resend dashboard if using <code>onboarding@resend.dev</code>).
+</div>
+
+<h3>3.3 Merchant Login</h3>
+<pre>curl -s -X POST $API/api/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "unlock@unlock.com",
+    "token": "'$MERCHANT_TOKEN'"
+  }' | python3 -m json.tool</pre>
+<div class="expect">Status 200, <code>success: true</code>, returns merchantId and token</div>
+
+<h3>3.4 Merchant Profile</h3>
+<pre>curl -s "$API/api/merchant-profile?token=$MERCHANT_TOKEN" | python3 -m json.tool</pre>
+<div class="expect">Full profile with plan, wallets, volume tracking</div>
+
+<!-- ====================== SECTION 4: WALLETS ====================== -->
+<h2 id="wallet-setup"><span class="section-num">4.</span> Wallet Configuration</h2>
+
+<h3>4.1 View Merchant Wallets (Admin)</h3>
+<pre>curl -s -H "x-admin-key: $ADMIN_KEY" \
+  "$API/api/v1/admin?resource=wallets&merchantId=$MERCHANT_ID" | python3 -m json.tool</pre>
+
+<h3>4.2 Set Merchant Wallets (Merchant Auth)</h3>
+<pre>curl -s -X POST $API/api/merchant-wallets \
+  -H "Authorization: Bearer $MERCHANT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantId": "'$MERCHANT_ID'",
+    "wallets": [
+      {"chain": "BASE_SEPOLIA", "address": "0x9e9Ebf31018EAeddB50E52085f4CCB4367235f2D"}
+    ]
+  }' | python3 -m json.tool</pre>
+<div class="expect">Status 200, <code>success: true</code></div>
+
+<h3>4.3 Set Merchant Wallets (Admin)</h3>
+<pre>curl -s -X POST $API/api/v1/admin/wallets \
+  -H "x-admin-key: $ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantId": "'$MERCHANT_ID'",
+    "wallets": [
+      {"chain": "BASE_SEPOLIA", "address": "0x9e9Ebf31018EAeddB50E52085f4CCB4367235f2D"}
+    ]
+  }' | python3 -m json.tool</pre>
+
+<!-- ====================== SECTION 5: ORDER LIFECYCLE ====================== -->
+<h2 id="order-lifecycle"><span class="section-num">5.</span> Order Lifecycle</h2>
+
+<h3>5.1 Create Order</h3>
+<pre>curl -s -X POST $API/api/v1/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantId": "'$MERCHANT_ID'",
+    "amount": "5.00",
+    "chain": "BASE_SEPOLIA",
+    "productName": "Test Widget",
+    "customerEmail": "customer@test.com"
+  }' | python3 -m json.tool</pre>
+<div class="expect">Status 201, returns order with <code>id</code>, <code>paymentAddress</code>, <code>status: "PENDING"</code>, <code>expiresAt</code></div>
+<div class="warn">Save: <code>ORDER_ID="..."</code></div>
+
+<h3>5.2 Check Order Status</h3>
+<pre>curl -s "$API/api/v1/orders?orderId=$ORDER_ID" | python3 -m json.tool</pre>
+<div class="expect">Order details with transactions and refunds arrays</div>
+
+<h3>5.3 Confirm Order (simulates on-chain confirmation)</h3>
+<pre>curl -s -X POST $API/api/v1/orders/$ORDER_ID/confirm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "txHash": "0xtest'$(date +%s)'",
+    "blockNumber": "12345",
+    "confirmations": 1
+  }' | python3 -m json.tool</pre>
+<div class="expect">
+    Status 200, <code>success: true</code>, order status becomes CONFIRMED.<br>
+    Fee calculated and stored on order (<code>feePercent</code>, <code>feeAmount</code>).<br>
+    Receipt auto-created. Webhooks fired (<code>order.confirmed</code>, <code>receipt.created</code>).
+</div>
+
+<h3>5.4 Confirm Already-Confirmed Order (idempotency check)</h3>
+<pre>curl -s -X POST $API/api/v1/orders/$ORDER_ID/confirm \
+  -H "Content-Type: application/json" \
+  -d '{"txHash": "0xduplicate"}' | python3 -m json.tool</pre>
+<div class="expect">Returns <code>alreadyConfirmed: true</code> — no double-counting of fees/volume</div>
+
+<h3>5.5 List Merchant Orders</h3>
+<pre>curl -s "$API/api/v1/orders?merchantId=$MERCHANT_ID" | python3 -m json.tool</pre>
+
+<h3>5.6 Delete Order (cleanup)</h3>
+<pre>curl -s -X DELETE $API/api/v1/orders/ORDER_ID_HERE \
+  -H "Content-Type: application/json" | python3 -m json.tool</pre>
+
+<!-- ====================== SECTION 6: EXPIRED & CANCELLED ====================== -->
+<h2 id="expired-orders"><span class="section-num">6.</span> Expired &amp; Cancelled Orders <span class="badge badge-critical">Fix 3</span> <span class="badge badge-medium">Fix 9</span></h2>
+
+<h3>6.1 Create a Test Order for Expiry/Cancel Tests</h3>
+<pre>curl -s -X POST $API/api/v1/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantId": "'$MERCHANT_ID'",
+    "amount": "1.00",
+    "chain": "BASE_SEPOLIA",
+    "productName": "Cancel Test"
+  }' | python3 -m json.tool</pre>
+<div class="warn">Save: <code>CANCEL_ORDER="..."</code></div>
+
+<h3>6.2 Cancel a PENDING Order (Fix 9: new endpoint)</h3>
+<pre>curl -s -X POST $API/api/v1/orders/$CANCEL_ORDER/cancel \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "Testing cancel flow"}' | python3 -m json.tool</pre>
+<div class="expect"><span class="badge badge-medium">Fix 9</span> Status 200, <code>success: true</code>, order status becomes CANCELLED</div>
+
+<h3>6.3 Try to Confirm a CANCELLED Order (Fix 3: should be blocked)</h3>
+<pre>curl -s -X POST $API/api/v1/orders/$CANCEL_ORDER/confirm \
+  -H "Content-Type: application/json" \
+  -d '{"txHash": "0xfake"}' | python3 -m json.tool</pre>
+<div class="expect"><span class="badge badge-critical">Fix 3</span> Status 400, <code>"Order is cancelled"</code></div>
+
+<h3>6.4 Try to Cancel a CONFIRMED Order (should fail)</h3>
+<pre><span class="comment"># Use the confirmed ORDER_ID from section 5.3</span>
+curl -s -X POST $API/api/v1/orders/$ORDER_ID/cancel \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "Should fail"}' | python3 -m json.tool</pre>
+<div class="expect">Status 400, <code>"Cannot cancel a completed order"</code> — tells user to use refund instead</div>
+
+<h3>6.5 Test EXPIRED Order Blocking (Fix 3)</h3>
+<div class="warn">
+    Orders expire after 30 minutes. To test immediately, you can set a short expiry by directly
+    updating the DB, or wait 30 minutes after creating an order. Once expired:
+</div>
+<pre><span class="comment"># Try to confirm an expired order</span>
+curl -s -X POST $API/api/v1/orders/EXPIRED_ORDER_ID/confirm \
+  -H "Content-Type: application/json" \
+  -d '{"txHash": "0xfake"}' | python3 -m json.tool</pre>
+<div class="expect"><span class="badge badge-critical">Fix 3</span> Status 400, <code>"Order is expired"</code></div>
+
+<!-- ====================== SECTION 7: REFUND FLOW ====================== -->
+<h2 id="refund-flow"><span class="section-num">7.</span> Refund Flow <span class="badge badge-critical">Fix 1</span> <span class="badge badge-critical">Fix 2</span></h2>
+
+<h3>7.1 Try Refund on PENDING Order (Fix 2: should be blocked)</h3>
+<pre><span class="comment"># Create a fresh PENDING order first</span>
+curl -s -X POST $API/api/v1/orders \
+  -H "Content-Type: application/json" \
+  -d '{"merchantId":"'$MERCHANT_ID'","amount":"2.00","chain":"BASE_SEPOLIA","productName":"Refund Blocker Test"}' \
+  | python3 -m json.tool
+
+<span class="comment"># Save the order ID, then try to refund it (should fail)</span>
+curl -s -X POST $API/api/refunds \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orderId": "PENDING_ORDER_ID_HERE",
+    "amount": "2.00",
+    "reason": "Testing refund on pending order"
+  }' | python3 -m json.tool</pre>
+<div class="expect"><span class="badge badge-critical">Fix 2</span> Status 400, <code>"Order not eligible for refund"</code> — only CONFIRMED/PAID orders can be refunded</div>
+
+<h3>7.2 Create Refund on CONFIRMED Order</h3>
+<pre><span class="comment"># Use the confirmed ORDER_ID from section 5.3</span>
+curl -s -X POST $API/api/refunds \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orderId": "'$ORDER_ID'",
+    "amount": "2.50",
+    "reason": "Customer requested partial refund"
+  }' | python3 -m json.tool</pre>
+<div class="expect">Status 201, refund created with status PENDING. Webhook <code>refund.requested</code> fired.</div>
+<div class="warn">Save: <code>REFUND_ID="..."</code></div>
+
+<h3>7.3 Admin: View Refunds</h3>
+<pre>curl -s -H "x-admin-key: $ADMIN_KEY" "$API/api/v1/admin/refunds" | python3 -m json.tool</pre>
+
+<h3>7.4 Admin: View Refund Stats</h3>
+<pre>curl -s -H "x-admin-key: $ADMIN_KEY" "$API/api/v1/admin/refunds/stats" | python3 -m json.tool</pre>
+
+<h3>7.5 Admin: Approve Refund</h3>
+<pre>curl -s -X POST $API/api/v1/admin/refunds/$REFUND_ID/approve \
+  -H "x-admin-key: $ADMIN_KEY" | python3 -m json.tool</pre>
+<div class="expect">Status 200, refund status becomes APPROVED. Returns <code>customerWallet</code> if available.</div>
+
+<h3>7.6 Admin: Process Refund with Tx Hash (Fix 1: includes fee reversal)</h3>
+<pre><span class="comment"># Note the merchant's feesDue BEFORE processing</span>
+curl -s -H "x-admin-key: $ADMIN_KEY" \
+  "$API/api/v1/admin?resource=merchants" | python3 -m json.tool | grep feesDue
+
+<span class="comment"># Process the refund</span>
+curl -s -X POST $API/api/v1/admin/refunds/$REFUND_ID/process \
+  -H "x-admin-key: $ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"txHash": "0xrefund'$(date +%s)'"}' | python3 -m json.tool
+
+<span class="comment"># Check feesDue AFTER processing — should have decreased</span>
+curl -s -H "x-admin-key: $ADMIN_KEY" \
+  "$API/api/v1/admin?resource=merchants" | python3 -m json.tool | grep feesDue</pre>
+<div class="expect">
+    <span class="badge badge-critical">Fix 1</span> Response includes <code>feeReversed</code> value &gt; 0.<br>
+    Order status becomes REFUNDED.<br>
+    Merchant <code>feesDue</code> decreased proportionally.<br>
+    Webhook <code>refund.processed</code> fired.
+</div>
+
+<h3>7.7 Admin: Reject a Refund (alternative path)</h3>
+<pre><span class="comment"># Create another refund first, then reject it</span>
+curl -s -X POST $API/api/v1/admin/refunds/ANOTHER_REFUND_ID/reject \
+  -H "x-admin-key: $ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "Insufficient evidence"}' | python3 -m json.tool</pre>
+
+<!-- ====================== SECTION 8: FEE COLLECTION ====================== -->
+<h2 id="fee-collection"><span class="section-num">8.</span> Fee Collection &amp; Payment <span class="badge badge-critical">Fix 4</span></h2>
+
+<h3>8.1 View Fee Balance</h3>
+<pre>curl -s "$API/api/fees/balance?merchantId=$MERCHANT_ID" \
+  -H "Authorization: Bearer $MERCHANT_TOKEN" | python3 -m json.tool</pre>
+<div class="expect">Shows billing cycle, volume, fees owed, payment history</div>
+<div class="warn">Note the <code>totalOwed</code> value before submitting payment</div>
+
+<h3>8.2 Submit Fee Payment (Fix 4: should NOT update balance)</h3>
+<pre>curl -s -X POST $API/api/fees/pay \
+  -H "Authorization: Bearer $MERCHANT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantId": "'$MERCHANT_ID'",
+    "txHash": "0xfeepay'$(date +%s)'",
+    "chain": "BASE_SEPOLIA",
+    "token": "USDC",
+    "amount": "0.50"
+  }' | python3 -m json.tool</pre>
+<div class="expect">
+    <span class="badge badge-critical">Fix 4</span> Returns <code>"status": "PENDING"</code> and message about admin verification.<br>
+    <code>remainingBalance</code> is UNCHANGED (same as before the payment).
+</div>
+<div class="warn">Save: <code>PAYMENT_ID="..."</code></div>
+
+<h3>8.3 Verify Balance Didn't Change</h3>
+<pre>curl -s "$API/api/fees/balance?merchantId=$MERCHANT_ID" \
+  -H "Authorization: Bearer $MERCHANT_TOKEN" | python3 -m json.tool | grep totalOwed</pre>
+<div class="expect"><span class="badge badge-critical">Fix 4</span> Same <code>totalOwed</code> as before — balance only changes after admin verification</div>
+
+<h3>8.4 Admin: View Pending Fee Payments</h3>
+<pre>curl -s -H "x-admin-key: $ADMIN_KEY" "$API/api/v1/admin/fee-payments" | python3 -m json.tool</pre>
+
+<h3>8.5 Admin: Verify Fee Payment (NOW balance updates)</h3>
+<pre>curl -s -X POST $API/api/v1/admin/fee-payments/$PAYMENT_ID/verify \
+  -H "x-admin-key: $ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"adminId": "admin"}' | python3 -m json.tool</pre>
+<div class="expect">Returns <code>previousBalance</code> and <code>newBalance</code>. Balance decreased by payment amount. If fully paid, <code>isSuspended</code> set to false.</div>
+
+<h3>8.6 Admin: Reject Fee Payment</h3>
+<pre>curl -s -X POST $API/api/v1/admin/fee-payments/PAYMENT_ID/reject \
+  -H "x-admin-key: $ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "Transaction not found on chain"}' | python3 -m json.tool</pre>
+
+<h3>8.7 View Pricing Tiers</h3>
+<pre>curl -s $API/api/fees/pricing | python3 -m json.tool</pre>
+<div class="expect">Lists all plans (FREE 0.5%, STARTER 1%, GROWTH 0.8%, PRO 0.5%, ENTERPRISE 0.3%)</div>
+
+<!-- ====================== SECTION 9: INVOICES & RECEIPTS ====================== -->
+<h2 id="invoices"><span class="section-num">9.</span> Invoices &amp; Receipts <span class="badge badge-medium">Fix 8</span></h2>
+
+<h3>9.1 Create Invoice</h3>
+<pre>curl -s -X POST $API/api/invoices \
+  -H "Authorization: Bearer $MERCHANT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantId": "'$MERCHANT_ID'",
+    "customerEmail": "customer@test.com",
+    "customerName": "Test Customer",
+    "lineItems": [
+      {"description": "Widget License", "quantity": 1, "unitPrice": "25.00"}
+    ],
+    "chain": "BASE_SEPOLIA",
+    "token": "USDC"
+  }' | python3 -m json.tool</pre>
+<div class="expect">Invoice created with invoiceNumber, status DRAFT or SENT. Webhook <code>invoice.created</code> fired.</div>
+
+<h3>9.2 Admin: View Receipts</h3>
+<pre>curl -s -H "x-admin-key: $ADMIN_KEY" "$API/api/v1/admin/receipts" | python3 -m json.tool</pre>
+
+<h3>9.3 Admin: Receipt Stats</h3>
+<pre>curl -s -H "x-admin-key: $ADMIN_KEY" "$API/api/v1/admin/receipts/stats" | python3 -m json.tool</pre>
+<div class="expect">Counts for total, sent, pending, failed receipts</div>
+
+<h3>9.4 Admin: Resend Receipt Email</h3>
+<pre>curl -s -X POST $API/api/v1/admin/receipts/RECEIPT_ID/resend \
+  -H "x-admin-key: $ADMIN_KEY" | python3 -m json.tool</pre>
+<div class="expect">
+    <span class="badge badge-medium">Fix 8</span> Receipt email sent. Webhook <code>receipt.sent</code> fired.
+</div>
+
+<!-- ====================== SECTION 10: WIDGET ====================== -->
+<h2 id="widget"><span class="section-num">10.</span> Embeddable Widget <span class="badge badge-medium">Fix 10</span></h2>
+
+<h3>10.1 Test Widget in Browser</h3>
+<p>Open a new HTML file locally or use the browser console on any page:</p>
+<pre>&lt;script src="https://stablepay-nine.vercel.app/js/stablepay-widget.js"&gt;&lt;/script&gt;
+&lt;button onclick="testPay()"&gt;Test Payment&lt;/button&gt;
+&lt;script&gt;
+function testPay() {
+  StablePay.checkout({
+    merchantId: 'cmhkjckgi0000qut5wxmtsw1f',
+    amount: 1.00,
+    productName: 'Widget Test',
+    customerEmail: 'test@test.com',
+    onSuccess: (data) =&gt; { alert('Success! Order: ' + data.orderId); },
+    onCancel: () =&gt; { console.log('Cancelled'); },
+    onError: (err) =&gt; { console.error(err); }
+  });
+}
+&lt;/script&gt;</pre>
+
+<h3>10.2 Double-Pay Prevention (Fix 10)</h3>
+<ol>
+    <li>Open the widget and connect your MetaMask wallet</li>
+    <li>Click the green "Pay" button</li>
+    <li>Verify: Button immediately changes to <strong>"PROCESSING..."</strong> and becomes disabled</li>
+    <li>Verify: Clicking again does nothing (button is unresponsive)</li>
+    <li>If you cancel in MetaMask, the modal shows an error — button stays disabled until you restart the flow</li>
+</ol>
+<div class="expect"><span class="badge badge-medium">Fix 10</span> Pay button disabled on first click, shows PROCESSING... text, no duplicate transactions possible</div>
+
+<h3>10.3 Widget Chains Endpoint</h3>
+<pre>curl -s "$API/api/embed/chains?merchantId=$MERCHANT_ID" | python3 -m json.tool</pre>
+<div class="expect">Returns chains configured for this merchant</div>
+
+<!-- ====================== SECTION 11: ADMIN PANEL ====================== -->
+<h2 id="admin-panel"><span class="section-num">11.</span> Admin Panel UI Testing</h2>
+
+<h3>11.1 Login</h3>
+<ol>
+    <li>Go to <a href="https://stablepay-nine.vercel.app/enterprise-admin.html">enterprise-admin.html</a></li>
+    <li>Enter any email + password: <code>admin123</code></li>
+    <li>Should load the dashboard with stats cards</li>
+</ol>
+
+<h3>11.2 Test Each Tab</h3>
+<table>
+    <tr><th>Tab</th><th>What to Check</th></tr>
+    <tr><td>Dashboard</td><td>Stats cards load (merchants, orders, fees). No console errors.</td></tr>
+    <tr><td>Merchants</td><td>Table loads with merchant list. Can click Activate/Edit.</td></tr>
+    <tr><td>All Orders</td><td>Orders table with status badges, fee columns, merchant info.</td></tr>
+    <tr><td>Refunds</td><td>Stats cards (pending/processed/rejected). Table with Approve/Reject/Process actions.</td></tr>
+    <tr><td>Receipts</td><td>Stats cards (total/sent/pending/failed). Table with Download/Resend actions.</td></tr>
+    <tr><td>Billing</td><td>Fee summaries. Merchants with outstanding fees highlighted.</td></tr>
+    <tr><td>Fee Payments</td><td>Pending payments list. Verify/Reject buttons work.</td></tr>
+    <tr><td>Platform Wallets</td><td>Can add/edit/deactivate platform fee collection wallets.</td></tr>
+</table>
+
+<h3>11.3 Admin Refund Flow (UI)</h3>
+<ol>
+    <li>Go to <strong>Refunds</strong> tab</li>
+    <li>Find a PENDING refund &rarr; click <strong>Approve</strong></li>
+    <li>Status should change to APPROVED</li>
+    <li>Click <strong>Process</strong> &rarr; prompted for tx hash &rarr; enter any value</li>
+    <li>Status should change to PROCESSED</li>
+    <li>Go to <strong>Billing</strong> tab &rarr; merchant's feesDue should have decreased</li>
+</ol>
+
+<!-- ====================== SECTION 12: WEBHOOKS ====================== -->
+<h2 id="webhooks"><span class="section-num">12.</span> Webhooks <span class="badge badge-medium">Fix 8</span></h2>
+
+<h3>12.1 All Webhook Event Types</h3>
+<table>
+    <tr><th>Event</th><th>Triggered By</th><th>Status</th></tr>
+    <tr><td><code>order.created</code></td><td>New order created</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>order.confirmed</code></td><td>Order confirmed with tx</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>order.expired</code></td><td>Order past expiry time</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>refund.requested</code></td><td>Refund created</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>refund.processed</code></td><td>Refund completed with tx</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>invoice.created</code></td><td>Invoice created</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>invoice.sent</code></td><td>Invoice email sent</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>invoice.viewed</code></td><td>Customer views pay page</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>invoice.paid</code></td><td>Invoice marked paid</td><td class="badge badge-pass">Fix 8</td></tr>
+    <tr><td><code>invoice.cancelled</code></td><td>Invoice cancelled</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>receipt.created</code></td><td>Receipt auto-created on confirm</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>receipt.sent</code></td><td>Receipt email sent</td><td class="badge badge-pass">Fix 8</td></tr>
+</table>
+
+<h3>12.2 Test Webhook (if merchant has webhook URL configured)</h3>
+<pre>curl -s -X POST $API/api/webhooks/test \
+  -H "Authorization: Bearer $MERCHANT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"merchantId": "'$MERCHANT_ID'"}' | python3 -m json.tool</pre>
+
+<!-- ====================== SECTION 13: CRON JOBS ====================== -->
+<h2 id="cron"><span class="section-num">13.</span> Cron Jobs <span class="badge badge-high">Fix 6</span></h2>
+
+<div class="warn">Cron jobs only run when the server is running directly (not on Vercel serverless). They are scheduled in <code>startServer()</code>.</div>
+
+<h3>13.1 Fee Overdue Check (runs every 6 hours)</h3>
+<p>You can trigger it manually:</p>
+<pre>curl -s -X POST $API/api/fees/check-overdue \
+  -H "Content-Type: application/json" \
+  -d '{"adminKey": "'$ADMIN_KEY'"}' | python3 -m json.tool</pre>
+<div class="expect">Returns <code>checked</code>, <code>suspended</code>, <code>inGracePeriod</code> counts</div>
+
+<h3>13.2 Manual Suspend/Unsuspend</h3>
+<pre><span class="comment"># Suspend a merchant</span>
+curl -s -X POST $API/api/fees/suspend \
+  -H "Content-Type: application/json" \
+  -d '{"adminKey":"'$ADMIN_KEY'","merchantId":"'$MERCHANT_ID'","suspend":true}' | python3 -m json.tool
+
+<span class="comment"># Unsuspend</span>
+curl -s -X POST $API/api/fees/suspend \
+  -H "Content-Type: application/json" \
+  -d '{"adminKey":"'$ADMIN_KEY'","merchantId":"'$MERCHANT_ID'","suspend":false}' | python3 -m json.tool</pre>
+
+<h3>13.3 Test Suspended Merchant Can't Process Payments</h3>
+<pre><span class="comment"># While merchant is suspended, try to confirm an order</span>
+curl -s -X POST $API/api/v1/orders/ORDER_ID/confirm \
+  -H "Content-Type: application/json" \
+  -d '{"txHash":"0xtest"}' | python3 -m json.tool</pre>
+<div class="expect">Status 403, <code>"Merchant account suspended"</code></div>
+<div class="warn">Remember to unsuspend the test merchant after this test!</div>
+
+<!-- ====================== SECTION 14: CHECKLIST ====================== -->
+<h2 id="checklist"><span class="section-num">14.</span> Final Checklist</h2>
+
+<h3>Critical Fixes (Data Integrity)</h3>
+<ul class="checklist">
+    <li><strong>Fix 1:</strong> Admin refund process reverses fees proportionally + fires webhook</li>
+    <li><strong>Fix 2:</strong> Refund creation blocked on PENDING/EXPIRED/CANCELLED orders</li>
+    <li><strong>Fix 3:</strong> EXPIRED and CANCELLED orders can't be confirmed (both endpoints)</li>
+    <li><strong>Fix 4:</strong> Fee payment submit doesn't change balance — only admin verify does</li>
+</ul>
+
+<h3>High Priority Fixes (Broken Flows)</h3>
+<ul class="checklist">
+    <li><strong>Fix 5:</strong> Transaction fromAddress shows "Unknown" instead of customerName</li>
+    <li><strong>Fix 6:</strong> Cron jobs scheduled (fee check every 6h, webhook retries every 5m)</li>
+    <li><strong>Fix 7:</strong> Activation email auto-sent when admin activates merchant</li>
+</ul>
+
+<h3>Medium Priority Fixes (Hardening)</h3>
+<ul class="checklist">
+    <li><strong>Fix 8:</strong> invoice.paid and receipt.sent webhook events now fire</li>
+    <li><strong>Fix 9:</strong> Cancel endpoint exists and works (PENDING &rarr; CANCELLED)</li>
+    <li><strong>Fix 10:</strong> Widget pay button disabled after click, shows PROCESSING...</li>
+</ul>
+
+<h3>Full Flow Smoke Test</h3>
+<ul class="checklist">
+    <li>Health check passes</li>
+    <li>Admin login works in browser</li>
+    <li>Create merchant &rarr; activate &rarr; set wallets &rarr; login</li>
+    <li>Create order &rarr; confirm with tx &rarr; receipt auto-created</li>
+    <li>Create refund on confirmed order &rarr; approve &rarr; process &rarr; fees reversed</li>
+    <li>Submit fee payment &rarr; verify balance unchanged &rarr; admin verify &rarr; balance updated</li>
+    <li>Cancel a pending order &rarr; try to confirm &rarr; blocked</li>
+    <li>Widget: connect wallet &rarr; click pay &rarr; button disabled</li>
+    <li>Admin panel: all tabs load, no console errors</li>
+</ul>
+
+<hr>
+<p style="text-align: center; color: #999; font-size: 13px; margin-top: 40px;">
+    StablePay Testing Guide &bull; Generated Feb 2026 &bull; All 10 audit fixes included
+</p>
+
+</div>
+</body>
+</html>

@@ -231,6 +231,14 @@ router.post('/', rateLimit({
       return res.status(404).json({ error: 'Order not found' });
     }
 
+    // Only allow refunds on CONFIRMED or PAID orders
+    if (order.status !== 'CONFIRMED' && order.status !== 'PAID') {
+      return res.status(400).json({
+        error: 'Order not eligible for refund',
+        message: `Cannot refund an order with status ${order.status}. Only CONFIRMED or PAID orders can be refunded.`,
+      });
+    }
+
     // If customer email provided, verify it matches the order
     if (data.customerEmail && order.customerEmail) {
       if (data.customerEmail.toLowerCase() !== order.customerEmail.toLowerCase()) {

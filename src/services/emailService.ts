@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const BASE_URL = process.env.BASE_URL || 'https://stablepay-nine.vercel.app';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'StablePay <noreply@stablepay.io>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'StablePay <onboarding@resend.dev>';
 
 class EmailService {
   /**
@@ -134,6 +134,19 @@ class EmailService {
         to: toEmail,
         messageId: data?.id
       });
+
+      // Fire receipt.sent webhook
+      if (receipt.merchantId) {
+        try {
+          const { webhookService } = await import('./webhookService');
+          webhookService.sendWebhook(receipt.merchantId, 'receipt.sent', {
+            receiptId,
+            receiptNumber: receipt.receiptNumber,
+            customerEmail: toEmail,
+            amount: Number(receipt.amount),
+          }).catch(() => {});
+        } catch {}
+      }
 
       return true;
     } catch (error) {

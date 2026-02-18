@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StablePay - Merchant Integration Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+        body { background: #f8fafc; }
+        .brutal-card {
+            border: 3px solid #000;
+            box-shadow: 6px 6px 0px #000;
+        }
+        .brutal-card:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px #000;
+            transition: all 0.15s ease;
+        }
+        pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 2px solid #000;
+            overflow-x: auto;
+        }
+        .step-number {
+            width: 48px;
+            height: 48px;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #3b82f6;
+            color: white;
+            border: 2px solid #000;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .copy-btn:hover { background: #2563eb; }
+        .copy-btn.copied { background: #16a34a; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Header -->
+    <div class="bg-black text-white">
+        <div class="max-w-4xl mx-auto px-6 py-12">
+            <div class="flex items-center space-x-3 mb-6">
+                <div class="w-10 h-10 bg-blue-500 border-2 border-white flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">$</span>
+                </div>
+                <span class="text-2xl font-extrabold tracking-tight">STABLEPAY</span>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+                Merchant Integration Guide
+            </h1>
+            <p class="text-xl text-slate-300 max-w-2xl">
+                Accept USDC payments on your website in under 5 minutes. No backend required.
+            </p>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-6 py-12">
+
+        <!-- Quick Start -->
+        <div class="mb-16">
+            <h2 class="text-3xl font-extrabold mb-2">Quick Start</h2>
+            <p class="text-slate-500 mb-8">Everything you need to start accepting crypto payments</p>
+
+            <div class="grid md:grid-cols-3 gap-6 mb-8">
+                <div class="brutal-card bg-white p-6">
+                    <div class="text-3xl font-extrabold text-blue-500 mb-2">01</div>
+                    <h3 class="font-bold text-lg mb-1">Add the Script</h3>
+                    <p class="text-slate-500 text-sm">One line of code on your site</p>
+                </div>
+                <div class="brutal-card bg-white p-6">
+                    <div class="text-3xl font-extrabold text-blue-500 mb-2">02</div>
+                    <h3 class="font-bold text-lg mb-1">Add a Pay Button</h3>
+                    <p class="text-slate-500 text-sm">Trigger checkout with your amount</p>
+                </div>
+                <div class="brutal-card bg-white p-6">
+                    <div class="text-3xl font-extrabold text-blue-500 mb-2">03</div>
+                    <h3 class="font-bold text-lg mb-1">Get Paid</h3>
+                    <p class="text-slate-500 text-sm">USDC goes directly to your wallet</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Your Credentials -->
+        <div class="mb-16">
+            <h2 class="text-3xl font-extrabold mb-2">Your Credentials</h2>
+            <p class="text-slate-500 mb-6">Keep these safe - you'll need them for integration</p>
+
+            <div class="brutal-card bg-yellow-50 p-6 space-y-4">
+                <div class="flex justify-between items-center border-b border-yellow-200 pb-3">
+                    <span class="font-bold text-sm uppercase text-slate-600">Merchant ID</span>
+                    <code class="mono text-sm bg-white px-3 py-1 border border-slate-300 select-all">cmhkjckgi0000qut5wxmtsw1f</code>
+                </div>
+                <div class="flex justify-between items-center border-b border-yellow-200 pb-3">
+                    <span class="font-bold text-sm uppercase text-slate-600">Dashboard URL</span>
+                    <a href="https://stablepay-nine.vercel.app/login.html" target="_blank" class="text-blue-600 hover:underline text-sm mono">stablepay-nine.vercel.app/login.html</a>
+                </div>
+                <div class="flex justify-between items-center border-b border-yellow-200 pb-3">
+                    <span class="font-bold text-sm uppercase text-slate-600">Login Email</span>
+                    <code class="mono text-sm bg-white px-3 py-1 border border-slate-300 select-all">unlock@unlock.com</code>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-sm uppercase text-slate-600">Login Token</span>
+                    <code class="mono text-sm bg-white px-3 py-1 border border-slate-300 select-all">78luhzxlf8r2h7aztu15sl</code>
+                </div>
+            </div>
+
+            <div class="mt-4 bg-blue-50 border-2 border-blue-200 p-4 text-sm text-blue-800">
+                <strong>Quick Login Link:</strong><br>
+                <a href="https://stablepay-nine.vercel.app/login.html?email=unlock@unlock.com&token=78luhzxlf8r2h7aztu15sl" target="_blank" class="mono text-xs break-all hover:underline">
+                    https://stablepay-nine.vercel.app/login.html?email=unlock@unlock.com&token=78luhzxlf8r2h7aztu15sl
+                </a>
+            </div>
+        </div>
+
+        <!-- Integration Guide -->
+        <div class="mb-16">
+            <h2 class="text-3xl font-extrabold mb-2">Integration</h2>
+            <p class="text-slate-500 mb-8">Choose the method that works best for your site</p>
+
+            <!-- Method A: Widget -->
+            <div class="mb-12">
+                <div class="flex items-center space-x-4 mb-6">
+                    <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 border-2 border-black">RECOMMENDED</span>
+                    <h3 class="text-2xl font-extrabold">Method A: Embed Widget</h3>
+                </div>
+
+                <!-- Step 1 -->
+                <div class="flex items-start space-x-4 mb-8">
+                    <div class="step-number bg-blue-100 text-blue-700">1</div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-lg mb-2">Add the StablePay script to your site</h4>
+                        <p class="text-slate-500 mb-3">Paste this line before the closing <code class="mono text-sm bg-slate-100 px-1">&lt;/body&gt;</code> tag on any page where you want payments:</p>
+                        <div class="relative">
+                            <pre class="p-4 text-sm rounded-none"><code>&lt;script src="https://stablepay-nine.vercel.app/js/stablepay-widget.js"&gt;&lt;/script&gt;</code></pre>
+                            <button class="copy-btn" onclick="copyCode(this, '&lt;script src=&quot;https://stablepay-nine.vercel.app/js/stablepay-widget.js&quot;&gt;&lt;/script&gt;')">COPY</button>
+                        </div>
+                        <p class="text-slate-400 text-sm mt-2">For Lovable: Go to your page editor and add a Custom HTML/Script block</p>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="flex items-start space-x-4 mb-8">
+                    <div class="step-number bg-blue-100 text-blue-700">2</div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-lg mb-2">Add a Pay Button (Fixed Amount)</h4>
+                        <p class="text-slate-500 mb-3">For a simple fixed-price product or subscription:</p>
+                        <div class="relative">
+                            <pre class="p-4 text-sm rounded-none"><code>&lt;button onclick="StablePay.checkout({
+  merchantId: 'cmhkjckgi0000qut5wxmtsw1f',
+  amount: 29.99,
+  productName: 'Premium Subscription',
+  chain: 'BASE_MAINNET',
+  onSuccess: function(data) {
+    alert('Payment successful! Order: ' + data.orderId);
+    // Redirect to thank you page, unlock content, etc.
+  },
+  onError: function(err) {
+    alert('Payment failed: ' + err.message);
+  }
+})"&gt;
+  Pay $29.99 with USDC
+&lt;/button&gt;</code></pre>
+                            <button class="copy-btn" onclick="copyBlock(this, 'fixed-amount')">COPY</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2b -->
+                <div class="flex items-start space-x-4 mb-8">
+                    <div class="step-number bg-purple-100 text-purple-700">2b</div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-lg mb-2">Pay Button (Dynamic Amount)</h4>
+                        <p class="text-slate-500 mb-3">For carts or user-entered amounts:</p>
+                        <div class="relative">
+                            <pre class="p-4 text-sm rounded-none"><code>&lt;!-- Amount input --&gt;
+&lt;input type="number" id="payAmount" placeholder="Enter amount" min="0.01" step="0.01" /&gt;
+&lt;input type="email" id="payEmail" placeholder="Your email" /&gt;
+
+&lt;button onclick="StablePay.checkout({
+  merchantId: 'cmhkjckgi0000qut5wxmtsw1f',
+  amount: parseFloat(document.getElementById('payAmount').value),
+  customerEmail: document.getElementById('payEmail').value,
+  productName: 'UnlockRiver Order',
+  chain: 'BASE_MAINNET',
+  onSuccess: function(data) {
+    window.location.href = '/thank-you?order=' + data.orderId;
+  }
+})"&gt;
+  Pay with USDC
+&lt;/button&gt;</code></pre>
+                            <button class="copy-btn" onclick="copyBlock(this, 'dynamic-amount')">COPY</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2c -->
+                <div class="flex items-start space-x-4 mb-8">
+                    <div class="step-number bg-yellow-100 text-yellow-700">2c</div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-lg mb-2">Pay Button (With Customer Info)</h4>
+                        <p class="text-slate-500 mb-3">Collect name & email for receipts and records:</p>
+                        <div class="relative">
+                            <pre class="p-4 text-sm rounded-none"><code>&lt;button onclick="StablePay.checkout({
+  merchantId: 'cmhkjckgi0000qut5wxmtsw1f',
+  amount: 49.99,
+  productName: 'Annual Plan',
+  customerEmail: 'customer@email.com',
+  customerName: 'John Doe',
+  chain: 'BASE_MAINNET',
+  metadata: {
+    plan: 'annual',
+    userId: '12345'
+  },
+  onSuccess: function(data) {
+    console.log('Order ID:', data.orderId);
+    console.log('Status:', data.status);
+    // Your post-payment logic here
+  },
+  onCancel: function() {
+    console.log('User cancelled payment');
+  }
+})"&gt;
+  Subscribe - $49.99/year
+&lt;/button&gt;</code></pre>
+                            <button class="copy-btn" onclick="copyBlock(this, 'with-info')">COPY</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Method B: Redirect -->
+            <div class="mb-12">
+                <div class="flex items-center space-x-4 mb-6">
+                    <span class="bg-slate-500 text-white text-xs font-bold px-3 py-1 border-2 border-black">ALTERNATIVE</span>
+                    <h3 class="text-2xl font-extrabold">Method B: Payment Link</h3>
+                </div>
+                <p class="text-slate-500 mb-4">Don't want to embed code? Send customers directly to a payment page:</p>
+                <div class="relative">
+                    <pre class="p-4 text-sm rounded-none"><code>https://stablepay-nine.vercel.app/crypto-pay.html?merchantId=cmhkjckgi0000qut5wxmtsw1f&amount=29.99&chain=BASE_MAINNET</code></pre>
+                    <button class="copy-btn" onclick="copyCode(this, 'https://stablepay-nine.vercel.app/crypto-pay.html?merchantId=cmhkjckgi0000qut5wxmtsw1f&amount=29.99&chain=BASE_MAINNET')">COPY</button>
+                </div>
+                <p class="text-slate-400 text-sm mt-2">Use this in emails, social media, or as a simple link on your site</p>
+            </div>
+        </div>
+
+        <!-- Checkout Options Reference -->
+        <div class="mb-16">
+            <h2 class="text-3xl font-extrabold mb-2">Checkout Options Reference</h2>
+            <p class="text-slate-500 mb-6">All parameters you can pass to <code class="mono text-sm bg-slate-100 px-1">StablePay.checkout()</code></p>
+
+            <div class="brutal-card bg-white overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-black text-white">
+                        <tr>
+                            <th class="text-left px-4 py-3 font-bold">Parameter</th>
+                            <th class="text-left px-4 py-3 font-bold">Type</th>
+                            <th class="text-left px-4 py-3 font-bold">Required</th>
+                            <th class="text-left px-4 py-3 font-bold">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr>
+                            <td class="px-4 py-3 mono font-medium">merchantId</td>
+                            <td class="px-4 py-3 text-slate-500">string</td>
+                            <td class="px-4 py-3"><span class="bg-red-100 text-red-700 text-xs px-2 py-0.5 font-bold">YES</span></td>
+                            <td class="px-4 py-3">Your merchant ID</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 mono font-medium">amount</td>
+                            <td class="px-4 py-3 text-slate-500">number</td>
+                            <td class="px-4 py-3"><span class="bg-red-100 text-red-700 text-xs px-2 py-0.5 font-bold">YES</span></td>
+                            <td class="px-4 py-3">Payment amount in USD (e.g. 29.99)</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 mono font-medium">productName</td>
+                            <td class="px-4 py-3 text-slate-500">string</td>
+                            <td class="px-4 py-3 text-slate-400">optional</td>
+                            <td class="px-4 py-3">Product or service name shown in checkout</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 mono font-medium">customerEmail</td>
+                            <td class="px-4 py-3 text-slate-500">string</td>
+                            <td class="px-4 py-3 text-slate-400">optional</td>
+                            <td class="px-4 py-3">Customer's email (for receipts)</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 mono font-medium">customerName</td>
+                            <td class="px-4 py-3 text-slate-500">string</td>
+                            <td class="px-4 py-3 text-slate-400">optional</td>
+                            <td class="px-4 py-3">Customer's name</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 mono font-medium">chain</td>
+                            <td class="px-4 py-3 text-slate-500">string</td>
+                            <td class="px-4 py-3 text-slate-400">optional</td>
+                            <td class="px-4 py-3">Blockchain to pay on (see below). If omitted, shows chain selector</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 mono font-medium">metadata</td>
+                            <td class="px-4 py-3 text-slate-500">object</td>
+                            <td class="px-4 py-3 text-slate-400">optional</td>
+                            <td class="px-4 py-3">Custom data (plan IDs, user IDs, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 mono font-medium">onSuccess</td>
+                            <td class="px-4 py-3 text-slate-500">function</td>
+                            <td class="px-4 py-3 text-slate-400">optional</td>
+                            <td class="px-4 py-3">Called after payment. Receives <code class="mono text-xs">{ orderId, status }</code></td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 mono font-medium">onCancel</td>
+                            <td class="px-4 py-3 text-slate-500">function</td>
+                            <td class="px-4 py-3 text-slate-400">optional</td>
+                            <td class="px-4 py-3">Called when user closes checkout</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 mono font-medium">onError</td>
+                            <td class="px-4 py-3 text-slate-500">function</td>
+                            <td class="px-4 py-3 text-slate-400">optional</td>
+                            <td class="px-4 py-3">Called on error. Receives <code class="mono text-xs">{ message }</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Supported Chains -->
+        <div class="mb-16">
+            <h2 class="text-3xl font-extrabold mb-2">Supported Chains</h2>
+            <p class="text-slate-500 mb-6">Pass these values as the <code class="mono text-sm bg-slate-100 px-1">chain</code> parameter</p>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">B</div>
+                        <div>
+                            <h4 class="font-bold">Base (Mainnet)</h4>
+                            <code class="mono text-xs text-slate-500">BASE_MAINNET</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Low fees, fast confirmations. Recommended for production.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-blue-300 rounded-full flex items-center justify-center text-white font-bold text-xs">B</div>
+                        <div>
+                            <h4 class="font-bold">Base (Sepolia Testnet)</h4>
+                            <code class="mono text-xs text-slate-500">BASE_SEPOLIA</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Free testnet for development. Use testnet USDC.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white font-bold text-xs">E</div>
+                        <div>
+                            <h4 class="font-bold">Ethereum (Mainnet)</h4>
+                            <code class="mono text-xs text-slate-500">ETHEREUM_MAINNET</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Most secure. Higher gas fees.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xs">P</div>
+                        <div>
+                            <h4 class="font-bold">Polygon (Mainnet)</h4>
+                            <code class="mono text-xs text-slate-500">POLYGON_MAINNET</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Very low fees. Popular for payments.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- How it Works -->
+        <div class="mb-16">
+            <h2 class="text-3xl font-extrabold mb-2">How Payments Work</h2>
+            <p class="text-slate-500 mb-8">The full flow from checkout to payout</p>
+
+            <div class="space-y-6">
+                <div class="flex items-start space-x-4">
+                    <div class="step-number bg-green-100 text-green-700">1</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Customer clicks Pay</h4>
+                        <p class="text-slate-500">StablePay modal opens with amount, chain, and wallet connect</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-4">
+                    <div class="step-number bg-green-100 text-green-700">2</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Customer connects wallet & sends USDC</h4>
+                        <p class="text-slate-500">Supports MetaMask, Coinbase Wallet, WalletConnect, and more</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-4">
+                    <div class="step-number bg-green-100 text-green-700">3</div>
+                    <div>
+                        <h4 class="font-bold text-lg">USDC goes directly to your wallet</h4>
+                        <p class="text-slate-500">No middleman. 100% of the payment hits your wallet immediately.</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-4">
+                    <div class="step-number bg-green-100 text-green-700">4</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Order confirmed & receipt generated</h4>
+                        <p class="text-slate-500">StablePay verifies the transaction on-chain and creates a receipt</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-4">
+                    <div class="step-number bg-green-100 text-green-700">5</div>
+                    <div>
+                        <h4 class="font-bold text-lg">onSuccess callback fires</h4>
+                        <p class="text-slate-500">Redirect to a thank-you page, unlock content, update your database</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Merchant Dashboard -->
+        <div class="mb-16">
+            <h2 class="text-3xl font-extrabold mb-2">Your Merchant Dashboard</h2>
+            <p class="text-slate-500 mb-6">Track everything from one place</p>
+
+            <div class="brutal-card bg-white p-6 mb-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg">Login to Dashboard</h3>
+                    <a href="https://stablepay-nine.vercel.app/login.html" target="_blank" class="bg-blue-500 text-white px-4 py-2 font-bold text-sm border-2 border-black hover:bg-blue-600">
+                        OPEN DASHBOARD
+                    </a>
+                </div>
+                <p class="text-slate-500 text-sm">Use your login credentials above to access your merchant dashboard.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="brutal-card bg-white p-5">
+                    <h4 class="font-bold mb-2">Orders</h4>
+                    <p class="text-sm text-slate-500">View all incoming payments, amounts, customer info, and transaction status in real-time</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <h4 class="font-bold mb-2">Receipts</h4>
+                    <p class="text-sm text-slate-500">Auto-generated receipts for every confirmed payment. Download PDFs or email to customers</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <h4 class="font-bold mb-2">Wallet Management</h4>
+                    <p class="text-sm text-slate-500">Configure which wallets receive payments on each blockchain</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <h4 class="font-bold mb-2">Refund Requests</h4>
+                    <p class="text-sm text-slate-500">Request refunds for any order. Admin reviews, approves, and processes</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lovable Specific -->
+        <div class="mb-16">
+            <h2 class="text-3xl font-extrabold mb-2">Lovable Integration (Step-by-Step)</h2>
+            <p class="text-slate-500 mb-6">If your site is built on Lovable, follow these exact steps</p>
+
+            <div class="space-y-6">
+                <div class="brutal-card bg-white p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="step-number bg-pink-100 text-pink-700">1</div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Open your Lovable project</h4>
+                            <p class="text-slate-500">Navigate to the page where you want to add payments</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="brutal-card bg-white p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="step-number bg-pink-100 text-pink-700">2</div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Add a Script component</h4>
+                            <p class="text-slate-500 mb-2">In your Lovable page, add a Custom Code / Script component and paste:</p>
+                            <pre class="p-3 text-sm"><code>&lt;script src="https://stablepay-nine.vercel.app/js/stablepay-widget.js"&gt;&lt;/script&gt;</code></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="brutal-card bg-white p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="step-number bg-pink-100 text-pink-700">3</div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Add your Pay button</h4>
+                            <p class="text-slate-500 mb-2">Add a button element with the onclick handler, or add another Custom Code block:</p>
+                            <pre class="p-3 text-sm"><code>&lt;button
+  style="background:#3b82f6;color:white;padding:12px 24px;font-weight:bold;font-size:16px;border:3px solid black;box-shadow:4px 4px 0px black;cursor:pointer;"
+  onclick="StablePay.checkout({
+    merchantId: 'cmhkjckgi0000qut5wxmtsw1f',
+    amount: 29.99,
+    productName: 'Your Product',
+    chain: 'BASE_MAINNET',
+    onSuccess: function(data) {
+      alert('Payment successful! Order: ' + data.orderId);
+    }
+  })"
+&gt;
+  Pay $29.99 with USDC
+&lt;/button&gt;</code></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="brutal-card bg-white p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="step-number bg-pink-100 text-pink-700">4</div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Publish & Test</h4>
+                            <p class="text-slate-500">Publish your Lovable site, click the pay button, and verify the StablePay modal opens. Check your merchant dashboard to see the order.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="mb-16">
+            <h2 class="text-3xl font-extrabold mb-6">FAQ</h2>
+
+            <div class="space-y-4">
+                <div class="brutal-card bg-white p-5">
+                    <h4 class="font-bold mb-1">Do I need a backend?</h4>
+                    <p class="text-sm text-slate-500">No. The widget handles everything client-side. Just add the script and button.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <h4 class="font-bold mb-1">What wallets do customers need?</h4>
+                    <p class="text-sm text-slate-500">Any EVM wallet: MetaMask, Coinbase Wallet, Rainbow, Trust Wallet, or any WalletConnect-compatible wallet.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <h4 class="font-bold mb-1">When do I receive the funds?</h4>
+                    <p class="text-sm text-slate-500">Immediately. USDC is sent directly to your wallet. There's no holding period.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <h4 class="font-bold mb-1">What are the fees?</h4>
+                    <p class="text-sm text-slate-500">A small platform fee (0.3% - 1% depending on plan) is invoiced separately. You receive 100% of customer payments.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <h4 class="font-bold mb-1">How do refunds work?</h4>
+                    <p class="text-sm text-slate-500">Request a refund from your merchant dashboard. The admin reviews, approves, and processes refunds manually via on-chain transfer.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <h4 class="font-bold mb-1">Can I test without real money?</h4>
+                    <p class="text-sm text-slate-500">Yes! Use <code class="mono text-xs">chain: 'BASE_SEPOLIA'</code> to test with testnet USDC. No real funds needed.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Support -->
+        <div class="brutal-card bg-black text-white p-8">
+            <h2 class="text-2xl font-extrabold mb-2">Need Help?</h2>
+            <p class="text-slate-300 mb-4">We're here to help you get integrated.</p>
+            <div class="flex flex-wrap gap-4">
+                <a href="https://stablepay-nine.vercel.app/login.html" target="_blank" class="bg-blue-500 text-white px-6 py-3 font-bold text-sm border-2 border-white hover:bg-blue-600 inline-block">
+                    MERCHANT DASHBOARD
+                </a>
+                <a href="https://stablepay-nine.vercel.app" target="_blank" class="bg-white text-black px-6 py-3 font-bold text-sm border-2 border-white hover:bg-slate-100 inline-block">
+                    STABLEPAY HOME
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="bg-black text-white mt-16 py-8">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <p class="text-slate-400 text-sm">StablePay - Multi-Chain USDC Payment Platform</p>
+        </div>
+    </div>
+
+    <script>
+        function copyCode(btn, text) {
+            // Decode HTML entities
+            const div = document.createElement('div');
+            div.innerHTML = text;
+            navigator.clipboard.writeText(div.textContent);
+            btn.textContent = 'COPIED!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'COPY';
+                btn.classList.remove('copied');
+            }, 2000);
+        }
+
+        function copyBlock(btn, id) {
+            const pre = btn.parentElement.querySelector('code');
+            // Decode HTML entities
+            const div = document.createElement('div');
+            div.innerHTML = pre.innerHTML;
+            navigator.clipboard.writeText(div.textContent);
+            btn.textContent = 'COPIED!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'COPY';
+                btn.classList.remove('copied');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
