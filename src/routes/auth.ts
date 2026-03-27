@@ -133,6 +133,7 @@ router.get('/merchant-profile', async (req, res) => {
       monthlyVolumeUsed: merchant.monthlyVolumeUsed,
       monthlyTransactions: merchant.monthlyTransactions,
       billingCycleStart: merchant.billingCycleStart,
+      feesDue: merchant.feesDue,
     });
   } catch (error) {
     console.error('Profile fetch error:', error);

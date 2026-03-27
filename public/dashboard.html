@@ -526,50 +526,84 @@
             </div>
         </div>
 
-        <!-- Pricing Tier Card -->
-        <div class="bg-gradient-to-r from-indigo-900/50 to-blue-900/50 border border-blue-700/50 mb-8 p-5">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <h3 class="text-lg font-bold text-white" id="currentPlanName">FREE TIER</h3>
-                    <p class="text-sm text-slate-400" data-i18n="pricing.tierDescription">Your current pricing plan</p>
+        <!-- Pricing & Fees Card -->
+        <div class="bg-slate-900 border border-slate-800 mb-8 overflow-hidden">
+            <!-- Current fee header -->
+            <div class="bg-gradient-to-r from-blue-900/60 to-slate-800/60 px-5 py-4 border-b border-slate-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wide">Your Fee Rate</p>
+                        <p class="text-3xl font-bold text-white" id="currentFeeDisplay">0.5%</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wide">Fees Owed</p>
+                        <p class="text-2xl font-bold text-cyan-400" id="feesOwedDisplay">$0.00</p>
+                    </div>
                 </div>
-                <button id="upgradeBtn" class="bg-blue-600 hover:bg-indigo-700 text-white px-5 py-2 font-medium text-sm transition-colors" data-i18n="pricing.upgrade">
-                    Upgrade
-                </button>
             </div>
 
-            <!-- Usage Bar -->
-            <div class="mb-4">
-                <div class="flex justify-between mb-2">
-                    <span class="text-xs font-medium text-slate-400 uppercase" data-i18n="pricing.monthlyUsage">Monthly Volume</span>
-                    <span class="text-xs font-medium text-white" id="volumeUsageText">$0 / $1,000</span>
+            <div class="p-5">
+                <!-- Volume progress to next tier -->
+                <div class="mb-5">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-xs font-medium text-slate-400 uppercase">30-Day Volume</span>
+                        <span class="text-xs font-medium text-white" id="volumeUsageText">$0</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden mb-2">
+                        <div id="volumeUsageBar" class="bg-gradient-to-r from-cyan-400 to-blue-500 h-full transition-all duration-500 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <p class="text-xs text-slate-500" id="nextTierText">Process $10,000 to unlock 0.8% fee rate</p>
                 </div>
-                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                    <div id="volumeUsageBar" class="bg-blue-500 h-full transition-all duration-500 rounded-full" style="width: 0%"></div>
-                </div>
-                <p class="text-xs text-slate-500 mt-2" id="billingCycleText">Billing cycle resets in 30 days</p>
-            </div>
 
-            <!-- Plan Features -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                    <span class="text-slate-500 text-xs uppercase">Chains</span>
-                    <div class="font-medium text-white" id="planBlockchains">1</div>
+                <!-- Fee tiers visualization -->
+                <div class="grid grid-cols-4 gap-1 mb-5">
+                    <div id="tierStarter" class="text-center p-2 bg-slate-800 border-2 border-cyan-400">
+                        <p class="text-xs text-slate-400">Starter</p>
+                        <p class="text-sm font-bold text-white">1.0%</p>
+                        <p class="text-[10px] text-slate-500">&lt; $10k</p>
+                    </div>
+                    <div id="tierGrowth" class="text-center p-2 bg-slate-800/50 border border-slate-700">
+                        <p class="text-xs text-slate-400">Growth</p>
+                        <p class="text-sm font-bold text-slate-400">0.8%</p>
+                        <p class="text-[10px] text-slate-500">$10k-50k</p>
+                    </div>
+                    <div id="tierPro" class="text-center p-2 bg-slate-800/50 border border-slate-700">
+                        <p class="text-xs text-slate-400">Pro</p>
+                        <p class="text-sm font-bold text-slate-400">0.5%</p>
+                        <p class="text-[10px] text-slate-500">$50k-250k</p>
+                    </div>
+                    <div id="tierEnterprise" class="text-center p-2 bg-slate-800/50 border border-slate-700">
+                        <p class="text-xs text-slate-400">Enterprise</p>
+                        <p class="text-sm font-bold text-slate-400">0.3%</p>
+                        <p class="text-[10px] text-slate-500">$250k+</p>
+                    </div>
                 </div>
-                <div>
-                    <span class="text-slate-500 text-xs uppercase">Fee</span>
-                    <div class="font-medium text-white" id="planFee">1.0%</div>
-                </div>
-                <div>
-                    <span class="text-slate-500 text-xs uppercase">Refunds</span>
-                    <div class="font-medium text-white" id="planRefunds">No</div>
-                </div>
-                <div>
-                    <span class="text-slate-500 text-xs uppercase">Webhooks</span>
-                    <div class="font-medium text-white" id="planWebhooks">No</div>
+
+                <!-- Billing cycle info -->
+                <div class="flex items-center justify-between text-xs bg-slate-800/50 border border-slate-700 p-3">
+                    <div>
+                        <span class="text-slate-400">Billing Cycle</span>
+                        <span class="text-white font-bold ml-2" id="billingCycleLabel">Weekly</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">Next Invoice</span>
+                        <span class="text-white font-bold ml-2" id="billingCycleText">—</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400">Fees Saved</span>
+                        <span class="text-green-400 font-bold ml-2" id="feesSavedDisplay">$0</span>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Hidden legacy elements for compatibility -->
+        <span id="currentPlanName" class="hidden"></span>
+        <span id="planBlockchains" class="hidden"></span>
+        <span id="planFee" class="hidden"></span>
+        <span id="planRefunds" class="hidden"></span>
+        <span id="planWebhooks" class="hidden"></span>
+        <button id="upgradeBtn" class="hidden"></button>
 
         <!-- Quick Stats -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -1926,110 +1960,79 @@ onMounted(() => {
         }
 
         function updatePricingTierDisplay(merchant) {
-            const plan = merchant.plan || 'FREE';
-            const accountType = PRICING_TIERS[plan] || PRICING_TIERS.FREE;
             const monthlyVolume = parseFloat(merchant.monthlyVolumeUsed || 0);
+            const feesDue = parseFloat(merchant.feesDue || 0);
             const volumeTier = getVolumeTier(monthlyVolume);
-
-            // Get custom enterprise rate if set
-            const customFee = merchant.customFeePercent ? parseFloat(merchant.customFeePercent) * 100 : null;
+            const customFee = merchant.customFeePercent ? parseFloat(merchant.customFeePercent) : null;
             const currentFee = customFee || volumeTier.feePercent;
 
-            // Update plan name based on mode
-            const hasMainnetWallets = (merchant.wallets || []).some(w => w.chain && w.chain.includes('MAINNET'));
-            if (plan === 'FREE' && !hasMainnetWallets) {
-                document.getElementById('currentPlanName').textContent = 'FREE';
-            } else if (plan === 'FREE' && hasMainnetWallets) {
-                document.getElementById('currentPlanName').textContent = 'FREE (LIVE)';
-            } else if (plan === 'ENTERPRISE') {
-                document.getElementById('currentPlanName').textContent = 'ENTERPRISE';
+            // Current fee display
+            document.getElementById('currentFeeDisplay').textContent = (currentFee * 100).toFixed(1) + '%';
+            document.getElementById('feesOwedDisplay').textContent = '$' + feesDue.toFixed(2);
+
+            // Volume display
+            const fmtVol = monthlyVolume.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            document.getElementById('volumeUsageText').textContent = '$' + fmtVol;
+
+            // Progress to next tier
+            const tiers = [
+                { name: 'Starter', min: 0, max: 10000, fee: 0.01 },
+                { name: 'Growth', min: 10000, max: 50000, fee: 0.008 },
+                { name: 'Pro', min: 50000, max: 250000, fee: 0.005 },
+                { name: 'Enterprise', min: 250000, max: Infinity, fee: 0.003 },
+            ];
+
+            const currentIdx = tiers.findIndex(t => monthlyVolume < t.max);
+            const tier = tiers[Math.max(currentIdx, 0)];
+            const nextTier = tiers[Math.min(currentIdx + 1, tiers.length - 1)];
+
+            // Volume bar
+            const progress = tier.max === Infinity ? 100 : Math.min((monthlyVolume / tier.max) * 100, 100);
+            document.getElementById('volumeUsageBar').style.width = progress + '%';
+
+            // Next tier text
+            if (currentIdx < tiers.length - 1) {
+                const remaining = nextTier.min - monthlyVolume;
+                document.getElementById('nextTierText').textContent =
+                    `$${remaining.toLocaleString()} more to unlock ${(nextTier.fee * 100).toFixed(1)}% fee (${nextTier.name})`;
             } else {
-                document.getElementById('currentPlanName').textContent = volumeTier.name.toUpperCase() + ' TIER';
+                document.getElementById('nextTierText').textContent = 'You have the best rate available!';
             }
 
-            // Update usage display
-            if (plan === 'FREE') {
-                // Test mode - show mainnet limits
-                const mainnetVolumeUsed = parseFloat(merchant.mainnetVolumeUsed || 0);
-                const mainnetTxns = merchant.mainnetTransactions || 0;
-                const testnetVolumeUsed = parseFloat(merchant.testnetVolumeUsed || 0);
-                const testnetTxns = merchant.testnetTransactions || 0;
-
-                const volumePercentage = Math.min((mainnetVolumeUsed / TEST_MODE_LIMITS.mainnetVolume) * 100, 100);
-                const txnPercentage = Math.min((mainnetTxns / TEST_MODE_LIMITS.mainnetTxns) * 100, 100);
-                const maxPercentage = Math.max(volumePercentage, txnPercentage);
-
-                document.getElementById('volumeUsageBar').style.width = maxPercentage + '%';
-                document.getElementById('volumeUsageText').innerHTML = `
-                    <div class="text-sm">
-                        <div><strong>Mainnet:</strong> ${mainnetTxns}/${TEST_MODE_LIMITS.mainnetTxns} txns | $${mainnetVolumeUsed.toFixed(2)}/$${TEST_MODE_LIMITS.mainnetVolume}</div>
-                        <div class="text-xs text-gray-500 mt-1"><strong>Testnet:</strong> ${testnetTxns} txns | $${testnetVolumeUsed.toFixed(2)} (unlimited)</div>
-                    </div>
-                `;
-
-                const bar = document.getElementById('volumeUsageBar');
-                if (maxPercentage >= 90) bar.style.background = '#EF4444';
-                else if (maxPercentage >= 75) bar.style.background = '#F59E0B';
-                else bar.style.background = '#4FC3F7';
-
-                document.getElementById('billingCycleText').innerHTML = `
-                    <span class="text-yellow-400">Test Mode:</span> Go live to accept unlimited payments
-                `;
-            } else {
-                // Live mode - show volume toward next tier
-                const nextTier = VOLUME_TIERS.find(t => t.minVolume > monthlyVolume);
-
-                if (nextTier) {
-                    const progressToNext = ((monthlyVolume - volumeTier.minVolume) / (nextTier.minVolume - volumeTier.minVolume)) * 100;
-                    document.getElementById('volumeUsageBar').style.width = Math.min(progressToNext, 100) + '%';
-                    document.getElementById('volumeUsageText').innerHTML = `
-                        <span>$${monthlyVolume.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} / $${nextTier.minVolume.toLocaleString()}</span>
-                        <span class="text-green-400 ml-2">→ ${nextTier.feePercent}% fee</span>
-                    `;
-                    document.getElementById('volumeUsageBar').style.background = '#10B981';
+            // Highlight current tier
+            const tierIds = ['tierStarter', 'tierGrowth', 'tierPro', 'tierEnterprise'];
+            tierIds.forEach((id, i) => {
+                const el = document.getElementById(id);
+                if (i === Math.max(currentIdx, 0)) {
+                    el.className = 'text-center p-2 bg-cyan-900/30 border-2 border-cyan-400';
+                    el.querySelector('p:nth-child(2)').className = 'text-sm font-bold text-cyan-300';
+                } else if (i < currentIdx) {
+                    el.className = 'text-center p-2 bg-slate-800/30 border border-slate-700 opacity-50';
                 } else {
-                    // Already at highest tier
-                    document.getElementById('volumeUsageBar').style.width = '100%';
-                    document.getElementById('volumeUsageText').textContent = `$${monthlyVolume.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} - Best rate!`;
-                    document.getElementById('volumeUsageBar').style.background = '#10B981';
+                    el.className = 'text-center p-2 bg-slate-800/50 border border-slate-700';
                 }
+            });
 
-                // Calculate days until reset
-                if (merchant.billingCycleStart) {
-                    const cycleStart = new Date(merchant.billingCycleStart);
-                    const now = new Date();
-                    const daysPassed = Math.floor((now - cycleStart) / (1000 * 60 * 60 * 24));
-                    const daysRemaining = Math.max(30 - daysPassed, 0);
-                    document.getElementById('billingCycleText').textContent = `Volume resets in ${daysRemaining} days`;
-                }
-            }
+            // Billing cycle
+            const billingCycles = { FREE: null, STARTER: 7, GROWTH: 14, PRO: 30, ENTERPRISE: 30 };
+            const cycleDays = billingCycles[merchant.plan] || billingCycles[volumeTier.plan] || 7;
+            const cycleLabels = { 7: 'Weekly', 14: 'Bi-weekly', 30: 'Monthly' };
+            document.getElementById('billingCycleLabel').textContent = cycleLabels[cycleDays] || `${cycleDays}d`;
 
-            // Update features
-            document.getElementById('planBlockchains').textContent = accountType.blockchains;
-            document.getElementById('planFee').textContent = currentFee.toFixed(1) + '%';
-            document.getElementById('planRefunds').textContent = accountType.refunds ? 'Yes' : 'No';
-            document.getElementById('planWebhooks').textContent = accountType.webhooks ? 'Yes' : 'No';
-
-            // Update upgrade button
-            const upgradeBtn = document.getElementById('upgradeBtn');
-            if (plan === 'ENTERPRISE') {
-                upgradeBtn.textContent = 'Contact Support';
-                upgradeBtn.onclick = () => window.location.href = 'mailto:enterprise@wetakestables.shop';
-            } else if (plan === 'FREE') {
-                if (hasMainnetWallets) {
-                    upgradeBtn.textContent = 'Upgrade Plan';
-                    upgradeBtn.onclick = () => window.location.href = '/pricing.html#volume-tiers';
-                } else {
-                    upgradeBtn.textContent = 'Add Mainnet Wallet';
-                    upgradeBtn.onclick = () => {
-                        // Switch to wallets tab
-                        document.querySelector('[data-tab="wallets"]')?.click();
-                    };
-                }
+            if (merchant.billingCycleStart) {
+                const cycleStart = new Date(merchant.billingCycleStart);
+                const now = new Date();
+                const daysPassed = Math.floor((now - cycleStart) / (1000 * 60 * 60 * 24));
+                const daysRemaining = Math.max(cycleDays - (daysPassed % cycleDays), 0);
+                document.getElementById('billingCycleText').textContent = `in ${daysRemaining} days`;
             } else {
-                upgradeBtn.textContent = 'See Tiers';
-                upgradeBtn.onclick = () => window.location.href = '/pricing.html#volume-tiers';
+                document.getElementById('billingCycleText').textContent = '—';
             }
+
+            // Fees saved (compared to highest rate of 1%)
+            const maxRate = 0.01;
+            const savedAmount = monthlyVolume * (maxRate - currentFee);
+            document.getElementById('feesSavedDisplay').textContent = savedAmount > 0 ? '$' + savedAmount.toFixed(2) : '$0';
         }
 
         async function loadMerchantData() {
