@@ -283,11 +283,15 @@
     <div id="chatPanel" class="hidden fixed bottom-6 right-6 z-[9991] w-[400px] h-[520px] bg-slate-900 border-4 border-black flex flex-col" style="box-shadow: 8px 8px 0px #000;">
         <!-- Header -->
         <div class="flex items-center justify-between px-4 py-3 border-b-4 border-black" style="background: #00E5FF;">
-            <span class="font-bold text-black text-sm tracking-wide" style="text-transform: uppercase;">AGENT</span>
+            <div class="flex items-center gap-1.5">
+                <div class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
+                <span class="font-bold text-black text-xs tracking-wide opacity-60">online</span>
+            </div>
             <div class="flex items-center gap-2">
                 <button id="chatTipBtn" class="text-xs font-bold text-black px-2 py-1 border-2 border-black bg-yellow-300 hover:bg-yellow-400" style="text-transform: uppercase;" title="Tip the agent">TIP</button>
                 <button id="chatClearBtn" class="text-xs font-bold text-black opacity-60 hover:opacity-100" style="text-transform: uppercase;">CLEAR</button>
-                <button id="chatCloseBtn" class="text-black font-bold text-lg leading-none">&times;</button>
+                <button id="chatMinBtn" class="text-black font-bold text-lg leading-none" title="Minimize">&#8722;</button>
+                <button id="chatCloseBtn" class="text-black font-bold text-lg leading-none" title="Close">&times;</button>
             </div>
         </div>
         <!-- Tip overlay -->
@@ -351,11 +355,11 @@
                     <div class="space-y-4 mb-8">
                         <div class="flex items-center gap-4 p-4 bg-slate-800 border-2 border-slate-700">
                             <span class="text-cyan-400 font-bold text-lg">1</span>
-                            <span class="text-white font-medium">Add your wallet address</span>
+                            <span class="text-white font-medium">Add wallet addresses</span>
                         </div>
                         <div class="flex items-center gap-4 p-4 bg-slate-800 border-2 border-slate-700">
                             <span class="text-cyan-400 font-bold text-lg">2</span>
-                            <span class="text-white font-medium">Choose your blockchain</span>
+                            <span class="text-white font-medium">Choose blockchains & stablecoins</span>
                         </div>
                         <div class="flex items-center gap-4 p-4 bg-slate-800 border-2 border-slate-700">
                             <span class="text-cyan-400 font-bold text-lg">3</span>
@@ -5174,9 +5178,29 @@ onMounted(() => {
             // Expose for loadMerchantData to call
             window._autoGreetNewMerchant = autoGreetNewMerchant;
 
+            const minBtn = document.getElementById('chatMinBtn');
+
             closeBtn.addEventListener('click', () => {
                 panel.classList.add('hidden');
                 fab.classList.remove('hidden');
+            });
+
+            // Minimize: collapse to just the header bar at bottom-right
+            let isMinimized = false;
+            minBtn.addEventListener('click', () => {
+                isMinimized = !isMinimized;
+                if (isMinimized) {
+                    panel.style.height = '44px';
+                    panel.style.overflow = 'hidden';
+                    minBtn.innerHTML = '&#43;'; // +
+                    minBtn.title = 'Expand';
+                } else {
+                    panel.style.height = '520px';
+                    panel.style.overflow = '';
+                    minBtn.innerHTML = '&#8722;'; // −
+                    minBtn.title = 'Minimize';
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                }
             });
 
             function escapeHtml(text) {
