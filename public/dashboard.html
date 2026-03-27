@@ -580,8 +580,13 @@
                     <p class="text-xs text-slate-500" id="nextTierText">Process $10,000 to unlock 0.8% fee rate</p>
                 </div>
 
-                <!-- Fee tiers visualization -->
-                <div class="grid grid-cols-4 gap-1 mb-5">
+                <!-- Fee tiers (collapsible) -->
+                <button onclick="document.getElementById('tierGrid').classList.toggle('hidden'); this.querySelector('span:last-child').textContent = document.getElementById('tierGrid').classList.contains('hidden') ? '+' : '−'"
+                    class="flex items-center justify-between w-full text-left text-xs text-slate-400 hover:text-slate-300 mb-2 py-1">
+                    <span class="uppercase font-medium">View All Fee Tiers</span>
+                    <span class="text-lg leading-none">+</span>
+                </button>
+                <div id="tierGrid" class="hidden grid grid-cols-4 gap-1 mb-5">
                     <div id="tierStarter" class="text-center p-2 bg-slate-800 border-2 border-cyan-400">
                         <p class="text-xs text-slate-400">Starter</p>
                         <p class="text-sm font-bold text-white">1.0%</p>
@@ -653,26 +658,32 @@
             </div>
         </div>
 
-        <!-- Quick Actions -->
-        <div class="bg-slate-900 border border-slate-800 p-5 mb-8">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-4">Quick Actions - Test Your Integration</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button onclick="openTestStoreModal()"
-                   class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-medium text-sm transition-colors">
-                    <span>Open Test Store</span>
-                </button>
-                <button onclick="openDirectCheckoutModal()"
-                   class="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 font-medium text-sm transition-colors">
-                    <span>Direct Checkout Link</span>
-                </button>
-                <button onclick="copyMerchantId()"
-                   class="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 font-medium text-sm transition-colors">
-                    <span id="copyMerchantBtn">Copy Merchant ID</span>
-                </button>
+        <!-- Quick Actions (collapsible) -->
+        <div class="bg-slate-900 border border-slate-800 mb-8">
+            <button onclick="document.getElementById('quickActionsBody').classList.toggle('hidden'); this.querySelector('span:last-child').textContent = document.getElementById('quickActionsBody').classList.contains('hidden') ? '+' : '−'"
+                class="flex items-center justify-between w-full text-left px-5 py-4 hover:bg-slate-800/50 transition-colors">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wide">Quick Actions</h3>
+                <span class="text-lg text-slate-400 leading-none">+</span>
+            </button>
+            <div id="quickActionsBody" class="hidden px-5 pb-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button onclick="openTestStoreModal()"
+                       class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-medium text-sm transition-colors">
+                        <span>Open Test Store</span>
+                    </button>
+                    <button onclick="openDirectCheckoutModal()"
+                       class="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 font-medium text-sm transition-colors">
+                        <span>Direct Checkout Link</span>
+                    </button>
+                    <button onclick="copyMerchantId()"
+                       class="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 font-medium text-sm transition-colors">
+                        <span id="copyMerchantBtn">Copy Merchant ID</span>
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500 mt-3">
+                    Use the Test Store to simulate customer payments. All orders will appear in your dashboard below.
+                </p>
             </div>
-            <p class="text-xs text-slate-500 mt-3">
-                <strong>Tip:</strong> Use the Test Store to simulate customer payments. All orders will appear in your dashboard below.
-            </p>
         </div>
 
         <!-- Test Store Chain Selection Modal -->
