@@ -319,15 +319,36 @@
             </div>
         </div>
         <!-- Tip overlay -->
-        <div id="tipOverlay" class="hidden absolute inset-0 z-10 bg-slate-900/95 flex flex-col items-center justify-center p-6">
-            <h3 class="text-lg font-bold text-white mb-2" style="text-transform: uppercase;">TIP THE AGENT</h3>
-            <p class="text-slate-400 text-sm mb-4 text-center">Send a USDC tip directly from your wallet as a thank-you!</p>
+        <div id="tipOverlay" class="hidden absolute inset-0 z-10 bg-slate-900/95 flex flex-col items-center justify-center p-6 overflow-y-auto">
+            <h3 class="text-lg font-bold text-white mb-1" style="text-transform: uppercase;">Tip the Agent</h3>
+            <p class="text-slate-400 text-xs mb-4 text-center">Send a stablecoin tip from your wallet</p>
+
+            <!-- Step 1: Pick network -->
+            <div class="w-full max-w-[280px] mb-3">
+                <label class="text-xs text-slate-400 font-bold uppercase mb-1 block">Network</label>
+                <select id="tipChainSelect" class="w-full px-3 py-2 bg-slate-800 text-white text-sm border-2 border-slate-600 focus:outline-none focus:border-cyan-400">
+                    <option value="0x2105" data-name="BASE_MAINNET">Base</option>
+                    <option value="0x1" data-name="ETHEREUM_MAINNET">Ethereum</option>
+                    <option value="0x89" data-name="POLYGON_MAINNET">Polygon</option>
+                    <option value="0x14a34" data-name="BASE_SEPOLIA">Base Sepolia (test)</option>
+                </select>
+            </div>
+
+            <!-- Step 2: Pick token -->
+            <div class="w-full max-w-[280px] mb-3">
+                <label class="text-xs text-slate-400 font-bold uppercase mb-1 block">Stablecoin</label>
+                <select id="tipTokenSelect" class="w-full px-3 py-2 bg-slate-800 text-white text-sm border-2 border-slate-600 focus:outline-none focus:border-cyan-400">
+                    <option value="USDC">USDC</option>
+                </select>
+            </div>
+
+            <!-- Step 3: Pick amount -->
             <div class="flex gap-2 mb-4">
                 <button class="tip-amount-btn px-4 py-2 border-2 border-black text-black font-bold text-sm" style="background: #00E5FF;" data-amount="1">$1</button>
                 <button class="tip-amount-btn px-4 py-2 border-2 border-black text-black font-bold text-sm" style="background: #00E5FF;" data-amount="5">$5</button>
                 <button class="tip-amount-btn px-4 py-2 border-2 border-black text-black font-bold text-sm" style="background: #00E5FF;" data-amount="10">$10</button>
             </div>
-            <p id="tipStatus" class="text-sm text-slate-300 mb-4 text-center hidden"></p>
+            <p id="tipStatus" class="text-sm text-slate-300 mb-3 text-center hidden"></p>
             <button id="tipCancelBtn" class="text-xs text-slate-400 hover:text-white font-bold" style="text-transform: uppercase;">CANCEL</button>
         </div>
         <!-- Messages -->
@@ -5378,6 +5399,26 @@ onMounted(() => {
             const tipOverlay = document.getElementById('tipOverlay');
             const tipCancel = document.getElementById('tipCancelBtn');
             const tipStatus = document.getElementById('tipStatus');
+            const tipChainSelect = document.getElementById('tipChainSelect');
+            const tipTokenSelect = document.getElementById('tipTokenSelect');
+
+            // Token contracts per chain
+            const tipChainTokens = {
+                '0x2105':  { name: 'BASE_MAINNET', tokens: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42' }},
+                '0x1':     { name: 'ETHEREUM_MAINNET', tokens: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7', EURC: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c' }},
+                '0x89':    { name: 'POLYGON_MAINNET', tokens: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' }},
+                '0x14a34': { name: 'BASE_SEPOLIA', tokens: { USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' }},
+            };
+
+            // Update token dropdown when chain changes
+            function updateTipTokens() {
+                const chainId = tipChainSelect.value;
+                const chainConf = tipChainTokens[chainId];
+                tipTokenSelect.innerHTML = Object.keys(chainConf?.tokens || { USDC: '' })
+                    .map(t => `<option value="${t}">${t}</option>`).join('');
+            }
+            tipChainSelect.addEventListener('change', updateTipTokens);
+            updateTipTokens();
 
             tipBtn.addEventListener('click', () => tipOverlay.classList.remove('hidden'));
             tipCancel.addEventListener('click', () => tipOverlay.classList.add('hidden'));
@@ -5385,6 +5426,10 @@ onMounted(() => {
             document.querySelectorAll('.tip-amount-btn').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     const amount = btn.dataset.amount;
+                    const selectedChainId = tipChainSelect.value;
+                    const selectedToken = tipTokenSelect.value;
+                    const chainConf = tipChainTokens[selectedChainId];
+
                     tipStatus.textContent = 'Connecting wallet...';
                     tipStatus.classList.remove('hidden');
 
@@ -5394,14 +5439,14 @@ onMounted(() => {
                             return;
                         }
 
-                        // Get tip wallet info
+                        // Get tip wallet address
                         const authToken = sessionStorage.getItem('merchantToken');
                         const walletRes = await fetch('/api/agent/tip-wallet');
                         const walletData = await walletRes.json();
-                        const tipAddress = walletData.evm;
+                        const tipAddress = walletData.evm?.trim();
 
                         if (!tipAddress || tipAddress === '0x0000000000000000000000000000000000000000') {
-                            tipStatus.textContent = 'Tipping not configured yet. Coming soon!';
+                            tipStatus.textContent = 'Tipping not configured yet.';
                             return;
                         }
 
@@ -5409,29 +5454,22 @@ onMounted(() => {
                         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                         const from = accounts[0];
 
-                        // Get chain ID to determine USDC address
-                        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-                        let usdcAddress;
-                        let chainName;
-
-                        // Map chain ID to USDC contract
-                        const chainMap = {
-                            '0x2105': { usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', name: 'BASE_MAINNET' },
-                            '0x14a34': { usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', name: 'BASE_SEPOLIA' },
-                            '0x1': { usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', name: 'ETHEREUM_MAINNET' },
-                            '0xaa36a7': { usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', name: 'ETHEREUM_SEPOLIA' },
-                            '0x89': { usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', name: 'POLYGON_MAINNET' },
-                        };
-
-                        const chainInfo = chainMap[chainId];
-                        if (!chainInfo) {
-                            tipStatus.textContent = 'Please switch to Base, Ethereum, or Polygon to tip.';
-                            return;
+                        // Switch to selected chain if needed
+                        const currentChain = await window.ethereum.request({ method: 'eth_chainId' });
+                        if (currentChain !== selectedChainId) {
+                            tipStatus.textContent = 'Switching network...';
+                            try {
+                                await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: selectedChainId }] });
+                            } catch (switchErr) {
+                                tipStatus.textContent = 'Please switch to the selected network in your wallet.';
+                                return;
+                            }
                         }
-                        usdcAddress = chainInfo.usdc;
-                        chainName = chainInfo.name;
 
-                        tipStatus.textContent = `Sending $${amount} USDC tip on ${chainName.replace('_', ' ')}...`;
+                        const tokenAddress = chainConf.tokens[selectedToken];
+                        const chainName = chainConf.name;
+
+                        tipStatus.textContent = `Sending $${amount} ${selectedToken} on ${chainName.replace(/_/g, ' ')}...`;
 
                         // ERC20 transfer: transfer(address,uint256)
                         const amountWei = '0x' + (BigInt(amount) * BigInt(1e6)).toString(16);
@@ -5443,7 +5481,7 @@ onMounted(() => {
                             method: 'eth_sendTransaction',
                             params: [{
                                 from,
-                                to: usdcAddress,
+                                to: tokenAddress,
                                 data: transferData,
                             }],
                         });
@@ -5459,7 +5497,7 @@ onMounted(() => {
                             },
                             body: JSON.stringify({
                                 amount,
-                                token: 'USDC',
+                                token: selectedToken,
                                 chain: chainName,
                                 txHash,
                                 fromAddress: from
