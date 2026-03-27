@@ -97,14 +97,22 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'generate_checkout_link',
-    description: 'Generate a shareable direct checkout link (URL) that the merchant can send to customers via email, WhatsApp, social media, etc. No code needed — just a link. Can create multiple links for different products/prices.',
+    description: 'Generate a shareable direct checkout link (URL) that the merchant can send to customers via email, WhatsApp, social media, etc. No code needed — just a link. Supports multiple allowed chains and tokens so the customer can choose at checkout. Can create multiple links for different products/prices.',
     input_schema: {
       type: 'object' as const,
       properties: {
         amount: { type: 'number', description: 'Payment amount in USD' },
         productName: { type: 'string', description: 'What the payment is for' },
-        chain: { type: 'string', description: 'Pre-select chain (optional — customer can choose if omitted)' },
-        token: { type: 'string', description: 'Pre-select token (optional)' },
+        chains: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Allowed chains. E.g. ["BASE_MAINNET","ETHEREUM_MAINNET"]. Omit to allow all merchant-configured chains. Customer picks at checkout.',
+        },
+        tokens: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Allowed tokens. E.g. ["USDC","USDT"]. Omit to allow all. Customer picks at checkout.',
+        },
         customerEmail: { type: 'string', description: 'Pre-fill customer email (optional)' },
       },
       required: ['amount'],
@@ -295,20 +303,27 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       params.set('merchantId', merchantId);
       params.set('amount', input.amount.toString());
       if (input.productName) params.set('productName', input.productName);
-      if (input.chain) params.set('chain', input.chain);
-      if (input.token) params.set('token', input.token);
+      if (input.chains?.length) params.set('chains', input.chains.join(','));
+      if (input.tokens?.length) params.set('tokens', input.tokens.join(','));
       if (input.customerEmail) params.set('customerEmail', input.customerEmail);
 
       const link = `https://wetakestables.shop/crypto-pay.html?${params.toString()}`;
+
+      const chainsNote = input.chains?.length
+        ? `Allowed chains: ${input.chains.join(', ')}`
+        : 'Customer can choose any chain you have configured';
+      const tokensNote = input.tokens?.length
+        ? `Allowed tokens: ${input.tokens.join(', ')}`
+        : 'Customer can choose any token available on the selected chain';
 
       return JSON.stringify({
         success: true,
         link,
         amount: input.amount,
         productName: input.productName || null,
-        chain: input.chain || 'customer chooses',
-        token: input.token || 'customer chooses',
-        note: 'Share this link anywhere — WhatsApp, email, social media, QR code. Customer clicks and pays.',
+        chains: chainsNote,
+        tokens: tokensNote,
+        note: 'Share this link anywhere — WhatsApp, email, social media, QR code. Customer clicks, picks their chain/token, and pays.',
       });
     }
 
