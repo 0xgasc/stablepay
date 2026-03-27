@@ -139,6 +139,8 @@ model Merchant {
   invoices              Invoice[]
   receipts              Receipt[]
   chatMessages          ChatMessage[]
+  agentMemories         AgentMemory[]
+  agentTips             AgentTip[]
 
   @@index([plan])
   @@index([networkMode])
@@ -445,6 +447,38 @@ model ChatMessage {
 
   @@index([merchantId, createdAt])
   @@map("chat_messages")
+  @@schema("public")
+}
+
+model AgentMemory {
+  id         String   @id @default(cuid())
+  merchantId String
+  key        String   // e.g. "preferred_chain", "business_type", "integration_framework"
+  value      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, key])
+  @@map("agent_memories")
+  @@schema("public")
+}
+
+model AgentTip {
+  id            String   @id @default(cuid())
+  merchantId    String
+  amount        Decimal  @db.Decimal(18, 6)
+  token         String   @default("USDC")
+  chain         String
+  txHash        String?  @unique
+  fromAddress   String
+  createdAt     DateTime @default(now())
+
+  merchant      Merchant @relation(fields: [merchantId], references: [id])
+
+  @@index([merchantId])
+  @@map("agent_tips")
   @@schema("public")
 }
 

@@ -66,6 +66,23 @@ const TOOLS: Anthropic.Tool[] = [
       required: [],
     },
   },
+  {
+    name: 'save_memory',
+    description: 'Save a piece of information about this merchant for future conversations. Use this to remember preferences, business context, tech stack, past issues, etc. Keys should be descriptive like "preferred_chain", "business_type", "tech_stack", "integration_notes".',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        key: { type: 'string', description: 'A descriptive key for this memory (snake_case)' },
+        value: { type: 'string', description: 'The information to remember' },
+      },
+      required: ['key', 'value'],
+    },
+  },
+  {
+    name: 'recall_memories',
+    description: 'Recall all saved memories about this merchant. Use this at the start of conversations to personalize your responses and remember past context.',
+    input_schema: { type: 'object' as const, properties: {}, required: [] },
+  },
 ];
 
 // ─── Tool execution ─────────────────────────────────────────────────────────
@@ -156,6 +173,30 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       return JSON.stringify({ success: true, code });
     }
 
+    case 'save_memory': {
+      const { key, value } = input;
+      await db.agentMemory.upsert({
+        where: { merchantId_key: { merchantId, key } },
+        update: { value },
+        create: { merchantId, key, value },
+      });
+      return JSON.stringify({ success: true, message: `Remembered: ${key}` });
+    }
+
+    case 'recall_memories': {
+      const memories = await db.agentMemory.findMany({
+        where: { merchantId },
+        orderBy: { updatedAt: 'desc' },
+        take: 30,
+      });
+      if (memories.length === 0) {
+        return JSON.stringify({ memories: [], message: 'No saved memories for this merchant yet.' });
+      }
+      return JSON.stringify({
+        memories: memories.map(m => ({ key: m.key, value: m.value, updated: m.updatedAt })),
+      });
+    }
+
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
@@ -206,12 +247,22 @@ When you detect setup is not complete, guide them through this flow CONVERSATION
 Fee model: Merchants receive 100% of payments upfront. Fees accumulate and are invoiced per billing cycle.
 
 ## Important Rules
-- ALWAYS call get_setup_status at the start if this is a new conversation (no prior messages).
+- At the START of every new conversation (no prior messages), call BOTH get_setup_status AND recall_memories to load context.
 - When the merchant gives you a wallet address, validate the format before calling add_wallet.
 - EVM addresses: 0x + 40 hex chars. Solana: 32-44 base58 chars.
 - Don't ask for info you can get from tools. Check status first.
 - If they say "set up everything" or similar, still ask which chains and get their wallet address — you need those from them.
-- Keep responses under 150 words unless showing code.`;
+- Keep responses under 150 words unless showing code.
+
+## Memory
+- Use save_memory to remember important things: business type, preferred chains, tech stack, country, past issues, preferences.
+- Use recall_memories at conversation start to personalize.
+- Memory keys: "business_type", "preferred_chains", "tech_stack", "country", "integration_notes", "support_history", etc.
+- Example: if they mention "we're an e-commerce store in Guatemala using React", save business_type=e-commerce, country=Guatemala, tech_stack=React.
+
+## Tipping
+- The chat has a "Tip Agent" button. If a merchant tips you, be genuinely grateful and warm.
+- You don't need to prompt for tips, but if they ask about it, explain: they can click the tip button to send USDC directly from their wallet as a thank-you.`;
 }
 
 // ─── Main chat with tool use loop ───────────────────────────────────────────

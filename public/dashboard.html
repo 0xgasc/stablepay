@@ -283,11 +283,24 @@
     <div id="chatPanel" class="hidden fixed bottom-6 right-6 z-[9991] w-[400px] h-[520px] bg-slate-900 border-4 border-black flex flex-col" style="box-shadow: 8px 8px 0px #000;">
         <!-- Header -->
         <div class="flex items-center justify-between px-4 py-3 border-b-4 border-black" style="background: #00E5FF;">
-            <span class="font-bold text-black text-sm tracking-wide" style="text-transform: uppercase;">STABLEPAY AI</span>
+            <span class="font-bold text-black text-sm tracking-wide" style="text-transform: uppercase;">WETAKESTABLES AI</span>
             <div class="flex items-center gap-2">
+                <button id="chatTipBtn" class="text-xs font-bold text-black px-2 py-1 border-2 border-black bg-yellow-300 hover:bg-yellow-400" style="text-transform: uppercase;" title="Tip the agent">TIP</button>
                 <button id="chatClearBtn" class="text-xs font-bold text-black opacity-60 hover:opacity-100" style="text-transform: uppercase;">CLEAR</button>
                 <button id="chatCloseBtn" class="text-black font-bold text-lg leading-none">&times;</button>
             </div>
+        </div>
+        <!-- Tip overlay -->
+        <div id="tipOverlay" class="hidden absolute inset-0 z-10 bg-slate-900/95 flex flex-col items-center justify-center p-6">
+            <h3 class="text-lg font-bold text-white mb-2" style="text-transform: uppercase;">TIP THE AGENT</h3>
+            <p class="text-slate-400 text-sm mb-4 text-center">Send a USDC tip directly from your wallet as a thank-you!</p>
+            <div class="flex gap-2 mb-4">
+                <button class="tip-amount-btn px-4 py-2 border-2 border-black text-black font-bold text-sm" style="background: #00E5FF;" data-amount="1">$1</button>
+                <button class="tip-amount-btn px-4 py-2 border-2 border-black text-black font-bold text-sm" style="background: #00E5FF;" data-amount="5">$5</button>
+                <button class="tip-amount-btn px-4 py-2 border-2 border-black text-black font-bold text-sm" style="background: #00E5FF;" data-amount="10">$10</button>
+            </div>
+            <p id="tipStatus" class="text-sm text-slate-300 mb-4 text-center hidden"></p>
+            <button id="tipCancelBtn" class="text-xs text-slate-400 hover:text-white font-bold" style="text-transform: uppercase;">CANCEL</button>
         </div>
         <!-- Messages -->
         <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-3" style="scrollbar-width: thin;">
@@ -5269,13 +5282,116 @@ onMounted(() => {
                         method: 'DELETE',
                         headers: { 'Authorization': 'Bearer ' + token }
                     });
-                    messagesEl.innerHTML = `
-                        <div class="flex justify-start">
-                            <div class="bg-slate-800 border-2 border-slate-700 px-3 py-2 max-w-[85%] text-sm text-slate-200">
-                                Hi! I'm the StablePay AI assistant. Ask me about integration, API usage, pricing, or troubleshooting.
-                            </div>
-                        </div>`;
+                    messagesEl.innerHTML = '';
                 } catch (err) { /* ignore */ }
+            });
+
+            // ─── Tipping ────────────────────────────────────
+            const tipBtn = document.getElementById('chatTipBtn');
+            const tipOverlay = document.getElementById('tipOverlay');
+            const tipCancel = document.getElementById('tipCancelBtn');
+            const tipStatus = document.getElementById('tipStatus');
+
+            tipBtn.addEventListener('click', () => tipOverlay.classList.remove('hidden'));
+            tipCancel.addEventListener('click', () => tipOverlay.classList.add('hidden'));
+
+            document.querySelectorAll('.tip-amount-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const amount = btn.dataset.amount;
+                    tipStatus.textContent = 'Connecting wallet...';
+                    tipStatus.classList.remove('hidden');
+
+                    try {
+                        if (!window.ethereum) {
+                            tipStatus.textContent = 'No wallet detected. Install MetaMask or another Web3 wallet.';
+                            return;
+                        }
+
+                        // Get tip wallet info
+                        const authToken = sessionStorage.getItem('merchantToken');
+                        const walletRes = await fetch('/api/agent/tip-wallet');
+                        const walletData = await walletRes.json();
+                        const tipAddress = walletData.evm;
+
+                        if (!tipAddress || tipAddress === '0x0000000000000000000000000000000000000000') {
+                            tipStatus.textContent = 'Tipping not configured yet. Coming soon!';
+                            return;
+                        }
+
+                        // Connect wallet
+                        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                        const from = accounts[0];
+
+                        // Get chain ID to determine USDC address
+                        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                        let usdcAddress;
+                        let chainName;
+
+                        // Map chain ID to USDC contract
+                        const chainMap = {
+                            '0x2105': { usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', name: 'BASE_MAINNET' },
+                            '0x14a34': { usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', name: 'BASE_SEPOLIA' },
+                            '0x1': { usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', name: 'ETHEREUM_MAINNET' },
+                            '0xaa36a7': { usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', name: 'ETHEREUM_SEPOLIA' },
+                            '0x89': { usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', name: 'POLYGON_MAINNET' },
+                        };
+
+                        const chainInfo = chainMap[chainId];
+                        if (!chainInfo) {
+                            tipStatus.textContent = 'Please switch to Base, Ethereum, or Polygon to tip.';
+                            return;
+                        }
+                        usdcAddress = chainInfo.usdc;
+                        chainName = chainInfo.name;
+
+                        tipStatus.textContent = `Sending $${amount} USDC tip on ${chainName.replace('_', ' ')}...`;
+
+                        // ERC20 transfer: transfer(address,uint256)
+                        const amountWei = '0x' + (BigInt(amount) * BigInt(1e6)).toString(16);
+                        const transferData = '0xa9059cbb' +
+                            tipAddress.slice(2).padStart(64, '0') +
+                            amountWei.slice(2).padStart(64, '0');
+
+                        const txHash = await window.ethereum.request({
+                            method: 'eth_sendTransaction',
+                            params: [{
+                                from,
+                                to: usdcAddress,
+                                data: transferData,
+                            }],
+                        });
+
+                        tipStatus.textContent = 'Tip sent! Recording...';
+
+                        // Record tip
+                        await fetch('/api/agent/tip', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + authToken
+                            },
+                            body: JSON.stringify({
+                                amount,
+                                token: 'USDC',
+                                chain: chainName,
+                                txHash,
+                                fromAddress: from
+                            })
+                        });
+
+                        tipStatus.innerHTML = '<span class="text-green-400 font-bold">Thank you for the tip!</span>';
+                        setTimeout(() => {
+                            tipOverlay.classList.add('hidden');
+                            tipStatus.classList.add('hidden');
+                            // Notify the agent about the tip
+                            sendMessageText(`I just tipped you $${amount} USDC!`);
+                        }, 1500);
+
+                    } catch (err) {
+                        console.error('Tip error:', err);
+                        tipStatus.textContent = err.code === 4001 ? 'Transaction cancelled.' : 'Tip failed: ' + (err.message || 'Unknown error');
+                    }
+                });
             });
         })();
 

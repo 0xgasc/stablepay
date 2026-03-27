@@ -90,4 +90,50 @@ router.delete('/history', async (req, res) => {
   }
 });
 
+// ─── Record agent tip ───────────────────────────────────────────────────────
+router.post('/tip', async (req, res) => {
+  try {
+    const merchant = await authenticateMerchant(req);
+    if (!merchant) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { amount, token, chain, txHash, fromAddress } = req.body;
+
+    if (!amount || !chain || !fromAddress) {
+      return res.status(400).json({ error: 'amount, chain, and fromAddress are required' });
+    }
+
+    const tip = await db.agentTip.create({
+      data: {
+        merchantId: merchant.id,
+        amount: parseFloat(amount),
+        token: token || 'USDC',
+        chain,
+        txHash: txHash || null,
+        fromAddress,
+      },
+    });
+
+    res.json({ success: true, tipId: tip.id, message: 'Tip recorded! Thank you!' });
+  } catch (error) {
+    console.error('Agent tip error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── Get tip wallet address ─────────────────────────────────────────────────
+router.get('/tip-wallet', async (req, res) => {
+  // Platform wallet for receiving tips — same address works on all EVM chains
+  res.json({
+    evm: process.env.TIP_WALLET_EVM || '0x0000000000000000000000000000000000000000',
+    solana: process.env.TIP_WALLET_SOLANA || '',
+    tokens: {
+      BASE_SEPOLIA: { USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' },
+      BASE_MAINNET: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' },
+      ETHEREUM_MAINNET: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' },
+    },
+  });
+});
+
 export const agentRouter = router;
