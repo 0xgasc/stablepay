@@ -383,6 +383,10 @@
                             <label class="block text-sm font-bold text-white mb-2" style="text-transform: uppercase;">WALLET ADDRESS</label>
                             <input type="text" id="wizardWalletAddress" class="w-full px-4 py-3 bg-slate-800 text-white border-4 border-black focus:outline-none font-mono text-sm" placeholder="0x... or SOL address">
                         </div>
+                        <div id="wizardTokens" class="hidden">
+                            <label class="block text-sm font-bold text-white mb-2" style="text-transform: uppercase;">ACCEPTED STABLECOINS</label>
+                            <div id="wizardTokenCheckboxes" class="flex gap-4"></div>
+                        </div>
                     </div>
                     <p id="wizardWalletError" class="text-red-400 font-bold text-sm mb-4 hidden"></p>
                     <div class="flex gap-4">
@@ -5269,8 +5273,44 @@ onMounted(() => {
                 document.getElementById('setupWizard').classList.add('hidden');
             }
 
+            // Wizard token config per chain
+            const WIZ_CHAIN_TOKENS = {
+                BASE_SEPOLIA: ['USDC'], ETHEREUM_SEPOLIA: ['USDC'], ARBITRUM_SEPOLIA: ['USDC'], SOLANA_DEVNET: ['USDC'],
+                BASE_MAINNET: ['USDC', 'EURC'], ETHEREUM_MAINNET: ['USDC', 'USDT', 'EURC'],
+                POLYGON_MAINNET: ['USDC', 'USDT'], ARBITRUM_MAINNET: ['USDC', 'USDT'],
+                SOLANA_MAINNET: ['USDC', 'USDT']
+            };
+
+            function updateWizardTokens() {
+                const chain = document.getElementById('wizardChain').value;
+                const tokens = WIZ_CHAIN_TOKENS[chain] || ['USDC'];
+                const container = document.getElementById('wizardTokens');
+                const cbContainer = document.getElementById('wizardTokenCheckboxes');
+
+                if (tokens.length <= 1) {
+                    container.classList.add('hidden');
+                    return;
+                }
+                container.classList.remove('hidden');
+                cbContainer.innerHTML = tokens.map(t => `
+                    <label class="flex items-center gap-2 cursor-pointer bg-slate-800 border-2 border-slate-600 px-4 py-2">
+                        <input type="checkbox" value="${t}" class="wizard-token-cb accent-cyan-400" checked>
+                        <span class="text-sm font-bold text-white">${t}</span>
+                    </label>
+                `).join('');
+            }
+
+            document.getElementById('wizardChain').addEventListener('change', updateWizardTokens);
+
+            function getWizardSelectedTokens() {
+                const cbs = document.querySelectorAll('.wizard-token-cb');
+                if (cbs.length === 0) return ['USDC'];
+                const selected = Array.from(cbs).filter(c => c.checked).map(c => c.value);
+                return selected.length > 0 ? selected : ['USDC'];
+            }
+
             // Step 1 → Step 2
-            document.getElementById('wizardNext1').addEventListener('click', () => showStep(1));
+            document.getElementById('wizardNext1').addEventListener('click', () => { showStep(1); updateWizardTokens(); });
 
             // Step 2 → Add wallet → Step 3
             document.getElementById('wizardBack2').addEventListener('click', () => showStep(0));
@@ -5286,6 +5326,7 @@ onMounted(() => {
                     return;
                 }
 
+                const selectedTokens = getWizardSelectedTokens();
                 const btn = document.getElementById('wizardNext2');
                 btn.disabled = true;
                 btn.textContent = 'ADDING...';
@@ -5301,7 +5342,7 @@ onMounted(() => {
                         },
                         body: JSON.stringify({
                             merchantId,
-                            wallets: [{ chain, address, supportedTokens: ['USDC'] }]
+                            wallets: [{ chain, address, supportedTokens: selectedTokens }]
                         })
                     });
                     const data = await res.json();
@@ -5319,8 +5360,8 @@ onMounted(() => {
                             <span class="text-white font-mono text-xs">${address.slice(0, 10)}...${address.slice(-6)}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-slate-400">Token</span>
-                            <span class="text-white font-bold">USDC</span>
+                            <span class="text-slate-400">Stablecoins</span>
+                            <span class="text-cyan-300 font-bold">${selectedTokens.join(', ')}</span>
                         </div>
                     `;
                     showStep(2);

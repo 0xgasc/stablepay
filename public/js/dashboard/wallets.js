@@ -29,6 +29,20 @@ async function loadWallets() {
     }
 }
 
+// Available tokens per chain (matches checkout widget config)
+const CHAIN_TOKENS = {
+    BASE_SEPOLIA: ['USDC'],
+    ETHEREUM_SEPOLIA: ['USDC'],
+    ARBITRUM_SEPOLIA: ['USDC'],
+    SOLANA_DEVNET: ['USDC'],
+    BASE_MAINNET: ['USDC', 'EURC'],
+    ETHEREUM_MAINNET: ['USDC', 'USDT', 'EURC'],
+    POLYGON_MAINNET: ['USDC', 'USDT'],
+    POLYGON_MUMBAI: ['USDC'],
+    ARBITRUM_MAINNET: ['USDC', 'USDT'],
+    SOLANA_MAINNET: ['USDC', 'USDT'],
+};
+
 // Render chain toggles for wallet configuration
 function renderChainToggles() {
     const container = document.getElementById('chainTogglesContainer');
@@ -47,6 +61,8 @@ function renderChainToggles() {
                     const wallet = window.merchantWallets?.find(w => w.chain === net.id);
                     const isActive = wallet?.isActive;
                     const address = wallet?.address || '';
+                    const supportedTokens = wallet?.supportedTokens || ['USDC'];
+                    const availableTokens = CHAIN_TOKENS[net.id] || ['USDC'];
 
                     return `
                         <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
@@ -65,7 +81,7 @@ function renderChainToggles() {
                                     <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                 </label>
                             </div>
-                            <div class="flex gap-2">
+                            <div class="flex gap-2 mb-2">
                                 <input type="text"
                                        id="wallet-${net.id}"
                                        value="${address}"
@@ -78,12 +94,50 @@ function renderChainToggles() {
                                     Save
                                 </button>
                             </div>
+                            ${availableTokens.length > 1 ? `
+                            <div class="flex items-center gap-3 mt-2 ${!isActive ? 'opacity-40 pointer-events-none' : ''}">
+                                <span class="text-xs text-slate-400 font-bold uppercase">Accepted tokens:</span>
+                                <div class="flex gap-2" id="tokens-${net.id}">
+                                    ${availableTokens.map(token => `
+                                        <label class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="checkbox" value="${token}"
+                                                   class="token-checkbox accent-cyan-400"
+                                                   data-chain="${net.id}"
+                                                   ${supportedTokens.includes(token) ? 'checked' : ''}>
+                                            <span class="text-xs font-bold ${supportedTokens.includes(token) ? 'text-cyan-300' : 'text-slate-500'}">${token}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            ` : `
+                            <div class="mt-1">
+                                <span class="text-xs text-slate-500">Token: <span class="text-cyan-300 font-bold">USDC</span></span>
+                            </div>
+                            `}
                         </div>
                     `;
                 }).join('')}
             </div>
         </div>
     `).join('');
+
+    // Add token checkbox change listeners
+    document.querySelectorAll('.token-checkbox').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+            const chain = e.target.dataset.chain;
+            const label = e.target.nextElementSibling;
+            if (label) {
+                label.className = e.target.checked ? 'text-xs font-bold text-cyan-300' : 'text-xs font-bold text-slate-500';
+            }
+            // Ensure at least one token is selected
+            const chainTokens = document.querySelectorAll(`.token-checkbox[data-chain="${chain}"]`);
+            const checked = Array.from(chainTokens).filter(c => c.checked);
+            if (checked.length === 0) {
+                e.target.checked = true;
+                if (label) label.className = 'text-xs font-bold text-cyan-300';
+            }
+        });
+    });
 }
 
 // Toggle chain enabled/disabled
@@ -109,6 +163,14 @@ async function toggleChain(chainId, enabled) {
     await saveWallet(chainId, enabled);
 }
 
+// Get selected tokens for a chain from checkboxes
+function getSelectedTokens(chainId) {
+    const checkboxes = document.querySelectorAll(`.token-checkbox[data-chain="${chainId}"]`);
+    if (checkboxes.length === 0) return ['USDC']; // Default for single-token chains
+    const selected = Array.from(checkboxes).filter(c => c.checked).map(c => c.value);
+    return selected.length > 0 ? selected : ['USDC'];
+}
+
 // Save wallet address
 async function saveWallet(chainId, isActive = true) {
     try {
@@ -122,6 +184,8 @@ async function saveWallet(chainId, isActive = true) {
             return;
         }
 
+        const supportedTokens = getSelectedTokens(chainId);
+
         const response = await fetch('/api/merchant/wallets', {
             method: 'POST',
             headers: {
@@ -132,6 +196,7 @@ async function saveWallet(chainId, isActive = true) {
                 merchantId,
                 chain: chainId,
                 address: address || '',
+                supportedTokens,
                 isActive
             })
         });
@@ -143,9 +208,9 @@ async function saveWallet(chainId, isActive = true) {
         // Update local cache
         const existingIndex = window.merchantWallets?.findIndex(w => w.chain === chainId);
         if (existingIndex >= 0) {
-            window.merchantWallets[existingIndex] = { chain: chainId, address, isActive };
+            window.merchantWallets[existingIndex] = { chain: chainId, address, supportedTokens, isActive };
         } else if (window.merchantWallets) {
-            window.merchantWallets.push({ chain: chainId, address, isActive });
+            window.merchantWallets.push({ chain: chainId, address, supportedTokens, isActive });
         }
 
         // Show success feedback

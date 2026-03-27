@@ -6,7 +6,7 @@
 (function() {
   'use strict';
 
-  const STABLEPAY_URL = 'https://stablepay-nine.vercel.app';
+  const STABLEPAY_URL = 'https://wetakestables.shop';
   const WIDGET_VERSION = '3.0.0';
 
   // Chain configurations (subset for widget)
