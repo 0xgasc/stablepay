@@ -8,7 +8,7 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-  schemas   = ["public", "auth"]
+  schemas   = ["public"]
 }
 
 enum Chain {
@@ -98,6 +98,9 @@ model Merchant {
   isSuspended           Boolean     @default(false)  // Suspended for unpaid fees
   suspendedAt           DateTime?
   setupCompleted        Boolean     @default(false)
+  emailVerified         Boolean     @default(false)
+  emailVerifyToken      String?
+  emailVerifyExpiry     DateTime?
   passwordHash          String?
   loginToken            String?     @unique
   tokenExpiresAt        DateTime?
@@ -135,6 +138,7 @@ model Merchant {
   webhookLogs           WebhookLog[]
   invoices              Invoice[]
   receipts              Receipt[]
+  chatMessages          ChatMessage[]
 
   @@index([plan])
   @@index([networkMode])
@@ -427,6 +431,20 @@ model Receipt {
   @@index([merchantId])
   @@index([paymentDate])
   @@map("receipts")
+  @@schema("public")
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  merchantId String
+  role       String   // "user" or "assistant"
+  content    String
+  createdAt  DateTime @default(now())
+
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId, createdAt])
+  @@map("chat_messages")
   @@schema("public")
 }
 

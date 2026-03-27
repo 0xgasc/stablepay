@@ -14,6 +14,7 @@ import { webhooksRouter } from './routes/webhooks';
 import { invoicesRouter, invoicePayRouter } from './routes/invoices';
 import { receiptsRouter } from './routes/receipts';
 import { embedRouter } from './routes/embed';
+import { agentRouter } from './routes/agent';
 import { validateEnv } from './utils/env';
 import { OrderService } from './services/orderService';
 import { logger } from './utils/logger';
@@ -48,7 +49,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://lxbrsiujmntrvzqdphhj.supabase.co", "https://stablepay-nine.vercel.app"],
+      connectSrc: ["'self'", "https://stablepay-nine.vercel.app"],
     },
   },
 }));
@@ -76,6 +77,7 @@ app.use('/api/v1/admin', adminRouter);
 app.use('/api/fees', feesRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/embed', embedRouter);  // Embeddable widget endpoints
+app.use('/api/agent', agentRouter);  // AI chat assistant
 app.use('/api', authRouter);
 
 // Simple orders endpoint for test payments

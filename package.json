@@ -18,8 +18,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@prisma/client": "^5.7.1",
-    "@supabase/supabase-js": "^2.57.2",
     "@vercel/node": "^3.0.0",
     "axios": "^1.6.2",
     "bcryptjs": "^3.0.2",

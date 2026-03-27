@@ -35,6 +35,9 @@ const envSchema = z.object({
 
   // CORS origins
   ALLOWED_ORIGINS: z.string().optional(),
+
+  // AI Agent
+  ANTHROPIC_API_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

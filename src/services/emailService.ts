@@ -18,6 +18,107 @@ class EmailService {
   }
 
   /**
+   * Send email verification code to new merchant
+   */
+  async sendVerificationEmail(email: string, code: string, contactName: string): Promise<boolean> {
+    if (!resend) {
+      logger.warn('Email service not configured, skipping verification email', { email });
+      return false;
+    }
+
+    try {
+      const { data, error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: email,
+        subject: `${code} is your StablePay verification code`,
+        html: this.renderVerificationEmail(code, contactName)
+      });
+
+      if (error) {
+        logger.error('Failed to send verification email', error as Error, { email });
+        return false;
+      }
+
+      logger.info('Verification email sent', { email, messageId: data?.id });
+      return true;
+    } catch (error) {
+      logger.error('Error sending verification email', error as Error, { email });
+      return false;
+    }
+  }
+
+  /**
+   * Render verification email HTML
+   */
+  private renderVerificationEmail(code: string, contactName: string): string {
+    const digits = code.split('');
+    const digitBoxes = digits.map(d =>
+      `<td style="width: 48px; height: 56px; text-align: center; font-size: 28px; font-weight: 700; font-family: monospace; border: 4px solid #000; background: #f4f4f5; margin: 0 4px;">${d}</td>`
+    ).join('<td style="width: 8px;"></td>');
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify your email</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #000000; padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">STABLEPAY</h1>
+              <p style="color: #a1a1aa; margin: 10px 0 0 0; font-size: 14px;">Verify your email address</p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 20px 0; font-size: 16px; color: #18181b;">
+                Hi${contactName ? ` ${contactName}` : ''},
+              </p>
+              <p style="margin: 0 0 30px 0; font-size: 16px; color: #52525b;">
+                Enter this verification code to activate your StablePay account:
+              </p>
+
+              <!-- Code Box -->
+              <table cellpadding="0" cellspacing="0" style="margin: 0 auto 30px auto;">
+                <tr>${digitBoxes}</tr>
+              </table>
+
+              <p style="margin: 0 0 10px 0; font-size: 14px; color: #71717a; text-align: center;">
+                This code expires in <strong>15 minutes</strong>.
+              </p>
+              <p style="margin: 0; font-size: 14px; color: #71717a; text-align: center;">
+                If you didn't sign up for StablePay, you can ignore this email.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f4f4f5; padding: 20px 30px; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #71717a;">
+                Powered by <a href="https://stablepay.io" style="color: #000000; text-decoration: none;">StablePay</a> - Stablecoin Payment Infrastructure
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+  }
+
+  /**
    * Send invoice email to customer
    */
   async sendInvoice(invoiceId: string): Promise<boolean> {

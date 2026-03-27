@@ -170,20 +170,18 @@
                         </div>
 
                         <div>
-                            <label for="token" class="block text-sm font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;" data-i18n="form.token">
-                                LOGIN TOKEN
+                            <label for="password" class="block text-sm font-bold text-black mb-2 tracking-wide" style="text-transform: uppercase;">
+                                PASSWORD
                             </label>
                             <input
-                                id="token"
-                                name="token"
-                                type="text"
+                                id="password"
+                                name="password"
+                                type="password"
                                 required
-                                class="w-full px-4 py-3 bg-white border-4 border-black text-black font-mono focus:outline-none"
-                                placeholder="Enter your login token"
+                                autocomplete="current-password"
+                                class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none"
+                                placeholder="Enter your password"
                             />
-                            <p class="text-xs text-gray-500 mt-2" data-i18n="form.tokenHint">
-                                Check your email for the login link sent by admin
-                            </p>
                         </div>
 
                         <div>
@@ -415,7 +413,7 @@
         document.getElementById('tokenLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
-            const token = document.getElementById('token').value;
+            const password = document.getElementById('password').value;
             const submitBtn = document.getElementById('loginBtn');
 
             try {
@@ -425,28 +423,25 @@
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, token })
+                    body: JSON.stringify({ email, password })
                 });
 
                 const result = await response.json();
 
                 if (response.ok) {
-                    // Store authentication data
                     sessionStorage.setItem('merchantToken', result.token);
                     sessionStorage.setItem('merchantId', result.merchantId);
                     sessionStorage.setItem('isAuthenticated', 'true');
                     sessionStorage.setItem('isActive', result.isActive);
                     sessionStorage.setItem('isPending', result.isPending);
 
-                    // Check if account is pending
                     if (result.isPending) {
                         alert('Account pending approval. Dashboard access granted with limited features until activation.');
                     }
 
-                    // Redirect to dashboard
                     window.location.href = '/dashboard.html';
                 } else {
-                    alert(result.error || 'Invalid email or token');
+                    alert(result.error || 'Invalid email or password');
                 }
             } catch (error) {
                 console.error('Login error:', error);
