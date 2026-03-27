@@ -204,8 +204,9 @@
             color: #d97706 !important;
         }
 
-        body.day-mode .text-cyan-400 {
-            color: #9333ea !important;
+        body.day-mode .text-cyan-400,
+        body.day-mode .text-cyan-300 {
+            color: #0891b2 !important;
         }
 
         body.day-mode .text-red-400 {
@@ -262,8 +263,32 @@
             border-color: #e2e8f0 !important;
         }
 
+        /* Gradients in day mode */
         body.day-mode .bg-gradient-to-r {
-            opacity: 0.9;
+            background: linear-gradient(to right, #eff6ff, #f0f9ff) !important;
+        }
+
+        body.day-mode .bg-gradient-to-br {
+            background: linear-gradient(to bottom right, #eff6ff, #f0f9ff) !important;
+        }
+
+        /* Pricing card in day mode */
+        body.day-mode .bg-cyan-900\/30 {
+            background: #e0f7fa !important;
+        }
+
+        body.day-mode .border-cyan-400 {
+            border-color: #06b6d4 !important;
+        }
+
+        /* Buttons in day mode */
+        body.day-mode .bg-blue-500,
+        body.day-mode .bg-blue-600 {
+            background: #2563eb !important;
+        }
+
+        body.day-mode .bg-blue-600:hover {
+            background: #1d4ed8 !important;
         }
 
         #pendingBanner {
@@ -1914,10 +1939,10 @@ onMounted(() => {
 
         // Volume-based pricing tiers (automatic based on 30-day volume)
         const VOLUME_TIERS = [
-            { name: 'Starter', minVolume: 0, maxVolume: 10000, feePercent: 0.5 },
-            { name: 'Growth', minVolume: 10000, maxVolume: 50000, feePercent: 0.4 },
-            { name: 'Scale', minVolume: 50000, maxVolume: 250000, feePercent: 0.3 },
-            { name: 'Volume', minVolume: 250000, maxVolume: Infinity, feePercent: 0.2 }
+            { name: 'Starter', minVolume: 0, maxVolume: 10000, feePercent: 0.01, plan: 'STARTER' },
+            { name: 'Growth', minVolume: 10000, maxVolume: 50000, feePercent: 0.008, plan: 'GROWTH' },
+            { name: 'Pro', minVolume: 50000, maxVolume: 250000, feePercent: 0.005, plan: 'PRO' },
+            { name: 'Enterprise', minVolume: 250000, maxVolume: Infinity, feePercent: 0.003, plan: 'ENTERPRISE' }
         ];
 
         // Test mode limits
