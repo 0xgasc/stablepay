@@ -80,7 +80,7 @@
 <h2 id="prereqs"><span class="section-num">1.</span> Prerequisites &amp; Test Credentials</h2>
 
 <h3>Base URL</h3>
-<pre>https://stablepay-nine.vercel.app</pre>
+<pre>https://wetakestables.shop</pre>
 
 <h3>Admin Credentials</h3>
 <table>
@@ -106,7 +106,7 @@
 
 <h3>Shell Variable Setup</h3>
 <pre><span class="comment"># Paste into terminal to set up all variables for the tests below</span>
-API="https://stablepay-nine.vercel.app"
+API="https://wetakestables.shop"
 ADMIN_KEY="admin123"
 MERCHANT_ID="cmhkjckgi0000qut5wxmtsw1f"
 MERCHANT_TOKEN="78luhzxlf8r2h7aztu15sl"</pre>
@@ -452,7 +452,7 @@ curl -s -X POST $API/api/v1/admin/refunds/ANOTHER_REFUND_ID/reject \
 
 <h3>10.1 Test Widget in Browser</h3>
 <p>Open a new HTML file locally or use the browser console on any page:</p>
-<pre>&lt;script src="https://stablepay-nine.vercel.app/js/stablepay-widget.js"&gt;&lt;/script&gt;
+<pre>&lt;script src="https://wetakestables.shop/js/stablepay-widget.js"&gt;&lt;/script&gt;
 &lt;button onclick="testPay()"&gt;Test Payment&lt;/button&gt;
 &lt;script&gt;
 function testPay() {
@@ -487,7 +487,7 @@ function testPay() {
 
 <h3>11.1 Login</h3>
 <ol>
-    <li>Go to <a href="https://stablepay-nine.vercel.app/enterprise-admin.html">enterprise-admin.html</a></li>
+    <li>Go to <a href="https://wetakestables.shop/enterprise-admin.html">enterprise-admin.html</a></li>
     <li>Enter any email + password: <code>admin123</code></li>
     <li>Should load the dashboard with stats cards</li>
 </ol>

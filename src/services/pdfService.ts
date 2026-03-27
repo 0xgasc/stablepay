@@ -125,7 +125,7 @@ class PdfService {
           doc.moveDown(3);
           doc.font('Helvetica-Bold').fontSize(10).text('Payment Instructions');
           doc.font('Helvetica').fontSize(9);
-          doc.text(`Pay online at: ${process.env.BASE_URL || 'https://stablepay-nine.vercel.app'}/pay/${invoice.id}`);
+          doc.text(`Pay online at: ${process.env.BASE_URL || 'https://wetakestables.shop'}/pay/${invoice.id}`);
           if (invoice.paymentAddress) {
             doc.text(`Or send ${invoice.token} to: ${invoice.paymentAddress}`);
           }

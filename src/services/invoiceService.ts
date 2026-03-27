@@ -554,7 +554,7 @@ class InvoiceService {
    * Format invoice for API response
    */
   private formatInvoiceResponse(invoice: any): InvoiceResponse {
-    const baseUrl = process.env.BASE_URL || 'https://stablepay-nine.vercel.app';
+    const baseUrl = process.env.BASE_URL || 'https://wetakestables.shop';
 
     return {
       id: invoice.id,

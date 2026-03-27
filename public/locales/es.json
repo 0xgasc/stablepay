@@ -383,7 +383,7 @@
         },
         "statusPage": {
           "title": "Página de estado en tiempo real",
-          "text": "Estado del sistema en vivo en status.stablepay.io. Suscríbase para notificaciones de incidentes y ventanas de mantenimiento."
+          "text": "Estado del sistema en vivo en status.wetakestables.shop. Suscríbase para notificaciones de incidentes y ventanas de mantenimiento."
         }
       },
       "refundMgmt": {
@@ -444,7 +444,7 @@
         "heading": "Divulgación de Seguridad",
         "responsible": {
           "title": "Programa de divulgación responsable",
-          "text": "¿Encontró un problema de seguridad? Repórtelo de forma privada a security@stablepay.io. Lo reconoceremos en 24 horas y lo mantendremos actualizado durante todo el proceso de corrección."
+          "text": "¿Encontró un problema de seguridad? Repórtelo de forma privada a security@wetakestables.shop. Lo reconoceremos en 24 horas y lo mantendremos actualizado durante todo el proceso de corrección."
         },
         "bugBounty": {
           "title": "Programa de recompensas por errores",

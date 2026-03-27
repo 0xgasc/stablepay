@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 // Initialize Resend client (will be null if no API key)
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-const BASE_URL = process.env.BASE_URL || 'https://stablepay-nine.vercel.app';
+const BASE_URL = process.env.BASE_URL || 'https://wetakestables.shop';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'StablePay <onboarding@resend.dev>';
 
 class EmailService {
@@ -105,7 +105,7 @@ class EmailService {
           <tr>
             <td style="background-color: #f4f4f5; padding: 20px 30px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #71717a;">
-                Powered by <a href="https://stablepay.io" style="color: #000000; text-decoration: none;">StablePay</a> - Stablecoin Payment Infrastructure
+                Powered by <a href="https://wetakestables.shop" style="color: #000000; text-decoration: none;">StablePay</a> - Stablecoin Payment Infrastructure
               </p>
             </td>
           </tr>
@@ -412,7 +412,7 @@ class EmailService {
           <tr>
             <td style="background-color: #f4f4f5; padding: 20px 30px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #71717a;">
-                Powered by <a href="https://stablepay.io" style="color: #000000; text-decoration: none;">StablePay</a> - Stablecoin Payment Infrastructure
+                Powered by <a href="https://wetakestables.shop" style="color: #000000; text-decoration: none;">StablePay</a> - Stablecoin Payment Infrastructure
               </p>
             </td>
           </tr>
@@ -519,7 +519,7 @@ class EmailService {
           <tr>
             <td style="background-color: #f4f4f5; padding: 20px 30px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #71717a;">
-                Powered by <a href="https://stablepay.io" style="color: #000000; text-decoration: none;">StablePay</a> - Stablecoin Payment Infrastructure
+                Powered by <a href="https://wetakestables.shop" style="color: #000000; text-decoration: none;">StablePay</a> - Stablecoin Payment Infrastructure
               </p>
             </td>
           </tr>
@@ -612,7 +612,7 @@ class EmailService {
           <tr>
             <td style="background-color: #f4f4f5; padding: 20px 30px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #71717a;">
-                Powered by <a href="https://stablepay.io" style="color: #000000; text-decoration: none;">StablePay</a> - Stablecoin Payment Infrastructure
+                Powered by <a href="https://wetakestables.shop" style="color: #000000; text-decoration: none;">StablePay</a> - Stablecoin Payment Infrastructure
               </p>
             </td>
           </tr>

@@ -49,7 +49,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://stablepay-nine.vercel.app"],
+      connectSrc: ["'self'", "https://wetakestables.shop"],
     },
   },
 }));

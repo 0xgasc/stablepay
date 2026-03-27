@@ -400,7 +400,7 @@ router.put('/', requireAdminKey, async (req, res) => {
             // Send activation notification (uses Resend)
             const { Resend } = await import('resend');
             const resend = new Resend(process.env.RESEND_API_KEY);
-            const BASE_URL = process.env.BASE_URL || 'https://stablepay-nine.vercel.app';
+            const BASE_URL = process.env.BASE_URL || 'https://wetakestables.shop';
             const FROM_EMAIL = process.env.FROM_EMAIL || 'StablePay <onboarding@resend.dev>';
 
             await resend.emails.send({

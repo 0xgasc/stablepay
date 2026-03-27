@@ -62,3 +62,4 @@ dashboard/out/
 temp/
 tmp/bfg.jar
 .vercel
+.env.vercel

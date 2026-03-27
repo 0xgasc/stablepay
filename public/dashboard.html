@@ -877,8 +877,8 @@
                                     </div>
                                     <p class="text-sm text-slate-400 mb-3">Add this before your closing &lt;/head&gt; tag:</p>
                                     <div class="bg-gray-900 p-3 rounded border border-slate-700 relative">
-                                        <pre class="text-xs text-green-400 font-mono overflow-x-auto">&lt;script src="https://stablepay-nine.vercel.app/checkout-widget.js"&gt;&lt;/script&gt;</pre>
-                                        <button onclick="copyToClipboard(this, '&lt;script src=&quot;https://stablepay-nine.vercel.app/checkout-widget.js&quot;&gt;&lt;/script&gt;')" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-xs">
+                                        <pre class="text-xs text-green-400 font-mono overflow-x-auto">&lt;script src="https://wetakestables.shop/checkout-widget.js"&gt;&lt;/script&gt;</pre>
+                                        <button onclick="copyToClipboard(this, '&lt;script src=&quot;https://wetakestables.shop/checkout-widget.js&quot;&gt;&lt;/script&gt;')" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-xs">
                                             Copy
                                         </button>
                                     </div>
@@ -995,7 +995,7 @@
 export default function Checkout() {
   useEffect(() => {
     const script = document.createElement('script');
-    script.src = 'https://stablepay-nine.vercel.app/checkout-widget.js';
+    script.src = 'https://wetakestables.shop/checkout-widget.js';
     document.head.appendChild(script);
 
     document.addEventListener('stablepay:payment.success', (event) => {
@@ -1027,7 +1027,7 @@ import Script from 'next/script';
 export default function CheckoutPage() {
   return (
     &lt;&gt;
-      &lt;Script src="https://stablepay-nine.vercel.app/checkout-widget.js" /&gt;
+      &lt;Script src="https://wetakestables.shop/checkout-widget.js" /&gt;
 
       &lt;div className="stablepay-checkout"
            data-merchant={process.env.NEXT_PUBLIC_STABLEPAY_MERCHANT_ID}
@@ -1061,7 +1061,7 @@ const merchantId = import.meta.env.VITE_STABLEPAY_MERCHANT_ID;
 
 onMounted(() => {
   const script = document.createElement('script');
-  script.src = 'https://stablepay-nine.vercel.app/checkout-widget.js';
+  script.src = 'https://wetakestables.shop/checkout-widget.js';
   document.head.appendChild(script);
 });
 &lt;/script&gt;</pre>
@@ -1076,7 +1076,7 @@ onMounted(() => {
                                 <div class="bg-gray-900 border border-slate-700 p-4 overflow-x-auto relative">
                                     <pre class="text-xs text-green-400 font-mono">&lt;!-- Add to your WordPress post/page --&gt;
 
-&lt;script src="https://stablepay-nine.vercel.app/checkout-widget.js"&gt;&lt;/script&gt;
+&lt;script src="https://wetakestables.shop/checkout-widget.js"&gt;&lt;/script&gt;
 
 &lt;div class="stablepay-checkout"
      data-merchant="YOUR_MERCHANT_ID"
@@ -1993,7 +1993,7 @@ onMounted(() => {
             const upgradeBtn = document.getElementById('upgradeBtn');
             if (plan === 'ENTERPRISE') {
                 upgradeBtn.textContent = 'Contact Support';
-                upgradeBtn.onclick = () => window.location.href = 'mailto:enterprise@stablepay.io';
+                upgradeBtn.onclick = () => window.location.href = 'mailto:enterprise@wetakestables.shop';
             } else if (plan === 'FREE') {
                 upgradeBtn.textContent = 'Go Live';
                 upgradeBtn.onclick = () => {

@@ -383,7 +383,7 @@
         },
         "statusPage": {
           "title": "Real-time status page",
-          "text": "Live system status at status.stablepay.io. Subscribe for incident notifications and maintenance windows."
+          "text": "Live system status at status.wetakestables.shop. Subscribe for incident notifications and maintenance windows."
         }
       },
       "refundMgmt": {
@@ -444,7 +444,7 @@
         "heading": "Security Disclosure",
         "responsible": {
           "title": "Responsible disclosure program",
-          "text": "Found a security issue? Report it privately to security@stablepay.io. We'll acknowledge within 24 hours and keep you updated throughout the fix process."
+          "text": "Found a security issue? Report it privately to security@wetakestables.shop. We'll acknowledge within 24 hours and keep you updated throughout the fix process."
         },
         "bugBounty": {
           "title": "Bug bounty program",
