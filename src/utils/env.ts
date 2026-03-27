@@ -38,6 +38,8 @@ const envSchema = z.object({
 
   // AI Agent
   ANTHROPIC_API_KEY: z.string().optional(),
+  AGENT_WALLET_KEY: z.string().optional(),
+  AGENT_WALLET_ADDRESS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

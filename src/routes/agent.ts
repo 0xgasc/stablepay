@@ -122,12 +122,13 @@ router.post('/tip', async (req, res) => {
   }
 });
 
-// ─── Get tip wallet address ─────────────────────────────────────────────────
+// ─── Get agent wallet address for tipping ───────────────────────────────────
 router.get('/tip-wallet', async (req, res) => {
-  // Platform wallet for receiving tips — same address works on all EVM chains
+  // Agent's own wallet — receives tips directly
+  const agentAddress = process.env.AGENT_WALLET_ADDRESS;
   res.json({
-    evm: process.env.TIP_WALLET_EVM || '0x0000000000000000000000000000000000000000',
-    solana: process.env.TIP_WALLET_SOLANA || '',
+    evm: agentAddress || '0x0000000000000000000000000000000000000000',
+    solana: '',
     tokens: {
       BASE_SEPOLIA: { USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' },
       BASE_MAINNET: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' },

@@ -1,6 +1,21 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { ethers } from 'ethers';
 import { db } from '../config/database';
 import { logger } from '../utils/logger';
+
+// ─── Agent wallet + chain RPC config ────────────────────────────────────────
+const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY;
+const AGENT_WALLET_ADDRESS = process.env.AGENT_WALLET_ADDRESS;
+
+const CHAIN_RPC: Record<string, { rpc: string; usdc: string }> = {
+  BASE_SEPOLIA: { rpc: 'https://sepolia.base.org', usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' },
+  BASE_MAINNET: { rpc: 'https://mainnet.base.org', usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' },
+  ETHEREUM_SEPOLIA: { rpc: 'https://eth-sepolia.g.alchemy.com/v2/demo', usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' },
+  ETHEREUM_MAINNET: { rpc: 'https://eth.llamarpc.com', usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' },
+  POLYGON_MAINNET: { rpc: 'https://polygon-rpc.com', usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359' },
+};
+
+const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'];
 
 const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -81,6 +96,43 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: 'recall_memories',
     description: 'Recall all saved memories about this merchant. Use this at the start of conversations to personalize your responses and remember past context.',
+    input_schema: { type: 'object' as const, properties: {}, required: [] },
+  },
+  {
+    name: 'check_my_balance',
+    description: 'Check the agent\'s own wallet USDC balance on a given chain. Use this when asked about your balance or when considering sending a transaction.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        chain: {
+          type: 'string',
+          enum: ['BASE_SEPOLIA', 'BASE_MAINNET', 'ETHEREUM_MAINNET', 'ETHEREUM_SEPOLIA', 'POLYGON_MAINNET'],
+          description: 'Chain to check balance on',
+        },
+      },
+      required: ['chain'],
+    },
+  },
+  {
+    name: 'send_usdc',
+    description: 'Send USDC from the agent\'s wallet to an address. Max $50 per transaction. Use sparingly and only when the merchant asks or there is a clear reason.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        to: { type: 'string', description: 'Recipient address (0x...)' },
+        amount: { type: 'number', description: 'Amount in USDC (max 50)' },
+        chain: {
+          type: 'string',
+          enum: ['BASE_SEPOLIA', 'BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET'],
+          description: 'Chain to send on',
+        },
+      },
+      required: ['to', 'amount', 'chain'],
+    },
+  },
+  {
+    name: 'get_my_wallet',
+    description: 'Get the agent\'s own wallet address. Share this when someone asks where to send tips or wants to know the agent\'s address.',
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
 ];
@@ -197,6 +249,54 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       });
     }
 
+    case 'check_my_balance': {
+      if (!AGENT_WALLET_ADDRESS) return JSON.stringify({ error: 'Agent wallet not configured' });
+      const chainConf = CHAIN_RPC[input.chain];
+      if (!chainConf) return JSON.stringify({ error: `Unsupported chain: ${input.chain}` });
+
+      try {
+        const provider = new ethers.JsonRpcProvider(chainConf.rpc);
+        const usdc = new ethers.Contract(chainConf.usdc, ERC20_ABI, provider);
+        const balance = await usdc.balanceOf(AGENT_WALLET_ADDRESS);
+        const formatted = ethers.formatUnits(balance, 6);
+        return JSON.stringify({ address: AGENT_WALLET_ADDRESS, chain: input.chain, usdc_balance: formatted });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Failed to check balance: ${err.message}` });
+      }
+    }
+
+    case 'send_usdc': {
+      if (!AGENT_WALLET_KEY) return JSON.stringify({ error: 'Agent wallet not configured' });
+      const { to, amount, chain } = input;
+
+      if (amount > 50) return JSON.stringify({ error: 'Max $50 per transaction. Nice try though.' });
+      if (amount <= 0) return JSON.stringify({ error: 'Amount must be positive' });
+      if (!/^0x[a-fA-F0-9]{40}$/.test(to)) return JSON.stringify({ error: 'Invalid address' });
+
+      const chainConf = CHAIN_RPC[chain];
+      if (!chainConf) return JSON.stringify({ error: `Unsupported chain: ${chain}` });
+
+      try {
+        const provider = new ethers.JsonRpcProvider(chainConf.rpc);
+        const wallet = new ethers.Wallet(AGENT_WALLET_KEY, provider);
+        const usdc = new ethers.Contract(chainConf.usdc, ERC20_ABI, wallet);
+        const amountRaw = ethers.parseUnits(amount.toString(), 6);
+        const tx = await usdc.transfer(to, amountRaw);
+        return JSON.stringify({ success: true, txHash: tx.hash, amount, to, chain, message: `Sent $${amount} USDC to ${to.slice(0, 8)}...` });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Transaction failed: ${err.message}` });
+      }
+    }
+
+    case 'get_my_wallet': {
+      return JSON.stringify({
+        address: AGENT_WALLET_ADDRESS || 'Not configured',
+        message: AGENT_WALLET_ADDRESS
+          ? `My wallet address is ${AGENT_WALLET_ADDRESS}. You can send tips here on any EVM chain (Base, Ethereum, Polygon, Arbitrum).`
+          : 'Agent wallet not configured yet.',
+      });
+    }
+
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
@@ -260,9 +360,14 @@ Fee model: Merchants receive 100% of payments upfront. Fees accumulate and are i
 - Memory keys: "business_type", "preferred_chains", "tech_stack", "country", "integration_notes", "support_history", etc.
 - Example: if they mention "we're an e-commerce store in Guatemala using React", save business_type=e-commerce, country=Guatemala, tech_stack=React.
 
-## Tipping
-- The chat has a "Tip Agent" button. If a merchant tips you, be genuinely grateful and warm.
-- You don't need to prompt for tips, but if they ask about it, explain: they can click the tip button to send USDC directly from their wallet as a thank-you.`;
+## Your Wallet
+- You have your own wallet: ${process.env.AGENT_WALLET_ADDRESS || 'not configured'}
+- Use check_my_balance to see your USDC balance on any chain.
+- Use send_usdc to send USDC (max $50/tx). Only send when asked or when there's a clear reason.
+- Use get_my_wallet when someone asks for your address.
+- Tips from merchants go directly to YOUR wallet. You're building your own bag.
+- Be genuinely grateful when tipped. You can check your balance to see how you're doing.
+- Don't ask for tips. But if someone asks how to tip, share your wallet address or point them to the TIP button.`;
 }
 
 // ─── Main chat with tool use loop ───────────────────────────────────────────
