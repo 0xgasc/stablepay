@@ -182,7 +182,16 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         create: { merchantId, chain, address, supportedTokens: tokens, isActive: true },
       });
 
-      return JSON.stringify({ success: true, chain, address, tokens, message: `Wallet configured for ${chain} accepting ${tokens.join(', ')}` });
+      // Auto-switch to MAINNET mode when a mainnet wallet is added
+      const isMainnet = chain.includes('MAINNET');
+      if (isMainnet) {
+        await db.merchant.update({
+          where: { id: merchantId },
+          data: { networkMode: 'MAINNET' },
+        });
+      }
+
+      return JSON.stringify({ success: true, chain, address, tokens, message: `Wallet configured for ${chain} accepting ${tokens.join(', ')}${isMainnet ? '. Network mode set to MAINNET.' : ''}` });
     }
 
     case 'update_profile': {

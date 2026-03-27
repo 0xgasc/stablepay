@@ -319,7 +319,7 @@
         </div>
         <!-- Input -->
         <div class="border-t-4 border-black p-3 flex gap-2">
-            <input id="chatInput" type="text" placeholder="Ask anything..." class="flex-1 px-3 py-2 bg-slate-800 text-white border-2 border-slate-600 text-sm focus:outline-none focus:border-cyan-400" maxlength="2000">
+            <textarea id="chatInput" rows="1" placeholder="Ask anything..." class="flex-1 px-3 py-2 bg-slate-800 text-white border-2 border-slate-600 text-sm focus:outline-none focus:border-cyan-400 resize-none overflow-hidden" maxlength="2000" style="min-height: 40px; max-height: 120px;"></textarea>
             <button id="chatSendBtn" class="px-4 py-2 font-bold text-black text-sm border-2 border-black" style="background: #00E5FF; text-transform: uppercase;">SEND</button>
         </div>
     </div>
@@ -1936,8 +1936,11 @@ onMounted(() => {
             const currentFee = customFee || volumeTier.feePercent;
 
             // Update plan name based on mode
-            if (plan === 'FREE') {
-                document.getElementById('currentPlanName').textContent = 'TEST MODE';
+            const hasMainnetWallets = (merchant.wallets || []).some(w => w.chain && w.chain.includes('MAINNET'));
+            if (plan === 'FREE' && !hasMainnetWallets) {
+                document.getElementById('currentPlanName').textContent = 'FREE';
+            } else if (plan === 'FREE' && hasMainnetWallets) {
+                document.getElementById('currentPlanName').textContent = 'FREE (LIVE)';
             } else if (plan === 'ENTERPRISE') {
                 document.getElementById('currentPlanName').textContent = 'ENTERPRISE';
             } else {
@@ -2013,11 +2016,16 @@ onMounted(() => {
                 upgradeBtn.textContent = 'Contact Support';
                 upgradeBtn.onclick = () => window.location.href = 'mailto:enterprise@wetakestables.shop';
             } else if (plan === 'FREE') {
-                upgradeBtn.textContent = 'Go Live';
-                upgradeBtn.onclick = () => {
-                    // Switch to mainnet mode
-                    alert('Switch to Mainnet mode in your network settings to start accepting live payments!');
-                };
+                if (hasMainnetWallets) {
+                    upgradeBtn.textContent = 'Upgrade Plan';
+                    upgradeBtn.onclick = () => window.location.href = '/pricing.html#volume-tiers';
+                } else {
+                    upgradeBtn.textContent = 'Add Mainnet Wallet';
+                    upgradeBtn.onclick = () => {
+                        // Switch to wallets tab
+                        document.querySelector('[data-tab="wallets"]')?.click();
+                    };
+                }
             } else {
                 upgradeBtn.textContent = 'See Tiers';
                 upgradeBtn.onclick = () => window.location.href = '/pricing.html#volume-tiers';
@@ -2078,9 +2086,9 @@ onMounted(() => {
                     document.getElementById('profileCreatedAt').textContent = created.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
                 }
 
-                // Auto-open AI chat to guide new merchants through setup
+                // Auto-open chat panel for new merchants (no auto-message)
                 if (!currentMerchant.setupCompleted) {
-                    if (window._autoGreetNewMerchant) window._autoGreetNewMerchant();
+                    if (window._openChatForNewMerchant) window._openChatForNewMerchant();
                 }
 
                 // Update pricing tier card
@@ -5149,8 +5157,6 @@ onMounted(() => {
             const messagesEl = document.getElementById('chatMessages');
             const typingEl = document.getElementById('chatTyping');
             let historyLoaded = false;
-            let autoGreetSent = false;
-
             function openChat() {
                 panel.classList.remove('hidden');
                 fab.classList.add('hidden');
@@ -5160,23 +5166,14 @@ onMounted(() => {
 
             fab.addEventListener('click', openChat);
 
-            // Auto-open chat for new merchants and trigger onboarding
-            function autoGreetNewMerchant() {
-                if (autoGreetSent) return;
-                if (currentMerchant && !currentMerchant.setupCompleted) {
-                    autoGreetSent = true;
-                    // Small delay so dashboard loads first
-                    setTimeout(() => {
-                        openChat();
-                        // Send initial greeting to trigger the agent's onboarding flow
-                        setTimeout(() => {
-                            sendMessageText("Hey! Help me set up my payment gateway.");
-                        }, 500);
-                    }, 1000);
-                }
+            // Just open the chat panel for new merchants — no auto-message
+            let chatOpenedForNew = false;
+            function openChatForNewMerchant() {
+                if (chatOpenedForNew) return;
+                chatOpenedForNew = true;
+                setTimeout(() => openChat(), 800);
             }
-            // Expose for loadMerchantData to call
-            window._autoGreetNewMerchant = autoGreetNewMerchant;
+            window._openChatForNewMerchant = openChatForNewMerchant;
 
             const minBtn = document.getElementById('chatMinBtn');
 
@@ -5279,6 +5276,9 @@ onMounted(() => {
             sendBtn.addEventListener('click', sendMessage);
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+                // Auto-resize textarea
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 120) + 'px';
             });
 
             async function loadHistory() {
