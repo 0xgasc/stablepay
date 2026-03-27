@@ -36,8 +36,7 @@ const TOOLS: Anthropic.Tool[] = [
       properties: {
         chain: {
           type: 'string',
-          enum: ['BASE_SEPOLIA', 'ETHEREUM_SEPOLIA', 'ARBITRUM_SEPOLIA', 'SOLANA_DEVNET',
-                 'BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'SOLANA_MAINNET'],
+          enum: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'SOLANA_MAINNET'],
           description: 'The blockchain to configure',
         },
         address: { type: 'string', description: 'The wallet address (0x... for EVM, base58 for Solana)' },
@@ -321,7 +320,7 @@ When you detect setup is not complete, guide them through this flow CONVERSATION
 3. **Wallet address** — Ask for their wallet address. One address works across all EVM chains (Base, Ethereum, Polygon, Arbitrum). Solana needs a separate address.
 4. **Stablecoins** — For each chain, ask which stablecoins they want. Explain briefly: USDC (most popular, widest support), USDT (high volume, Tether), EURC (Euro stablecoin for EU customers).
 5. **Configure** — Use add_wallet tool to set up each chain. Confirm each one.
-6. **Network mode** — Ask if they want to start in testnet (safe testing) or mainnet (live payments). Recommend testnet first if they're new.
+6. **Network mode** — Always set up on MAINNET chains. Do NOT suggest testnets to merchants. Testnets are only for internal development.
 7. **Complete setup** — Once at least one wallet is configured, offer to complete setup.
 8. **Widget code** — Use get_widget_code to generate their embed code. Show them how to add it.
 
