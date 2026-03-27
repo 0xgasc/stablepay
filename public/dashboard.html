@@ -305,17 +305,16 @@
         </svg>
     </button>
 
-    <div id="chatPanel" class="hidden fixed bottom-6 right-6 z-[9991] w-[400px] h-[520px] bg-slate-900 border-4 border-black flex flex-col" style="box-shadow: 8px 8px 0px #000;">
+    <div id="chatPanel" class="hidden fixed bottom-6 right-6 z-[9991] w-[400px] bg-slate-900 border-4 border-black flex flex-col" style="box-shadow: 8px 8px 0px #000; height: 44px; overflow: hidden;">
         <!-- Header -->
-        <div class="flex items-center justify-between px-4 py-3 border-b-4 border-black" style="background: #00E5FF;">
+        <div id="chatHeader" class="flex items-center justify-between px-4 py-3 border-b-4 border-black cursor-pointer shrink-0" style="background: #00E5FF;">
             <div class="flex items-center gap-1.5">
                 <div class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
                 <span class="font-bold text-black text-xs tracking-wide opacity-60">online</span>
             </div>
             <div class="flex items-center gap-2">
-                <button id="chatTipBtn" class="text-xs font-bold text-black px-2 py-1 border-2 border-black bg-yellow-300 hover:bg-yellow-400" style="text-transform: uppercase;" title="Tip the agent">TIP</button>
                 <button id="chatClearBtn" class="text-xs font-bold text-black opacity-60 hover:opacity-100" style="text-transform: uppercase;">CLEAR</button>
-                <button id="chatMinBtn" class="text-black font-bold text-lg leading-none" title="Minimize">&#8722;</button>
+                <button id="chatMinBtn" class="text-black font-bold text-lg leading-none" title="Expand">&#43;</button>
                 <button id="chatCloseBtn" class="text-black font-bold text-lg leading-none" title="Close">&times;</button>
             </div>
         </div>
@@ -343,7 +342,8 @@
             </div>
         </div>
         <!-- Input -->
-        <div class="border-t-4 border-black p-3 flex gap-2">
+        <div class="border-t-4 border-black p-3 flex gap-2 shrink-0">
+            <button id="chatTipBtn" class="px-2 py-2 text-yellow-400 hover:text-yellow-300 text-lg leading-none" title="Tip the agent">&#9733;</button>
             <textarea id="chatInput" rows="1" placeholder="Ask anything..." class="flex-1 px-3 py-2 bg-slate-800 text-white border-2 border-slate-600 text-sm focus:outline-none focus:border-cyan-400 resize-none overflow-hidden" maxlength="2000" style="min-height: 40px; max-height: 120px;"></textarea>
             <button id="chatSendBtn" class="px-4 py-2 font-bold text-black text-sm border-2 border-black" style="background: #00E5FF; text-transform: uppercase;">SEND</button>
         </div>
@@ -5196,47 +5196,65 @@ onMounted(() => {
             const messagesEl = document.getElementById('chatMessages');
             const typingEl = document.getElementById('chatTyping');
             let historyLoaded = false;
-            function openChat() {
+            function openChat(startExpanded) {
                 panel.classList.remove('hidden');
                 fab.classList.add('hidden');
-                input.focus();
                 if (!historyLoaded) { loadHistory(); historyLoaded = true; }
+                if (startExpanded) expandChat();
             }
 
-            fab.addEventListener('click', openChat);
+            fab.addEventListener('click', () => openChat(true));
 
-            // Just open the chat panel for new merchants — no auto-message
+            // Open chat minimized for new merchants — just the header bar visible
             let chatOpenedForNew = false;
             function openChatForNewMerchant() {
                 if (chatOpenedForNew) return;
                 chatOpenedForNew = true;
-                setTimeout(() => openChat(), 800);
+                setTimeout(() => openChat(false), 800); // Opens minimized
             }
             window._openChatForNewMerchant = openChatForNewMerchant;
 
             const minBtn = document.getElementById('chatMinBtn');
+            const chatHeader = document.getElementById('chatHeader');
+            let isMinimized = true; // Start minimized
 
-            closeBtn.addEventListener('click', () => {
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 panel.classList.add('hidden');
                 fab.classList.remove('hidden');
             });
 
-            // Minimize: collapse to just the header bar at bottom-right
-            let isMinimized = false;
-            minBtn.addEventListener('click', () => {
-                isMinimized = !isMinimized;
-                if (isMinimized) {
-                    panel.style.height = '44px';
-                    panel.style.overflow = 'hidden';
-                    minBtn.innerHTML = '&#43;'; // +
-                    minBtn.title = 'Expand';
-                } else {
-                    panel.style.height = '520px';
-                    panel.style.overflow = '';
-                    minBtn.innerHTML = '&#8722;'; // −
-                    minBtn.title = 'Minimize';
+            function expandChat() {
+                isMinimized = false;
+                panel.style.height = '520px';
+                panel.style.overflow = '';
+                minBtn.innerHTML = '&#8722;'; // −
+                minBtn.title = 'Minimize';
+                setTimeout(() => {
                     messagesEl.scrollTop = messagesEl.scrollHeight;
-                }
+                    input.focus();
+                }, 100);
+            }
+
+            function minimizeChat() {
+                isMinimized = true;
+                panel.style.height = '44px';
+                panel.style.overflow = 'hidden';
+                minBtn.innerHTML = '&#43;'; // +
+                minBtn.title = 'Expand';
+            }
+
+            // Click header to toggle
+            chatHeader.addEventListener('click', (e) => {
+                if (e.target.closest('#chatClearBtn') || e.target.closest('#chatCloseBtn')) return;
+                if (isMinimized) expandChat();
+                else minimizeChat();
+            });
+
+            minBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (isMinimized) expandChat();
+                else minimizeChat();
             });
 
             function escapeHtml(text) {
