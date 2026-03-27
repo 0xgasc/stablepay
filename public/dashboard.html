@@ -283,7 +283,7 @@
     <div id="chatPanel" class="hidden fixed bottom-6 right-6 z-[9991] w-[400px] h-[520px] bg-slate-900 border-4 border-black flex flex-col" style="box-shadow: 8px 8px 0px #000;">
         <!-- Header -->
         <div class="flex items-center justify-between px-4 py-3 border-b-4 border-black" style="background: #00E5FF;">
-            <span class="font-bold text-black text-sm tracking-wide" style="text-transform: uppercase;">WETAKESTABLES AI</span>
+            <span class="font-bold text-black text-sm tracking-wide" style="text-transform: uppercase;">AGENT</span>
             <div class="flex items-center gap-2">
                 <button id="chatTipBtn" class="text-xs font-bold text-black px-2 py-1 border-2 border-black bg-yellow-300 hover:bg-yellow-400" style="text-transform: uppercase;" title="Tip the agent">TIP</button>
                 <button id="chatClearBtn" class="text-xs font-bold text-black opacity-60 hover:opacity-100" style="text-transform: uppercase;">CLEAR</button>
@@ -5166,7 +5166,7 @@ onMounted(() => {
                         openChat();
                         // Send initial greeting to trigger the agent's onboarding flow
                         setTimeout(() => {
-                            sendMessageText("Hi! I just signed up and need help setting up my payment gateway.");
+                            sendMessageText("Hey! Help me set up my payment gateway.");
                         }, 500);
                     }, 1000);
                 }
