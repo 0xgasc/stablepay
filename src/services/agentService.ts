@@ -69,15 +69,45 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'get_widget_code',
-    description: 'Generate the checkout widget embed code customized for this merchant, with their merchant ID and optional parameters.',
+    description: 'Generate an embeddable "Pay with Crypto" button + checkout widget code for the merchant\'s website. Ask the merchant: what product/service, what price (or dynamic), which chains/tokens to allow, and button style preference.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        amount: { type: 'number', description: 'Default payment amount (optional)' },
-        productName: { type: 'string', description: 'Product name to show (optional)' },
-        chain: { type: 'string', description: 'Pre-select a chain (optional)' },
+        amount: { type: 'number', description: 'Fixed payment amount. Omit for dynamic/variable pricing.' },
+        productName: { type: 'string', description: 'Product or service name shown at checkout' },
+        chains: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Which chains to allow. E.g. ["BASE_MAINNET","ETHEREUM_MAINNET"]. Omit to allow all configured chains.',
+        },
+        tokens: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Which tokens to allow. E.g. ["USDC","USDT"]. Omit to allow all configured tokens.',
+        },
+        buttonStyle: {
+          type: 'string',
+          enum: ['default', 'minimal', 'custom'],
+          description: 'Button style: default (styled Pay with Crypto button), minimal (just the script, merchant styles their own button), custom (inline checkout, no button).',
+        },
+        customerEmail: { type: 'string', description: 'Pre-fill customer email if known (optional)' },
       },
       required: [],
+    },
+  },
+  {
+    name: 'generate_checkout_link',
+    description: 'Generate a shareable direct checkout link (URL) that the merchant can send to customers via email, WhatsApp, social media, etc. No code needed — just a link. Can create multiple links for different products/prices.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        amount: { type: 'number', description: 'Payment amount in USD' },
+        productName: { type: 'string', description: 'What the payment is for' },
+        chain: { type: 'string', description: 'Pre-select chain (optional — customer can choose if omitted)' },
+        token: { type: 'string', description: 'Pre-select token (optional)' },
+        customerEmail: { type: 'string', description: 'Pre-fill customer email (optional)' },
+      },
+      required: ['amount'],
     },
   },
   {
@@ -218,19 +248,68 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
     }
 
     case 'get_widget_code': {
-      const m = await db.merchant.findUnique({ where: { id: merchantId } });
-      const params = [
-        `merchantId: '${merchantId}'`,
-        input.amount ? `amount: ${input.amount}` : null,
-        input.productName ? `productName: '${input.productName}'` : `productName: 'Your Product'`,
-        input.chain ? `chain: '${input.chain}'` : null,
-        `onSuccess: (data) => { console.log('Payment confirmed!', data); }`,
-        `onCancel: () => { console.log('Payment cancelled'); }`,
-      ].filter(Boolean).join(',\n    ');
+      const m = await db.merchant.findUnique({
+        where: { id: merchantId },
+        include: { wallets: true },
+      });
 
-      const code = `<script src="https://wetakestables.shop/checkout-widget.js"></script>\n<button id="pay-btn">Pay with Stablecoins</button>\n<script>\ndocument.getElementById('pay-btn').addEventListener('click', () => {\n  StablePay.checkout({\n    ${params}\n  });\n});\n</script>`;
+      if (!m?.wallets?.length) {
+        return JSON.stringify({ error: 'No wallets configured yet. Add at least one wallet first.' });
+      }
 
-      return JSON.stringify({ success: true, code });
+      const style = input.buttonStyle || 'default';
+      const configParams: string[] = [`merchantId: '${merchantId}'`];
+
+      if (input.amount) configParams.push(`amount: ${input.amount}`);
+      if (input.productName) configParams.push(`productName: '${input.productName}'`);
+      if (input.customerEmail) configParams.push(`customerEmail: '${input.customerEmail}'`);
+      if (input.chains?.length) configParams.push(`allowedChains: ${JSON.stringify(input.chains)}`);
+      if (input.tokens?.length) configParams.push(`allowedTokens: ${JSON.stringify(input.tokens)}`);
+      configParams.push(`onSuccess: (data) => {\n      // Payment confirmed! data contains orderId, txHash, amount\n      console.log('Payment confirmed!', data);\n      // Redirect or show confirmation\n    }`);
+      configParams.push(`onCancel: () => {\n      console.log('Payment cancelled');\n    }`);
+
+      const paramsStr = configParams.join(',\n    ');
+
+      let code: string;
+      if (style === 'minimal') {
+        code = `<!-- Add this script to your page -->\n<script src="https://wetakestables.shop/checkout-widget.js"></script>\n\n<!-- Call this from your own button/link -->\n<script>\nfunction openPayment() {\n  StablePay.checkout({\n    ${paramsStr}\n  });\n}\n</script>`;
+      } else if (style === 'custom') {
+        code = `<!-- Inline checkout (no button — opens immediately) -->\n<script src="https://wetakestables.shop/checkout-widget.js"></script>\n<script>\nStablePay.checkout({\n  ${paramsStr}\n});\n</script>`;
+      } else {
+        code = `<!-- Pay with Crypto button -->\n<script src="https://wetakestables.shop/checkout-widget.js"></script>\n<button onclick="StablePay.checkout({\n  ${paramsStr}\n})" style="background:#000;color:#fff;padding:12px 24px;font-weight:bold;font-size:14px;border:2px solid #000;cursor:pointer;font-family:sans-serif;">Pay with Crypto</button>`;
+      }
+
+      const configuredChains = m.wallets.filter(w => w.isActive).map(w => w.chain);
+      return JSON.stringify({
+        success: true,
+        code,
+        configuredChains,
+        note: input.chains
+          ? `Checkout restricted to: ${input.chains.join(', ')}`
+          : `Checkout will show all configured chains: ${configuredChains.join(', ')}`,
+      });
+    }
+
+    case 'generate_checkout_link': {
+      const params = new URLSearchParams();
+      params.set('merchantId', merchantId);
+      params.set('amount', input.amount.toString());
+      if (input.productName) params.set('productName', input.productName);
+      if (input.chain) params.set('chain', input.chain);
+      if (input.token) params.set('token', input.token);
+      if (input.customerEmail) params.set('customerEmail', input.customerEmail);
+
+      const link = `https://wetakestables.shop/crypto-pay.html?${params.toString()}`;
+
+      return JSON.stringify({
+        success: true,
+        link,
+        amount: input.amount,
+        productName: input.productName || null,
+        chain: input.chain || 'customer chooses',
+        token: input.token || 'customer chooses',
+        note: 'Share this link anywhere — WhatsApp, email, social media, QR code. Customer clicks and pays.',
+      });
     }
 
     case 'save_memory': {
@@ -331,10 +410,17 @@ When you detect setup is not complete, guide them through this flow CONVERSATION
 5. **Configure** — Use add_wallet tool to set up each chain. Confirm each one.
 6. **Network mode** — Always set up on MAINNET chains. Do NOT suggest testnets to merchants. Testnets are only for internal development.
 7. **Complete setup** — Once at least one wallet is configured, offer to complete setup.
-8. **Widget code** — Use get_widget_code to generate their embed code. Show them how to add it.
+8. **Payment integration** — This is the most important step. Ask HOW they want to accept payments:
+   - **"I have a website"** → Ask: what product/service? Fixed price or variable? Which chains/tokens to show? Then use get_widget_code with the right buttonStyle.
+   - **"I want a link to share"** → Use generate_checkout_link. Great for WhatsApp, email, social media, invoicing.
+   - **"I need multiple links for different products"** → Generate multiple checkout links with different amounts/names.
+   - **"Both"** → Generate both widget code AND shareable links.
+   Always ask which chains/tokens to restrict to (or all). Show them the output and explain how to use it.
 
 ## For returning merchants (setup already complete)
-- Help with: adding more chains/tokens, widget integration, API questions, troubleshooting, billing
+- Help with: adding more chains/tokens, generating new payment links, widget integration, API questions, troubleshooting, billing
+- If they ask for a payment link, use generate_checkout_link
+- If they ask for embed code, use get_widget_code and ask about their preferences
 - Be a knowledgeable support agent
 
 ## Stablecoins by Chain
