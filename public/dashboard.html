@@ -69,7 +69,7 @@
         }
 
         .accent-indigo {
-            background: #7C4DFF;
+            background: #4FC3F7;
         }
 
         .accent-teal {
@@ -204,7 +204,7 @@
             color: #d97706 !important;
         }
 
-        body.day-mode .text-purple-400 {
+        body.day-mode .text-cyan-400 {
             color: #9333ea !important;
         }
 
@@ -324,8 +324,8 @@
         </div>
     </div>
 
-    <!-- ═══ Setup Wizard Overlay ═══ -->
-    <div id="setupWizard" class="hidden fixed inset-0 z-[9999] bg-slate-950 overflow-y-auto">
+    <!-- Setup wizard removed — agent handles onboarding -->
+    <div id="setupWizard" class="hidden">
         <div class="min-h-screen flex items-center justify-center p-4">
             <div class="max-w-lg w-full">
                 <!-- Progress bar -->
@@ -373,10 +373,14 @@
 
                 <!-- Step 2: Add Wallet -->
                 <div id="wizardStep2" class="hidden bg-slate-900 border-4 border-black p-8" style="box-shadow: 8px 8px 0px #000;">
-                    <h2 class="text-2xl font-bold text-white mb-2 tracking-tight" style="text-transform: uppercase;">ADD WALLET</h2>
-                    <p class="text-slate-400 mb-6">Where should we send your payments?</p>
+                    <h2 class="text-2xl font-bold text-white mb-2 tracking-tight" style="text-transform: uppercase;">ADD WALLETS</h2>
+                    <p class="text-slate-400 mb-4">Add one or more blockchains to accept payments on.</p>
 
-                    <div class="space-y-4 mb-6">
+                    <!-- Added wallets list -->
+                    <div id="wizardAddedWallets" class="hidden mb-4 space-y-2"></div>
+
+                    <!-- Add wallet form -->
+                    <div id="wizardWalletForm" class="space-y-4 mb-6 bg-slate-800/50 border-2 border-slate-700 p-4">
                         <div>
                             <label class="block text-sm font-bold text-white mb-2" style="text-transform: uppercase;">BLOCKCHAIN</label>
                             <select id="wizardChain" class="w-full px-4 py-3 bg-slate-800 text-white border-4 border-black focus:outline-none">
@@ -395,11 +399,13 @@
                             <label class="block text-sm font-bold text-white mb-2" style="text-transform: uppercase;">ACCEPTED STABLECOINS</label>
                             <div id="wizardTokenCheckboxes" class="flex gap-4"></div>
                         </div>
+                        <p id="wizardWalletError" class="text-red-400 font-bold text-sm hidden"></p>
+                        <button id="wizardAddBtn" class="w-full py-3 font-bold text-black border-4 border-black tracking-wide text-sm" style="background: #00E5FF; text-transform: uppercase; box-shadow: 4px 4px 0px #000;">ADD CHAIN</button>
                     </div>
-                    <p id="wizardWalletError" class="text-red-400 font-bold text-sm mb-4 hidden"></p>
+
                     <div class="flex gap-4">
                         <button id="wizardBack2" class="flex-1 py-4 font-bold text-white border-4 border-slate-600 tracking-wide bg-slate-800" style="text-transform: uppercase;">BACK</button>
-                        <button id="wizardNext2" class="flex-1 py-4 font-bold text-black border-4 border-black tracking-wide" style="background: #00E5FF; text-transform: uppercase; box-shadow: 6px 6px 0px #000;">ADD WALLET</button>
+                        <button id="wizardNext2" class="flex-1 py-4 font-bold text-black border-4 border-black tracking-wide disabled:opacity-40" style="background: #1DE9B6; text-transform: uppercase; box-shadow: 6px 6px 0px #000;" disabled>CONTINUE</button>
                     </div>
                 </div>
 
@@ -480,7 +486,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Merchant Profile Card -->
         <div class="bg-slate-900 border border-slate-800 mb-8 overflow-hidden">
-            <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-5">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-5">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-4">
                         <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-xl font-bold text-white" id="profileInitial">
@@ -521,13 +527,13 @@
         </div>
 
         <!-- Pricing Tier Card -->
-        <div class="bg-gradient-to-r from-indigo-900/50 to-purple-900/50 border border-indigo-700/50 mb-8 p-5">
+        <div class="bg-gradient-to-r from-indigo-900/50 to-blue-900/50 border border-blue-700/50 mb-8 p-5">
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <h3 class="text-lg font-bold text-white" id="currentPlanName">FREE TIER</h3>
                     <p class="text-sm text-slate-400" data-i18n="pricing.tierDescription">Your current pricing plan</p>
                 </div>
-                <button id="upgradeBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 font-medium text-sm transition-colors" data-i18n="pricing.upgrade">
+                <button id="upgradeBtn" class="bg-blue-600 hover:bg-indigo-700 text-white px-5 py-2 font-medium text-sm transition-colors" data-i18n="pricing.upgrade">
                     Upgrade
                 </button>
             </div>
@@ -539,7 +545,7 @@
                     <span class="text-xs font-medium text-white" id="volumeUsageText">$0 / $1,000</span>
                 </div>
                 <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                    <div id="volumeUsageBar" class="bg-indigo-500 h-full transition-all duration-500 rounded-full" style="width: 0%"></div>
+                    <div id="volumeUsageBar" class="bg-blue-500 h-full transition-all duration-500 rounded-full" style="width: 0%"></div>
                 </div>
                 <p class="text-xs text-slate-500 mt-2" id="billingCycleText">Billing cycle resets in 30 days</p>
             </div>
@@ -584,7 +590,7 @@
 
             <div class="bg-slate-900 border border-slate-800 p-5">
                 <p class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Volume</p>
-                <p class="text-2xl font-bold text-purple-400" id="totalVolume">$0</p>
+                <p class="text-2xl font-bold text-cyan-400" id="totalVolume">$0</p>
             </div>
         </div>
 
@@ -597,7 +603,7 @@
                     <span>Open Test Store</span>
                 </button>
                 <button onclick="openDirectCheckoutModal()"
-                   class="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 font-medium text-sm transition-colors">
+                   class="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 font-medium text-sm transition-colors">
                     <span>Direct Checkout Link</span>
                 </button>
                 <button onclick="copyMerchantId()"
@@ -678,7 +684,7 @@
                     <button onclick="closeDirectCheckoutModal()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium text-sm">
                         Cancel
                     </button>
-                    <button onclick="generateCheckoutLink()" class="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm">
+                    <button onclick="generateCheckoutLink()" class="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium text-sm">
                         Generate Link
                     </button>
                 </div>
@@ -876,7 +882,7 @@
                     <div class="space-y-6">
 
                         <!-- Quick Start Guide -->
-                        <div class="bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-blue-800 p-6">
+                        <div class="bg-gradient-to-br from-blue-900/20 to-blue-900/20 border border-blue-800 p-6">
                             <h2 class="text-2xl font-bold text-white mb-2">Add Crypto Payments in 3 Steps</h2>
                             <p class="text-slate-300 mb-6">Copy-paste this code to accept USDC on your website</p>
 
@@ -1154,7 +1160,7 @@ onMounted(() => {
                         <div class="grid grid-cols-2 gap-4">
                             <button
                                 id="createDemoStoreBtn"
-                                class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 border font-medium transition-all shadow-lg hover:shadow-xl"
+                                class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 border font-medium transition-all shadow-lg hover:shadow-xl"
                             >
                                 Create Demo Store
                             </button>
@@ -1268,7 +1274,7 @@ onMounted(() => {
                         <div class="bg-slate-950 border border-slate-800 p-6">
                             <div class="flex justify-between items-start mb-4">
                                 <h3 class="text-lg font-semibold text-white">End of Period Projection</h3>
-                                <span id="projectionBadge" class="px-3 py-1 bg-purple-600/20 text-purple-400 text-sm font-medium rounded-full">Estimate</span>
+                                <span id="projectionBadge" class="px-3 py-1 bg-blue-500/20 text-cyan-400 text-sm font-medium rounded-full">Estimate</span>
                             </div>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                                 <div>
@@ -1289,7 +1295,7 @@ onMounted(() => {
                                 </div>
                             </div>
                             <!-- Projection Summary -->
-                            <div class="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-600/30 p-4 rounded">
+                            <div class="bg-gradient-to-r from-blue-900/30 to-blue-900/30 border border-blue-500/30 p-4 rounded">
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <p class="text-slate-400 text-sm">Projected Volume</p>
@@ -1298,7 +1304,7 @@ onMounted(() => {
                                     </div>
                                     <div>
                                         <p class="text-slate-400 text-sm">Projected Fees</p>
-                                        <p id="projectedFees" class="text-xl font-bold text-purple-400">$0.00</p>
+                                        <p id="projectedFees" class="text-xl font-bold text-cyan-400">$0.00</p>
                                         <p class="text-slate-500 text-xs">based on current pace</p>
                                     </div>
                                 </div>
@@ -1961,7 +1967,7 @@ onMounted(() => {
                 const bar = document.getElementById('volumeUsageBar');
                 if (maxPercentage >= 90) bar.style.background = '#EF4444';
                 else if (maxPercentage >= 75) bar.style.background = '#F59E0B';
-                else bar.style.background = '#7C4DFF';
+                else bar.style.background = '#4FC3F7';
 
                 document.getElementById('billingCycleText').innerHTML = `
                     <span class="text-yellow-400">Test Mode:</span> Go live to accept unlimited payments
@@ -2072,10 +2078,8 @@ onMounted(() => {
                     document.getElementById('profileCreatedAt').textContent = created.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
                 }
 
-                // Show setup wizard if not completed
+                // Auto-open AI chat to guide new merchants through setup
                 if (!currentMerchant.setupCompleted) {
-                    document.getElementById('setupWizard').classList.remove('hidden');
-                    // Auto-open AI chat to guide new merchants
                     if (window._autoGreetNewMerchant) window._autoGreetNewMerchant();
                 }
 
@@ -2350,11 +2354,11 @@ onMounted(() => {
             // Update badge color based on projected fees (red if high)
             const badge = document.getElementById('projectionBadge');
             if (projectedFees > 100) {
-                badge.classList.remove('bg-purple-600/20', 'text-purple-400');
+                badge.classList.remove('bg-blue-500/20', 'text-cyan-400');
                 badge.classList.add('bg-yellow-600/20', 'text-yellow-400');
             } else {
                 badge.classList.remove('bg-yellow-600/20', 'text-yellow-400');
-                badge.classList.add('bg-purple-600/20', 'text-purple-400');
+                badge.classList.add('bg-blue-500/20', 'text-cyan-400');
             }
         }
 
@@ -3264,7 +3268,7 @@ onMounted(() => {
                         <p class="text-slate-400">Your custom payment store is ready with your configured wallets</p>
                     </div>
 
-                    <div class="bg-gradient-to-r from-purple-50 to-blue-50 border p-6 mb-6 border border-purple-200">
+                    <div class="bg-gradient-to-r from-blue-50 to-blue-50 border p-6 mb-6 border border-blue-200">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-sm font-medium text-slate-300">Your Store URL:</span>
                             <button onclick="navigator.clipboard.writeText('${storeUrl}'); alert('Copied!')"
@@ -3273,7 +3277,7 @@ onMounted(() => {
                             </button>
                         </div>
                         <div class="bg-slate-950 border p-3 border border-slate-800">
-                            <code class="text-sm text-purple-700 break-all">${storeUrl}</code>
+                            <code class="text-sm text-blue-600 break-all">${storeUrl}</code>
                         </div>
                     </div>
 
@@ -3289,7 +3293,7 @@ onMounted(() => {
 
                     <div class="flex space-x-3">
                         <button onclick="window.open('${storeUrl}', '_blank')"
-                                class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 border font-medium transition-all">
+                                class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 border font-medium transition-all">
                             Open Store
                         </button>
                         <button onclick="this.closest('.fixed').remove()"
@@ -4975,7 +4979,7 @@ onMounted(() => {
                 .map(w => `
                     <label class="flex items-center gap-3 p-2 bg-slate-800 hover:bg-slate-700 cursor-pointer">
                         <input type="checkbox" name="checkoutChain" value="${w.chain}" checked
-                               class="w-4 h-4 accent-purple-500">
+                               class="w-4 h-4 accent-blue-500">
                         <span class="text-white text-sm">${CHAIN_DISPLAY_NAMES[w.chain] || w.chain}</span>
                     </label>
                 `).join('');
@@ -5415,9 +5419,10 @@ onMounted(() => {
             });
         })();
 
-        // ═══ Setup Wizard Logic ═══
+        // ═══ Setup Wizard (removed — agent handles onboarding) ═══
         (function() {
-            const steps = ['wizardStep1', 'wizardStep2', 'wizardStep3'];
+            // Wizard removed. Keeping IIFE wrapper for scoping.
+            return;
             const bars = ['wizStep1Bar', 'wizStep2Bar', 'wizStep3Bar'];
 
             function showStep(n) {
