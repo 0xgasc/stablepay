@@ -433,17 +433,51 @@
       }
     }
 
+    detectEVMProviders() {
+      const providers = [];
+      // Check for multiple injected providers (EIP-6963 style)
+      if (window.ethereum?.providers?.length) {
+        window.ethereum.providers.forEach(p => {
+          if (p.isMetaMask) providers.push({ name: 'MetaMask', provider: p, icon: '🦊' });
+          else if (p.isRabby) providers.push({ name: 'Rabby', provider: p, icon: '🐰' });
+          else if (p.isCoinbaseWallet) providers.push({ name: 'Coinbase', provider: p, icon: '🔵' });
+          else if (p.isRainbow) providers.push({ name: 'Rainbow', provider: p, icon: '🌈' });
+          else providers.push({ name: 'Wallet', provider: p, icon: '👛' });
+        });
+      } else if (window.ethereum) {
+        // Single provider
+        const p = window.ethereum;
+        if (p.isMetaMask) providers.push({ name: 'MetaMask', provider: p, icon: '🦊' });
+        else if (p.isCoinbaseWallet) providers.push({ name: 'Coinbase', provider: p, icon: '🔵' });
+        else if (p.isRainbow) providers.push({ name: 'Rainbow', provider: p, icon: '🌈' });
+        else providers.push({ name: 'Wallet', provider: p, icon: '👛' });
+      }
+      return providers;
+    }
+
     async connectEVMWallet() {
-      if (!window.ethereum) {
-        this.showError('No Ethereum wallet found. Please install MetaMask.');
+      const providers = this.detectEVMProviders();
+
+      if (providers.length === 0) {
+        this.showError('No wallet detected. Install MetaMask, Rainbow, or Coinbase Wallet to continue.');
         return;
       }
 
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      let selectedProvider;
+
+      if (providers.length === 1) {
+        selectedProvider = providers[0].provider;
+      } else {
+        // Show wallet picker
+        selectedProvider = await this.showWalletPicker(providers);
+        if (!selectedProvider) return; // User cancelled
+      }
+
+      const accounts = await selectedProvider.request({ method: 'eth_requestAccounts' });
       if (accounts.length === 0) throw new Error('No accounts found');
 
       this.connectedWallet = accounts[0];
-      this.provider = window.ethereum;
+      this.provider = selectedProvider;
 
       // Switch to correct chain
       const chainConfig = this.selectedChain.config;
@@ -469,16 +503,61 @@
       this.updateWalletStatus();
     }
 
+    showWalletPicker(providers) {
+      return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.8);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;';
+        overlay.innerHTML = `
+          <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:16px;">Choose Wallet</div>
+          ${providers.map((p, i) => `
+            <button data-idx="${i}" style="width:100%;max-width:280px;padding:12px 16px;margin-bottom:8px;background:#1e293b;color:#fff;border:1px solid #334155;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:12px;font-size:14px;">
+              <span style="font-size:20px;">${p.icon}</span>
+              <span>${p.name}</span>
+            </button>
+          `).join('')}
+          <button data-cancel style="margin-top:8px;color:#94a3b8;font-size:12px;background:none;border:none;cursor:pointer;">Cancel</button>
+        `;
+
+        overlay.querySelectorAll('[data-idx]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            overlay.remove();
+            resolve(providers[parseInt(btn.dataset.idx)].provider);
+          });
+        });
+        overlay.querySelector('[data-cancel]').addEventListener('click', () => {
+          overlay.remove();
+          resolve(null);
+        });
+
+        this.container.querySelector('.sp-widget')?.appendChild(overlay);
+      });
+    }
+
     async connectSolanaWallet() {
+      // Detect Solana wallets
       const phantom = window.phantom?.solana || window.solana;
-      if (!phantom) {
-        this.showError('No Solana wallet found. Please install Phantom.');
+      const solflare = window.solflare;
+      const backpack = window.backpack;
+
+      const solProviders = [];
+      if (phantom?.isPhantom) solProviders.push({ name: 'Phantom', provider: phantom, icon: '👻' });
+      if (solflare?.isSolflare) solProviders.push({ name: 'Solflare', provider: solflare, icon: '☀️' });
+      if (backpack) solProviders.push({ name: 'Backpack', provider: backpack, icon: '🎒' });
+
+      if (solProviders.length === 0) {
+        this.showError('No Solana wallet found. Install Phantom or Solflare.');
         return;
       }
 
-      const resp = await phantom.connect();
+      let selected = solProviders[0].provider;
+      if (solProviders.length > 1) {
+        selected = await this.showWalletPicker(solProviders);
+        if (!selected) return;
+      }
+
+      const resp = await selected.connect();
       this.connectedWallet = resp.publicKey.toString();
-      this.provider = phantom;
+      this.provider = selected;
 
       this.updateWalletStatus();
     }
