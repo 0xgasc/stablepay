@@ -3,6 +3,7 @@ import { db } from '../config/database';
 import { CHAIN_CONFIGS } from '../config/chains';
 import { Chain } from '../types';
 import { Decimal } from '@prisma/client/runtime/library';
+import { OrderService } from './orderService';
 
 const USDC_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 value)",
@@ -10,36 +11,68 @@ const USDC_ABI = [
   "function balanceOf(address owner) view returns (uint256)"
 ];
 
+// Chains to scan (mainnet only)
+const SCAN_CHAINS: Chain[] = [
+  'BASE_MAINNET',
+  'ETHEREUM_MAINNET',
+  'POLYGON_MAINNET',
+  'ARBITRUM_MAINNET',
+];
+
 export class BlockchainService {
-  private providers: Record<Chain, ethers.JsonRpcProvider> = {} as any;
-  private contracts: Record<Chain, ethers.Contract> = {} as any;
+  private providers: Record<string, ethers.JsonRpcProvider> = {};
+  private contracts: Record<string, ethers.Contract> = {};
+  private orderService = new OrderService();
 
   constructor() {
     this.initializeProviders();
   }
 
   private initializeProviders() {
-    Object.entries(CHAIN_CONFIGS).forEach(([chain, config]) => {
-      this.providers[chain as Chain] = new ethers.JsonRpcProvider(config.rpcUrl);
-      this.contracts[chain as Chain] = new ethers.Contract(
+    for (const chain of SCAN_CHAINS) {
+      const config = CHAIN_CONFIGS[chain];
+      if (!config?.rpcUrl) continue;
+      this.providers[chain] = new ethers.JsonRpcProvider(config.rpcUrl);
+      this.contracts[chain] = new ethers.Contract(
         config.usdcAddress,
         USDC_ABI,
-        this.providers[chain as Chain]
+        this.providers[chain]
       );
-    });
+    }
   }
 
-  async scanForPayments(chain: Chain): Promise<void> {
+  async scanForPayments(chain: Chain): Promise<number> {
     try {
       const provider = this.providers[chain];
       const contract = this.contracts[chain];
       const config = CHAIN_CONFIGS[chain];
-      
-      const currentBlock = await provider.getBlockNumber();
-      
-      let chainConfig = await db.chainConfig.findUnique({
-        where: { chain },
+
+      if (!provider || !contract) {
+        console.log(`[scanner] Skipping ${chain} — no provider configured`);
+        return 0;
+      }
+
+      // Get pending orders for this chain — these are the addresses we're watching
+      const pendingOrders = await db.order.findMany({
+        where: {
+          chain,
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true, paymentAddress: true, amount: true },
       });
+
+      if (pendingOrders.length === 0) return 0;
+
+      // Build set of addresses we're watching
+      const watchAddresses = new Set(
+        pendingOrders.map(o => o.paymentAddress.toLowerCase())
+      );
+
+      const currentBlock = await provider.getBlockNumber();
+
+      // Get or create chain scan state
+      let chainConfig = await db.chainConfig.findUnique({ where: { chain } });
 
       if (!chainConfig) {
         chainConfig = await db.chainConfig.create({
@@ -47,148 +80,179 @@ export class BlockchainService {
             chain,
             rpcUrl: config.rpcUrl,
             usdcAddress: config.usdcAddress,
-            paymentAddress: config.paymentAddress,
+            paymentAddress: config.paymentAddress || '',
             requiredConfirms: config.requiredConfirms,
             blockTimeSeconds: config.blockTimeSeconds,
-            lastScannedBlock: BigInt(currentBlock - 1000),
+            lastScannedBlock: BigInt(currentBlock - 100), // Start 100 blocks back
           },
         });
       }
 
       const fromBlock = Number(chainConfig.lastScannedBlock);
-      const toBlock = Math.min(fromBlock + 1000, currentBlock);
+      const toBlock = Math.min(fromBlock + 500, currentBlock); // Scan 500 blocks max per cycle
 
-      if (fromBlock >= toBlock) return;
+      if (fromBlock >= toBlock) return 0;
 
-      const filter = contract.filters.Transfer(null, config.paymentAddress);
+      // Query ALL USDC Transfer events (no TO filter)
+      const filter = contract.filters.Transfer();
       const events = await contract.queryFilter(filter, fromBlock, toBlock);
 
+      let matched = 0;
+
       for (const event of events) {
-        await this.processTransferEvent(chain, event);
+        const log = event as ethers.EventLog;
+        if (!log.args) continue;
+
+        const toAddress = log.args.to?.toLowerCase();
+
+        // Only process transfers TO our watched addresses
+        if (!toAddress || !watchAddresses.has(toAddress)) continue;
+
+        const txHash = log.transactionHash;
+        const amount = ethers.formatUnits(log.args.value, 6);
+        const fromAddress = log.args.from;
+
+        // Skip if we already processed this tx
+        const existingTx = await db.transaction.findUnique({ where: { txHash } });
+        if (existingTx) continue;
+
+        // Find matching pending order
+        let matchedOrder = null;
+        for (const order of pendingOrders) {
+          if (order.paymentAddress.toLowerCase() !== toAddress) continue;
+          const orderAmount = Number(order.amount);
+          const txAmount = Number(amount);
+          if (Math.abs(orderAmount - txAmount) < 0.01) {
+            matchedOrder = order;
+            break;
+          }
+        }
+
+        if (!matchedOrder) continue;
+
+        // Get block info
+        const receipt = await provider.getTransactionReceipt(txHash);
+        const block = await provider.getBlock(log.blockNumber);
+
+        if (!receipt || !block) continue;
+
+        const confirmations = currentBlock - log.blockNumber;
+
+        // Create transaction record
+        await db.transaction.create({
+          data: {
+            orderId: matchedOrder.id,
+            txHash,
+            chain,
+            amount: new Decimal(amount),
+            fromAddress,
+            toAddress: log.args.to, // Original case
+            blockNumber: BigInt(log.blockNumber),
+            blockTimestamp: new Date(block.timestamp * 1000),
+            status: receipt.status === 1 ? 'CONFIRMED' : 'FAILED',
+            confirmations,
+          },
+        });
+
+        // Confirm the order using OrderService (handles fees, webhooks, receipts)
+        if (receipt.status === 1 && confirmations >= config.requiredConfirms) {
+          try {
+            await this.orderService.confirmOrder(matchedOrder.id, {
+              txHash,
+              blockNumber: log.blockNumber,
+              confirmations,
+            });
+            console.log(`[scanner] ✅ Confirmed order ${matchedOrder.id} — $${amount} USDC on ${chain}`);
+            matched++;
+          } catch (err) {
+            console.error(`[scanner] Failed to confirm order ${matchedOrder.id}:`, err);
+          }
+        }
       }
 
+      // Update scan position
       await db.chainConfig.update({
         where: { chain },
         data: { lastScannedBlock: BigInt(toBlock) },
       });
 
-      console.log(`Scanned ${chain} blocks ${fromBlock} to ${toBlock}, found ${events.length} transfers`);
-    } catch (error) {
-      console.error(`Error scanning ${chain}:`, error);
-    }
-  }
-
-  private async processTransferEvent(chain: Chain, event: any): Promise<void> {
-    const txHash = event.transactionHash;
-    const amount = ethers.formatUnits(event.args.value, 6);
-    const fromAddress = event.args.from;
-    const toAddress = event.args.to;
-
-    const existingTx = await db.transaction.findUnique({
-      where: { txHash },
-    });
-
-    if (existingTx) return;
-
-    const receipt = await event.getTransactionReceipt();
-    const block = await event.getBlock();
-
-    const pendingOrders = await db.order.findMany({
-      where: {
-        chain,
-        status: 'PENDING',
-        paymentAddress: toAddress,
-        expiresAt: { gt: new Date() },
-      },
-    });
-
-    let matchedOrder = null;
-    for (const order of pendingOrders) {
-      const orderAmount = Number(order.amount);
-      const txAmount = Number(amount);
-      
-      if (Math.abs(orderAmount - txAmount) < 0.01) {
-        matchedOrder = order;
-        break;
+      if (events.length > 0 || matched > 0) {
+        console.log(`[scanner] ${chain}: blocks ${fromBlock}→${toBlock}, ${events.length} transfers, ${matched} confirmed`);
       }
+
+      return matched;
+    } catch (error: any) {
+      console.error(`[scanner] Error scanning ${chain}:`, error.message);
+      return 0;
     }
-
-    const transaction = await db.transaction.create({
-      data: {
-        orderId: matchedOrder?.id || 'unmatched',
-        txHash,
-        chain,
-        amount: new Decimal(amount),
-        fromAddress,
-        toAddress,
-        blockNumber: BigInt(receipt.blockNumber),
-        blockTimestamp: new Date(block.timestamp * 1000),
-        status: receipt.status === 1 ? 'CONFIRMED' : 'FAILED',
-        confirmations: await this.getConfirmations(chain, receipt.blockNumber),
-      },
-    });
-
-    if (matchedOrder && receipt.status === 1) {
-      const confirmations = await this.getConfirmations(chain, receipt.blockNumber);
-      const requiredConfirms = CHAIN_CONFIGS[chain].requiredConfirms;
-
-      if (confirmations >= requiredConfirms) {
-        const now = new Date();
-        await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${matchedOrder.id}`;
-      }
-    }
-
-    console.log(`Processed transaction ${txHash} on ${chain}, amount: ${amount} USDC`);
   }
 
-  private async getConfirmations(chain: Chain, blockNumber: number): Promise<number> {
-    const currentBlock = await this.providers[chain].getBlockNumber();
-    return Math.max(0, currentBlock - blockNumber);
-  }
+  async updatePendingConfirmations(chain: Chain): Promise<void> {
+    try {
+      const provider = this.providers[chain];
+      if (!provider) return;
 
-  async updateTransactionConfirmations(chain: Chain): Promise<void> {
-    const pendingTransactions = await db.transaction.findMany({
-      where: {
-        chain,
-        status: 'CONFIRMED',
-      },
-      include: { order: true },
-    });
+      const config = CHAIN_CONFIGS[chain];
+      const currentBlock = await provider.getBlockNumber();
 
-    for (const tx of pendingTransactions) {
-      if (!tx.blockNumber) continue;
-
-      const confirmations = await this.getConfirmations(chain, Number(tx.blockNumber));
-      const requiredConfirms = CHAIN_CONFIGS[chain].requiredConfirms;
-
-      await db.transaction.update({
-        where: { id: tx.id },
-        data: { confirmations },
+      // Find transactions that are confirmed on-chain but order is still PENDING
+      const pendingTxs = await db.transaction.findMany({
+        where: {
+          chain,
+          status: 'CONFIRMED',
+          order: { status: 'PENDING' },
+        },
+        include: { order: true },
       });
 
-      if (
-        confirmations >= requiredConfirms &&
-        tx.order &&
-        tx.order.status === 'PENDING'
-      ) {
-        const now = new Date();
-        await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${tx.orderId}`;
+      for (const tx of pendingTxs) {
+        if (!tx.blockNumber) continue;
+
+        const confirmations = currentBlock - Number(tx.blockNumber);
+
+        await db.transaction.update({
+          where: { id: tx.id },
+          data: { confirmations },
+        });
+
+        if (confirmations >= config.requiredConfirms && tx.order.status === 'PENDING') {
+          try {
+            await this.orderService.confirmOrder(tx.orderId, {
+              txHash: tx.txHash,
+              blockNumber: Number(tx.blockNumber),
+              confirmations,
+            });
+            console.log(`[scanner] ✅ Late-confirmed order ${tx.orderId} (${confirmations} confirmations)`);
+          } catch (err) {
+            console.error(`[scanner] Failed late-confirm ${tx.orderId}:`, err);
+          }
+        }
       }
+    } catch (error: any) {
+      console.error(`[scanner] Error updating confirmations ${chain}:`, error.message);
     }
   }
 
-  async startScanning(): Promise<void> {
-    const chains: Chain[] = ['BASE_SEPOLIA', 'ETHEREUM_SEPOLIA'];
-    
-    const scanAll = async () => {
-      for (const chain of chains) {
-        await this.scanForPayments(chain);
-        await this.updateTransactionConfirmations(chain);
-      }
-    };
+  async scanAll(): Promise<void> {
+    for (const chain of SCAN_CHAINS) {
+      await this.scanForPayments(chain);
+      await this.updatePendingConfirmations(chain);
+    }
+  }
 
-    scanAll();
-    setInterval(scanAll, 30000);
-    console.log('Blockchain scanner started for all chains');
+  async startScanning(intervalMs = 15000): Promise<void> {
+    console.log(`[scanner] Starting blockchain scanner — ${SCAN_CHAINS.length} chains, ${intervalMs}ms interval`);
+
+    // Initial scan
+    await this.scanAll();
+
+    // Continuous scanning
+    setInterval(async () => {
+      try {
+        await this.scanAll();
+      } catch (error: any) {
+        console.error('[scanner] Scan cycle error:', error.message);
+      }
+    }, intervalMs);
   }
 }

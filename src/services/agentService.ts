@@ -254,6 +254,20 @@ const TOOLS: Anthropic.Tool[] = [
     description: 'Get the agent\'s own wallet address. Share this when someone asks where to send tips or wants to know the agent\'s address.',
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
+  {
+    name: 'withdraw_managed_wallet',
+    description: 'Withdraw funds from a merchant\'s managed wallet to an external address. Use when a merchant with a managed wallet wants to move their funds out. Requires the destination address, amount, chain, and token.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        toAddress: { type: 'string', description: 'Destination wallet address (0x... for EVM)' },
+        amount: { type: 'number', description: 'Amount to withdraw' },
+        chain: { type: 'string', enum: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET'], description: 'Chain to withdraw on' },
+        token: { type: 'string', enum: ['USDC', 'USDT', 'EURC'], description: 'Token to withdraw. Defaults to USDC.' },
+      },
+      required: ['toAddress', 'amount', 'chain'],
+    },
+  },
 ];
 
 // ─── Tool execution ─────────────────────────────────────────────────────────
@@ -639,6 +653,52 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
           ? `My wallet address is ${AGENT_WALLET_ADDRESS}. You can send tips here on any EVM chain (Base, Ethereum, Polygon, Arbitrum).`
           : 'Agent wallet not configured yet.',
       });
+    }
+
+    case 'withdraw_managed_wallet': {
+      const { toAddress, amount, chain, token } = input;
+      const tokenName = token || 'USDC';
+
+      if (!/^0x[a-fA-F0-9]{40}$/.test(toAddress)) {
+        return JSON.stringify({ error: 'Invalid destination address' });
+      }
+      if (amount <= 0) return JSON.stringify({ error: 'Amount must be positive' });
+
+      // Find the merchant's managed wallet for this chain
+      const managedWallet = await db.managedWallet.findUnique({
+        where: { merchantId_chain: { merchantId, chain } },
+      });
+
+      if (!managedWallet) {
+        return JSON.stringify({ error: `No managed wallet found for ${chain}. You may have already migrated to your own wallet.` });
+      }
+
+      const chainConf = CHAIN_RPC[chain];
+      if (!chainConf) return JSON.stringify({ error: `Unsupported chain: ${chain}` });
+
+      try {
+        // Decrypt the managed wallet key
+        const privateKey = decryptKey(managedWallet.encryptedKey);
+        const provider = new ethers.JsonRpcProvider(chainConf.rpc);
+        const wallet = new ethers.Wallet(privateKey, provider);
+        const usdc = new ethers.Contract(chainConf.usdc, ERC20_ABI, wallet);
+        const amountRaw = ethers.parseUnits(amount.toString(), 6);
+
+        const tx = await usdc.transfer(toAddress, amountRaw);
+
+        return JSON.stringify({
+          success: true,
+          txHash: tx.hash,
+          amount,
+          token: tokenName,
+          chain,
+          from: managedWallet.address,
+          to: toAddress,
+          message: `Sent $${amount} ${tokenName} from your managed wallet to ${toAddress.slice(0, 8)}...${toAddress.slice(-4)}. TX: ${tx.hash}`,
+        });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Withdrawal failed: ${err.message}` });
+      }
     }
 
     default:

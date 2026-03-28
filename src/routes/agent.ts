@@ -46,6 +46,29 @@ router.post('/chat', rateLimit({
       return res.status(400).json({ error: 'Message too long (max 2000 characters)' });
     }
 
+    // Daily message limit check
+    const today = new Date().toISOString().split('T')[0];
+    const dailyKey = `_daily_messages_${today}`;
+    const dailyRecord = await db.agentMemory.findUnique({
+      where: { merchantId_key: { merchantId: merchant.id, key: dailyKey } },
+    });
+    const dailyCount = dailyRecord ? parseInt(dailyRecord.value) : 0;
+    const dailyLimit = merchant.plan === 'FREE' ? 50 : 200;
+
+    if (dailyCount >= dailyLimit) {
+      return res.json({
+        success: true,
+        response: `You've reached your daily chat limit (${dailyLimit} messages). Resets at midnight UTC. Need more? Your volume tier automatically increases your limit.`,
+      });
+    }
+
+    // Increment daily counter
+    await db.agentMemory.upsert({
+      where: { merchantId_key: { merchantId: merchant.id, key: dailyKey } },
+      update: { value: (dailyCount + 1).toString() },
+      create: { merchantId: merchant.id, key: dailyKey, value: '1' },
+    });
+
     const response = await agentService.chat(merchant.id, message.trim());
 
     res.json({ success: true, response });

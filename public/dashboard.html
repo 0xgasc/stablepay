@@ -305,7 +305,7 @@
         </svg>
     </button>
 
-    <div id="chatPanel" class="hidden fixed bottom-6 right-6 z-[9991] w-[400px] bg-slate-900 border-4 border-black flex flex-col" style="box-shadow: 8px 8px 0px #000; height: 44px; overflow: hidden;">
+    <div id="chatPanel" class="hidden fixed bottom-6 right-6 z-[9991] w-[400px] max-[480px]:w-[calc(100vw-24px)] max-[480px]:right-3 max-[480px]:left-3 bg-slate-900 border-4 border-black flex flex-col" style="box-shadow: 8px 8px 0px #000; height: 44px; overflow: hidden;">
         <!-- Header -->
         <div id="chatHeader" class="flex items-center justify-between px-4 py-3 border-b-4 border-black cursor-pointer shrink-0" style="background: #00E5FF;">
             <div class="flex items-center gap-1.5">
@@ -2126,7 +2126,9 @@ onMounted(() => {
 
                 // Fetch actual merchant data from API
                 console.log('Loading merchant data with:', { merchantId, hasToken: !!merchantToken });
-                const response = await fetch(`/api/merchant-profile?${merchantId ? 'id=' + merchantId : 'token=' + merchantToken}`);
+                const response = await fetch('/api/merchant-profile', {
+                    headers: { 'Authorization': 'Bearer ' + merchantToken }
+                });
 
                 console.log('API response status:', response.status);
 
@@ -4880,11 +4882,13 @@ onMounted(() => {
             if (saveProfileBtn) {
                 saveProfileBtn.addEventListener('click', async () => {
                 try {
-                    const response = await fetch(`/api/merchant-profile`, {
+                    const response = await fetch('/api/merchant-profile', {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + sessionStorage.getItem('merchantToken')
+                        },
                         body: JSON.stringify({
-                            id: currentMerchant.id,
                             companyName: document.getElementById('companyName').value,
                             contactName: document.getElementById('contactName').value,
                             email: document.getElementById('email').value
@@ -5267,7 +5271,7 @@ onMounted(() => {
 
             function expandChat() {
                 isMinimized = false;
-                panel.style.height = '520px';
+                panel.style.height = window.innerWidth <= 480 ? 'calc(100vh - 80px)' : '520px';
                 panel.style.overflow = '';
                 minBtn.innerHTML = '&#8722;'; // −
                 minBtn.title = 'Minimize';
@@ -5698,8 +5702,11 @@ onMounted(() => {
                     const merchantId = sessionStorage.getItem('merchantId');
                     await fetch('/api/merchant-profile', {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: merchantId, setupCompleted: true })
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + sessionStorage.getItem('merchantToken')
+                        },
+                        body: JSON.stringify({ setupCompleted: true })
                     });
                     closeWizard();
                     // Reload merchant data to refresh dashboard

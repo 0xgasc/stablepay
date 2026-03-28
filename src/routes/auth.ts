@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { db } from '../config/database';
 import { rateLimit } from '../middleware/rateLimit';
+import { requireMerchantAuth, AuthenticatedRequest } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { hashPassword, comparePassword, validatePassword } from '../utils/password';
 import { emailService } from '../services/emailService';
@@ -94,19 +95,13 @@ router.post('/login', rateLimit({
   }
 });
 
-// ─── Get merchant profile ───────────────────────────────────────────────────
-router.get('/merchant-profile', async (req, res) => {
+// ─── Get merchant profile (auth required) ───────────────────────────────────
+router.get('/merchant-profile', requireMerchantAuth, async (req, res) => {
   try {
-    const { id, token } = req.query;
+    const authMerchant = (req as AuthenticatedRequest).merchant;
 
-    if (!id && !token) {
-      return res.status(400).json({ error: 'Merchant ID or token is required' });
-    }
-
-    const merchant = await db.merchant.findFirst({
-      where: id
-        ? { id: id as string }
-        : { loginToken: token as string },
+    const merchant = await db.merchant.findUnique({
+      where: { id: authMerchant.id },
       include: {
         _count: { select: { orders: true } },
         wallets: true,
@@ -141,30 +136,26 @@ router.get('/merchant-profile', async (req, res) => {
   }
 });
 
-// ─── Update merchant profile ────────────────────────────────────────────────
-router.put('/merchant-profile', async (req, res) => {
+// ─── Update merchant profile (auth required) ────────────────────────────────
+router.put('/merchant-profile', requireMerchantAuth, async (req, res) => {
   try {
-    const { id, companyName, contactName, email, plan, networkMode, paymentMode, setupCompleted } = req.body;
-
-    if (!id) {
-      return res.status(400).json({ error: 'Merchant ID is required' });
-    }
+    const authMerchant = (req as AuthenticatedRequest).merchant;
+    const { companyName, contactName, email, networkMode, paymentMode, setupCompleted } = req.body;
 
     // If completing setup, validate merchant has at least one wallet
     if (setupCompleted === true) {
-      const walletCount = await db.merchantWallet.count({ where: { merchantId: id } });
+      const walletCount = await db.merchantWallet.count({ where: { merchantId: authMerchant.id } });
       if (walletCount === 0) {
         return res.status(400).json({ error: 'Add at least one wallet before completing setup' });
       }
     }
 
     const updated = await db.merchant.update({
-      where: { id },
+      where: { id: authMerchant.id },
       data: {
         ...(companyName && { companyName }),
         ...(contactName && { contactName }),
         ...(email && { email }),
-        ...(plan && { plan }),
         ...(networkMode && { networkMode }),
         ...(paymentMode && { paymentMode }),
         ...(typeof setupCompleted === 'boolean' && { setupCompleted }),
