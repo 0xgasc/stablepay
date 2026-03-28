@@ -43,6 +43,7 @@
 
         <!-- Quick nav -->
         <div class="flex flex-wrap gap-3 mb-12 text-sm">
+            <a href="#how-it-works" class="px-3 py-1 bg-cyan-900 border border-cyan-700 text-cyan-300 hover:border-cyan-400">How It Works</a>
             <a href="#auth" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Auth</a>
             <a href="#checkout" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Checkout</a>
             <a href="#orders" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Orders</a>
@@ -243,6 +244,77 @@ export default async function handler(req, res) {
 
                 <div class="mt-4 p-3 bg-slate-800 border border-cyan-800 text-sm text-cyan-300">
                     <strong>Your webhook should respond with 200 OK.</strong> We retry up to 3 times with exponential backoff on failure.
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ How It Works ═══ -->
+        <section id="how-it-works" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">How It Works</h2>
+
+            <div class="bg-slate-900 border border-slate-800 p-5 mb-6">
+                <h3 class="text-white font-bold mb-4">Setup (3 steps)</h3>
+                <div class="space-y-4 text-sm text-slate-400">
+                    <div class="flex gap-4">
+                        <span class="text-cyan-400 font-bold text-lg">1</span>
+                        <div><strong class="text-white">Create wallet</strong> — bring your own (MetaMask, Phantom) or we create a managed one instantly. One address works on all EVM chains.</div>
+                    </div>
+                    <div class="flex gap-4">
+                        <span class="text-cyan-400 font-bold text-lg">2</span>
+                        <div><strong class="text-white">Add your domain</strong> — we auto-configure your webhook URL and redirect URLs. AI agent handles everything.</div>
+                    </div>
+                    <div class="flex gap-4">
+                        <span class="text-cyan-400 font-bold text-lg">3</span>
+                        <div><strong class="text-white">Add the widget</strong> — one script tag + one line of code. Customers can pay immediately.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-5 mb-6">
+                <h3 class="text-white font-bold mb-4">Payment Flow</h3>
+<pre style="background: transparent; border: none; padding: 0; font-size: 12px; color: #94a3b8;">
+Customer clicks "Pay with Crypto" on your site
+        |
+StablePay checkout opens (modal or hosted page)
+        |
+Customer picks chain (Base, Ethereum, Polygon, Arbitrum, Solana)
+        |
+Customer picks stablecoin (USDC, USDT, EURC — varies by chain)
+        |
+Customer picks HOW to pay:
+   +-- Connect Wallet — MetaMask/Rainbow/Coinbase/Phantom, one-click approve
+   +-- QR Code — scan with mobile wallet app
+   +-- Copy Address — paste into any wallet or exchange
+        |
+Payment lands in YOUR wallet (direct, non-custodial)
+        |
+Our scanner detects the on-chain transfer (15-30 seconds)
+        |
+Webhook fires to your server: { event: "order.confirmed", amount, txHash }
+        |
+Customer redirected to your success page
+</pre>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-5">
+                <h3 class="text-white font-bold mb-4">What Your Customers See</h3>
+                <div class="text-sm text-slate-400 space-y-3">
+                    <p>The checkout widget gives every customer <strong class="text-white">3 ways to pay</strong> — no config needed:</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
+                        <div class="bg-slate-800 border border-slate-700 p-4 text-center">
+                            <p class="text-white font-bold mb-1">Connect Wallet</p>
+                            <p class="text-xs">MetaMask, Rainbow, Coinbase Wallet, Phantom. One-click approve. Best for desktop.</p>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 p-4 text-center">
+                            <p class="text-white font-bold mb-1">QR Code</p>
+                            <p class="text-xs">Scan with any mobile wallet app. Pre-filled transaction. Best for phones.</p>
+                        </div>
+                        <div class="bg-slate-800 border border-slate-700 p-4 text-center">
+                            <p class="text-white font-bold mb-1">Copy Address</p>
+                            <p class="text-xs">Copy wallet address + exact amount. Send from any wallet or exchange (Coinbase, Binance).</p>
+                        </div>
+                    </div>
+                    <p class="mt-3">Customers choose their chain and stablecoin. The widget shows only what you have configured. If you accept USDC on Base and Ethereum, that's what they see — nothing more.</p>
                 </div>
             </div>
         </section>
