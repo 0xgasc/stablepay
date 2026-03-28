@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ethers } from 'ethers';
+import { Keypair } from '@solana/web3.js';
 import crypto from 'crypto';
 import { db } from '../config/database';
 import { logger } from '../utils/logger';
@@ -204,8 +205,8 @@ const TOOLS: Anthropic.Tool[] = [
       properties: {
         chains: {
           type: 'array',
-          items: { type: 'string', enum: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET'] },
-          description: 'Which chains to create managed wallets for. One EVM key works on all, but we register per chain.',
+          items: { type: 'string', enum: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'SOLANA_MAINNET'] },
+          description: 'Which chains to create managed wallets for. One EVM key works on all EVM chains. Solana gets a separate keypair automatically.',
         },
         tokens: {
           type: 'array',
@@ -327,27 +328,50 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         });
       }
 
+      const evmChains = chains.filter((c: string) => !c.startsWith('SOLANA'));
+      const solanaChains = chains.filter((c: string) => c.startsWith('SOLANA'));
+
+      const results: { chain: string; address: string }[] = [];
+
       // Generate ONE EVM wallet (works on all EVM chains)
-      const wallet = ethers.Wallet.createRandom();
-      const encrypted = encryptKey(wallet.privateKey);
+      if (evmChains.length > 0) {
+        const evmWallet = ethers.Wallet.createRandom();
+        const encrypted = encryptKey(evmWallet.privateKey);
 
-      // Create managed wallet records + merchant wallets for each chain
-      for (const chain of chains) {
-        await db.managedWallet.create({
-          data: {
-            merchantId,
-            chain,
-            address: wallet.address,
-            encryptedKey: encrypted,
-          },
-        });
+        for (const chain of evmChains) {
+          await db.managedWallet.create({
+            data: { merchantId, chain, address: evmWallet.address, encryptedKey: encrypted },
+          });
+          await db.merchantWallet.upsert({
+            where: { merchantId_chain: { merchantId, chain } },
+            update: { address: evmWallet.address, supportedTokens, isActive: true },
+            create: { merchantId, chain, address: evmWallet.address, supportedTokens, isActive: true },
+          });
+          results.push({ chain, address: evmWallet.address });
+        }
+      }
 
-        // Also add as merchant wallet so payments route correctly
-        await db.merchantWallet.upsert({
-          where: { merchantId_chain: { merchantId, chain } },
-          update: { address: wallet.address, supportedTokens, isActive: true },
-          create: { merchantId, chain, address: wallet.address, supportedTokens, isActive: true },
-        });
+      // Generate Solana keypair (separate from EVM)
+      if (solanaChains.length > 0) {
+        const solKeypair = Keypair.generate();
+        const solAddress = solKeypair.publicKey.toBase58();
+        const solSecret = Buffer.from(solKeypair.secretKey).toString('hex');
+        const encrypted = encryptKey(solSecret);
+
+        // Solana tokens available
+        const solTokens = supportedTokens.filter((t: string) => ['USDC', 'USDT'].includes(t));
+
+        for (const chain of solanaChains) {
+          await db.managedWallet.create({
+            data: { merchantId, chain, address: solAddress, encryptedKey: encrypted },
+          });
+          await db.merchantWallet.upsert({
+            where: { merchantId_chain: { merchantId, chain } },
+            update: { address: solAddress, supportedTokens: solTokens.length ? solTokens : ['USDC'], isActive: true },
+            create: { merchantId, chain, address: solAddress, supportedTokens: solTokens.length ? solTokens : ['USDC'], isActive: true },
+          });
+          results.push({ chain, address: solAddress });
+        }
       }
 
       // Auto-switch to mainnet
@@ -356,13 +380,14 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         data: { networkMode: 'MAINNET' },
       });
 
+      const walletSummary = results.map(r => `${r.chain}: ${r.address}`).join('\n');
+
       return JSON.stringify({
         success: true,
-        address: wallet.address,
-        chains,
+        wallets: results,
         tokens: supportedTokens,
-        message: `Managed wallet created: ${wallet.address}. This is YOUR wallet — payments go directly here. However, we hold the keys for now. Please set up your own wallet (MetaMask, Rainbow, etc.) and update your address as soon as possible for full control of your funds.`,
-        warning: 'IMPORTANT: We strongly recommend setting up your own wallet. With a managed wallet, you trust us with your keys. With your own wallet, only YOU control your money.',
+        message: `Managed wallets created:\n${walletSummary}\n\nPayments go directly to these wallets. We hold the keys for now — please set up your own wallets when ready for full control of your funds.`,
+        warning: 'We recommend setting up your own wallets (MetaMask for EVM chains, Phantom for Solana). With your own wallet, only YOU control your money.',
       });
     }
 
