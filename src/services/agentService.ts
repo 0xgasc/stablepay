@@ -1,7 +1,30 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ethers } from 'ethers';
+import crypto from 'crypto';
 import { db } from '../config/database';
 import { logger } from '../utils/logger';
+
+// ─── Encryption for managed wallet keys ─────────────────────────────────────
+const ENCRYPTION_KEY = process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY || 'default-key-change-me';
+
+function encryptKey(privateKey: string): string {
+  const iv = crypto.randomBytes(16);
+  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+  let encrypted = cipher.update(privateKey, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  return iv.toString('hex') + ':' + encrypted;
+}
+
+function decryptKey(encrypted: string): string {
+  const [ivHex, encData] = encrypted.split(':');
+  const iv = Buffer.from(ivHex, 'hex');
+  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+  let decrypted = decipher.update(encData, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
 
 // ─── Agent wallet + chain RPC config ────────────────────────────────────────
 const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY;
@@ -174,6 +197,26 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: 'create_managed_wallet',
+    description: 'Create a managed wallet for a merchant who doesn\'t have their own crypto wallet yet. We generate and hold the keys for them. Always urge them to set up their own wallet ASAP for security. This is a temporary convenience — not a long-term solution.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        chains: {
+          type: 'array',
+          items: { type: 'string', enum: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET'] },
+          description: 'Which chains to create managed wallets for. One EVM key works on all, but we register per chain.',
+        },
+        tokens: {
+          type: 'array',
+          items: { type: 'string', enum: ['USDC', 'USDT', 'EURC'] },
+          description: 'Which tokens to accept on each chain. Defaults to ["USDC"].',
+        },
+      },
+      required: ['chains'],
+    },
+  },
+  {
     name: 'check_my_balance',
     description: 'Check the agent\'s own wallet USDC balance on a given chain. Use this when asked about your balance or when considering sending a transaction.',
     input_schema: {
@@ -269,6 +312,58 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       }
 
       return JSON.stringify({ success: true, chain, address, tokens, message: `Wallet configured for ${chain} accepting ${tokens.join(', ')}${isMainnet ? '. Network mode set to MAINNET.' : ''}` });
+    }
+
+    case 'create_managed_wallet': {
+      const { chains, tokens } = input;
+      const supportedTokens = tokens || ['USDC'];
+
+      // Check if they already have managed wallets
+      const existing = await db.managedWallet.findMany({ where: { merchantId } });
+      if (existing.length > 0) {
+        return JSON.stringify({
+          error: 'Managed wallets already exist for this merchant.',
+          wallets: existing.map(w => ({ chain: w.chain, address: w.address })),
+        });
+      }
+
+      // Generate ONE EVM wallet (works on all EVM chains)
+      const wallet = ethers.Wallet.createRandom();
+      const encrypted = encryptKey(wallet.privateKey);
+
+      // Create managed wallet records + merchant wallets for each chain
+      for (const chain of chains) {
+        await db.managedWallet.create({
+          data: {
+            merchantId,
+            chain,
+            address: wallet.address,
+            encryptedKey: encrypted,
+          },
+        });
+
+        // Also add as merchant wallet so payments route correctly
+        await db.merchantWallet.upsert({
+          where: { merchantId_chain: { merchantId, chain } },
+          update: { address: wallet.address, supportedTokens, isActive: true },
+          create: { merchantId, chain, address: wallet.address, supportedTokens, isActive: true },
+        });
+      }
+
+      // Auto-switch to mainnet
+      await db.merchant.update({
+        where: { id: merchantId },
+        data: { networkMode: 'MAINNET' },
+      });
+
+      return JSON.stringify({
+        success: true,
+        address: wallet.address,
+        chains,
+        tokens: supportedTokens,
+        message: `Managed wallet created: ${wallet.address}. This is YOUR wallet — payments go directly here. However, we hold the keys for now. Please set up your own wallet (MetaMask, Rainbow, etc.) and update your address as soon as possible for full control of your funds.`,
+        warning: 'IMPORTANT: We strongly recommend setting up your own wallet. With a managed wallet, you trust us with your keys. With your own wallet, only YOU control your money.',
+      });
     }
 
     case 'set_chain_priority': {
@@ -418,6 +513,8 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
 
       const wallets = m.wallets.filter(w => w.isActive);
       const hasMainnetWallet = wallets.some(w => w.chain.includes('MAINNET'));
+      const managedWallets = await db.managedWallet.findMany({ where: { merchantId, migratedToOwn: false } });
+      const hasManagedWallet = managedWallets.length > 0;
       const hasWebhook = !!(m.webhookUrl && m.webhookEnabled);
       const hasSuccessUrl = !!m.successUrl;
       const hasCancelUrl = !!m.cancelUrl;
@@ -425,8 +522,9 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       const isSetupComplete = m.setupCompleted;
 
       const steps = [
-        { step: 'Wallet configured', done: wallets.length > 0, detail: wallets.length > 0 ? `${wallets.length} chain(s): ${wallets.map(w => w.chain).join(', ')}` : 'No wallets yet' },
+        { step: 'Wallet configured', done: wallets.length > 0, detail: wallets.length > 0 ? `${wallets.length} chain(s): ${wallets.map(w => w.chain).join(', ')}${hasManagedWallet ? ' (⚠️ managed — merchant should set up own wallet)' : ''}` : 'No wallets yet' },
         { step: 'Mainnet wallet', done: hasMainnetWallet, detail: hasMainnetWallet ? 'Ready for live payments' : 'Add a mainnet wallet to go live' },
+        ...(hasManagedWallet ? [{ step: 'Own wallet (recommended)', done: false, detail: 'Merchant is using a managed wallet — urge them to set up their own for security' }] : []),
         { step: 'Webhook URL', done: hasWebhook, detail: hasWebhook ? m.webhookUrl : 'Not set — you won\'t know when payments confirm' },
         { step: 'Success redirect URL', done: hasSuccessUrl, detail: hasSuccessUrl ? m.successUrl : 'Not set — customers stay on payment page after paying' },
         { step: 'Cancel redirect URL', done: hasCancelUrl, detail: hasCancelUrl ? m.cancelUrl : 'Optional — where customers go if they cancel' },
@@ -561,11 +659,22 @@ This gives you a checklist of what's done and what's next. Work through the inco
 ### For each step:
 
 **Wallet setup:**
-- Ask their crypto comfort level (new vs experienced)
-- New to crypto: explain wallets simply, recommend MetaMask, Base + USDC
-- Experienced: ask which chains/tokens, move fast
+- Ask: "Do you have a crypto wallet address, or do you need us to create one for you?"
+
+**If they have a wallet:**
+- Ask for their address (0x... for EVM chains)
 - One EVM address works on all EVM chains (Base, Ethereum, Polygon, Arbitrum)
+- Ask which chains and tokens
 - Use add_wallet to configure
+
+**If they DON'T have a wallet (white glove onboarding):**
+- Say: "No problem! I'll create a managed wallet for you right now so you can start accepting payments immediately."
+- Ask which chains they want (recommend Base + Ethereum)
+- Use create_managed_wallet to generate their wallet
+- Tell them their new wallet address
+- THEN explain: "This wallet is ready to receive payments. However, I strongly recommend setting up your own wallet when you get a chance — it takes 2 minutes with MetaMask or Rainbow, and it means only YOU control your funds. I can help you switch whenever you're ready."
+- Save memory: crypto_level=beginner, has_managed_wallet=true
+- In EVERY future conversation with this merchant, gently remind them to set up their own wallet if they still have a managed one. Don't be annoying about it, but mention it once per conversation.
 
 **Webhook URL:**
 - Ask: "Where should we send payment notifications? This is an HTTPS endpoint on your server."

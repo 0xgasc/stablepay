@@ -145,6 +145,7 @@ model Merchant {
   chatMessages          ChatMessage[]
   agentMemories         AgentMemory[]
   agentTips             AgentTip[]
+  managedWallets        ManagedWallet[]
 
   @@index([plan])
   @@index([networkMode])
@@ -467,6 +468,25 @@ model AgentMemory {
 
   @@unique([merchantId, key])
   @@map("agent_memories")
+  @@schema("public")
+}
+
+model ManagedWallet {
+  id              String    @id @default(cuid())
+  merchantId      String
+  chain           String    // Which chain this managed wallet is for
+  address         String    // Public address
+  encryptedKey    String    // Encrypted private key (AES-256)
+  isActive        Boolean   @default(true)
+  migratedToOwn   Boolean   @default(false) // True once merchant provides their own wallet
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  merchant        Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, chain])
+  @@index([merchantId])
+  @@map("managed_wallets")
   @@schema("public")
 }
 

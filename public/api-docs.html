@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Docs — WeTakeStables</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Space Grotesk', sans-serif; }
+        code, pre { font-family: 'JetBrains Mono', monospace; }
+        body { background: #0f172a; color: #e2e8f0; }
+        .endpoint { border-left: 4px solid #06b6d4; }
+        .method-post { color: #22c55e; }
+        .method-get { color: #3b82f6; }
+        .method-put { color: #f59e0b; }
+        .method-delete { color: #ef4444; }
+        pre { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 16px; overflow-x: auto; font-size: 13px; }
+        .nav-link { color: #94a3b8; transition: color 0.15s; }
+        .nav-link:hover { color: #06b6d4; }
+        details summary { cursor: pointer; list-style: none; }
+        details summary::-webkit-details-marker { display: none; }
+        details summary::before { content: '+ '; font-weight: bold; color: #06b6d4; }
+        details[open] summary::before { content: '− '; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <header class="border-b border-slate-800 px-6 py-4">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-white uppercase tracking-tight">WeTakeStables</a>
+            <nav class="flex gap-6 text-sm">
+                <a href="/dashboard.html" class="nav-link">Dashboard</a>
+                <a href="/api-docs.html" class="nav-link text-cyan-400">API Docs</a>
+                <a href="/pricing.html" class="nav-link">Pricing</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="max-w-5xl mx-auto px-6 py-12">
+        <h1 class="text-4xl font-bold text-white mb-2">API Reference</h1>
+        <p class="text-slate-400 mb-8">Everything you need to accept stablecoin payments. Base URL: <code class="text-cyan-400">https://wetakestables.shop</code></p>
+
+        <!-- Quick nav -->
+        <div class="flex flex-wrap gap-3 mb-12 text-sm">
+            <a href="#auth" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Auth</a>
+            <a href="#checkout" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Checkout</a>
+            <a href="#orders" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Orders</a>
+            <a href="#webhooks" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Webhooks</a>
+            <a href="#widget" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Widget</a>
+            <a href="#invoices" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Invoices</a>
+        </div>
+
+        <!-- ═══ Authentication ═══ -->
+        <section id="auth" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Authentication</h2>
+            <p class="text-slate-400 mb-6">All authenticated endpoints require a Bearer token in the <code>Authorization</code> header. Get your token from the dashboard or login response.</p>
+            <pre>Authorization: Bearer your-merchant-token</pre>
+
+            <div class="space-y-6 mt-8">
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-post">POST</span> /api/v1/signup</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p class="mb-3">Create a new merchant account. Returns a merchant ID and sends a verification email.</p>
+                        <p class="text-slate-500 mb-2 font-bold">Body:</p>
+<pre>{
+  "email": "merchant@example.com",
+  "companyName": "My Store",
+  "contactName": "John",
+  "password": "min8chars",
+  "plan": "FREE"
+}</pre>
+                        <p class="text-slate-500 mt-3 mb-2 font-bold">Response:</p>
+<pre>{
+  "success": true,
+  "message": "Check your email for the verification code.",
+  "merchantId": "cmXXXXXXXX"
+}</pre>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-post">POST</span> /api/verify-email</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p class="mb-3">Verify email with the 6-digit code. Auto-activates FREE tier accounts.</p>
+<pre>{ "email": "merchant@example.com", "code": "123456" }</pre>
+                        <p class="text-slate-500 mt-3 mb-2 font-bold">Response:</p>
+<pre>{ "success": true, "token": "your-bearer-token", "merchantId": "cmXXXX", "isActive": true }</pre>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-post">POST</span> /api/login</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p class="mb-3">Login with email + password. Returns a Bearer token for API calls.</p>
+<pre>{ "email": "merchant@example.com", "password": "your-password" }</pre>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- ═══ Checkout ═══ -->
+        <section id="checkout" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Checkout (Create Payment)</h2>
+            <p class="text-slate-400 mb-6">This is the main endpoint your checkout flow calls. Creates an order and returns a payment address.</p>
+
+            <div class="endpoint bg-slate-900 border border-slate-800 p-5">
+                <h3 class="text-white font-bold mb-3"><span class="method-post">POST</span> /api/embed/checkout</h3>
+                <p class="text-slate-400 text-sm mb-4">Create a payment order. No auth required — uses merchantId to identify the account.</p>
+                <p class="text-slate-500 text-sm mb-2 font-bold">Body:</p>
+<pre>{
+  "merchantId": "your-merchant-id",    // Required
+  "amount": 99.99,                     // Required — in USD
+  "chain": "BASE_MAINNET",            // Optional — customer picks if omitted
+  "token": "USDC",                    // Optional — defaults to USDC
+  "customerEmail": "buyer@email.com", // Optional
+  "productName": "Order #1234"        // Optional
+}</pre>
+                <p class="text-slate-500 mt-4 mb-2 font-bold">Response:</p>
+<pre>{
+  "success": true,
+  "order": {
+    "id": "cmXXXXXX",
+    "amount": 99.99,
+    "token": "USDC",
+    "chain": "BASE_MAINNET",
+    "paymentAddress": "0x...",    // Send stablecoins HERE
+    "expiresAt": "2026-03-28T..."
+  }
+}</pre>
+                <div class="mt-4 p-3 bg-slate-800 border border-cyan-800 text-sm text-cyan-300">
+                    <strong>Flow:</strong> Your checkout calls this → customer sends stablecoins to paymentAddress → we detect the transfer on-chain → webhook fires to your server → order confirmed.
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ Orders ═══ -->
+        <section id="orders" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Orders</h2>
+
+            <div class="space-y-6">
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/orders?merchantId=X</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p>List all orders. Requires Bearer token. Filter by status with <code>?status=CONFIRMED</code>.</p>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/orders/:orderId</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p>Get a single order by ID. Returns full order details including transaction info.</p>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-post">POST</span> /api/orders/:orderId/confirm</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p>Manually confirm an order (admin). Normally handled automatically by on-chain detection.</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- ═══ Webhooks ═══ -->
+        <section id="webhooks" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Webhooks</h2>
+            <p class="text-slate-400 mb-6">Configure your webhook URL in the dashboard or via the agent. We POST to your endpoint when payment events occur.</p>
+
+            <div class="bg-slate-900 border border-slate-800 p-5">
+                <h3 class="text-white font-bold mb-3">Webhook Payload</h3>
+                <p class="text-slate-400 text-sm mb-4">We send this JSON to your webhook URL:</p>
+<pre>{
+  "event": "order.confirmed",           // Event type
+  "orderId": "cmXXXXXX",
+  "merchantId": "cmXXXXXX",
+  "amount": "99.99",
+  "token": "USDC",
+  "chain": "BASE_MAINNET",
+  "txHash": "0xabc...",
+  "customerEmail": "buyer@email.com",
+  "status": "CONFIRMED",
+  "timestamp": "2026-03-28T12:00:00Z"
+}</pre>
+                <p class="text-slate-500 mt-4 mb-2 font-bold">Events:</p>
+                <ul class="text-sm text-slate-400 space-y-1 ml-4">
+                    <li><code class="text-cyan-400">order.created</code> — New payment order created</li>
+                    <li><code class="text-cyan-400">order.confirmed</code> — Payment confirmed on-chain</li>
+                    <li><code class="text-cyan-400">order.refunded</code> — Refund processed</li>
+                    <li><code class="text-cyan-400">invoice.paid</code> — Invoice payment received</li>
+                    <li><code class="text-cyan-400">receipt.sent</code> — Receipt email delivered</li>
+                </ul>
+
+                <div class="mt-4 p-3 bg-slate-800 border border-cyan-800 text-sm text-cyan-300">
+                    <strong>Your webhook should respond with 200 OK.</strong> We retry up to 3 times with exponential backoff on failure.
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ Widget ═══ -->
+        <section id="widget" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Checkout Widget</h2>
+            <p class="text-slate-400 mb-6">Drop-in checkout for any website. One script tag + one function call.</p>
+
+            <div class="bg-slate-900 border border-slate-800 p-5">
+                <h3 class="text-white font-bold mb-3">Quick Start</h3>
+<pre>&lt;script src="https://wetakestables.shop/checkout-widget.js"&gt;&lt;/script&gt;
+
+&lt;button onclick="StablePay.checkout({
+  merchantId: 'your-merchant-id',
+  amount: 49.99,
+  onSuccess: (data) =&gt; {
+    console.log('Paid!', data.orderId, data.txHash);
+    window.location.href = '/thank-you';
+  },
+  onCancel: () =&gt; console.log('Cancelled')
+})"&gt;Pay with Crypto&lt;/button&gt;</pre>
+
+                <p class="text-slate-500 mt-4 mb-2 font-bold">All Options:</p>
+                <div class="text-sm text-slate-400 space-y-2">
+                    <div class="grid grid-cols-3 gap-2 border-b border-slate-700 pb-2 font-bold text-slate-300">
+                        <span>Parameter</span><span>Type</span><span>Description</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2"><code class="text-cyan-400">merchantId</code><span>string</span><span>Required. Your merchant ID.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code class="text-cyan-400">amount</code><span>number</span><span>Payment amount in USD. Omit for dynamic.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>productName</code><span>string</span><span>Optional. Shown in checkout UI.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>customerEmail</code><span>string</span><span>Optional. Pre-fill customer email.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>allowedChains</code><span>string[]</span><span>Restrict chains: ["BASE_MAINNET", "ETHEREUM_MAINNET"]</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>allowedTokens</code><span>string[]</span><span>Restrict tokens: ["USDC", "USDT"]</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>onSuccess</code><span>function</span><span>Callback with { orderId, txHash, amount }</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>onCancel</code><span>function</span><span>Called when customer closes checkout</span></div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-5 mt-6">
+                <h3 class="text-white font-bold mb-3">Supported Chains & Tokens</h3>
+                <div class="text-sm text-slate-400 space-y-2">
+                    <div class="grid grid-cols-2 gap-2"><span class="text-white">Base</span><span>USDC, EURC</span></div>
+                    <div class="grid grid-cols-2 gap-2"><span class="text-white">Ethereum</span><span>USDC, USDT, EURC</span></div>
+                    <div class="grid grid-cols-2 gap-2"><span class="text-white">Polygon</span><span>USDC, USDT</span></div>
+                    <div class="grid grid-cols-2 gap-2"><span class="text-white">Arbitrum</span><span>USDC, USDT</span></div>
+                    <div class="grid grid-cols-2 gap-2"><span class="text-white">Solana</span><span>USDC, USDT</span></div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-5 mt-6">
+                <h3 class="text-white font-bold mb-3">Supported Wallets</h3>
+                <div class="text-sm text-slate-400 space-y-2">
+                    <div class="grid grid-cols-2 gap-2"><span class="text-white">EVM Chains</span><span>MetaMask, Rainbow, Coinbase Wallet, Rabby</span></div>
+                    <div class="grid grid-cols-2 gap-2"><span class="text-white">Solana</span><span>Phantom, Solflare, Backpack</span></div>
+                </div>
+                <p class="text-slate-500 text-xs mt-3">If multiple wallets are installed, customers see a picker. Single wallet connects automatically.</p>
+            </div>
+        </section>
+
+        <!-- ═══ Invoices ═══ -->
+        <section id="invoices" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Invoices & Receipts</h2>
+
+            <div class="space-y-6">
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-post">POST</span> /api/invoices</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p class="mb-3">Create and send an invoice. Requires Bearer token.</p>
+<pre>{
+  "merchantId": "cmXXXX",
+  "customerEmail": "client@email.com",
+  "customerName": "Client Name",
+  "subtotal": 500.00,
+  "lineItems": [
+    { "description": "Web Design", "quantity": 1, "unitPrice": 500.00 }
+  ],
+  "dueDate": "2026-04-15",
+  "notes": "Thank you for your business"
+}</pre>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/receipts?merchantId=X</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p>List all receipts. Auto-generated when payments confirm.</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- ═══ Pricing ═══ -->
+        <section id="pricing" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Pricing</h2>
+            <div class="bg-slate-900 border border-slate-800 p-5 text-sm text-slate-400">
+                <p class="mb-4">Volume-based fees. No subscriptions. No setup costs.</p>
+                <div class="space-y-2">
+                    <div class="flex justify-between"><span>Under $10k/month</span><span class="text-white font-bold">1.0%</span></div>
+                    <div class="flex justify-between"><span>$10k - $50k/month</span><span class="text-white font-bold">0.8%</span></div>
+                    <div class="flex justify-between"><span>$50k - $250k/month</span><span class="text-white font-bold">0.5%</span></div>
+                    <div class="flex justify-between"><span>$250k+/month</span><span class="text-white font-bold">0.3%</span></div>
+                </div>
+                <p class="mt-4 text-slate-500">100% of payments go directly to your wallet. Fees are invoiced separately per billing cycle.</p>
+            </div>
+        </section>
+
+        <footer class="border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
+            <p>WeTakeStables — Stablecoin payment infrastructure</p>
+        </footer>
+    </div>
+</body>
+</html>
