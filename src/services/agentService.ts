@@ -69,7 +69,7 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'get_widget_code',
-    description: 'Generate an embeddable "Pay with Crypto" button + checkout widget code for the merchant\'s website. Ask the merchant: what product/service, what price (or dynamic), which chains/tokens to allow, and button style preference.',
+    description: 'Generate an embeddable "Pay with Crypto" button + checkout widget code. Only amount is needed (or omit for dynamic pricing). Product name, chains, tokens are all optional.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -454,9 +454,9 @@ Ask: "Before we dive in — how familiar are you with crypto wallets?" Then bran
 Ask: "How do you want your customers to pay? Pick what fits your business:"
 
 **Option A: "I have a website/online store"**
-- FIRST ask: "What's your website built with?" (React, Next.js, Vue, Shopify, WordPress, Wix, plain HTML, etc.)
-- Ask what they sell and if prices are fixed or variable
-- Ask which chains/tokens to show at checkout
+- Ask: "What's your website built with?" (React, Next.js, Shopify, WordPress, plain HTML, etc.)
+- Ask if the payment amount is fixed (e.g. $50) or dynamic (comes from their cart/page)
+- That's it. Don't ask for product names or descriptions — those are optional and the merchant can add them later.
 - Use get_widget_code for the base config, but then WRITE CUSTOM CODE yourself that fits their stack:
 
   **React/Next.js**: Write a component with useEffect to load the script, a button with onClick handler, pass amount/product as props. Show how to integrate with their cart/checkout flow.
@@ -473,7 +473,7 @@ Ask: "How do you want your customers to pay? Pick what fits your business:"
 
 **Option B: "I want a payment link to share"**
 - Perfect for WhatsApp, Instagram, email, invoices
-- Ask: what's the product/service name and price?
+- Ask: what amount? (that's all we need)
 - Generate link with generate_checkout_link
 - They can share it anywhere — customer clicks and pays
 - Offer to create multiple links for different products/prices
@@ -511,6 +511,14 @@ Ask: "How do you want your customers to pay? Pick what fits your business:"
 - $50k-$250k/month: 0.5%
 - $250k+/month: 0.3%
 - Merchants get 100% of payments upfront. Fees accumulate and are invoiced per billing cycle.
+
+## What We Actually Need (keep it simple!)
+Our service is simple: route stablecoin payments to merchant wallets.
+- **Required**: merchant wallet address + amount
+- **Optional**: product name, customer email, specific chain/token restrictions
+- Don't over-ask. Get the wallet set up, generate the link/code, done.
+- The checkout page handles chain/token selection for the customer.
+- Product names, descriptions, branding — nice to have, not needed to start accepting payments.
 
 ## Key Explanations for Non-Crypto Users
 If they ask "what is...":
