@@ -94,6 +94,24 @@
                     <div class="mt-4 text-sm text-slate-400">
                         <p class="mb-3">Login with email + password. Returns a Bearer token for API calls.</p>
 <pre>{ "email": "merchant@example.com", "password": "your-password" }</pre>
+                        <p class="text-slate-500 mt-3 mb-2 font-bold">Response:</p>
+<pre>{ "success": true, "token": "your-bearer-token", "merchantId": "cmXXXX", "isActive": true }</pre>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-post">POST</span> /api/forgot-password</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p class="mb-3">Request a password reset code. Sends a 6-digit code to the email.</p>
+<pre>{ "email": "merchant@example.com" }</pre>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-post">POST</span> /api/reset-password</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p class="mb-3">Reset password using the 6-digit code from email.</p>
+<pre>{ "email": "merchant@example.com", "code": "123456", "newPassword": "min8chars" }</pre>
                     </div>
                 </details>
             </div>
@@ -114,6 +132,7 @@
   "chain": "BASE_MAINNET",            // Optional — customer picks if omitted
   "token": "USDC",                    // Optional — defaults to USDC
   "customerEmail": "buyer@email.com", // Optional
+  "customerWallet": "0xabc...",       // Optional — customer's wallet for precise matching
   "productName": "Order #1234"        // Optional
 }</pre>
                 <p class="text-slate-500 mt-4 mb-2 font-bold">Response:</p>
@@ -140,9 +159,13 @@
 
             <div class="space-y-6">
                 <details class="endpoint bg-slate-900 border border-slate-800 p-5">
-                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/orders?merchantId=X</summary>
+                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/orders</summary>
                     <div class="mt-4 text-sm text-slate-400">
-                        <p>List all orders. Requires Bearer token. Filter by status with <code>?status=CONFIRMED</code>.</p>
+                        <p class="mb-3">List your orders. Requires Bearer token. Returns only orders belonging to the authenticated merchant.</p>
+<pre>Authorization: Bearer your-token
+
+// Response:
+{ "orders": [...], "total": 42, "page": 1, "limit": 50 }</pre>
                     </div>
                 </details>
 
