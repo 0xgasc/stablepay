@@ -310,7 +310,7 @@
         <div id="chatHeader" class="flex items-center justify-between px-4 py-3 border-b-4 border-black cursor-pointer shrink-0" style="background: #00E5FF;">
             <div class="flex items-center gap-1.5">
                 <div class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
-                <span class="font-bold text-black text-xs tracking-wide opacity-60">online</span>
+                <span class="font-bold text-black text-xs tracking-wide opacity-70">agent ready</span>
             </div>
             <div class="flex items-center gap-2">
                 <button id="chatClearBtn" class="text-xs font-bold text-black opacity-60 hover:opacity-100" style="text-transform: uppercase;">CLEAR</button>
@@ -353,6 +353,13 @@
         </div>
         <!-- Messages -->
         <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-3" style="scrollbar-width: thin;">
+        </div>
+        <!-- Quick start suggestions (shown when no messages) -->
+        <div id="chatSuggestions" class="px-4 pb-3 flex flex-wrap gap-2">
+            <button class="chat-suggest-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Set up my wallets</button>
+            <button class="chat-suggest-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Generate a payment link</button>
+            <button class="chat-suggest-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Add checkout to my site</button>
+            <button class="chat-suggest-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">How does billing work?</button>
         </div>
         <!-- Typing indicator -->
         <div id="chatTyping" class="hidden px-4 pb-2">
@@ -5320,6 +5327,7 @@ onMounted(() => {
             async function sendMessageText(text) {
                 const msg = text.trim();
                 if (!msg) return;
+                hideSuggestions();
                 addMessage('user', msg);
                 typingEl.classList.remove('hidden');
                 messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -5362,6 +5370,16 @@ onMounted(() => {
                 input.style.height = Math.min(input.scrollHeight, 120) + 'px';
             });
 
+            // Quick start suggestion buttons
+            const suggestionsEl = document.getElementById('chatSuggestions');
+            function hideSuggestions() { suggestionsEl.classList.add('hidden'); }
+            document.querySelectorAll('.chat-suggest-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    hideSuggestions();
+                    sendMessageText(btn.textContent);
+                });
+            });
+
             async function loadHistory() {
                 try {
                     const token = sessionStorage.getItem('merchantToken');
@@ -5373,6 +5391,7 @@ onMounted(() => {
                         // Clear default welcome message
                         messagesEl.innerHTML = '';
                         data.messages.forEach(m => addMessage(m.role, m.content));
+                        hideSuggestions();
                     }
                 } catch (err) {
                     // Silently fail — keep default welcome
