@@ -371,6 +371,11 @@
             <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Python API</button>
             <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Other</button>
         </div>
+        <!-- Webhook/URL chips (shown when agent asks about notifications) -->
+        <div id="chatWebhookChips" class="hidden px-4 pb-3 flex flex-wrap gap-2">
+            <button class="chat-webhook-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">I have a domain, let's set it up</button>
+            <button class="chat-webhook-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Skip for now</button>
+        </div>
         <!-- Wallet setup chips (shown when agent asks about wallets) -->
         <div id="chatWalletChips" class="hidden px-4 pb-3 flex flex-wrap gap-2">
             <button class="chat-wallet-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">I have my own wallet</button>
@@ -5351,6 +5356,7 @@ onMounted(() => {
                 hideSuggestions();
                 hideTechChips();
                 hideWalletChips();
+                hideWebhookChips();
                 addMessage('user', msg);
                 typingEl.classList.remove('hidden');
                 messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -5372,6 +5378,7 @@ onMounted(() => {
                     addMessage('assistant', reply);
                     checkForTechQuestion(reply);
                     checkForWalletQuestion(reply);
+                    checkForWebhookQuestion(reply);
                 } catch (err) {
                     typingEl.classList.add('hidden');
                     addMessage('assistant', 'Connection error. Please try again.');
@@ -5438,6 +5445,23 @@ onMounted(() => {
                 const lower = text.toLowerCase();
                 if (lower.includes('wallet') && (lower.includes('have') || lower.includes('create') || lower.includes('need') || lower.includes('address') || lower.includes('set up'))) {
                     walletChipsEl.classList.remove('hidden');
+                }
+            }
+
+            // Webhook/notification chips
+            const webhookChipsEl = document.getElementById('chatWebhookChips');
+            function hideWebhookChips() { webhookChipsEl.classList.add('hidden'); }
+            document.querySelectorAll('.chat-webhook-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    hideWebhookChips();
+                    sendMessageText(btn.textContent);
+                });
+            });
+
+            function checkForWebhookQuestion(text) {
+                const lower = text.toLowerCase();
+                if ((lower.includes('webhook') || lower.includes('notification') || lower.includes('payment confirm')) && (lower.includes('domain') || lower.includes('where') || lower.includes('send') || lower.includes('set up'))) {
+                    webhookChipsEl.classList.remove('hidden');
                 }
             }
 

@@ -167,9 +167,36 @@
             <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Webhooks</h2>
             <p class="text-slate-400 mb-6">Configure your webhook URL in the dashboard or via the agent. We POST to your endpoint when payment events occur.</p>
 
+            <div class="bg-slate-900 border border-slate-800 p-5 mb-6">
+                <h3 class="text-white font-bold mb-3">How It Works</h3>
+                <p class="text-slate-400 text-sm mb-3">When a customer pays, we send a POST request to your server so you know it happened. You don't need to check — we tell you.</p>
+                <p class="text-slate-400 text-sm mb-3"><strong>Your webhook URL:</strong> <code class="text-cyan-400">https://YOUR-DOMAIN/api/webhooks/stablepay</code></p>
+                <p class="text-slate-400 text-sm">Set this in your dashboard or tell the AI agent your domain and it'll configure everything + write the handler code for you.</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-5 mb-6">
+                <h3 class="text-white font-bold mb-3">Example: Next.js Webhook Handler</h3>
+<pre>// pages/api/webhooks/stablepay.js
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).end();
+
+  const { event, orderId, amount, txHash, chain } = req.body;
+
+  if (event === 'order.confirmed') {
+    // Payment confirmed! Do your thing:
+    // - Update your database
+    // - Send confirmation email
+    // - Fulfill the order
+    console.log(`Payment: $${amount} on ${chain}, tx: ${txHash}`);
+  }
+
+  res.status(200).json({ received: true });
+}</pre>
+            </div>
+
             <div class="bg-slate-900 border border-slate-800 p-5">
                 <h3 class="text-white font-bold mb-3">Webhook Payload</h3>
-                <p class="text-slate-400 text-sm mb-4">We send this JSON to your webhook URL:</p>
+                <p class="text-slate-400 text-sm mb-4">We POST this JSON to your webhook URL:</p>
 <pre>{
   "event": "order.confirmed",           // Event type
   "orderId": "cmXXXXXX",
@@ -244,12 +271,19 @@
             </div>
 
             <div class="bg-slate-900 border border-slate-800 p-5 mt-6">
+                <h3 class="text-white font-bold mb-3">3 Payment Methods (built-in)</h3>
+                <p class="text-slate-400 text-sm mb-3">Every checkout automatically shows 3 ways to pay. No config needed.</p>
+                <div class="text-sm text-slate-400 space-y-2 mb-4">
+                    <div class="grid grid-cols-3 gap-2"><span class="text-white font-bold">Connect Wallet</span><span class="col-span-2">One-click with MetaMask, Rainbow, Coinbase, Phantom. Best for desktop.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><span class="text-white font-bold">QR Code</span><span class="col-span-2">Scan with any mobile wallet app. Best for phones.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><span class="text-white font-bold">Copy Address</span><span class="col-span-2">Copy wallet address + amount. Send from any wallet or exchange.</span></div>
+                </div>
                 <h3 class="text-white font-bold mb-3">Supported Wallets</h3>
                 <div class="text-sm text-slate-400 space-y-2">
                     <div class="grid grid-cols-2 gap-2"><span class="text-white">EVM Chains</span><span>MetaMask, Rainbow, Coinbase Wallet, Rabby</span></div>
                     <div class="grid grid-cols-2 gap-2"><span class="text-white">Solana</span><span>Phantom, Solflare, Backpack</span></div>
                 </div>
-                <p class="text-slate-500 text-xs mt-3">If multiple wallets are installed, customers see a picker. Single wallet connects automatically.</p>
+                <p class="text-slate-500 text-xs mt-3">Multiple wallets? Customer sees a picker. Single wallet connects automatically.</p>
             </div>
         </section>
 
