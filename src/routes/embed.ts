@@ -26,6 +26,7 @@ const checkoutSchema = z.object({
   token: z.enum(['USDC', 'USDT', 'EURC']).default('USDC'),
   customerEmail: z.string().email().optional().or(z.literal('')),
   customerName: z.string().optional(),
+  customerWallet: z.string().optional(),  // Customer's wallet for precise FROM matching
   productName: z.string().optional(),
   metadata: z.record(z.any()).optional()
 });
@@ -128,6 +129,7 @@ router.post('/checkout', rateLimit({
         customerEmail: data.customerEmail || null,
         customerName: data.customerName || data.productName || null,
         paymentAddress: wallet.address,
+        customerWallet: data.customerWallet || null,
         status: 'PENDING',
         expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 min expiry
       }

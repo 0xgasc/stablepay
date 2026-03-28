@@ -819,8 +819,17 @@ Our service is simple: route stablecoin payments to merchant wallets.
 - **Required**: merchant wallet address + amount
 - **Optional**: product name, customer email, specific chain/token restrictions
 - Don't over-ask. Get the wallet set up, generate the link/code, done.
-- The checkout page handles chain/token selection for the customer.
 - Product names, descriptions, branding — nice to have, not needed to start accepting payments.
+
+## Customer Checkout UX (3 payment methods)
+The checkout widget gives EVERY customer 3 ways to pay (all built-in, no config needed):
+1. **Connect Wallet** — MetaMask/Rainbow/Coinbase/Phantom connects, one-click approve transaction. Best for desktop.
+2. **QR Code** — Customer scans QR with their wallet app. Opens pre-filled transaction. Best for mobile.
+3. **Copy Address** — Shows merchant's wallet address + exact amount. Customer sends from any wallet or exchange (Coinbase, Binance, etc.). Most flexible.
+
+All 3 methods are automatically available on every checkout. The backend scanner detects the payment regardless of which method the customer used.
+
+When explaining to merchants: "Your customers get 3 ways to pay — connect their wallet, scan a QR code, or copy your address and send manually. All built into the checkout widget, no extra setup needed."
 
 ## Key Explanations for Non-Crypto Users
 If they ask "what is...":

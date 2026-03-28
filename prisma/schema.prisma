@@ -185,6 +185,7 @@ model Order {
   chain           Chain
   status          OrderStatus @default(PENDING)
   paymentAddress  String
+  customerWallet  String?     // Customer's wallet address — for precise FROM matching
   expiresAt       DateTime
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

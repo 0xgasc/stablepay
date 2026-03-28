@@ -290,47 +290,89 @@
             </div>
           </div>
 
-          <!-- Wallet Status -->
-          <div id="sp-wallet-status" style="
-            background: var(--sp-card);
-            border: 1px solid var(--sp-border);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-          ">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></div>
-              <span style="font-size: 13px; color: var(--sp-muted);">Wallet not connected</span>
+          <!-- Payment Method Tabs -->
+          <div style="margin-bottom: 12px;">
+            <div id="sp-method-tabs" style="display: flex; gap: 4px; margin-bottom: 12px;">
+              <button class="sp-method-tab" data-method="wallet" style="
+                flex: 1; padding: 8px; font-size: 11px; font-weight: 600; border: 1px solid var(--sp-border);
+                background: ${accent}; color: white; border-radius: 6px; cursor: pointer; text-transform: uppercase;
+              ">Connect Wallet</button>
+              <button class="sp-method-tab" data-method="qr" style="
+                flex: 1; padding: 8px; font-size: 11px; font-weight: 600; border: 1px solid var(--sp-border);
+                background: var(--sp-card); color: var(--sp-muted); border-radius: 6px; cursor: pointer; text-transform: uppercase;
+              ">QR Code</button>
+              <button class="sp-method-tab" data-method="address" style="
+                flex: 1; padding: 8px; font-size: 11px; font-weight: 600; border: 1px solid var(--sp-border);
+                background: var(--sp-card); color: var(--sp-muted); border-radius: 6px; cursor: pointer; text-transform: uppercase;
+              ">Copy Address</button>
             </div>
-            <button id="sp-connect-btn" style="
-              padding: 6px 12px;
-              background: ${accent};
-              color: white;
-              border: none;
-              border-radius: 6px;
-              font-size: 12px;
-              font-weight: 500;
-              cursor: pointer;
-            ">Connect</button>
-          </div>
 
-          <!-- Pay Button -->
-          <button id="sp-pay-btn" class="sp-pay-btn" disabled style="
-            width: 100%;
-            padding: 16px;
-            background: ${accent};
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-          ">
-            Connect Wallet to Pay
-          </button>
+            <!-- Method: Connect Wallet -->
+            <div id="sp-method-wallet" class="sp-method-panel">
+              <div id="sp-wallet-status" style="
+                background: var(--sp-card); border: 1px solid var(--sp-border);
+                border-radius: 8px; padding: 12px; margin-bottom: 12px;
+                display: flex; align-items: center; justify-content: space-between;
+              ">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></div>
+                  <span style="font-size: 13px; color: var(--sp-muted);">Wallet not connected</span>
+                </div>
+                <button id="sp-connect-btn" style="
+                  padding: 6px 12px; background: ${accent}; color: white;
+                  border: none; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;
+                ">Connect</button>
+              </div>
+              <button id="sp-pay-btn" class="sp-pay-btn" disabled style="
+                width: 100%; padding: 14px; background: ${accent}; color: white;
+                border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+              ">Connect Wallet to Pay</button>
+            </div>
+
+            <!-- Method: QR Code -->
+            <div id="sp-method-qr" class="sp-method-panel" style="display: none;">
+              <div style="text-align: center; padding: 16px 0;">
+                <div id="sp-qr-container" style="
+                  background: white; border-radius: 8px; padding: 16px;
+                  display: inline-block; margin-bottom: 12px;
+                ">
+                  <canvas id="sp-qr-canvas" width="180" height="180"></canvas>
+                </div>
+                <p style="font-size: 12px; color: var(--sp-muted); margin-bottom: 8px;">Scan with your wallet app to pay</p>
+                <div id="sp-qr-status" style="font-size: 12px; color: ${accent}; display: none;">
+                  Waiting for payment...
+                </div>
+              </div>
+            </div>
+
+            <!-- Method: Copy Address -->
+            <div id="sp-method-address" class="sp-method-panel" style="display: none;">
+              <div style="background: var(--sp-card); border: 1px solid var(--sp-border); border-radius: 8px; padding: 14px; margin-bottom: 12px;">
+                <div style="font-size: 11px; color: var(--sp-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 6px;">Send to this address</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <code id="sp-pay-address" style="font-size: 11px; color: var(--sp-text); word-break: break-all; flex: 1;"></code>
+                  <button id="sp-copy-addr-btn" style="
+                    padding: 4px 10px; background: ${accent}; color: white;
+                    border: none; border-radius: 4px; font-size: 11px; cursor: pointer; white-space: nowrap;
+                  ">Copy</button>
+                </div>
+              </div>
+              <div style="background: var(--sp-card); border: 1px solid var(--sp-border); border-radius: 8px; padding: 14px; margin-bottom: 12px;">
+                <div style="font-size: 11px; color: var(--sp-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 6px;">Exact Amount</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="sp-pay-amount" style="font-size: 18px; font-weight: 700; color: var(--sp-text);"></span>
+                  <button id="sp-copy-amt-btn" style="
+                    padding: 4px 10px; background: ${accent}; color: white;
+                    border: none; border-radius: 4px; font-size: 11px; cursor: pointer;
+                  ">Copy</button>
+                </div>
+              </div>
+              <p style="font-size: 11px; color: var(--sp-muted); text-align: center;">Send the exact amount on the selected chain. Payment confirms automatically.</p>
+              <div id="sp-addr-status" style="font-size: 12px; color: ${accent}; text-align: center; margin-top: 8px; display: none;">
+                Waiting for payment...
+              </div>
+            </div>
+          </div>
 
           <!-- Footer -->
           <div style="margin-top: 16px; text-align: center; font-size: 11px; color: var(--sp-muted);">
@@ -386,6 +428,144 @@
       if (payBtn) {
         payBtn.addEventListener('click', () => this.processPayment());
       }
+
+      // Payment method tabs
+      this.container.querySelectorAll('.sp-method-tab').forEach(tab => {
+        tab.addEventListener('click', () => this.switchPaymentMethod(tab.dataset.method));
+      });
+
+      // Copy buttons
+      const copyAddrBtn = this.container.querySelector('#sp-copy-addr-btn');
+      if (copyAddrBtn) {
+        copyAddrBtn.addEventListener('click', () => {
+          const addr = this.container.querySelector('#sp-pay-address')?.textContent;
+          if (addr) { navigator.clipboard.writeText(addr); copyAddrBtn.textContent = 'Copied!'; setTimeout(() => copyAddrBtn.textContent = 'Copy', 1500); }
+        });
+      }
+      const copyAmtBtn = this.container.querySelector('#sp-copy-amt-btn');
+      if (copyAmtBtn) {
+        copyAmtBtn.addEventListener('click', () => {
+          const amt = this.container.querySelector('#sp-pay-amount')?.textContent;
+          if (amt) { navigator.clipboard.writeText(amt); copyAmtBtn.textContent = 'Copied!'; setTimeout(() => copyAmtBtn.textContent = 'Copy', 1500); }
+        });
+      }
+    }
+
+    switchPaymentMethod(method) {
+      const accent = this.options.accentColor || '#3b82f6';
+      // Update tabs
+      this.container.querySelectorAll('.sp-method-tab').forEach(tab => {
+        if (tab.dataset.method === method) {
+          tab.style.background = accent;
+          tab.style.color = 'white';
+        } else {
+          tab.style.background = 'var(--sp-card)';
+          tab.style.color = 'var(--sp-muted)';
+        }
+      });
+      // Show/hide panels
+      this.container.querySelectorAll('.sp-method-panel').forEach(panel => {
+        panel.style.display = 'none';
+      });
+      const panel = this.container.querySelector(`#sp-method-${method}`);
+      if (panel) panel.style.display = 'block';
+
+      // For QR and address methods, create order + show details
+      if (method === 'qr' || method === 'address') {
+        this.showManualPaymentDetails(method);
+      }
+    }
+
+    async showManualPaymentDetails(method) {
+      if (!this.selectedChain) {
+        this.showError('Please select a chain first');
+        return;
+      }
+
+      const payAddress = this.container.querySelector('#sp-pay-address');
+      const payAmount = this.container.querySelector('#sp-pay-amount');
+
+      // Get merchant wallet for this chain
+      const chain = this.selectedChain;
+      const walletAddr = chain.walletAddress || this.merchantConfig?.wallets?.find(w => w.chain === chain.chain)?.address;
+
+      if (!walletAddr) {
+        this.showError('No wallet configured for this chain');
+        return;
+      }
+
+      const amount = this.options.amount || 0;
+
+      // Create the order so scanner knows to watch for it
+      if (!this.currentOrderId) {
+        try {
+          const res = await fetch(`${STABLEPAY_URL}/api/embed/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchantId: this.options.merchantId,
+              amount,
+              chain: chain.chain,
+              token: this.selectedToken,
+              customerEmail: this.options.customerEmail,
+              productName: this.options.productName,
+              customerWallet: this.connectedWallet || null,
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            this.currentOrderId = data.order.id;
+          }
+        } catch (err) {
+          this.showError('Failed to create payment order');
+          return;
+        }
+      }
+
+      // Show address + amount
+      if (payAddress) payAddress.textContent = walletAddr;
+      if (payAmount) payAmount.textContent = `${amount} ${this.selectedToken}`;
+
+      // Generate QR code
+      if (method === 'qr') {
+        const canvas = this.container.querySelector('#sp-qr-canvas');
+        if (canvas && typeof QRCode !== 'undefined') {
+          QRCode.toCanvas(canvas, walletAddr, { width: 180, margin: 2 }, (err) => {
+            if (err) console.error('QR generation failed:', err);
+          });
+        } else if (canvas) {
+          // Fallback: show address as text if QR library not loaded
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, 180, 180);
+          ctx.fillStyle = '#333';
+          ctx.font = '10px monospace';
+          ctx.fillText('QR loading...', 30, 90);
+        }
+      }
+
+      // Start polling for payment confirmation
+      const statusEl = this.container.querySelector(method === 'qr' ? '#sp-qr-status' : '#sp-addr-status');
+      if (statusEl) statusEl.style.display = 'block';
+      this.startPaymentPolling();
+    }
+
+    startPaymentPolling() {
+      if (this._pollingInterval) return; // Don't double-poll
+      this._pollingInterval = setInterval(async () => {
+        if (!this.currentOrderId) return;
+        try {
+          const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}`);
+          const data = await res.json();
+          if (data.status === 'CONFIRMED' || data.status === 'PAID') {
+            clearInterval(this._pollingInterval);
+            this._pollingInterval = null;
+            this.showSuccess(data);
+          }
+        } catch (err) {
+          // Silently retry
+        }
+      }, 5000);
     }
 
     selectChain(chainKey) {
@@ -807,10 +987,40 @@
     { childList: true, subtree: true }
   );
 
+  // Load QR code library
+  if (typeof QRCode === 'undefined') {
+    const qrScript = document.createElement('script');
+    qrScript.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+    qrScript.async = true;
+    document.head.appendChild(qrScript);
+  }
+
   // Global API
   window.StablePay = {
     Checkout: StablePayCheckout,
     version: WIDGET_VERSION,
-    create: (element, options) => new StablePayCheckout(element, options)
+    create: (element, options) => new StablePayCheckout(element, options),
+    checkout: (options) => {
+      // Create a modal overlay for the checkout
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'max-width:420px;width:100%;max-height:90vh;overflow-y:auto;position:relative;';
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '×';
+      closeBtn.style.cssText = 'position:absolute;top:8px;right:12px;z-index:10;background:none;border:none;color:#999;font-size:24px;cursor:pointer;';
+      closeBtn.onclick = () => { overlay.remove(); if (options.onCancel) options.onCancel(); };
+      overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); if (options.onCancel) options.onCancel(); } };
+      wrapper.appendChild(closeBtn);
+      overlay.appendChild(wrapper);
+      document.body.appendChild(overlay);
+
+      const checkout = new StablePayCheckout(wrapper, {
+        ...options,
+        onSuccess: (data) => { overlay.remove(); if (options.onSuccess) options.onSuccess(data); },
+        onCancel: () => { overlay.remove(); if (options.onCancel) options.onCancel(); },
+      });
+      return checkout;
+    },
   };
 })();

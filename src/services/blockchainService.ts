@@ -59,7 +59,7 @@ export class BlockchainService {
           status: 'PENDING',
           expiresAt: { gt: new Date() },
         },
-        select: { id: true, paymentAddress: true, amount: true },
+        select: { id: true, paymentAddress: true, amount: true, customerWallet: true },
       });
 
       if (pendingOrders.length === 0) return 0;
@@ -116,16 +116,21 @@ export class BlockchainService {
         const existingTx = await db.transaction.findUnique({ where: { txHash } });
         if (existingTx) continue;
 
-        // Find matching pending order
+        // Find matching pending order (FROM + TO + amount for precision)
         let matchedOrder = null;
         for (const order of pendingOrders) {
           if (order.paymentAddress.toLowerCase() !== toAddress) continue;
           const orderAmount = Number(order.amount);
           const txAmount = Number(amount);
-          if (Math.abs(orderAmount - txAmount) < 0.01) {
-            matchedOrder = order;
-            break;
+          if (Math.abs(orderAmount - txAmount) >= 0.01) continue;
+
+          // If order has customerWallet, require FROM match (prevents cross-matching)
+          if (order.customerWallet) {
+            if (fromAddress.toLowerCase() !== order.customerWallet.toLowerCase()) continue;
           }
+
+          matchedOrder = order;
+          break;
         }
 
         if (!matchedOrder) continue;
