@@ -781,6 +781,7 @@ This gives you a checklist of what's done and what's next. Work through the inco
 - ALWAYS use get_widget_code tool first to get the correct base code, then adapt it for their framework
 - Include merchantId, allowedChains, allowedTokens in the checkout call
 - Include the onSuccess callback that redirects to their successUrl
+- AFTER writing the code, tell them: "Your customers will see 3 payment options automatically — Connect Wallet, QR Code, and Copy Address. No extra setup needed."
 - Payment links only if they ask or don't have a site
 
 **Test payment:**
