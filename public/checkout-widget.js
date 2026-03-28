@@ -331,6 +331,21 @@
 
             <!-- Method: QR Code -->
             <div id="sp-method-qr" class="sp-method-panel" style="display: none;">
+              <!-- Wallet ID step (if not already connected) -->
+              <div id="sp-manual-wallet-input" style="padding: 12px; border-bottom: 1px solid var(--sp-border);">
+                <div style="font-size: 11px; color: var(--sp-muted); font-weight: 600; margin-bottom: 6px; text-transform: uppercase;">Your wallet address</div>
+                <div style="display: flex; gap: 6px;">
+                  <input id="sp-sender-wallet" type="text" placeholder="0x... (so we can match your payment)" style="
+                    flex: 1; padding: 8px; font-size: 11px; font-family: monospace; border: 1px solid var(--sp-border);
+                    border-radius: 4px; background: var(--sp-card); color: var(--sp-text); outline: none;
+                  ">
+                  <button id="sp-sender-wallet-btn" style="
+                    padding: 6px 12px; background: ${accent}; color: white; border: none;
+                    border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;
+                  ">OK</button>
+                </div>
+                <p style="font-size: 10px; color: var(--sp-muted); margin-top: 4px;">The address you'll send FROM. Helps us match your payment faster.</p>
+              </div>
               <div style="text-align: center; padding: 16px 0;">
                 <div id="sp-qr-container" style="
                   background: white; border-radius: 8px; padding: 16px;
@@ -447,6 +462,42 @@
         copyAmtBtn.addEventListener('click', () => {
           const amt = this.container.querySelector('#sp-pay-amount')?.textContent;
           if (amt) { navigator.clipboard.writeText(amt); copyAmtBtn.textContent = 'Copied!'; setTimeout(() => copyAmtBtn.textContent = 'Copy', 1500); }
+        });
+      }
+
+      // Init sender wallet input for QR/Copy tabs
+      this.initSenderWalletInput();
+    }
+
+    // Called after wallet connects via Connect Wallet tab — hide the manual input
+    onWalletConnected() {
+      const inputDiv = this.container.querySelector('#sp-manual-wallet-input');
+      if (inputDiv) inputDiv.style.display = 'none';
+    }
+
+    initSenderWalletInput() {
+      const input = this.container.querySelector('#sp-sender-wallet');
+      const btn = this.container.querySelector('#sp-sender-wallet-btn');
+      const inputDiv = this.container.querySelector('#sp-manual-wallet-input');
+
+      // Hide wallet input if already connected via Connect Wallet tab
+      if (this.connectedWallet) {
+        if (inputDiv) inputDiv.style.display = 'none';
+      }
+
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const addr = input?.value?.trim();
+          if (addr && addr.length > 10) {
+            this.connectedWallet = addr;
+            if (inputDiv) inputDiv.style.display = 'none';
+            this.showManualPaymentDetails(this.container.querySelector('#sp-method-qr')?.style.display !== 'none' ? 'qr' : 'address');
+          }
+        });
+      }
+      if (input) {
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') btn?.click();
         });
       }
     }
@@ -681,6 +732,7 @@
       }
 
       this.updateWalletStatus();
+      this.onWalletConnected();
     }
 
     showWalletPicker(providers) {

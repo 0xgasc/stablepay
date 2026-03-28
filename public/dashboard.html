@@ -502,12 +502,12 @@
                     <a href="/" class="text-xl font-bold text-white uppercase tracking-tight">
                         StablePay
                     </a>
-                    <span class="ml-4 px-3 py-1 bg-blue-600/20 text-blue-400 border border-blue-600/30 text-xs font-medium uppercase" data-i18n="nav.merchantDashboard">
+                    <span class="ml-2 sm:ml-4 px-2 sm:px-3 py-1 bg-blue-600/20 text-blue-400 border border-blue-600/30 text-xs font-medium uppercase hidden sm:inline" data-i18n="nav.merchantDashboard">
                         Dashboard
                     </span>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <div class="text-sm text-slate-400" id="merchantInfo">
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <div class="text-sm text-slate-400 hidden sm:block" id="merchantInfo">
                         <span class="font-medium text-white" id="merchantName">Loading...</span>
                     </div>
                     <select id="langSelector" onchange="changeLanguage(this.value)" class="bg-slate-800 border border-slate-700 text-white px-2 py-1 text-xs cursor-pointer hover:bg-slate-700">
@@ -534,7 +534,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Merchant Profile Card -->
         <div class="bg-slate-900 border border-slate-800 mb-8 overflow-hidden">
-            <div class="bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-5">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 sm:px-6 py-4 sm:py-5">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-4">
                         <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-xl font-bold text-white" id="profileInitial">
