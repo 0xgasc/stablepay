@@ -161,6 +161,7 @@ model MerchantWallet {
   address         String
   supportedTokens String[]  @default(["USDC"])
   isActive        Boolean   @default(true)
+  priority        Int       @default(0)          // Lower = shown first in checkout. 0 = default
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

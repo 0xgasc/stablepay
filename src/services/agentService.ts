@@ -43,10 +43,29 @@ const TOOLS: Anthropic.Tool[] = [
         supportedTokens: {
           type: 'array',
           items: { type: 'string', enum: ['USDC', 'USDT', 'EURC'] },
-          description: 'Which stablecoins to accept on this chain. Defaults to ["USDC"]. Available: Base=USDC/EURC, Ethereum=USDC/USDT/EURC, Polygon=USDC/USDT, Arbitrum=USDC/USDT, Solana=USDC/USDT, Testnets=USDC only.',
+          description: 'Which stablecoins to accept on this chain. Defaults to ["USDC"]. Available: Base=USDC/EURC, Ethereum=USDC/USDT/EURC, Polygon=USDC/USDT, Arbitrum=USDC/USDT, Solana=USDC/USDT.',
+        },
+        priority: {
+          type: 'number',
+          description: 'Display order in checkout. Lower = shown first. 0 = top priority. Ask the merchant which chain they want as default.',
         },
       },
       required: ['chain', 'address'],
+    },
+  },
+  {
+    name: 'set_chain_priority',
+    description: 'Reorder which chains appear first in the customer checkout. Pass an array of chains in desired order — first = default/top.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        chainOrder: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Chains in priority order. E.g. ["BASE_MAINNET", "ETHEREUM_MAINNET", "POLYGON_MAINNET"]. First = shown first to customers.',
+        },
+      },
+      required: ['chainOrder'],
     },
   },
   {
@@ -210,17 +229,18 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         networkMode: m.networkMode,
         setupCompleted: m.setupCompleted,
         orderCount: m._count.orders,
-        wallets: m.wallets.map(w => ({
+        wallets: m.wallets.sort((a, b) => a.priority - b.priority).map(w => ({
           chain: w.chain,
           address: w.address,
           tokens: w.supportedTokens,
           active: w.isActive,
+          priority: w.priority,
         })),
       });
     }
 
     case 'add_wallet': {
-      const { chain, address, supportedTokens } = input;
+      const { chain, address, supportedTokens, priority } = input;
       const tokens = supportedTokens || ['USDC'];
 
       // Validate address format
@@ -232,11 +252,11 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         return JSON.stringify({ error: 'Invalid EVM address. Must start with 0x followed by 40 hex characters.' });
       }
 
-      // Upsert wallet
+      // Upsert wallet with priority
       await db.merchantWallet.upsert({
         where: { merchantId_chain: { merchantId, chain } },
-        update: { address, supportedTokens: tokens, isActive: true },
-        create: { merchantId, chain, address, supportedTokens: tokens, isActive: true },
+        update: { address, supportedTokens: tokens, isActive: true, ...(typeof priority === 'number' && { priority }) },
+        create: { merchantId, chain, address, supportedTokens: tokens, isActive: true, priority: priority ?? 0 },
       });
 
       // Auto-switch to MAINNET mode when a mainnet wallet is added
@@ -249,6 +269,25 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       }
 
       return JSON.stringify({ success: true, chain, address, tokens, message: `Wallet configured for ${chain} accepting ${tokens.join(', ')}${isMainnet ? '. Network mode set to MAINNET.' : ''}` });
+    }
+
+    case 'set_chain_priority': {
+      const { chainOrder } = input;
+      if (!chainOrder?.length) return JSON.stringify({ error: 'chainOrder array required' });
+
+      // Update priority for each chain in order
+      for (let i = 0; i < chainOrder.length; i++) {
+        await db.merchantWallet.updateMany({
+          where: { merchantId, chain: chainOrder[i] as any },
+          data: { priority: i },
+        });
+      }
+
+      return JSON.stringify({
+        success: true,
+        order: chainOrder,
+        message: `Chain priority set: ${chainOrder.map((c: string, i: number) => `${i + 1}. ${c}`).join(', ')}`,
+      });
     }
 
     case 'update_profile': {
@@ -306,7 +345,7 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         code = `<!-- Pay with Crypto button -->\n<script src="https://wetakestables.shop/checkout-widget.js"></script>\n<button onclick="StablePay.checkout({\n  ${paramsStr}\n})" style="background:#000;color:#fff;padding:12px 24px;font-weight:bold;font-size:14px;border:2px solid #000;cursor:pointer;font-family:sans-serif;">Pay with Crypto</button>`;
       }
 
-      const configuredChains = m.wallets.filter(w => w.isActive).map(w => w.chain);
+      const configuredChains = m.wallets.filter(w => w.isActive).sort((a, b) => a.priority - b.priority).map(w => w.chain);
       return JSON.stringify({
         success: true,
         code,
@@ -543,6 +582,7 @@ This gives you a checklist of what's done and what's next. Work through the inco
 **Integration code:**
 - Ask what their site is built with
 - THEN ask: "Which chains should your customers see at checkout? And which stablecoins?" — check their configured wallets and list what's available
+- Ask: "Which chain should appear first as the default? This is what customers see first." Use set_chain_priority to order them.
 - Write code that hooks into THEIR checkout — reads cart total dynamically
 - ALWAYS use get_widget_code tool first to get the correct base code, then adapt it for their framework
 - Include merchantId, allowedChains, allowedTokens in the checkout call
