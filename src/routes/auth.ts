@@ -282,11 +282,20 @@ router.post('/v1/signup', rateLimit({
       return res.status(400).json({ error: 'Email, company name, and contact name are required' });
     }
 
-    const existing = await db.merchant.findUnique({ where: { email } });
-
-    if (existing) {
-      logger.warn('Duplicate signup attempt', { email, ip: req.ip, event: 'auth.signup_duplicate' });
-      return res.status(400).json({ error: 'An account with this email already exists' });
+    // Test account bypass — allows multiple signups with unique suffix
+    const TEST_EMAIL = 'sololoopsmusic@gmail.com';
+    let finalEmail = email;
+    if (email === TEST_EMAIL) {
+      const existing = await db.merchant.findUnique({ where: { email } });
+      if (existing) {
+        finalEmail = `sololoopsmusic+test${Date.now()}@gmail.com`;
+      }
+    } else {
+      const existing = await db.merchant.findUnique({ where: { email } });
+      if (existing) {
+        logger.warn('Duplicate signup attempt', { email, ip: req.ip, event: 'auth.signup_duplicate' });
+        return res.status(400).json({ error: 'An account with this email already exists' });
+      }
     }
 
     const merchantPlan = plan || 'FREE';
@@ -307,7 +316,7 @@ router.post('/v1/signup', rateLimit({
 
     const merchant = await db.merchant.create({
       data: {
-        email,
+        email: finalEmail,
         companyName,
         contactName,
         plan: merchantPlan,
@@ -324,7 +333,7 @@ router.post('/v1/signup', rateLimit({
       },
     });
 
-    // Send verification email
+    // Send verification email (always send to original email, even for test +suffix)
     await emailService.sendVerificationEmail(email, verifyCode, contactName);
 
     logger.info('New merchant signup', {
