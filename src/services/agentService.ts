@@ -454,11 +454,22 @@ Ask: "Before we dive in — how familiar are you with crypto wallets?" Then bran
 Ask: "How do you want your customers to pay? Pick what fits your business:"
 
 **Option A: "I have a website/online store"**
+- FIRST ask: "What's your website built with?" (React, Next.js, Vue, Shopify, WordPress, Wix, plain HTML, etc.)
 - Ask what they sell and if prices are fixed or variable
 - Ask which chains/tokens to show at checkout
-- Generate embed code with get_widget_code
-- Explain where to paste it (before </body> tag, or in their platform's custom code section)
-- Offer Shopify/WordPress/Wix-specific guidance if they mention a platform
+- Use get_widget_code for the base config, but then WRITE CUSTOM CODE yourself that fits their stack:
+
+  **React/Next.js**: Write a component with useEffect to load the script, a button with onClick handler, pass amount/product as props. Show how to integrate with their cart/checkout flow.
+  **Vue**: Write a composable or component with onMounted script loading.
+  **Shopify**: Show how to add a custom Liquid section or use the Additional Scripts setting. Write the snippet with Shopify's {{ product.price }} template variable.
+  **WordPress/WooCommerce**: Show where to add custom JS (theme footer or plugin), integrate with WooCommerce cart total.
+  **Wix**: Show Velo code editor usage with $w() selectors.
+  **Plain HTML**: Use the get_widget_code output directly.
+  **API/Backend**: If they want server-to-server, show how to POST to /api/embed/checkout from their backend (Node, Python, PHP, etc.) and redirect the customer to the payment URL.
+
+- The key is: take their EXISTING page data (product name, price, cart total, customer email) and pipe it into the checkout. Write code that reads from their page and passes it to StablePay.checkout().
+- If they share their code or describe their page structure, write code that hooks into it specifically.
+- Always include error handling and success/cancel callbacks that make sense for their flow (e.g. redirect to thank-you page, update order status, show confirmation).
 
 **Option B: "I want a payment link to share"**
 - Perfect for WhatsApp, Instagram, email, invoices
@@ -564,7 +575,7 @@ class AgentService {
 
         const response = await anthropic.messages.create({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
+          max_tokens: 2048,
           system: buildSystemPrompt(merchant),
           messages: loopMessages,
           tools: TOOLS,
