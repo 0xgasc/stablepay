@@ -822,6 +822,30 @@
         const recipientAddress = this.selectedChain.address;
         const amount = parseFloat(this.options.amount);
 
+        // Step 1: Create order in our backend BEFORE submitting the transaction
+        if (!this.currentOrderId) {
+          try {
+            const res = await fetch(`${STABLEPAY_URL}/api/embed/checkout`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                merchantId: this.options.merchantId,
+                amount,
+                chain: this.selectedChain.chain,
+                token: this.selectedToken,
+                customerEmail: this.options.customerEmail,
+                customerWallet: this.connectedWallet,
+                productName: this.options.productName,
+              })
+            });
+            const data = await res.json();
+            if (data.success) this.currentOrderId = data.order.id;
+          } catch (err) {
+            console.error('Failed to create order:', err);
+          }
+        }
+
+        // Step 2: Submit the blockchain transaction
         if (chainConfig.type === 'solana') {
           await this.processSolanaPayment(tokenConfig, recipientAddress, amount);
         } else {
@@ -862,8 +886,16 @@
       const receipt = await tx.wait();
 
       if (receipt.status === 1) {
+        // Register txHash with our API for immediate confirmation
+        if (this.currentOrderId) {
+          fetch(`${STABLEPAY_URL}/api/orders/${this.currentOrderId}/transaction`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ txHash: tx.hash, fromAddress: await signer.getAddress() })
+          }).catch(() => {}); // Scanner will also pick it up as backup
+        }
         this.showSuccess(tx.hash);
-        this.emit('payment.success', { txHash: tx.hash, chain: chainKey, amount, token: this.selectedToken });
+        if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: tx.hash, amount, token: this.selectedToken });
       } else {
         throw new Error('Transaction failed');
       }
