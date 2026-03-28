@@ -371,6 +371,13 @@
             <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Python API</button>
             <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Other</button>
         </div>
+        <!-- Wallet setup chips (shown when agent asks about wallets) -->
+        <div id="chatWalletChips" class="hidden px-4 pb-3 flex flex-wrap gap-2">
+            <button class="chat-wallet-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">I have my own wallet</button>
+            <button class="chat-wallet-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Create EVM wallet for me</button>
+            <button class="chat-wallet-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Create Solana wallet for me</button>
+            <button class="chat-wallet-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Create both (EVM + Solana)</button>
+        </div>
         <!-- Typing indicator -->
         <div id="chatTyping" class="hidden px-4 pb-2">
             <div class="flex gap-1 items-center">
@@ -5343,6 +5350,7 @@ onMounted(() => {
                 if (!msg) return;
                 hideSuggestions();
                 hideTechChips();
+                hideWalletChips();
                 addMessage('user', msg);
                 typingEl.classList.remove('hidden');
                 messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -5363,6 +5371,7 @@ onMounted(() => {
                     const reply = data.response || data.error || 'No response';
                     addMessage('assistant', reply);
                     checkForTechQuestion(reply);
+                    checkForWalletQuestion(reply);
                 } catch (err) {
                     typingEl.classList.add('hidden');
                     addMessage('assistant', 'Connection error. Please try again.');
@@ -5412,6 +5421,23 @@ onMounted(() => {
                 const lower = text.toLowerCase();
                 if (lower.includes('built with') || lower.includes('framework') || lower.includes('what\'s your') || lower.includes('tech stack') || lower.includes('website built')) {
                     techChipsEl.classList.remove('hidden');
+                }
+            }
+
+            // Wallet setup chips
+            const walletChipsEl = document.getElementById('chatWalletChips');
+            function hideWalletChips() { walletChipsEl.classList.add('hidden'); }
+            document.querySelectorAll('.chat-wallet-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    hideWalletChips();
+                    sendMessageText(btn.textContent);
+                });
+            });
+
+            function checkForWalletQuestion(text) {
+                const lower = text.toLowerCase();
+                if (lower.includes('wallet') && (lower.includes('have') || lower.includes('create') || lower.includes('need') || lower.includes('address') || lower.includes('set up'))) {
+                    walletChipsEl.classList.remove('hidden');
                 }
             }
 
