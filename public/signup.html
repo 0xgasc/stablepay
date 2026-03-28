@@ -382,6 +382,8 @@
 
                 if (response.ok) {
                     signupMerchantId = result.merchantId;
+                    // Use the actual DB email (may differ for test accounts)
+                    if (result.email) signupEmail = result.email;
                     document.getElementById('verifyEmailDisplay').textContent = signupEmail;
                     document.getElementById('verifyModal').classList.remove('hidden');
                     document.querySelector('[data-code-input="0"]').focus();

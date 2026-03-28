@@ -340,6 +340,7 @@ router.post('/v1/signup', rateLimit({
       success: true,
       message: 'Check your email for the verification code.',
       merchantId: merchant.id,
+      email: finalEmail, // The actual DB email (may have +testXXX suffix)
     });
   } catch (error) {
     const err = error instanceof Error ? error : new Error('Unknown error');
