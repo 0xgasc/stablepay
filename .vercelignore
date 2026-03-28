@@ -9,3 +9,4 @@ test-db-connection.js
 README-old.md
 api-backup/
 contracts-hardhat/
+railway.json
