@@ -354,35 +354,8 @@
         <!-- Messages -->
         <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-3" style="scrollbar-width: thin;">
         </div>
-        <!-- Quick start suggestions (shown when no messages) -->
-        <div id="chatSuggestions" class="px-4 pb-3 flex flex-wrap gap-2">
-            <button class="chat-suggest-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Set up my wallets</button>
-            <button class="chat-suggest-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Integrate crypto checkout</button>
-            <button class="chat-suggest-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">How do fees work?</button>
-        </div>
-        <!-- Tech stack chips (shown when agent asks about framework) -->
-        <div id="chatTechChips" class="hidden px-4 pb-3 flex flex-wrap gap-2">
-            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">React / Next.js</button>
-            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Shopify</button>
-            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">WordPress</button>
-            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Vue / Nuxt</button>
-            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Plain HTML</button>
-            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Node.js API</button>
-            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Python API</button>
-            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Other</button>
-        </div>
-        <!-- Webhook/URL chips (shown when agent asks about notifications) -->
-        <div id="chatWebhookChips" class="hidden px-4 pb-3 flex flex-wrap gap-2">
-            <button class="chat-webhook-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">I have a domain, let's set it up</button>
-            <button class="chat-webhook-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Skip for now</button>
-        </div>
-        <!-- Wallet setup chips (shown when agent asks about wallets) -->
-        <div id="chatWalletChips" class="hidden px-4 pb-3 flex flex-wrap gap-2">
-            <button class="chat-wallet-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">I have my own wallet</button>
-            <button class="chat-wallet-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Create EVM wallet for me</button>
-            <button class="chat-wallet-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Create Solana wallet for me</button>
-            <button class="chat-wallet-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Create both (EVM + Solana)</button>
-        </div>
+        <!-- Dynamic chips container — only one set visible at a time -->
+        <div id="chatChips" class="hidden px-4 pb-2 flex flex-wrap gap-1.5 shrink-0"></div>
         <!-- Typing indicator -->
         <div id="chatTyping" class="hidden px-4 pb-2">
             <div class="flex gap-1 items-center">
@@ -5384,9 +5357,7 @@ onMounted(() => {
                     typingEl.classList.add('hidden');
                     const reply = data.response || data.error || 'No response';
                     addMessage('assistant', reply);
-                    checkForTechQuestion(reply);
-                    checkForWalletQuestion(reply);
-                    checkForWebhookQuestion(reply);
+                    detectChipsFromResponse(reply);
                 } catch (err) {
                     typingEl.classList.add('hidden');
                     addMessage('assistant', 'Connection error. Please try again.');
@@ -5411,67 +5382,68 @@ onMounted(() => {
                 input.style.height = Math.min(input.scrollHeight, 120) + 'px';
             });
 
-            // Quick start suggestion buttons
-            const suggestionsEl = document.getElementById('chatSuggestions');
-            const techChipsEl = document.getElementById('chatTechChips');
-            function hideSuggestions() { suggestionsEl.classList.add('hidden'); }
-            function hideTechChips() { techChipsEl.classList.add('hidden'); }
-            document.querySelectorAll('.chat-suggest-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    hideSuggestions();
-                    sendMessageText(btn.textContent);
-                });
-            });
+            // ─── Unified chip system ─────────────────────────
+            const chipsEl = document.getElementById('chatChips');
+            let chipsShown = false;
 
-            // Tech stack chips
-            document.querySelectorAll('.chat-tech-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    hideTechChips();
-                    sendMessageText(btn.textContent);
-                });
-            });
+            const CHIP_SETS = {
+                start: ['Set up wallets', 'Integrate checkout', 'How do fees work?'],
+                tech: ['React / Next.js', 'Shopify', 'WordPress', 'Vue / Nuxt', 'Plain HTML', 'Node.js API', 'Other'],
+                wallet: ['I have my own wallet', 'Create EVM wallet', 'Create Solana wallet', 'Create both'],
+                webhook: ['I have a domain', 'Skip for now'],
+            };
 
-            // Show tech chips when agent response mentions "built with" or "framework"
-            function checkForTechQuestion(text) {
+            function showChips(setName) {
+                const chips = CHIP_SETS[setName];
+                if (!chips) return;
+                // Hide any existing chips first
+                chipsEl.innerHTML = chips.map(label =>
+                    `<button class="chat-chip text-[11px] bg-slate-800/80 hover:bg-cyan-900/60 text-slate-300 hover:text-white border border-slate-600/50 px-2.5 py-1 rounded-full transition-colors cursor-pointer">${label}</button>`
+                ).join('');
+                chipsEl.classList.remove('hidden');
+                chipsShown = true;
+
+                // Bind click handlers
+                chipsEl.querySelectorAll('.chat-chip').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        hideChips();
+                        sendMessageText(btn.textContent);
+                    });
+                });
+            }
+
+            function hideChips() {
+                chipsEl.classList.add('hidden');
+                chipsEl.innerHTML = '';
+                chipsShown = false;
+            }
+
+            // Show initial chips if no messages
+            function showStartChips() { showChips('start'); }
+
+            // Detect what chips to show from agent response
+            function detectChipsFromResponse(text) {
                 const lower = text.toLowerCase();
-                if (lower.includes('built with') || lower.includes('framework') || lower.includes('what\'s your') || lower.includes('tech stack') || lower.includes('website built')) {
-                    techChipsEl.classList.remove('hidden');
+                // Only show one set — priority order
+                if (lower.includes('wallet') && (lower.includes('have') || lower.includes('create') || lower.includes('need') || lower.includes('own'))) {
+                    showChips('wallet'); return;
+                }
+                if (lower.includes('built with') || lower.includes('framework') || lower.includes('tech stack') || lower.includes('website built')) {
+                    showChips('tech'); return;
+                }
+                if ((lower.includes('webhook') || lower.includes('notification') || lower.includes('domain')) && (lower.includes('where') || lower.includes('send') || lower.includes('set up'))) {
+                    showChips('webhook'); return;
                 }
             }
 
-            // Wallet setup chips
-            const walletChipsEl = document.getElementById('chatWalletChips');
-            function hideWalletChips() { walletChipsEl.classList.add('hidden'); }
-            document.querySelectorAll('.chat-wallet-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    hideWalletChips();
-                    sendMessageText(btn.textContent);
-                });
-            });
-
-            function checkForWalletQuestion(text) {
-                const lower = text.toLowerCase();
-                if (lower.includes('wallet') && (lower.includes('have') || lower.includes('create') || lower.includes('need') || lower.includes('address') || lower.includes('set up'))) {
-                    walletChipsEl.classList.remove('hidden');
-                }
-            }
-
-            // Webhook/notification chips
-            const webhookChipsEl = document.getElementById('chatWebhookChips');
-            function hideWebhookChips() { webhookChipsEl.classList.add('hidden'); }
-            document.querySelectorAll('.chat-webhook-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    hideWebhookChips();
-                    sendMessageText(btn.textContent);
-                });
-            });
-
-            function checkForWebhookQuestion(text) {
-                const lower = text.toLowerCase();
-                if ((lower.includes('webhook') || lower.includes('notification') || lower.includes('payment confirm')) && (lower.includes('domain') || lower.includes('where') || lower.includes('send') || lower.includes('set up'))) {
-                    webhookChipsEl.classList.remove('hidden');
-                }
-            }
+            // Aliases for backward compat
+            function hideSuggestions() { hideChips(); }
+            function hideTechChips() { hideChips(); }
+            function hideWalletChips() { hideChips(); }
+            function hideWebhookChips() { hideChips(); }
+            function checkForTechQuestion() {}
+            function checkForWalletQuestion() {}
+            function checkForWebhookQuestion() {}
 
             async function loadHistory() {
                 try {
@@ -5481,10 +5453,11 @@ onMounted(() => {
                     });
                     const data = await res.json();
                     if (data.messages && data.messages.length > 0) {
-                        // Clear default welcome message
                         messagesEl.innerHTML = '';
                         data.messages.forEach(m => addMessage(m.role, m.content));
-                        hideSuggestions();
+                        hideChips();
+                    } else {
+                        showStartChips();
                     }
                 } catch (err) {
                     // Silently fail — keep default welcome
