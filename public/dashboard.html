@@ -360,6 +360,17 @@
             <button class="chat-suggest-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Integrate crypto checkout</button>
             <button class="chat-suggest-btn text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">How do fees work?</button>
         </div>
+        <!-- Tech stack chips (shown when agent asks about framework) -->
+        <div id="chatTechChips" class="hidden px-4 pb-3 flex flex-wrap gap-2">
+            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">React / Next.js</button>
+            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Shopify</button>
+            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">WordPress</button>
+            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Vue / Nuxt</button>
+            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Plain HTML</button>
+            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Node.js API</button>
+            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Python API</button>
+            <button class="chat-tech-btn text-xs bg-slate-800 hover:bg-cyan-900 text-slate-300 border border-slate-600 px-3 py-1.5 transition-colors">Other</button>
+        </div>
         <!-- Typing indicator -->
         <div id="chatTyping" class="hidden px-4 pb-2">
             <div class="flex gap-1 items-center">
@@ -5344,7 +5355,9 @@ onMounted(() => {
                     });
                     const data = await res.json();
                     typingEl.classList.add('hidden');
-                    addMessage('assistant', data.response || data.error || 'No response');
+                    const reply = data.response || data.error || 'No response';
+                    addMessage('assistant', reply);
+                    checkForTechQuestion(reply);
                 } catch (err) {
                     typingEl.classList.add('hidden');
                     addMessage('assistant', 'Connection error. Please try again.');
@@ -5371,13 +5384,31 @@ onMounted(() => {
 
             // Quick start suggestion buttons
             const suggestionsEl = document.getElementById('chatSuggestions');
+            const techChipsEl = document.getElementById('chatTechChips');
             function hideSuggestions() { suggestionsEl.classList.add('hidden'); }
+            function hideTechChips() { techChipsEl.classList.add('hidden'); }
             document.querySelectorAll('.chat-suggest-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     hideSuggestions();
                     sendMessageText(btn.textContent);
                 });
             });
+
+            // Tech stack chips
+            document.querySelectorAll('.chat-tech-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    hideTechChips();
+                    sendMessageText(btn.textContent);
+                });
+            });
+
+            // Show tech chips when agent response mentions "built with" or "framework"
+            function checkForTechQuestion(text) {
+                const lower = text.toLowerCase();
+                if (lower.includes('built with') || lower.includes('framework') || lower.includes('what\'s your') || lower.includes('tech stack') || lower.includes('website built')) {
+                    techChipsEl.classList.remove('hidden');
+                }
+            }
 
             async function loadHistory() {
                 try {
