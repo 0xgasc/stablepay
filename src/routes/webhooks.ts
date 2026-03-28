@@ -1,8 +1,9 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../config/database';
 import { webhookService, WebhookEventType } from '../services/webhookService';
 import { logger } from '../utils/logger';
+import { requireMerchantAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -22,33 +23,6 @@ const VALID_EVENTS: WebhookEventType[] = [
   'receipt.created',
   'receipt.sent',
 ];
-
-// Middleware to verify merchant auth token
-async function requireMerchantAuth(req: Request, res: Response, next: NextFunction) {
-  try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-    if (!token) {
-      return res.status(401).json({ error: 'Authorization required' });
-    }
-
-    const merchant = await db.merchant.findFirst({
-      where: { loginToken: token },
-      select: { id: true, email: true, companyName: true }
-    });
-
-    if (!merchant) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-
-    (req as any).merchant = merchant;
-    next();
-  } catch (error) {
-    logger.error('Webhook auth middleware error', error as Error);
-    res.status(500).json({ error: 'Authentication failed' });
-  }
-}
 
 // Validation schemas
 const updateConfigSchema = z.object({

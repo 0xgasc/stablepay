@@ -1,38 +1,12 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { db } from '../config/database';
 import { rateLimit } from '../middleware/rateLimit';
+import { requireMerchantAuth } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { receiptService } from '../services/receiptService';
 import { emailService } from '../services/emailService';
 
 const router = Router();
-
-// Middleware to verify merchant auth token
-async function requireMerchantAuth(req: Request, res: Response, next: NextFunction) {
-  try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-    if (!token) {
-      return res.status(401).json({ error: 'Authorization required' });
-    }
-
-    const merchant = await db.merchant.findFirst({
-      where: { loginToken: token },
-      select: { id: true, email: true, companyName: true }
-    });
-
-    if (!merchant) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-
-    (req as any).merchant = merchant;
-    next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
-  }
-}
 
 // ============================================
 // SPECIFIC ROUTES FIRST

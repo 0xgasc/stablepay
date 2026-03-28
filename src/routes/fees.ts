@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../config/database';
 import { rateLimit } from '../middleware/rateLimit';
+import { requireMerchantAuth, AuthenticatedRequest } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import {
   getTransactionFeePercent,
@@ -40,23 +41,14 @@ async function getFeeWallets(): Promise<{ chain: string; address: string; label?
 }
 
 // Get merchant's fee balance and transaction summary
-router.get('/balance', async (req, res) => {
+router.get('/balance', requireMerchantAuth, async (req, res) => {
   try {
-    const { merchantId } = req.query;
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-    if (!merchantId || !token) {
-      return res.status(400).json({ error: 'Merchant ID and auth token required' });
-    }
-
-    // Verify merchant token
-    const merchant = await db.merchant.findFirst({
-      where: { id: merchantId as string, loginToken: token }
+    const merchant = await db.merchant.findUnique({
+      where: { id: (req as AuthenticatedRequest).merchant.id },
     });
 
     if (!merchant) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(404).json({ error: 'Merchant not found' });
     }
 
     // Get confirmed orders for this merchant since last fee calculation

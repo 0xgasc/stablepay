@@ -1,8 +1,9 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../config/database';
 import { PRICING_TIERS } from '../config/pricing';
 import { rateLimit } from '../middleware/rateLimit';
+import { requireMerchantAuth } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { webhookService } from '../services/webhookService';
 
@@ -10,39 +11,11 @@ const router = Router();
 
 const createRefundSchema = z.object({
   orderId: z.string().min(1),
-  amount: z.string().min(1), // String to match Decimal in DB
+  amount: z.string().min(1),
   reason: z.string().min(1),
-  customerEmail: z.string().email().optional(), // For customer-initiated refunds
+  customerEmail: z.string().email().optional(),
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'PROCESSED']).optional(),
 });
-
-// Middleware to verify merchant auth token
-async function requireMerchantAuth(req: Request, res: Response, next: NextFunction) {
-  try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-    if (!token) {
-      return res.status(401).json({ error: 'Authorization required' });
-    }
-
-    const merchant = await db.merchant.findFirst({
-      where: { loginToken: token },
-      select: { id: true, email: true, companyName: true }
-    });
-
-    if (!merchant) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-
-    // Attach merchant to request
-    (req as any).merchant = merchant;
-    next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
-  }
-}
 
 // Helper to verify merchant owns the refund's order
 async function verifyRefundOwnership(refundId: string, merchantId: string): Promise<{ valid: boolean; refund?: any; error?: string }> {

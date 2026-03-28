@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { OrderService } from '../services/orderService';
 import { canProcessPayment } from '../config/pricing';
 import { rateLimit } from '../middleware/rateLimit';
+import { requireMerchantAuth, AuthenticatedRequest } from '../middleware/auth';
 import { db } from '../config/database';
 
 const router = Router();
@@ -77,18 +78,24 @@ router.get('/:orderId', rateLimit({
   }
 });
 
-router.get('/', rateLimit({
-  getMerchantId: async (req) => req.query.merchantId as string || null,
-  limitAnonymous: true,
-  anonymousLimit: 30
-}), async (req, res) => {
+router.get('/', requireMerchantAuth, async (req, res) => {
   try {
+    const merchantId = (req as AuthenticatedRequest).merchant.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const includeTransactions = req.query.includeTransactions === 'true';
-    
-    const result = await orderService.getAllOrders(page, limit, includeTransactions);
-    res.json(result);
+
+    // Only return orders belonging to this merchant
+    const orders = await db.order.findMany({
+      where: { merchantId },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: includeTransactions ? { transactions: true } : undefined,
+    });
+    const total = await db.order.count({ where: { merchantId } });
+
+    res.json({ orders, total, page, limit });
   } catch (error) {
     console.error('Get orders error:', error);
     res.status(500).json({ error: 'Internal server error' });
