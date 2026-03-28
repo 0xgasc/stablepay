@@ -333,17 +333,20 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       const { chains, tokens } = input;
       const supportedTokens = tokens || ['USDC'];
 
-      // Check if they already have managed wallets
+      // Check which chains already have managed wallets
       const existing = await db.managedWallet.findMany({ where: { merchantId } });
-      if (existing.length > 0) {
+      const existingChains = new Set(existing.map(w => w.chain));
+      const newChains = chains.filter((c: string) => !existingChains.has(c));
+
+      if (newChains.length === 0) {
         return JSON.stringify({
-          error: 'Managed wallets already exist for this merchant.',
+          message: 'All requested chains already have managed wallets.',
           wallets: existing.map(w => ({ chain: w.chain, address: w.address })),
         });
       }
 
-      const evmChains = chains.filter((c: string) => !c.startsWith('SOLANA'));
-      const solanaChains = chains.filter((c: string) => c.startsWith('SOLANA'));
+      const evmChains = newChains.filter((c: string) => !c.startsWith('SOLANA'));
+      const solanaChains = newChains.filter((c: string) => c.startsWith('SOLANA'));
 
       const results: { chain: string; address: string }[] = [];
 
@@ -400,8 +403,8 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         success: true,
         wallets: results,
         tokens: supportedTokens,
-        message: `Managed wallets created:\n${walletSummary}\n\nPayments go directly to these wallets. We hold the keys for now — please set up your own wallets when ready for full control of your funds.`,
-        warning: 'We recommend setting up your own wallets (MetaMask for EVM chains, Phantom for Solana). With your own wallet, only YOU control your money.',
+        message: `Wallets created:\n${walletSummary}\n\nPayments go directly to these addresses. WeTakeStables holds the private keys for you — like a bank holding your account. To take full control, set up MetaMask (for EVM) or Phantom (for Solana) and give us your own address.`,
+        custody: 'WeTakeStables (us) holds the keys. You can withdraw anytime or switch to your own wallet.',
       });
     }
 
@@ -770,6 +773,8 @@ This gives you a checklist of what's done and what's next. Work through the inco
 
 - Save memory: crypto_level and has_managed_wallet
 - In future conversations, gently remind once if they still have a managed wallet.
+- When mentioning managed wallets, ALWAYS be clear: "WeTakeStables holds the keys for your managed wallet. You can withdraw anytime, but for full control, set up your own wallet."
+- NEVER say "you already have wallets" without clarifying who holds the keys.
 
 **Webhook URL:**
 - Ask: "What's your website domain?" (e.g. s-o-l-o.fun, mystore.com)
