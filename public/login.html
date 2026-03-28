@@ -197,6 +197,24 @@
                         </div>
                     </form>
 
+                    <p class="text-center mt-4">
+                        <button id="forgotPasswordBtn" class="text-sm font-bold underline" style="color: #4FC3F7; text-transform: uppercase;">Forgot password?</button>
+                    </p>
+
+                    <!-- Forgot Password Modal -->
+                    <div id="forgotModal" class="hidden mt-6 bg-white border-4 border-black p-6 shadow-brutal">
+                        <h3 class="text-lg font-bold text-black mb-2" style="text-transform: uppercase;">RESET PASSWORD</h3>
+                        <p class="text-sm text-gray-700 mb-4">Enter your email. We'll send a code to reset your password.</p>
+                        <input type="email" id="forgotEmail" class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none mb-3" placeholder="your@email.com">
+                        <button id="sendResetBtn" class="w-full py-3 font-bold text-black border-4 border-black btn-brutal mb-3" style="background: #4FC3F7; text-transform: uppercase;">SEND RESET CODE</button>
+                        <div id="resetCodeSection" class="hidden">
+                            <input type="text" id="resetCode" class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none mb-3" placeholder="6-digit code" maxlength="6">
+                            <input type="password" id="newPassword" class="w-full px-4 py-3 bg-white border-4 border-black text-black focus:outline-none mb-3" placeholder="New password (min 8 chars)" minlength="8">
+                            <button id="resetPasswordBtn" class="w-full py-3 font-bold text-black border-4 border-black btn-brutal" style="background: #4FC3F7; text-transform: uppercase;">SET NEW PASSWORD</button>
+                        </div>
+                        <p id="resetStatus" class="text-sm font-bold mt-3 hidden"></p>
+                    </div>
+
                     <div class="mt-8">
                         <div class="relative">
                             <div class="absolute inset-0 flex items-center">
@@ -450,6 +468,65 @@
                 submitBtn.textContent = 'SIGN IN';
                 submitBtn.disabled = false;
             }
+        });
+
+        // Forgot password
+        document.getElementById('forgotPasswordBtn').addEventListener('click', () => {
+            document.getElementById('forgotModal').classList.toggle('hidden');
+        });
+
+        document.getElementById('sendResetBtn').addEventListener('click', async () => {
+            const email = document.getElementById('forgotEmail').value;
+            const status = document.getElementById('resetStatus');
+            if (!email) return;
+            const btn = document.getElementById('sendResetBtn');
+            btn.disabled = true; btn.textContent = 'SENDING...';
+            try {
+                await fetch('/api/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                status.textContent = 'Code sent! Check your email.';
+                status.className = 'text-sm font-bold mt-3 text-green-600';
+                status.classList.remove('hidden');
+                document.getElementById('resetCodeSection').classList.remove('hidden');
+            } catch (e) {
+                status.textContent = 'Failed to send. Try again.';
+                status.className = 'text-sm font-bold mt-3 text-red-600';
+                status.classList.remove('hidden');
+            } finally { btn.disabled = false; btn.textContent = 'SEND RESET CODE'; }
+        });
+
+        document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
+            const email = document.getElementById('forgotEmail').value;
+            const code = document.getElementById('resetCode').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const status = document.getElementById('resetStatus');
+            if (!email || !code || !newPassword) return;
+            const btn = document.getElementById('resetPasswordBtn');
+            btn.disabled = true; btn.textContent = 'RESETTING...';
+            try {
+                const res = await fetch('/api/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code, newPassword })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    status.textContent = 'Password updated! You can sign in now.';
+                    status.className = 'text-sm font-bold mt-3 text-green-600';
+                    document.getElementById('forgotModal').classList.add('hidden');
+                } else {
+                    status.textContent = data.error || 'Invalid code.';
+                    status.className = 'text-sm font-bold mt-3 text-red-600';
+                }
+                status.classList.remove('hidden');
+            } catch (e) {
+                status.textContent = 'Failed. Try again.';
+                status.className = 'text-sm font-bold mt-3 text-red-600';
+                status.classList.remove('hidden');
+            } finally { btn.disabled = false; btn.textContent = 'SET NEW PASSWORD'; }
         });
 
         // Admin login modal

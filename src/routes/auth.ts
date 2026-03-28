@@ -449,4 +449,84 @@ router.post('/resend-verification', rateLimit({
   }
 });
 
+// ─── Forgot password (request reset code) ───────────────────────────────────
+router.post('/forgot-password', rateLimit({
+  getMerchantId: async () => null,
+  limitAnonymous: true,
+  anonymousLimit: 5
+}), async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const merchant = await db.merchant.findUnique({ where: { email } });
+
+    if (merchant) {
+      const resetCode = generateVerifyCode();
+      await db.merchant.update({
+        where: { id: merchant.id },
+        data: {
+          emailVerifyToken: resetCode,
+          emailVerifyExpiry: new Date(Date.now() + 15 * 60 * 1000),
+        },
+      });
+      await emailService.sendVerificationEmail(email, resetCode, merchant.contactName);
+    }
+
+    // Always return success to prevent email enumeration
+    res.json({ success: true, message: 'If an account exists, a reset code has been sent.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── Reset password (verify code + set new password) ────────────────────────
+router.post('/reset-password', rateLimit({
+  getMerchantId: async () => null,
+  limitAnonymous: true,
+  anonymousLimit: 10
+}), async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: 'Email, code, and new password are required' });
+    }
+
+    const merchant = await db.merchant.findUnique({ where: { email } });
+
+    if (!merchant || merchant.emailVerifyToken !== code) {
+      return res.status(400).json({ error: 'Invalid reset code' });
+    }
+
+    if (merchant.emailVerifyExpiry && new Date() > merchant.emailVerifyExpiry) {
+      return res.status(400).json({ error: 'Reset code expired. Request a new one.' });
+    }
+
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ error: passwordValidation.error });
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await db.merchant.update({
+      where: { id: merchant.id },
+      data: {
+        passwordHash: hashedPassword,
+        emailVerifyToken: null,
+        emailVerifyExpiry: null,
+      },
+    });
+
+    logger.info('Password reset', { email, event: 'auth.password_reset' });
+
+    res.json({ success: true, message: 'Password updated. You can now log in.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export const authRouter = router;
