@@ -382,9 +382,11 @@
 
                 if (response.ok) {
                     signupMerchantId = result.merchantId;
-                    // Use the actual DB email (may differ for test accounts)
+                    // Use the actual DB email for verification API calls
                     if (result.email) signupEmail = result.email;
-                    document.getElementById('verifyEmailDisplay').textContent = signupEmail;
+                    // Display the original email the user typed (mask any +suffix)
+                    const displayEmail = document.getElementById('email').value;
+                    document.getElementById('verifyEmailDisplay').textContent = displayEmail;
                     document.getElementById('verifyModal').classList.remove('hidden');
                     document.querySelector('[data-code-input="0"]').focus();
                 } else {

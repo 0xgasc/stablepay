@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service — StablePay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>* { font-family: 'Space Grotesk', sans-serif; } body { background: #0f172a; color: #cbd5e1; }</style>
+</head>
+<body class="min-h-screen">
+    <header class="border-b border-slate-800 px-6 py-4">
+        <div class="max-w-3xl mx-auto flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-white uppercase tracking-tight">StablePay</a>
+            <a href="/signup.html" class="text-sm text-cyan-400">Sign Up</a>
+        </div>
+    </header>
+    <div class="max-w-3xl mx-auto px-6 py-12">
+        <h1 class="text-3xl font-bold text-white mb-2">Terms of Service</h1>
+        <p class="text-sm text-slate-500 mb-8">Last updated: March 28, 2026</p>
+
+        <div class="space-y-8 text-sm leading-relaxed">
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">1. Service Description</h2>
+                <p>StablePay ("we", "us", "the Service") provides stablecoin payment processing infrastructure. We enable merchants to accept USDC, USDT, and EURC payments on supported blockchains (Base, Ethereum, Polygon, Arbitrum, Solana). Payments are routed directly to merchant-designated wallet addresses.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">2. Accounts</h2>
+                <p>You must provide accurate information when creating an account. You are responsible for maintaining the security of your login credentials. One account per email address. We reserve the right to suspend accounts that violate these terms or are used for illegal activity.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">3. Payment Processing</h2>
+                <p><strong class="text-white">Non-Custodial (Own Wallet):</strong> When you provide your own wallet address, payments go directly from the customer to your wallet. We never hold, control, or have access to your funds. You are solely responsible for the security of your wallet and private keys.</p>
+                <p class="mt-2"><strong class="text-white">Managed Wallets:</strong> If you opt for a managed wallet, we generate and hold the private keys on your behalf. Funds in managed wallets are accessible to us for the purpose of facilitating withdrawals at your request. We strongly recommend transitioning to your own wallet as soon as possible. We are not liable for losses due to security breaches of managed wallets beyond commercially reasonable security measures.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">4. Fees</h2>
+                <p>We charge a percentage-based transaction fee on confirmed payments. Fee rates are volume-based and calculated on a rolling 30-day basis:</p>
+                <ul class="list-disc ml-6 mt-2 space-y-1">
+                    <li>Under $10,000/month: 1.0%</li>
+                    <li>$10,000 - $50,000/month: 0.8%</li>
+                    <li>$50,000 - $250,000/month: 0.5%</li>
+                    <li>$250,000+/month: 0.3%</li>
+                </ul>
+                <p class="mt-2">Fees accumulate and are invoiced per billing cycle (weekly, bi-weekly, or monthly depending on volume tier). You receive 100% of each payment immediately — fees are billed separately. Failure to pay invoiced fees may result in account suspension.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">5. Blockchain Transactions</h2>
+                <p>Blockchain transactions are irreversible. We are not responsible for transactions sent to incorrect addresses, on incorrect chains, or with incorrect amounts. Network gas fees are paid by the sender (customer) and are not charged by us. Transaction confirmation times depend on the blockchain network and are outside our control.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">6. Refunds</h2>
+                <p>Refunds are initiated by the merchant through our dashboard. We facilitate the refund process but do not guarantee refund execution. Refunds on blockchain are separate transactions and may incur gas fees.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">7. Prohibited Uses</h2>
+                <p>You may not use the Service for: illegal activities, money laundering, terrorist financing, sanctions evasion, fraud, sale of prohibited goods or services, or any activity that violates applicable laws in your jurisdiction.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">8. AI Assistant</h2>
+                <p>Our AI assistant provides guidance and can perform account configuration actions on your behalf. AI-generated code and advice are provided as-is. You are responsible for reviewing and testing any code before deploying it to production. The AI assistant's responses do not constitute financial, legal, or professional advice.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">9. Limitation of Liability</h2>
+                <p>The Service is provided "as is" without warranties of any kind. We are not liable for: lost funds due to incorrect wallet addresses, blockchain network failures, smart contract vulnerabilities, third-party wallet security breaches, or losses exceeding the fees paid to us in the preceding 12 months.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">10. Termination</h2>
+                <p>Either party may terminate the relationship at any time. Upon termination, outstanding fee balances remain due. We will provide reasonable notice before terminating active accounts except in cases of suspected fraud or legal requirement.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">11. Changes</h2>
+                <p>We may update these terms with 30 days notice via email. Continued use of the Service after changes constitutes acceptance of the updated terms.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">12. Contact</h2>
+                <p>Questions about these terms: <a href="mailto:legal@wetakestables.shop" class="text-cyan-400 underline">legal@wetakestables.shop</a></p>
+            </section>
+        </div>
+
+        <footer class="border-t border-slate-800 mt-12 pt-6 text-center text-xs text-slate-600">
+            <p>StablePay — Stablecoin payment infrastructure</p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — StablePay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>* { font-family: 'Space Grotesk', sans-serif; } body { background: #0f172a; color: #cbd5e1; }</style>
+</head>
+<body class="min-h-screen">
+    <header class="border-b border-slate-800 px-6 py-4">
+        <div class="max-w-3xl mx-auto flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-white uppercase tracking-tight">StablePay</a>
+            <a href="/signup.html" class="text-sm text-cyan-400">Sign Up</a>
+        </div>
+    </header>
+    <div class="max-w-3xl mx-auto px-6 py-12">
+        <h1 class="text-3xl font-bold text-white mb-2">Privacy Policy</h1>
+        <p class="text-sm text-slate-500 mb-8">Last updated: March 28, 2026</p>
+
+        <div class="space-y-8 text-sm leading-relaxed">
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">1. What We Collect</h2>
+                <p><strong class="text-white">Account Data:</strong> Email address, company name, contact name, hashed password. We never store plain-text passwords.</p>
+                <p class="mt-2"><strong class="text-white">Wallet Addresses:</strong> Public wallet addresses you provide. For managed wallets, we also store encrypted private keys (AES-256).</p>
+                <p class="mt-2"><strong class="text-white">Transaction Data:</strong> Order amounts, blockchain transaction hashes, chain, token type, timestamps, payment status.</p>
+                <p class="mt-2"><strong class="text-white">Chat History:</strong> Conversations with the AI assistant are stored to provide continuity and personalized support.</p>
+                <p class="mt-2"><strong class="text-white">Usage Data:</strong> IP addresses (for rate limiting), feature usage patterns.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">2. What We Don't Collect</h2>
+                <ul class="list-disc ml-6 space-y-1">
+                    <li>Private keys for non-managed wallets (we never have access)</li>
+                    <li>Customer (payer) personal data beyond optional email</li>
+                    <li>Browsing history or tracking cookies</li>
+                    <li>Government-issued identification (no KYC currently required)</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">3. How We Use Your Data</h2>
+                <ul class="list-disc ml-6 space-y-1">
+                    <li>Process and confirm stablecoin payments</li>
+                    <li>Calculate and invoice transaction fees</li>
+                    <li>Send verification emails and payment notifications</li>
+                    <li>Provide AI-assisted onboarding and support</li>
+                    <li>Prevent fraud and enforce rate limits</li>
+                    <li>Improve the service</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">4. Data Storage</h2>
+                <p>Data is stored on Railway (PostgreSQL) and served via Vercel. All connections use TLS encryption. Managed wallet private keys are encrypted at rest with AES-256. Database backups are automated by the hosting provider.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">5. Third-Party Services</h2>
+                <ul class="list-disc ml-6 space-y-1">
+                    <li><strong class="text-white">Resend:</strong> Email delivery (verification codes, invoices, receipts)</li>
+                    <li><strong class="text-white">Anthropic (Claude):</strong> AI assistant — your chat messages are sent to Anthropic's API for processing</li>
+                    <li><strong class="text-white">Blockchain RPCs:</strong> Public blockchain nodes for payment detection (no personal data sent)</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">6. Data Retention</h2>
+                <p>Account data: retained while account is active + 90 days after deletion. Transaction records: retained for 7 years (financial compliance). Chat history: retained while account is active, deletable by user. You can request full data export or deletion by contacting us.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">7. Your Rights</h2>
+                <ul class="list-disc ml-6 space-y-1">
+                    <li>Access your data (available in dashboard)</li>
+                    <li>Delete your chat history (via dashboard)</li>
+                    <li>Export your transaction data</li>
+                    <li>Delete your account (contact us)</li>
+                    <li>Withdraw managed wallet funds at any time</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">8. Security</h2>
+                <p>We use: HTTPS everywhere, bcrypt password hashing (12 rounds), AES-256 encryption for managed wallet keys, Bearer token authentication, rate limiting on all endpoints. We follow OWASP security best practices.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">9. Cookies</h2>
+                <p>We use sessionStorage (not cookies) for authentication. No tracking cookies, no analytics cookies, no third-party cookies.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">10. Changes</h2>
+                <p>We'll notify you via email of material changes to this policy. Minor changes are posted here with an updated date.</p>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-white mb-3">11. Contact</h2>
+                <p>Privacy questions: <a href="mailto:privacy@wetakestables.shop" class="text-cyan-400 underline">privacy@wetakestables.shop</a></p>
+            </section>
+        </div>
+
+        <footer class="border-t border-slate-800 mt-12 pt-6 text-center text-xs text-slate-600">
+            <p>StablePay — Stablecoin payment infrastructure</p>
+        </footer>
+    </div>
+</body>
+</html>
