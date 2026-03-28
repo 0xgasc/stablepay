@@ -5424,14 +5424,24 @@ onMounted(() => {
             // Detect what chips to show from agent response
             function detectChipsFromResponse(text) {
                 const lower = text.toLowerCase();
-                // Only show one set — priority order
-                if (lower.includes('wallet') && (lower.includes('have') || lower.includes('create') || lower.includes('need') || lower.includes('own'))) {
+
+                // Don't show chips if the response is a CONFIRMATION (contains addresses or "ready"/"created"/"set up")
+                if (lower.includes('0x') || lower.includes('ready') || lower.includes('created') || lower.includes('configured') || lower.includes('steps complete')) {
+                    hideChips();
+                    // But check if it's asking a NEW question after confirming
+                    if (lower.includes('domain') && lower.includes('?')) { showChips('webhook'); return; }
+                    if (lower.includes('built with') && lower.includes('?')) { showChips('tech'); return; }
+                    return;
+                }
+
+                // Only show wallet chips if ASKING about wallets (question mark = asking)
+                if (lower.includes('wallet') && lower.includes('?') && (lower.includes('have') || lower.includes('create') || lower.includes('need') || lower.includes('own'))) {
                     showChips('wallet'); return;
                 }
                 if (lower.includes('built with') || lower.includes('framework') || lower.includes('tech stack') || lower.includes('website built')) {
                     showChips('tech'); return;
                 }
-                if ((lower.includes('webhook') || lower.includes('notification') || lower.includes('domain')) && (lower.includes('where') || lower.includes('send') || lower.includes('set up'))) {
+                if ((lower.includes('webhook') || lower.includes('notification') || lower.includes('domain')) && lower.includes('?')) {
                     showChips('webhook'); return;
                 }
             }
