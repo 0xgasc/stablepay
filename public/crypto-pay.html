@@ -367,13 +367,51 @@
             </div>
         </div>
 
-        <!-- Wallet Connection -->
-        <div id="walletSection" class="bg-white border-4 border-black p-6 shadow-brutal mb-6">
-            <div id="connectWalletBtn" class="text-center">
-                <button id="connectBtn" class="w-full px-6 py-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #4FC3F7;" data-i18n="wallet.connect">
-                    CONNECT WALLET
-                </button>
+        <!-- Payment Method Tabs -->
+        <div class="bg-white border-4 border-black shadow-brutal mb-6 overflow-hidden">
+            <div class="flex border-b-4 border-black">
+                <button id="methodTabWallet" onclick="switchPayMethod('wallet')" class="flex-1 px-4 py-3 font-bold text-sm text-black tracking-wide" style="background: #4FC3F7; text-transform: uppercase;">Connect Wallet</button>
+                <button id="methodTabQR" onclick="switchPayMethod('qr')" class="flex-1 px-4 py-3 font-bold text-sm text-gray-500 tracking-wide border-l-4 border-black" style="text-transform: uppercase;">QR Code</button>
+                <button id="methodTabCopy" onclick="switchPayMethod('copy')" class="flex-1 px-4 py-3 font-bold text-sm text-gray-500 tracking-wide border-l-4 border-black" style="text-transform: uppercase;">Copy Address</button>
             </div>
+
+            <!-- Tab: QR Code -->
+            <div id="payMethodQR" class="hidden p-6 text-center">
+                <div style="background: white; display: inline-block; padding: 16px; border: 4px solid #000; margin-bottom: 12px;">
+                    <canvas id="cpQRCanvas" width="200" height="200"></canvas>
+                </div>
+                <p class="text-sm text-gray-600 font-bold mb-2">Scan with your wallet app</p>
+                <p class="text-xs text-gray-400" id="cpQRAddress"></p>
+                <div id="cpQRWaiting" class="hidden mt-4 text-sm font-bold" style="color: #4FC3F7;">Waiting for payment...</div>
+            </div>
+
+            <!-- Tab: Copy Address -->
+            <div id="payMethodCopy" class="hidden p-6">
+                <div class="bg-gray-50 border-4 border-black p-4 mb-4">
+                    <p class="text-xs font-bold text-gray-500 mb-2" style="text-transform: uppercase;">Send to this address</p>
+                    <div class="flex items-center gap-2">
+                        <code id="cpCopyAddress" class="text-xs text-black font-bold font-mono break-all flex-1"></code>
+                        <button onclick="copyPayAddress()" class="px-3 py-1 font-bold text-xs text-black border-2 border-black" style="background: #4FC3F7;">COPY</button>
+                    </div>
+                </div>
+                <div class="bg-gray-50 border-4 border-black p-4 mb-4">
+                    <p class="text-xs font-bold text-gray-500 mb-2" style="text-transform: uppercase;">Exact amount</p>
+                    <div class="flex items-center gap-2">
+                        <span id="cpCopyAmount" class="text-2xl font-bold text-black"></span>
+                        <button onclick="copyPayAmount()" class="px-3 py-1 font-bold text-xs text-black border-2 border-black" style="background: #4FC3F7;">COPY</button>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 text-center">Send the exact amount on the correct chain. Payment confirms automatically.</p>
+                <div id="cpCopyWaiting" class="hidden mt-4 text-sm font-bold text-center" style="color: #4FC3F7;">Waiting for payment...</div>
+            </div>
+
+            <!-- Tab: Connect Wallet (existing) -->
+            <div id="payMethodWallet" class="p-6">
+                <div id="connectWalletBtn" class="text-center">
+                    <button id="connectBtn" class="w-full px-6 py-4 font-bold tracking-wide btn-brutal text-black" style="text-transform: uppercase; background: #4FC3F7;" data-i18n="wallet.connect">
+                        CONNECT WALLET
+                    </button>
+                </div>
             <div id="walletInfo" class="hidden">
                 <div class="flex justify-between items-center pb-4 border-b-4 border-black">
                     <div>
@@ -388,6 +426,7 @@
                     <p class="text-sm text-gray-700 font-bold tracking-wide mb-3" style="text-transform: uppercase;">STABLECOIN BALANCES</p>
                     <p class="text-xs text-gray-500 mb-2">Balances shown next to each chain below</p>
                 </div>
+            </div>
             </div>
         </div>
 
@@ -2093,6 +2132,79 @@
         }
 
         // Add event listeners when DOM is ready
+        // ─── Payment method tabs ────────────────────────
+        function switchPayMethod(method) {
+            document.getElementById('payMethodWallet').style.display = method === 'wallet' ? 'block' : 'none';
+            document.getElementById('payMethodQR').style.display = method === 'qr' ? 'block' : 'none';
+            document.getElementById('payMethodCopy').style.display = method === 'copy' ? 'block' : 'none';
+            document.getElementById('methodTabWallet').style.background = method === 'wallet' ? '#4FC3F7' : '#fff';
+            document.getElementById('methodTabWallet').style.color = method === 'wallet' ? '#000' : '#999';
+            document.getElementById('methodTabQR').style.background = method === 'qr' ? '#4FC3F7' : '#fff';
+            document.getElementById('methodTabQR').style.color = method === 'qr' ? '#000' : '#999';
+            document.getElementById('methodTabCopy').style.background = method === 'copy' ? '#4FC3F7' : '#fff';
+            document.getElementById('methodTabCopy').style.color = method === 'copy' ? '#000' : '#999';
+
+            if (method === 'qr' || method === 'copy') populateManualPayment();
+        }
+
+        function populateManualPayment() {
+            const params = new URLSearchParams(window.location.search);
+            const addr = window.merchantPaymentAddress || params.get('paymentAddress') || '';
+            const amount = params.get('amount') || '0';
+            const token = params.get('token') || 'USDC';
+
+            document.getElementById('cpQRAddress').textContent = addr;
+            document.getElementById('cpCopyAddress').textContent = addr;
+            document.getElementById('cpCopyAmount').textContent = amount + ' ' + token;
+
+            // QR code
+            const canvas = document.getElementById('cpQRCanvas');
+            if (canvas && typeof QRCode !== 'undefined' && addr) {
+                QRCode.toCanvas(canvas, addr, { width: 200, margin: 2 }, () => {});
+            }
+
+            // Start polling
+            if (!window._cpPolling && window.currentOrderId) {
+                document.getElementById('cpQRWaiting').classList.remove('hidden');
+                document.getElementById('cpCopyWaiting').classList.remove('hidden');
+                window._cpPolling = setInterval(async () => {
+                    try {
+                        const res = await fetch('/api/embed/order/' + window.currentOrderId);
+                        const data = await res.json();
+                        if (data.status === 'CONFIRMED' || data.status === 'PAID') {
+                            clearInterval(window._cpPolling);
+                            document.getElementById('cpQRWaiting').textContent = 'Payment confirmed!';
+                            document.getElementById('cpCopyWaiting').textContent = 'Payment confirmed!';
+                            // Trigger success flow if available
+                            if (typeof showPaymentSuccess === 'function') showPaymentSuccess(data);
+                        }
+                    } catch (e) {}
+                }, 5000);
+            }
+        }
+
+        function copyPayAddress() {
+            const addr = document.getElementById('cpCopyAddress').textContent;
+            navigator.clipboard.writeText(addr);
+            event.target.textContent = 'COPIED!';
+            setTimeout(() => event.target.textContent = 'COPY', 1500);
+        }
+
+        function copyPayAmount() {
+            const amt = document.getElementById('cpCopyAmount').textContent;
+            navigator.clipboard.writeText(amt.split(' ')[0]); // just the number
+            event.target.textContent = 'COPIED!';
+            setTimeout(() => event.target.textContent = 'COPY', 1500);
+        }
+
+        // Load QR library
+        if (typeof QRCode === 'undefined') {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+            s.async = true;
+            document.head.appendChild(s);
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Crypto payment page loaded');
             
