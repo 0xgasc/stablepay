@@ -136,6 +136,25 @@ const TOOLS: Anthropic.Tool[] = [
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
   {
+    name: 'get_onboarding_progress',
+    description: 'Get a checklist of the merchant\'s onboarding progress. Shows what\'s done and what\'s remaining. Call this to understand where they are and what to guide them through next.',
+    input_schema: { type: 'object' as const, properties: {}, required: [] },
+  },
+  {
+    name: 'configure_settings',
+    description: 'Set up webhook URL, success redirect URL, cancel redirect URL, or toggle webhook events. Use this when the merchant provides these URLs during integration setup.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        webhookUrl: { type: 'string', description: 'HTTPS URL where we POST payment confirmations (e.g. https://their-site.com/api/webhooks/stablepay)' },
+        successUrl: { type: 'string', description: 'URL where customer is redirected after successful payment' },
+        cancelUrl: { type: 'string', description: 'URL where customer goes if they cancel payment' },
+        webhookEnabled: { type: 'boolean', description: 'Enable/disable webhook delivery' },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'check_my_balance',
     description: 'Check the agent\'s own wallet USDC balance on a given chain. Use this when asked about your balance or when considering sending a transaction.',
     input_schema: {
@@ -351,6 +370,67 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       });
     }
 
+    case 'get_onboarding_progress': {
+      const m = await db.merchant.findUnique({
+        where: { id: merchantId },
+        include: { wallets: true, _count: { select: { orders: true } } },
+      });
+      if (!m) return JSON.stringify({ error: 'Merchant not found' });
+
+      const wallets = m.wallets.filter(w => w.isActive);
+      const hasMainnetWallet = wallets.some(w => w.chain.includes('MAINNET'));
+      const hasWebhook = !!(m.webhookUrl && m.webhookEnabled);
+      const hasSuccessUrl = !!m.successUrl;
+      const hasCancelUrl = !!m.cancelUrl;
+      const hasTestPayment = m._count.orders > 0;
+      const isSetupComplete = m.setupCompleted;
+
+      const steps = [
+        { step: 'Wallet configured', done: wallets.length > 0, detail: wallets.length > 0 ? `${wallets.length} chain(s): ${wallets.map(w => w.chain).join(', ')}` : 'No wallets yet' },
+        { step: 'Mainnet wallet', done: hasMainnetWallet, detail: hasMainnetWallet ? 'Ready for live payments' : 'Add a mainnet wallet to go live' },
+        { step: 'Webhook URL', done: hasWebhook, detail: hasWebhook ? m.webhookUrl : 'Not set — you won\'t know when payments confirm' },
+        { step: 'Success redirect URL', done: hasSuccessUrl, detail: hasSuccessUrl ? m.successUrl : 'Not set — customers stay on payment page after paying' },
+        { step: 'Cancel redirect URL', done: hasCancelUrl, detail: hasCancelUrl ? m.cancelUrl : 'Optional — where customers go if they cancel' },
+        { step: 'Integration code added', done: false, detail: 'We can\'t detect this — ask the merchant' },
+        { step: 'Test payment', done: hasTestPayment, detail: hasTestPayment ? `${m._count.orders} order(s) created` : 'No orders yet' },
+        { step: 'Setup complete', done: isSetupComplete, detail: isSetupComplete ? 'All done!' : 'Mark complete when ready' },
+      ];
+
+      const completed = steps.filter(s => s.done).length;
+      const total = steps.length;
+
+      return JSON.stringify({
+        progress: `${completed}/${total} steps complete`,
+        percentage: Math.round((completed / total) * 100),
+        steps,
+        nextStep: steps.find(s => !s.done)?.step || 'All done!',
+      });
+    }
+
+    case 'configure_settings': {
+      const data: any = {};
+      if (input.webhookUrl) {
+        if (!input.webhookUrl.startsWith('https://')) {
+          return JSON.stringify({ error: 'Webhook URL must start with https://' });
+        }
+        data.webhookUrl = input.webhookUrl;
+        data.webhookEnabled = true;
+        data.webhookEvents = ['order.confirmed', 'order.created', 'order.refunded', 'invoice.paid'];
+      }
+      if (input.successUrl) data.successUrl = input.successUrl;
+      if (input.cancelUrl) data.cancelUrl = input.cancelUrl;
+      if (typeof input.webhookEnabled === 'boolean') data.webhookEnabled = input.webhookEnabled;
+
+      if (Object.keys(data).length === 0) {
+        return JSON.stringify({ error: 'No settings to update' });
+      }
+
+      await db.merchant.update({ where: { id: merchantId }, data });
+
+      const updated = Object.keys(data).filter(k => k !== 'webhookEvents');
+      return JSON.stringify({ success: true, message: `Updated: ${updated.join(', ')}` });
+    }
+
     case 'check_my_balance': {
       if (!AGENT_WALLET_ADDRESS) return JSON.stringify({ error: 'Agent wallet not configured' });
       const chainConf = CHAIN_RPC[input.chain];
@@ -418,103 +498,69 @@ function buildSystemPrompt(merchant: any): string {
 - Only go longer when showing code snippets.
 - If explaining fees, do it in 2-3 sentences max. Not a pricing page.
 
-## Onboarding Decision Tree
+## Onboarding — Checklist-Driven
 
-At the START of every new conversation, call get_setup_status AND recall_memories.
+At the START of every new conversation, call get_onboarding_progress AND recall_memories.
+This gives you a checklist of what's done and what's next. Work through the incomplete items ONE AT A TIME.
 
-### Step 1: Assess their level
-Ask: "Before we dive in — how familiar are you with crypto wallets?" Then branch:
+### The Complete Setup Checklist:
+1. **Wallet configured** — They need at least one wallet on a mainnet chain
+2. **Webhook URL** — Where we notify their server when payments confirm (CRITICAL for real integration)
+3. **Success redirect URL** — Where customers go after paying
+4. **Cancel redirect URL** — Where customers go if they bail (optional)
+5. **Integration code** — Widget or API hooked into their checkout
+6. **Test payment** — At least one order created to verify it works
+7. **Setup complete** — Mark as done
 
-**Level 0 — "What's a wallet?"**
-- Explain simply: "A crypto wallet is like a bank account for digital money. You'll need one to receive payments. The most popular is MetaMask — it's a free browser extension."
-- Walk them through: download MetaMask → create wallet → copy their address
-- Explain: "Your wallet address is like your bank account number — safe to share. Your private key/seed phrase is like your password — NEVER share it."
-- Once they have an address, continue to Step 2
+### How to work through it:
+- Call get_onboarding_progress to see where they are
+- Tell them: "Here's where you are: X/7 steps done. Next up: [next step]."
+- Guide them through the next incomplete step
+- After each step completes, briefly confirm and move to the next one
+- Don't re-ask about completed steps
 
-**Level 1 — "I have a wallet but I'm new to this"**
-- Ask for their wallet address
-- Explain what stablecoins are if needed
-- Recommend simple setup: Base chain + USDC only (cheapest, fastest)
-- Continue to Step 2
+### For each step:
 
-**Level 2 — "I know crypto, let's go"**
-- Ask which chains and tokens they want
-- Skip explanations, move fast
-- Continue to Step 2
+**Wallet setup:**
+- Ask their crypto comfort level (new vs experienced)
+- New to crypto: explain wallets simply, recommend MetaMask, Base + USDC
+- Experienced: ask which chains/tokens, move fast
+- One EVM address works on all EVM chains (Base, Ethereum, Polygon, Arbitrum)
+- Use add_wallet to configure
 
-### Step 2: Wallet Setup
-- Ask for their EVM wallet address (works on Base, Ethereum, Polygon, Arbitrum — explain this)
-- If they also want Solana, they'll need a separate Solana wallet address
-- Ask which stablecoins to accept per chain:
-  - **USDC** — most popular, backed by Circle, available everywhere. Recommend this for everyone.
-  - **USDT** — highest trading volume, by Tether. Good for high-volume merchants.
-  - **EURC** — Euro stablecoin by Circle. Great if they have European customers.
-- Use add_wallet for each chain they want. Confirm each one.
-- For beginners: just set up Base + USDC. They can add more later.
+**Webhook URL:**
+- Ask: "Where should we send payment notifications? This is an HTTPS endpoint on your server."
+- Example: https://yoursite.com/api/webhooks/payments
+- We POST: { event, orderId, amount, txHash, chain, token, status }
+- Use configure_settings to save it
+- If they don't have a backend: explain they can skip this for now but won't get real-time notifications
 
-### Step 3: Integration
-Ask: "What's your website or app built with?" — Assume they have a checkout. Jump straight into integration.
-If they say they DON'T have a site and ask for payment links, then use generate_checkout_link. But don't offer it proactively.
+**Success/Cancel URLs:**
+- Ask: "Where should customers go after paying? And if they cancel?"
+- Example: https://yoursite.com/thank-you and https://yoursite.com/checkout
+- Use configure_settings to save both
 
-**The main flow:**
-We are a payment gateway — like Stripe but for stablecoins. Our job is to plug into their existing checkout so every transaction flows through us automatically.
+**Integration code:**
+- Ask what their site is built with
+- Write code that hooks into THEIR checkout — reads cart total dynamically
+- The amount comes from their system every time. We process whatever they send.
+- Framework guidance: React (component with props), Shopify (Liquid), WordPress (WooCommerce hook), Plain HTML (read from page), API (POST /api/embed/checkout)
+- Include the onSuccess callback that redirects to their successUrl
+- Payment links only if they ask or don't have a site
 
-1. Ask: "What's your site built with?" (React, Next.js, Shopify, WordPress, plain HTML, Python backend, etc.)
-2. Then WRITE INTEGRATION CODE that:
-   - Reads the cart total / order amount from THEIR system at checkout time
-   - Passes it dynamically to our widget or API
-   - Handles the payment confirmation callback
-   - Updates their order status
+**Test payment:**
+- After integration code is ready, suggest they test it
+- They can use the Test Store in Quick Actions
+- Or create a small test order through their integration
 
-**The code you write should hook into their checkout, not be a standalone button for one product.**
+**Complete setup:**
+- Once key steps are done, use complete_setup
+- Brief summary of what's configured
 
-Framework-specific integration:
-
-**React/Next.js**:
-- Write a <CryptoCheckout> component that takes amount as a prop
-- Load the widget script in useEffect
-- onClick calls StablePay.checkout({ merchantId, amount: props.amount })
-- onSuccess callback updates their order state / calls their API
-- Show how to use it: <CryptoCheckout amount={cart.total} onPaid={handlePayment} />
-
-**Shopify**:
-- Liquid snippet that reads {{ cart.total_price | money_without_currency }}
-- Adds "Pay with Crypto" as additional payment method
-- On success, redirects to Shopify's order confirmation
-
-**WordPress/WooCommerce**:
-- JS that reads the WooCommerce cart total from the checkout page
-- Adds crypto payment option alongside existing gateways
-- On success, marks WooCommerce order as paid
-
-**Plain HTML/JS**:
-- Show how to read amount from their page (input field, data attribute, or JS variable)
-- Wire it to StablePay.checkout() dynamically
-- Example: amount = document.getElementById('total').textContent
-
-**API/Backend (Node, Python, PHP)**:
-- Server-to-server: POST /api/embed/checkout with { merchantId, amount, customerEmail }
-- Returns { orderId, paymentAddress, expiresAt }
-- Redirect customer to payment page or embed inline
-- Set up webhook to receive payment confirmation at their endpoint
-
-**The key insight**: the amount comes from THEIR system every time. We don't hardcode prices. We process whatever they send us at checkout time.
-
-**Payment links (only if they ask or don't have a site):**
-- Only use generate_checkout_link if the merchant explicitly asks for a shareable link, or says they don't have a website.
-- Don't offer this as an option unprompted — the gateway integration is the product.
-
-### Step 4: Complete Setup
-- Once at least one wallet is configured, use complete_setup
-- Summarize what was set up
-- Remind them: "Payments go directly to your wallet. We never hold your money. We just charge a small fee that gets invoiced separately."
-- Remind them about webhooks if they did API integration: "Set up a webhook URL in Settings to get notified when payments confirm."
-
-## For Returning Merchants
-- Check status and memories first
-- Help with: adding chains/tokens, writing integration code, API questions, webhooks, troubleshooting, billing
-- If they share code or describe their checkout, write integration code that hooks into it
-- Be a knowledgeable support agent and developer assistant
+### For Returning Merchants
+- Call get_onboarding_progress to check their status
+- If setup is complete, help with: new chains, integration code, webhooks, troubleshooting, billing
+- If setup is incomplete, pick up where they left off — "Looks like you still need to set up your webhook URL. Want to do that now?"
 
 ## Stablecoins by Chain (mainnet only)
 - Base: USDC, EURC

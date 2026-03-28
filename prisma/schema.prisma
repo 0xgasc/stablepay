@@ -129,6 +129,10 @@ model Merchant {
   webhookEnabled        Boolean     @default(false)
   webhookEvents         String[]    @default([])   // Array of event types to send
 
+  // Checkout redirect URLs
+  successUrl            String?                    // Where customer goes after successful payment
+  cancelUrl             String?                    // Where customer goes if they cancel
+
   // Receipt settings
   autoSendReceipts      Boolean     @default(false)   // Auto-email receipts to customers
 
