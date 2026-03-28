@@ -5338,6 +5338,7 @@ onMounted(() => {
                 const msg = text.trim();
                 if (!msg) return;
                 hideSuggestions();
+                hideTechChips();
                 addMessage('user', msg);
                 typingEl.classList.remove('hidden');
                 messagesEl.scrollTop = messagesEl.scrollHeight;
