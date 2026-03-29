@@ -789,6 +789,9 @@
                     <button class="tab-btn border-blue-500 text-blue-400 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="orders">
                         Orders
                     </button>
+                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="treasury">
+                        Treasury
+                    </button>
                     <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="refunds">
                         <span>Refunds</span>
                         <span id="refundsAlertBadge" class="hidden ml-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">0</span>
@@ -814,6 +817,45 @@
 
             <!-- Tab Content -->
             <div class="p-6">
+                <!-- Treasury Tab -->
+                <div id="treasuryTab" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-white">Treasury</h2>
+                        <button onclick="loadTreasury()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 transition-colors">Refresh</button>
+                    </div>
+
+                    <!-- Total balance card -->
+                    <div class="bg-gradient-to-r from-blue-900/60 to-slate-800/60 border border-slate-700 p-5 mb-6">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <p class="text-xs text-slate-400 uppercase font-medium">Total Holdings</p>
+                                <p class="text-3xl font-bold text-white" id="treasuryTotal">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-400 uppercase font-medium">Fees Owed</p>
+                                <p class="text-2xl font-bold text-yellow-400" id="treasuryFees">—</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-400 uppercase font-medium">Net Available</p>
+                                <p class="text-2xl font-bold text-green-400" id="treasuryNet">—</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Per-chain balances -->
+                    <div id="treasuryWallets" class="space-y-4 mb-6">
+                        <p class="text-sm text-slate-500">Loading balances...</p>
+                    </div>
+
+                    <!-- Recent incoming -->
+                    <div class="border-t border-slate-800 pt-6">
+                        <h3 class="text-sm font-bold text-white uppercase mb-4">Recent Incoming (7 days)</h3>
+                        <div id="treasuryIncoming" class="space-y-2">
+                            <p class="text-sm text-slate-500">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Orders Tab -->
                 <div id="ordersTab" class="tab-content">
                     <div class="flex justify-between items-center mb-6">
@@ -1956,6 +1998,8 @@ onMounted(() => {
             // Load tab content
             if (tabName === 'orders') {
                 loadOrders();
+            } else if (tabName === 'treasury') {
+                loadTreasury();
             } else if (tabName === 'wallets') {
                 loadWallets();
             } else if (tabName === 'settings') {
@@ -2980,6 +3024,68 @@ onMounted(() => {
                 console.error('Error loading orders:', error);
                 renderOrdersTable([]);
                 updateStats({ orders: [], pagination: { total: 0 } });
+            }
+        }
+
+        // ─── Treasury ─────────────────────────────────
+        async function loadTreasury() {
+            const token = sessionStorage.getItem('merchantToken');
+            try {
+                const [balRes, inRes] = await Promise.all([
+                    fetch('/api/treasury/balances', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch('/api/treasury/incoming?days=7', { headers: { 'Authorization': 'Bearer ' + token } }),
+                ]);
+
+                const bal = await balRes.json();
+                const inc = await inRes.json();
+
+                // Totals
+                document.getElementById('treasuryTotal').textContent = '$' + (bal.totalUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+                document.getElementById('treasuryFees').textContent = '$' + (bal.feesDue || 0).toFixed(2);
+                document.getElementById('treasuryNet').textContent = '$' + (bal.netAvailable || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+                // Per-chain wallets
+                const walletsEl = document.getElementById('treasuryWallets');
+                if (bal.wallets?.length) {
+                    walletsEl.innerHTML = bal.wallets.map(w => `
+                        <div class="bg-slate-900 border border-slate-800 p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-white font-bold text-sm">${w.chain.replace('_', ' ')}</span>
+                                <span class="text-white font-bold">$${w.totalUSD.toFixed(2)}</span>
+                            </div>
+                            <p class="text-xs text-slate-500 font-mono mb-2">${w.address.slice(0, 10)}...${w.address.slice(-6)}</p>
+                            <div class="flex gap-3">
+                                ${w.tokens.map(t => `
+                                    <span class="text-xs px-2 py-1 bg-slate-800 border border-slate-700 ${parseFloat(t.balance) > 0 ? 'text-cyan-300' : 'text-slate-500'}">
+                                        ${t.token}: ${parseFloat(t.balance).toFixed(2)}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    walletsEl.innerHTML = '<p class="text-sm text-slate-500">No wallets configured yet.</p>';
+                }
+
+                // Recent incoming
+                const incEl = document.getElementById('treasuryIncoming');
+                if (inc.orders?.length) {
+                    incEl.innerHTML = `
+                        <p class="text-sm text-green-400 font-bold mb-3">$${inc.totalIncoming.toFixed(2)} received in last ${inc.period}</p>
+                        ${inc.orders.slice(0, 10).map(o => `
+                            <div class="flex justify-between text-xs py-1.5 border-b border-slate-800/50">
+                                <span class="text-slate-400">${new Date(o.updatedAt).toLocaleDateString()} ${new Date(o.updatedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                <span class="text-white font-bold">+$${Number(o.amount).toFixed(2)} ${o.token}</span>
+                                <span class="text-slate-500">${o.chain.replace('_', ' ')}</span>
+                            </div>
+                        `).join('')}
+                    `;
+                } else {
+                    incEl.innerHTML = '<p class="text-sm text-slate-500">No confirmed payments in the last 7 days.</p>';
+                }
+            } catch (err) {
+                console.error('Treasury load error:', err);
+                document.getElementById('treasuryWallets').innerHTML = '<p class="text-sm text-red-400">Failed to load balances.</p>';
             }
         }
 

@@ -285,6 +285,11 @@ const TOOLS: Anthropic.Tool[] = [
     description: 'Get the merchant\'s compliance overview — KYC status, total payments screened, flagged count, blocked count. Use when merchant asks about their compliance status.',
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
+  {
+    name: 'get_treasury_balances',
+    description: 'Get the merchant\'s stablecoin balances across all chains. Shows USDC/USDT/EURC balance per wallet, total holdings, fees owed, and net available. Use when merchant asks about their balance or holdings.',
+    input_schema: { type: 'object' as const, properties: {}, required: [] },
+  },
 ];
 
 // ─── Tool execution ─────────────────────────────────────────────────────────
@@ -741,6 +746,22 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       const { complianceService } = await import('./complianceService');
       const status = await complianceService.getMerchantCompliance(merchantId);
       return JSON.stringify(status);
+    }
+
+    case 'get_treasury_balances': {
+      const { treasuryService } = await import('./treasuryService');
+      const data = await treasuryService.getMerchantBalances(merchantId);
+      return JSON.stringify({
+        totalUSD: data.totalUSD,
+        feesDue: data.feesDue,
+        netAvailable: data.netAvailable,
+        wallets: data.wallets.map(w => ({
+          chain: w.chain,
+          address: `${w.address.slice(0, 8)}...${w.address.slice(-4)}`,
+          tokens: w.tokens.filter(t => t.balanceUSD > 0),
+          totalUSD: w.totalUSD,
+        })),
+      });
     }
 
     default:
