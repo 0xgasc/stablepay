@@ -50,6 +50,10 @@
             <a href="#webhooks" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Webhooks</a>
             <a href="#widget" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Widget</a>
             <a href="#invoices" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Invoices</a>
+            <a href="#treasury" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Treasury</a>
+            <a href="#compliance" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Compliance</a>
+            <a href="#managed-wallets" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Managed Wallets</a>
+            <a href="#agent" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">AI Agent</a>
         </div>
 
         <!-- ═══ Authentication ═══ -->
@@ -409,6 +413,193 @@ Customer redirected to your success page
                     <summary class="text-white font-bold"><span class="method-get">GET</span> /api/receipts?merchantId=X</summary>
                     <div class="mt-4 text-sm text-slate-400">
                         <p>List all receipts. Auto-generated when payments confirm.</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- ═══ Treasury ═══ -->
+        <section id="treasury" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Treasury</h2>
+            <p class="text-slate-400 mb-6">View your stablecoin balances across all chains in real-time.</p>
+
+            <div class="space-y-6">
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/treasury/balances</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p class="mb-3">Get USDC/USDT/EURC balances for all your wallets across every chain. Queries the blockchain in real-time.</p>
+                        <p class="text-slate-500 mb-2 font-bold">Response:</p>
+<pre>{
+  "wallets": [
+    {
+      "chain": "BASE_MAINNET",
+      "address": "0x42f8...",
+      "tokens": [
+        { "token": "USDC", "balance": "8200.00", "balanceUSD": 8200 }
+      ],
+      "totalUSD": 8200
+    }
+  ],
+  "totalUSD": 12340.00,
+  "feesDue": 89.20,
+  "netAvailable": 12250.80
+}</pre>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/treasury/incoming?days=7</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p>Recent confirmed payments. Defaults to 7 days, max 90.</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- ═══ Compliance ═══ -->
+        <section id="compliance" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Compliance & AML</h2>
+            <p class="text-slate-400 mb-6">Every payment is automatically screened against OFAC sanctions lists and known bad actors. Risk scores are assigned to every transaction.</p>
+
+            <div class="bg-slate-900 border border-slate-800 p-5 mb-6">
+                <h3 class="text-white font-bold mb-3">How Screening Works</h3>
+                <div class="text-sm text-slate-400 space-y-2">
+                    <p>When a customer pays, we check their wallet address against:</p>
+                    <ul class="list-disc ml-6 space-y-1">
+                        <li><strong class="text-white">OFAC sanctions list</strong> — U.S. Treasury sanctioned addresses (Tornado Cash, etc.)</li>
+                        <li><strong class="text-white">Known mixers</strong> — Privacy protocols used for laundering</li>
+                        <li><strong class="text-white">Known exploits</strong> — Addresses linked to hacks</li>
+                        <li><strong class="text-white">Transaction patterns</strong> — Large amounts, burst detection, repeat senders</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-5 mb-6">
+                <h3 class="text-white font-bold mb-3">Risk Levels</h3>
+                <div class="text-sm space-y-2">
+                    <div class="flex justify-between p-2 bg-green-900/20 border border-green-800/30"><span class="text-green-300">LOW (0-30)</span><span class="text-slate-400">Payment proceeds normally</span></div>
+                    <div class="flex justify-between p-2 bg-yellow-900/20 border border-yellow-800/30"><span class="text-yellow-300">MEDIUM (31-60)</span><span class="text-slate-400">Payment proceeds, flagged for review</span></div>
+                    <div class="flex justify-between p-2 bg-orange-900/20 border border-orange-800/30"><span class="text-orange-300">HIGH (61-80)</span><span class="text-slate-400">Payment confirmed but flagged for merchant review</span></div>
+                    <div class="flex justify-between p-2 bg-red-900/20 border border-red-800/30"><span class="text-red-300">BLOCKED (81-100)</span><span class="text-slate-400">Payment rejected, not confirmed</span></div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/compliance/status</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p>Your compliance overview — KYC status, total screened, flagged count, blocked count.</p>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-post">POST</span> /api/compliance/screen-wallet</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p class="mb-3">Manually screen any wallet address.</p>
+<pre>{ "address": "0x...", "chain": "BASE_MAINNET" }
+
+// Response:
+{ "riskScore": 0, "riskLevel": "LOW", "flags": [] }
+// or
+{ "riskScore": 100, "riskLevel": "BLOCKED", "flags": ["OFAC_SANCTIONED"] }</pre>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/compliance/screenings</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p>Screening history with risk scores, flags, and timestamps.</p>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/compliance/export</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p>Download CSV export of all screenings for compliance audits.</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- ═══ Managed Wallets ═══ -->
+        <section id="managed-wallets" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Managed Wallets</h2>
+            <p class="text-slate-400 mb-6">Don't have a crypto wallet? We create and manage one for you.</p>
+
+            <div class="bg-slate-900 border border-slate-800 p-5 mb-6">
+                <h3 class="text-white font-bold mb-3">How It Works</h3>
+                <div class="text-sm text-slate-400 space-y-2">
+                    <p>During onboarding, if you don't have a wallet, our AI agent creates one instantly:</p>
+                    <ul class="list-disc ml-6 space-y-1">
+                        <li><strong class="text-white">EVM wallet</strong> — works on Base, Ethereum, Polygon, Arbitrum (one address)</li>
+                        <li><strong class="text-white">Solana wallet</strong> — separate keypair for Solana</li>
+                        <li><strong class="text-white">Encrypted storage</strong> — private keys encrypted with AES-256</li>
+                    </ul>
+                    <p class="mt-3"><strong class="text-white">Important:</strong> WeTakeStables holds the keys for managed wallets. You can withdraw anytime, but we strongly recommend setting up your own wallet (MetaMask, Phantom) for full control of your funds.</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-5">
+                <h3 class="text-white font-bold mb-3">Custody Model</h3>
+                <div class="text-sm text-slate-400 space-y-2">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-3 bg-slate-800 border border-slate-700">
+                            <p class="text-white font-bold mb-1">Own Wallet</p>
+                            <p class="text-xs">You hold the keys. We never touch your funds. Payments go directly to you.</p>
+                        </div>
+                        <div class="p-3 bg-slate-800 border border-slate-700">
+                            <p class="text-white font-bold mb-1">Managed Wallet</p>
+                            <p class="text-xs">We hold the keys. You can withdraw anytime. Best for getting started fast.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ AI Agent ═══ -->
+        <section id="agent" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">AI Agent</h2>
+            <p class="text-slate-400 mb-6">Built-in AI assistant that configures your account, writes integration code, and handles support.</p>
+
+            <div class="bg-slate-900 border border-slate-800 p-5 mb-6">
+                <h3 class="text-white font-bold mb-3">What It Can Do</h3>
+                <div class="text-sm text-slate-400 space-y-2">
+                    <ul class="list-disc ml-6 space-y-1">
+                        <li>Create and configure wallets (EVM + Solana)</li>
+                        <li>Set up webhooks and redirect URLs from your domain</li>
+                        <li>Generate integration code for React, Shopify, WordPress, etc.</li>
+                        <li>Screen wallet addresses for AML/sanctions risk</li>
+                        <li>Check your treasury balances across chains</li>
+                        <li>Explain fees, billing cycles, and pricing</li>
+                        <li>Remember your business context across sessions</li>
+                        <li>Withdraw from managed wallets</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-post">POST</span> /api/agent/chat</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p class="mb-3">Send a message to the AI agent. Requires Bearer token.</p>
+<pre>{ "message": "What's my balance on Base?" }
+
+// Response:
+{ "success": true, "response": "Your Base wallet has $8,200 USDC." }</pre>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-get">GET</span> /api/agent/history</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p>Get chat history. Returns last 50 messages by default.</p>
+                    </div>
+                </details>
+
+                <details class="endpoint bg-slate-900 border border-slate-800 p-5">
+                    <summary class="text-white font-bold"><span class="method-delete">DELETE</span> /api/agent/history</summary>
+                    <div class="mt-4 text-sm text-slate-400">
+                        <p>Clear chat history.</p>
                     </div>
                 </details>
             </div>
