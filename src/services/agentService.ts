@@ -6,9 +6,13 @@ import { db } from '../config/database';
 import { logger } from '../utils/logger';
 
 // ─── Encryption for managed wallet keys ─────────────────────────────────────
-const ENCRYPTION_KEY = process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY || 'default-key-change-me';
+const ENCRYPTION_KEY = process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
+if (!ENCRYPTION_KEY) {
+  console.error('[agent] WARNING: No encryption key set (JWT_SECRET or AGENT_WALLET_KEY). Managed wallets will not work.');
+}
 
 function encryptKey(privateKey: string): string {
+  if (!ENCRYPTION_KEY) throw new Error('Encryption key not configured');
   const iv = crypto.randomBytes(16);
   const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
   const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
@@ -18,6 +22,7 @@ function encryptKey(privateKey: string): string {
 }
 
 function decryptKey(encrypted: string): string {
+  if (!ENCRYPTION_KEY) throw new Error('Encryption key not configured');
   const [ivHex, encData] = encrypted.split(':');
   const iv = Buffer.from(ivHex, 'hex');
   const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);

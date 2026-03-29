@@ -205,6 +205,9 @@ model Order {
   receipt         Receipt?
 
   @@index([merchantId])
+  @@index([status])
+  @@index([chain, status])
+  @@index([expiresAt])
   @@map("orders")
   @@schema("public")
 }

@@ -29,10 +29,15 @@ try {
   env = validateEnv();
 } catch (error) {
   console.error('Environment validation failed:', error);
+  // Fall back to minimal config for Vercel (where zod validation may fail on optional fields)
+  if (!process.env.DATABASE_URL) {
+    console.error('FATAL: DATABASE_URL not set. Exiting.');
+    process.exit(1);
+  }
   env = {
     PORT: process.env.PORT || '3000',
     NODE_ENV: process.env.NODE_ENV || 'production',
-    DATABASE_URL: process.env.DATABASE_URL || '',
+    DATABASE_URL: process.env.DATABASE_URL,
     DIRECT_URL: process.env.DIRECT_URL,
   } as any;
 }

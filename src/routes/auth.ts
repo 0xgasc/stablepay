@@ -273,10 +273,10 @@ router.post('/v1/signup', rateLimit({
       return res.status(400).json({ error: 'Email, company name, and contact name are required' });
     }
 
-    // Test account bypass — allows multiple signups with unique suffix
+    // Test account bypass — only in development
     const TEST_EMAIL = 'sololoopsmusic@gmail.com';
     let finalEmail = email;
-    if (email === TEST_EMAIL) {
+    if (email === TEST_EMAIL && process.env.NODE_ENV !== 'production') {
       const existing = await db.merchant.findUnique({ where: { email } });
       if (existing) {
         finalEmail = `sololoopsmusic+test${Date.now()}@gmail.com`;

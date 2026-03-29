@@ -258,18 +258,27 @@ export class BlockchainService {
     }
   }
 
+  private scanning = false;
+
   async startScanning(intervalMs = 15000): Promise<void> {
     console.log(`[scanner] Starting blockchain scanner — ${SCAN_CHAINS.length} chains, ${intervalMs}ms interval`);
 
     // Initial scan
     await this.scanAll();
 
-    // Continuous scanning
+    // Continuous scanning with lock to prevent overlap
     setInterval(async () => {
+      if (this.scanning) {
+        console.log('[scanner] Previous scan still running, skipping');
+        return;
+      }
+      this.scanning = true;
       try {
         await this.scanAll();
       } catch (error: any) {
         console.error('[scanner] Scan cycle error:', error.message);
+      } finally {
+        this.scanning = false;
       }
     }, intervalMs);
   }
