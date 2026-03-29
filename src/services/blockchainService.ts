@@ -159,15 +159,28 @@ export class BlockchainService {
           },
         });
 
-        // Confirm the order using OrderService (handles fees, webhooks, receipts)
+        // Compliance screening before confirmation
         if (receipt.status === 1 && confirmations >= config.requiredConfirms) {
           try {
+            const { complianceService } = await import('./complianceService');
+            const screening = await complianceService.screenTransaction(matchedOrder.id, fromAddress);
+
+            if (screening.riskLevel === 'BLOCKED') {
+              console.log(`[scanner] ❌ BLOCKED order ${matchedOrder.id} — ${screening.flags.join(', ')}`);
+              // Don't confirm — leave as PENDING with risk flags
+              continue;
+            }
+
+            if (screening.riskLevel === 'HIGH') {
+              console.log(`[scanner] ⚠️ FLAGGED order ${matchedOrder.id} — risk ${screening.riskScore}, ${screening.flags.join(', ')}`);
+            }
+
             await this.orderService.confirmOrder(matchedOrder.id, {
               txHash,
               blockNumber: log.blockNumber,
               confirmations,
             });
-            console.log(`[scanner] ✅ Confirmed order ${matchedOrder.id} — $${amount} USDC on ${chain}`);
+            console.log(`[scanner] ✅ Confirmed order ${matchedOrder.id} — $${amount} USDC on ${chain} (risk: ${screening.riskScore})`);
             matched++;
           } catch (err) {
             console.error(`[scanner] Failed to confirm order ${matchedOrder.id}:`, err);

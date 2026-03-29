@@ -267,7 +267,7 @@ router.post('/v1/signup', rateLimit({
 }), async (req, res) => {
   try {
     console.log('Signup attempt:', { email: req.body.email, hasPassword: !!req.body.password });
-    const { email, companyName, contactName, password, plan } = req.body;
+    const { email, companyName, contactName, password, plan, country, businessType } = req.body;
 
     if (!email || !companyName || !contactName) {
       return res.status(400).json({ error: 'Email, company name, and contact name are required' });
@@ -321,6 +321,9 @@ router.post('/v1/signup', rateLimit({
         loginToken,
         tokenExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
         ...(hashedPassword && { passwordHash: hashedPassword }),
+        ...(country && { country }),
+        ...(businessType && { businessType }),
+        kycStatus: 'PENDING',
       },
     });
 

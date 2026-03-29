@@ -15,6 +15,7 @@ import { invoicesRouter, invoicePayRouter } from './routes/invoices';
 import { receiptsRouter } from './routes/receipts';
 import { embedRouter } from './routes/embed';
 import { agentRouter } from './routes/agent';
+import { complianceRouter } from './routes/compliance';
 import { validateEnv } from './utils/env';
 import { logger } from './utils/logger';
 import cron from 'node-cron';
@@ -75,6 +76,7 @@ app.use('/api/fees', feesRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/embed', embedRouter);
 app.use('/api/agent', agentRouter);
+app.use('/api/compliance', complianceRouter);
 app.use('/api', authRouter);
 
 // ─── Legacy v1 redirects (old unprotected routes removed) ──────────────────

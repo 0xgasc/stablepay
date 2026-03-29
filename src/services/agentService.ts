@@ -268,6 +268,23 @@ const TOOLS: Anthropic.Tool[] = [
       required: ['toAddress', 'amount', 'chain'],
     },
   },
+  {
+    name: 'screen_wallet',
+    description: 'Screen any wallet address for AML/sanctions risk. Returns a risk score (0-100) and flags. Use when a merchant asks about a specific wallet or wants to check if an address is safe.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        address: { type: 'string', description: 'Wallet address to screen' },
+        chain: { type: 'string', description: 'Blockchain (defaults to BASE_MAINNET)' },
+      },
+      required: ['address'],
+    },
+  },
+  {
+    name: 'get_compliance_status',
+    description: 'Get the merchant\'s compliance overview — KYC status, total payments screened, flagged count, blocked count. Use when merchant asks about their compliance status.',
+    input_schema: { type: 'object' as const, properties: {}, required: [] },
+  },
 ];
 
 // ─── Tool execution ─────────────────────────────────────────────────────────
@@ -702,6 +719,28 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       } catch (err: any) {
         return JSON.stringify({ error: `Withdrawal failed: ${err.message}` });
       }
+    }
+
+    case 'screen_wallet': {
+      const { complianceService } = await import('./complianceService');
+      const result = await complianceService.screenWallet(input.address, input.chain || 'BASE_MAINNET');
+      return JSON.stringify({
+        address: input.address,
+        riskScore: result.riskScore,
+        riskLevel: result.riskLevel,
+        flags: result.flags,
+        message: result.riskLevel === 'LOW'
+          ? `Clean wallet. Risk score: ${result.riskScore}/100.`
+          : result.riskLevel === 'BLOCKED'
+          ? `BLOCKED — this wallet is sanctioned or linked to known bad actors. Flags: ${result.flags.join(', ')}.`
+          : `Flagged wallet. Risk score: ${result.riskScore}/100. Flags: ${result.flags.join(', ')}.`,
+      });
+    }
+
+    case 'get_compliance_status': {
+      const { complianceService } = await import('./complianceService');
+      const status = await complianceService.getMerchantCompliance(merchantId);
+      return JSON.stringify(status);
     }
 
     default:
