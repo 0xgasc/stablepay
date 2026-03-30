@@ -407,19 +407,29 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
 
       const results: { chain: string; address: string }[] = [];
 
+      // All available tokens per chain
+      const ALL_CHAIN_TOKENS: Record<string, string[]> = {
+        BASE_MAINNET: ['USDC', 'USDT', 'EURC'],
+        ETHEREUM_MAINNET: ['USDC', 'USDT', 'EURC'],
+        POLYGON_MAINNET: ['USDC', 'USDT', 'EURC'],
+        ARBITRUM_MAINNET: ['USDC', 'USDT', 'EURC'],
+        SOLANA_MAINNET: ['USDC', 'USDT', 'EURC'],
+      };
+
       // Generate ONE EVM wallet (works on all EVM chains)
       if (evmChains.length > 0) {
         const evmWallet = ethers.Wallet.createRandom();
         const encrypted = encryptKey(evmWallet.privateKey);
 
         for (const chain of evmChains) {
+          const chainTokens = ALL_CHAIN_TOKENS[chain] || supportedTokens;
           await db.managedWallet.create({
             data: { merchantId, chain, address: evmWallet.address, encryptedKey: encrypted },
           });
           await db.merchantWallet.upsert({
             where: { merchantId_chain: { merchantId, chain } },
-            update: { address: evmWallet.address, supportedTokens, isActive: true },
-            create: { merchantId, chain, address: evmWallet.address, supportedTokens, isActive: true },
+            update: { address: evmWallet.address, supportedTokens: chainTokens, isActive: true },
+            create: { merchantId, chain, address: evmWallet.address, supportedTokens: chainTokens, isActive: true },
           });
           results.push({ chain, address: evmWallet.address });
         }
@@ -433,16 +443,15 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         const encrypted = encryptKey(solSecret);
 
         // Solana tokens available
-        const solTokens = supportedTokens.filter((t: string) => ['USDC', 'USDT'].includes(t));
-
         for (const chain of solanaChains) {
+          const chainTokens = ALL_CHAIN_TOKENS[chain] || ['USDC', 'USDT', 'EURC'];
           await db.managedWallet.create({
             data: { merchantId, chain, address: solAddress, encryptedKey: encrypted },
           });
           await db.merchantWallet.upsert({
             where: { merchantId_chain: { merchantId, chain } },
-            update: { address: solAddress, supportedTokens: solTokens.length ? solTokens : ['USDC'], isActive: true },
-            create: { merchantId, chain, address: solAddress, supportedTokens: solTokens.length ? solTokens : ['USDC'], isActive: true },
+            update: { address: solAddress, supportedTokens: chainTokens, isActive: true },
+            create: { merchantId, chain, address: solAddress, supportedTokens: chainTokens, isActive: true },
           });
           results.push({ chain, address: solAddress });
         }
