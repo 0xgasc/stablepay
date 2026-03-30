@@ -353,7 +353,7 @@
               <div id="sp-send-step1" style="padding: 12px;">
                 <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 6px;">Step 1: Your wallet address</div>
                 <div style="display: flex; gap: 6px;">
-                  <input id="sp-sender-wallet" type="text" placeholder="0x... or SOL address" style="
+                  <input id="sp-sender-wallet" type="text" placeholder="${this.selectedChain?.config?.type === 'solana' ? 'Solana address (base58)' : '0x... (EVM address)'}" style="
                     flex: 1; padding: 8px; font-size: 11px; font-family: monospace; border: 3px solid #000;
                     background: var(--sp-card); color: var(--sp-text); outline: none;
                   ">
@@ -534,8 +534,9 @@
     }
 
     onWalletConnected() {
-      // If wallet connected via Connect Wallet tab, skip step 1 on QR/Address
-      if (inputDiv) inputDiv.style.display = 'none';
+      // If wallet connected via Connect Wallet tab, skip step 1 on Send tab
+      const step1 = this.container.querySelector('#sp-send-step1');
+      if (step1) step1.style.display = 'none';
     }
 
     initSenderWalletInput() {
@@ -701,6 +702,12 @@
         this.tokenBalance = null;
         this.updateWalletStatus();
         return; // updatePayButton called by updateWalletStatus
+      }
+
+      // Update wallet input placeholder for new chain type
+      const walletInput = this.container.querySelector('#sp-sender-wallet');
+      if (walletInput) {
+        walletInput.placeholder = newType === 'solana' ? 'Solana address (base58)' : '0x... (EVM address)';
       }
 
       // Re-check balance for new chain/token
@@ -971,8 +978,11 @@
         const ethers = window.ethers;
         if (!ethers) return;
 
-        const provider = new ethers.BrowserProvider(this.provider);
-        const contract = new ethers.Contract(tokenConfig.address, ERC20_ABI, provider);
+        // Use direct RPC provider (not BrowserProvider) to query balance on the correct chain
+        const rpcUrl = chainConfig.rpcUrls?.[0];
+        if (!rpcUrl) { this.tokenBalance = null; return; }
+        const rpcProvider = new ethers.JsonRpcProvider(rpcUrl);
+        const contract = new ethers.Contract(tokenConfig.address, ERC20_ABI, rpcProvider);
         const raw = await contract.balanceOf(this.connectedWallet);
         this.tokenBalance = parseFloat(ethers.formatUnits(raw, tokenConfig.decimals || 6));
         this.updatePayButton();
