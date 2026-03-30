@@ -734,7 +734,10 @@
                 <div id="treasuryTab" class="tab-content hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-bold text-white">Treasury</h2>
-                        <button onclick="loadTreasury()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 transition-colors">Refresh</button>
+                        <div class="flex gap-2">
+                            <button onclick="openWithdrawModal()" class="text-xs bg-purple-700 hover:bg-purple-600 text-white px-3 py-1.5 transition-colors font-medium">Withdraw Funds</button>
+                            <button onclick="loadTreasury()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 transition-colors">Refresh</button>
+                        </div>
                     </div>
 
                     <!-- Total balance card -->
@@ -1734,12 +1737,90 @@ onMounted(() => {
                 </div>
             </div>
 
-            <div class="flex gap-3 mt-8">
+            <!-- Method Toggle -->
+            <div class="mt-6 mb-2">
+                <div class="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wider">Refund Method</div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="refundMethodManaged" class="px-4 py-3 border-2 border-purple-500 bg-purple-900/30 text-purple-300 text-sm font-medium rounded transition-colors">
+                        🤖 Managed Wallet
+                    </button>
+                    <button id="refundMethodPersonal" class="px-4 py-3 border border-slate-700 bg-slate-900 text-slate-400 text-sm font-medium rounded transition-colors hover:border-slate-500">
+                        🔗 Connect Wallet
+                    </button>
+                </div>
+                <div id="refundManagedInfo" class="text-xs text-purple-400 mt-2">
+                    Refund sent automatically from your managed wallet. Gas sponsored.
+                </div>
+                <div id="refundPersonalInfo" class="text-xs text-blue-400 mt-2 hidden">
+                    Connect your personal wallet to send the refund manually.
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button id="executeManagedRefundBtn"
+                        class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 font-medium transition-colors rounded">
+                    🤖 Refund via Managed Wallet
+                </button>
                 <button id="executeRefundBtn" disabled
-                        class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 font-medium transition-colors rounded disabled:bg-slate-700 disabled:cursor-not-allowed">
+                        class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 font-medium transition-colors rounded disabled:bg-slate-700 disabled:cursor-not-allowed hidden">
                     Execute Refund
                 </button>
                 <button id="cancelRefundBtn"
+                        class="flex-1 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 font-medium transition-colors rounded">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdrawModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto py-8">
+        <div class="bg-slate-950 border border-slate-800 shadow-2xl p-8 max-w-md w-full mx-4 my-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-white">Withdraw Funds</h3>
+                <button onclick="document.getElementById('withdrawModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-300 text-2xl">&times;</button>
+            </div>
+
+            <div class="bg-purple-900/20 border border-purple-800 p-3 rounded mb-6">
+                <div class="text-xs text-purple-300">Send tokens from your managed wallet to any external address. Gas is automatically sponsored.</div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Chain</label>
+                    <select id="withdrawChain" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded">
+                        <option value="BASE_MAINNET">Base</option>
+                        <option value="ETHEREUM_MAINNET">Ethereum</option>
+                        <option value="POLYGON_MAINNET">Polygon</option>
+                        <option value="ARBITRUM_MAINNET">Arbitrum</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Token</label>
+                    <select id="withdrawToken" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded">
+                        <option value="USDC">USDC</option>
+                        <option value="USDT">USDT</option>
+                        <option value="EURC">EURC</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Amount</label>
+                    <input type="number" id="withdrawAmount" step="0.01" min="0.01" placeholder="0.00"
+                           class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Destination Address</label>
+                    <input type="text" id="withdrawAddress" placeholder="0x..."
+                           class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white font-mono text-sm rounded focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button id="executeWithdrawBtn" onclick="executeWithdraw()"
+                        class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 font-medium transition-colors rounded">
+                    Send Tokens
+                </button>
+                <button onclick="document.getElementById('withdrawModal').classList.add('hidden')"
                         class="flex-1 bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 font-medium transition-colors rounded">
                     Cancel
                 </button>
@@ -2937,6 +3018,52 @@ onMounted(() => {
                 console.error('Error loading orders:', error);
                 renderOrdersTable([]);
                 updateStats({ orders: [], pagination: { total: 0 } });
+            }
+        }
+
+        // ─── Withdraw ─────────────────────────────────
+        function openWithdrawModal() {
+            document.getElementById('withdrawModal').classList.remove('hidden');
+            document.getElementById('withdrawAmount').value = '';
+            document.getElementById('withdrawAddress').value = '';
+        }
+
+        async function executeWithdraw() {
+            const chain = document.getElementById('withdrawChain').value;
+            const token = document.getElementById('withdrawToken').value;
+            const amount = parseFloat(document.getElementById('withdrawAmount').value);
+            const toAddress = document.getElementById('withdrawAddress').value.trim();
+
+            if (!amount || amount <= 0) return alert('Enter a valid amount');
+            if (!toAddress) return alert('Enter a destination address');
+            if (!/^0x[a-fA-F0-9]{40}$/.test(toAddress)) return alert('Invalid EVM address (must start with 0x, 42 characters)');
+
+            const btn = document.getElementById('executeWithdrawBtn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const authToken = sessionStorage.getItem('merchantToken');
+                const response = await fetch('/api/treasury/withdraw', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + authToken,
+                    },
+                    body: JSON.stringify({ toAddress, amount, chain, token }),
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Withdrawal failed');
+
+                alert(`Withdrawal successful!\n\nAmount: $${data.amount} ${data.token}\nChain: ${data.chain}\nTX: ${data.txHash}${data.gasTxHash ? '\nGas TX: ' + data.gasTxHash : ''}`);
+                document.getElementById('withdrawModal').classList.add('hidden');
+                loadTreasury(); // Refresh balances
+            } catch (error) {
+                alert('Withdrawal failed: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send Tokens';
             }
         }
 
@@ -4319,6 +4446,11 @@ onMounted(() => {
             document.getElementById('refundWalletConnected').classList.add('hidden');
             document.getElementById('executeRefundBtn').disabled = true;
 
+            // Default to managed wallet method
+            refundMethod = 'managed';
+            document.getElementById('refundMethodManaged').click();
+            document.getElementById('refundWalletConnection').classList.add('hidden');
+
             // Detect and render wallet options
             renderRefundWalletOptions();
 
@@ -4339,6 +4471,72 @@ onMounted(() => {
         });
 
         // Close refund modal
+        // Refund method toggle
+        let refundMethod = 'managed'; // default to managed
+        document.getElementById('refundMethodManaged').addEventListener('click', () => {
+            refundMethod = 'managed';
+            document.getElementById('refundMethodManaged').className = 'px-4 py-3 border-2 border-purple-500 bg-purple-900/30 text-purple-300 text-sm font-medium rounded transition-colors';
+            document.getElementById('refundMethodPersonal').className = 'px-4 py-3 border border-slate-700 bg-slate-900 text-slate-400 text-sm font-medium rounded transition-colors hover:border-slate-500';
+            document.getElementById('refundManagedInfo').classList.remove('hidden');
+            document.getElementById('refundPersonalInfo').classList.add('hidden');
+            document.getElementById('executeManagedRefundBtn').classList.remove('hidden');
+            document.getElementById('executeRefundBtn').classList.add('hidden');
+            document.getElementById('refundWalletConnection').classList.add('hidden');
+        });
+        document.getElementById('refundMethodPersonal').addEventListener('click', () => {
+            refundMethod = 'personal';
+            document.getElementById('refundMethodPersonal').className = 'px-4 py-3 border-2 border-blue-500 bg-blue-900/30 text-blue-300 text-sm font-medium rounded transition-colors';
+            document.getElementById('refundMethodManaged').className = 'px-4 py-3 border border-slate-700 bg-slate-900 text-slate-400 text-sm font-medium rounded transition-colors hover:border-slate-500';
+            document.getElementById('refundPersonalInfo').classList.remove('hidden');
+            document.getElementById('refundManagedInfo').classList.add('hidden');
+            document.getElementById('executeManagedRefundBtn').classList.add('hidden');
+            document.getElementById('executeRefundBtn').classList.remove('hidden');
+            document.getElementById('refundWalletConnection').classList.remove('hidden');
+        });
+
+        // Execute managed refund
+        document.getElementById('executeManagedRefundBtn').addEventListener('click', async () => {
+            const orderId = document.getElementById('refundOrderId').value;
+            const customerWallet = document.getElementById('refundCustomerWallet').value;
+            const reason = document.getElementById('refundReason').value;
+
+            if (!customerWallet.trim()) {
+                alert('Please provide a customer wallet address');
+                return;
+            }
+            if (!reason.trim()) {
+                alert('Please provide a reason for the refund');
+                return;
+            }
+
+            const btn = document.getElementById('executeManagedRefundBtn');
+            btn.disabled = true;
+            btn.textContent = '🤖 Processing...';
+
+            try {
+                const response = await fetch('/api/refunds/managed', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionStorage.getItem('merchantToken'),
+                    },
+                    body: JSON.stringify({ orderId, customerWallet, reason }),
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Managed refund failed');
+
+                alert(`Refund successful!\n\nAmount: $${data.amount}\nTX: ${data.txHash}${data.gasTxHash ? '\nGas TX: ' + data.gasTxHash : ''}`);
+                document.getElementById('refundModal').classList.add('hidden');
+                loadOrders();
+            } catch (error) {
+                alert('Refund failed: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🤖 Refund via Managed Wallet';
+            }
+        });
+
         document.getElementById('closeRefundModal').addEventListener('click', () => {
             document.getElementById('refundModal').classList.add('hidden');
         });

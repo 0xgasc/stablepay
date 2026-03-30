@@ -108,6 +108,54 @@ router.get('/stats', requireMerchantAuth, async (req, res) => {
   }
 });
 
+// Process refund via managed wallet (no browser wallet needed)
+router.post('/managed', requireMerchantAuth, async (req, res) => {
+  try {
+    const merchant = (req as any).merchant;
+    const { orderId, amount, reason, customerWallet } = req.body;
+
+    if (!orderId) return res.status(400).json({ error: 'orderId is required' });
+
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: { transactions: true, refunds: true },
+    });
+
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.merchantId !== merchant.id) return res.status(403).json({ error: 'Not your order' });
+    if (order.status !== 'CONFIRMED' && order.status !== 'PAID') {
+      return res.status(400).json({ error: `Cannot refund order with status ${order.status}` });
+    }
+
+    // Determine refund address
+    const paymentTx = order.transactions.find((tx: any) => tx.status === 'CONFIRMED');
+    const refundTo = customerWallet || paymentTx?.fromAddress || order.customerWallet;
+    if (!refundTo) {
+      return res.status(400).json({ error: 'No customer wallet address available. Please provide customerWallet.' });
+    }
+
+    const { RefundService } = await import('../services/refundService');
+    const refundSvc = new RefundService();
+    const result = await refundSvc.processManagedRefund(orderId, refundTo);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({
+      success: true,
+      txHash: result.txHash,
+      gasTxHash: result.gasTxHash,
+      amount: result.amount,
+      refundTo,
+      message: `Refund of $${result.amount} sent to ${refundTo}`,
+    });
+  } catch (error) {
+    console.error('Managed refund error:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
 // ============================================
 // GENERAL ROUTES
 // ============================================
