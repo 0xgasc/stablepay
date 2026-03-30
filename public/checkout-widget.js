@@ -45,8 +45,7 @@
       rpcUrls: ['https://polygon-rpc.com'], blockExplorerUrls: ['https://polygonscan.com'],
       tokens: {
         USDC: { address: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', decimals: 6 },
-        USDT: { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6 },
-        EURC: { address: '0x390f28e7b2a5Ce76b67F0cD10EA0950A3a19F803', decimals: 6 }
+        USDT: { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6 }
       }
     },
     ARBITRUM_MAINNET: {
@@ -54,8 +53,7 @@
       rpcUrls: ['https://arb1.arbitrum.io/rpc'], blockExplorerUrls: ['https://arbiscan.io'],
       tokens: {
         USDC: { address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', decimals: 6 },
-        USDT: { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', decimals: 6 },
-        EURC: { address: '0x7Cb7cA2D5c848a1b3e6eCc8De1d8E4F79dAF96c8', decimals: 6 }
+        USDT: { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', decimals: 6 }
       }
     },
     SOLANA_MAINNET: {
