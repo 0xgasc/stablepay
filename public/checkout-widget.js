@@ -941,6 +941,8 @@
         };
 
         steps.forEach((step, i) => setTimeout(() => updateStep(i), step.delay));
+        // After last step, trigger transition to connected state
+        setTimeout(() => updateStep(steps.length), 2200);
         return;
       }
 
