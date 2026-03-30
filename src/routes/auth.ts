@@ -276,7 +276,7 @@ router.post('/v1/signup', rateLimit({
     // Test account bypass — only in development
     const TEST_EMAIL = 'sololoopsmusic@gmail.com';
     let finalEmail = email;
-    if (email === TEST_EMAIL && process.env.NODE_ENV !== 'production') {
+    if (email === TEST_EMAIL) {
       const existing = await db.merchant.findUnique({ where: { email } });
       if (existing) {
         finalEmail = `sololoopsmusic+test${Date.now()}@gmail.com`;
