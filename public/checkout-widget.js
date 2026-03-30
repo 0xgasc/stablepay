@@ -931,6 +931,31 @@
         await this.loadScript('https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js');
       }
 
+      // Switch to the correct chain BEFORE creating the provider
+      const chainConfig = this.selectedChain.config;
+      if (chainConfig.chainId) {
+        try {
+          await this.provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: chainConfig.chainId }]
+          });
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            await this.provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: chainConfig.chainId,
+                chainName: chainConfig.chainName,
+                rpcUrls: chainConfig.rpcUrls,
+                blockExplorerUrls: chainConfig.blockExplorerUrls
+              }]
+            });
+          } else {
+            throw new Error('Please switch to ' + chainConfig.chainName + ' in your wallet');
+          }
+        }
+      }
+
       const provider = new window.ethers.BrowserProvider(this.provider);
       const signer = await provider.getSigner();
       const signerAddress = await signer.getAddress();
@@ -944,8 +969,7 @@
       const decimals = tokenConfig.decimals || 6;
       const amountWei = window.ethers.parseUnits(amount.toString(), decimals);
 
-      // Direct transfer to merchant - fees collected separately
-      console.log('Direct payment to:', recipient);
+      console.log(`Payment: ${amount} ${this.selectedToken} on ${this.selectedChain.chain} to ${recipient}`);
       const tx = await tokenContract.transfer(recipient, amountWei);
 
       this.showProcessing(tx.hash);
