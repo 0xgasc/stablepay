@@ -331,53 +331,75 @@ export class BlockchainService {
             const tx = await connection.getParsedTransaction(sigInfo.signature, { maxSupportedTransactionVersion: 0 });
             if (!tx || tx.meta?.err) continue;
 
-            // Look for SPL token transfers in the instructions
-            const instructions = tx.transaction.message.instructions;
-            for (const ix of instructions) {
-              if ('parsed' in ix && ix.parsed?.type === 'transferChecked' && ix.program === 'spl-token') {
-                const info = ix.parsed.info;
-                const mint = info.mint;
-                const tokenName = TOKEN_MINTS[mint];
-                if (!tokenName) continue;
+            // Collect all SPL token transfers from both top-level and inner instructions
+            const allInstructions: any[] = [
+              ...tx.transaction.message.instructions,
+              ...(tx.meta?.innerInstructions?.flatMap((inner: any) => inner.instructions) || []),
+            ];
 
-                const amount = parseFloat(info.tokenAmount?.uiAmountString || '0');
-                const fromAuthority = info.authority;
+            // Build map of token account → owner from initializeAccount3 instructions
+            const tokenAccountOwners: Record<string, string> = {};
+            for (const ix of allInstructions) {
+              if ('parsed' in ix && ix.parsed?.type === 'initializeAccount3' && ix.program === 'spl-token') {
+                tokenAccountOwners[ix.parsed.info.account] = ix.parsed.info.owner;
+              }
+            }
 
-                // Match against pending orders
-                for (const order of orders) {
-                  const orderAmount = Number(order.amount);
-                  if (Math.abs(orderAmount - amount) >= 0.01) continue;
-                  if (order.customerWallet && fromAuthority.toLowerCase() !== order.customerWallet.toLowerCase()) continue;
+            for (const ix of allInstructions) {
+              if (!('parsed' in ix) || ix.program !== 'spl-token') continue;
+              if (ix.parsed?.type !== 'transferChecked' && ix.parsed?.type !== 'transfer') continue;
 
-                  // Match found — create transaction + confirm
-                  await db.transaction.create({
-                    data: {
-                      orderId: order.id,
-                      txHash: sigInfo.signature,
-                      chain: 'SOLANA_MAINNET',
-                      amount: amount,
-                      fromAddress: fromAuthority,
-                      toAddress: address,
-                      status: 'CONFIRMED',
-                      confirmations: 1,
-                      blockTimestamp: tx.blockTime ? new Date(tx.blockTime * 1000) : new Date(),
-                    },
+              const info = ix.parsed.info;
+              const mint = info.mint;
+              const tokenName = mint ? TOKEN_MINTS[mint] : null;
+              if (ix.parsed.type === 'transferChecked' && !tokenName) continue;
+
+              const amount = parseFloat(info.tokenAmount?.uiAmountString || info.amount || '0');
+              // Sender: authority OR multisigAuthority OR first signer
+              const fromAuthority = info.authority || info.multisigAuthority || info.signers?.[0] || '';
+              if (!fromAuthority) continue;
+
+              // Destination could be a token account — resolve to wallet owner
+              const destTokenAccount = info.destination;
+              const destOwner = tokenAccountOwners[destTokenAccount] || destTokenAccount;
+
+              // Check if destination resolves to our watched address
+              if (destOwner !== address && destTokenAccount !== address) continue;
+
+              // Match against pending orders
+              for (const order of orders) {
+                const orderAmount = Number(order.amount);
+                if (Math.abs(orderAmount - amount) >= 0.01) continue;
+                if (order.customerWallet && fromAuthority !== order.customerWallet) continue;
+
+                // Match found — create transaction + confirm
+                await db.transaction.create({
+                  data: {
+                    orderId: order.id,
+                    txHash: sigInfo.signature,
+                    chain: 'SOLANA_MAINNET',
+                    amount: amount,
+                    fromAddress: fromAuthority,
+                    toAddress: address,
+                    status: 'CONFIRMED',
+                    confirmations: 1,
+                    blockTimestamp: tx.blockTime ? new Date(tx.blockTime * 1000) : new Date(),
+                  },
+                });
+
+                // Compliance screening
+                const { complianceService } = await import('./complianceService');
+                const screening = await complianceService.screenTransaction(order.id, fromAuthority);
+
+                if (screening.riskLevel !== 'BLOCKED') {
+                  await this.orderService.confirmOrder(order.id, {
+                    txHash: sigInfo.signature,
                   });
-
-                  // Compliance screening
-                  const { complianceService } = await import('./complianceService');
-                  const screening = await complianceService.screenTransaction(order.id, fromAuthority);
-
-                  if (screening.riskLevel !== 'BLOCKED') {
-                    await this.orderService.confirmOrder(order.id, {
-                      txHash: sigInfo.signature,
-                    });
-                    console.log(`[scanner] ✅ Solana confirmed order ${order.id} — ${amount} ${tokenName}`);
-                  } else {
-                    console.log(`[scanner] ❌ Solana BLOCKED order ${order.id} — ${screening.flags.join(', ')}`);
-                  }
-                  break;
+                  console.log(`[scanner] ✅ Solana confirmed order ${order.id} — ${amount} ${tokenName || 'SPL'}`);
+                } else {
+                  console.log(`[scanner] ❌ Solana BLOCKED order ${order.id} — ${screening.flags.join(', ')}`);
                 }
+                break;
               }
             }
           }
