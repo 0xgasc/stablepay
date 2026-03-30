@@ -27,6 +27,8 @@ const checkoutSchema = z.object({
   customerEmail: z.string().email().optional().or(z.literal('')),
   customerName: z.string().optional(),
   customerWallet: z.string().optional(),  // Customer's wallet for precise FROM matching
+  paymentMethod: z.enum(['WALLET_CONNECT', 'MANUAL_SEND']).optional(),
+  source: z.enum(['EMBED_WIDGET', 'CHECKOUT_LINK', 'DASHBOARD', 'API', 'INVOICE']).optional(),
   productName: z.string().optional(),
   metadata: z.record(z.any()).optional()
 });
@@ -142,6 +144,8 @@ router.post('/checkout', rateLimit({
         customerName: data.customerName || data.productName || null,
         paymentAddress: wallet.address,
         customerWallet: data.customerWallet || null,
+        paymentMethod: data.paymentMethod || null,
+        source: data.source || 'EMBED_WIDGET',
         status: 'PENDING',
         expiresAt: new Date(Date.now() + 30 * 60 * 1000)
       }

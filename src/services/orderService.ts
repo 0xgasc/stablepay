@@ -27,6 +27,7 @@ export class OrderService {
         paymentAddress: chainConfig.paymentAddress,
         expiresAt,
         merchantId: data.merchantId,
+        source: 'API',
       },
     });
 

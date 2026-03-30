@@ -622,6 +622,8 @@
               customerEmail: this.options.customerEmail,
               productName: this.options.productName,
               customerWallet: this.connectedWallet || null,
+              paymentMethod: 'WALLET_CONNECT',
+              source: 'EMBED_WIDGET',
             })
           });
           const data = await res.json();
@@ -1168,6 +1170,8 @@
                 customerEmail: this.options.customerEmail,
                 customerWallet: this.connectedWallet,
                 productName: this.options.productName,
+                paymentMethod: 'MANUAL_SEND',
+                source: 'EMBED_WIDGET',
               })
             });
             const data = await res.json();

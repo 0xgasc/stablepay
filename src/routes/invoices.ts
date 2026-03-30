@@ -508,6 +508,8 @@ payRouter.post('/:invoiceId/order', rateLimit({
         customerEmail: invoice.customerEmail,
         customerName: invoice.customerName,
         paymentAddress: wallet.address,
+        paymentMethod: 'INVOICE',
+        source: 'INVOICE',
         status: 'PENDING',
         expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 min expiry
       }

@@ -3342,6 +3342,7 @@ onMounted(() => {
                             <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
                                 ${order.status}
                             </span>
+                            ${order.paymentMethod ? `<div class="text-[9px] text-slate-500 mt-0.5">${order.paymentMethod === 'WALLET_CONNECT' ? 'Wallet' : order.paymentMethod === 'MANUAL_SEND' ? 'Manual' : order.paymentMethod === 'INVOICE' ? 'Invoice' : order.paymentMethod}</div>` : ''}
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
                             ${txHash ? `
