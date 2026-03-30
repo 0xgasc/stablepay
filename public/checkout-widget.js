@@ -944,57 +944,7 @@
         // After last step, show connected state + check balance
         setTimeout(async () => {
           this.showConnectedState(statusDiv, shortAddr);
-
-          const payBtn = this.container.querySelector('#sp-pay-btn');
-          if (!payBtn || !this.connectedWallet) return;
-
-          const amt = parseFloat(this.options.amount || 0);
-          const chainConfig = this.selectedChain?.config;
-          const tokenConfig = chainConfig?.tokens?.[this.selectedToken];
-
-          // Check balance using wallet's provider
-          if (chainConfig?.type !== 'solana' && tokenConfig?.address && this.connectedWallet.startsWith('0x')) {
-            payBtn.disabled = true;
-            payBtn.textContent = 'Checking balance...';
-            payBtn.style.background = 'var(--sp-card)';
-            payBtn.style.color = 'var(--sp-muted)';
-
-            try {
-              if (!window.ethers) await this.loadScript('https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js');
-              const ethers = window.ethers;
-              const browserProvider = new ethers.BrowserProvider(this.provider || window.ethereum);
-              const contract = new ethers.Contract(tokenConfig.address, ERC20_ABI, browserProvider);
-              const raw = await contract.balanceOf(this.connectedWallet);
-              this.tokenBalance = parseFloat(ethers.formatUnits(raw, tokenConfig.decimals || 6));
-
-              if (this.tokenBalance < amt) {
-                payBtn.disabled = true;
-                payBtn.textContent = `Insufficient ${this.selectedToken} (${this.tokenBalance.toFixed(2)} available)`;
-                payBtn.style.background = '#ef4444';
-                payBtn.style.color = '#fff';
-                return;
-              }
-
-              // Balance OK
-              payBtn.disabled = false;
-              payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken} (${this.tokenBalance.toFixed(2)} available)`;
-              payBtn.style.background = '#00E5FF';
-              payBtn.style.color = '#000';
-            } catch (err) {
-              console.warn('[StablePay] Balance check failed:', err.message);
-              // Don't block — just enable without balance info
-              payBtn.disabled = false;
-              payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken}`;
-              payBtn.style.background = '#00E5FF';
-              payBtn.style.color = '#000';
-            }
-          } else {
-            // Solana or no token config — enable without balance
-            payBtn.disabled = false;
-            payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken}`;
-            payBtn.style.background = '#00E5FF';
-            payBtn.style.color = '#000';
-          }
+          await this.runBalanceCheck();
         }, 2400);
         return;
       }
@@ -1056,53 +1006,107 @@
       if (this.connectedWallet) this.checkTokenBalance();
     }
 
-    async checkTokenBalance() {
-      if (!this.connectedWallet || !this.selectedChain) {
-        this.tokenBalance = null;
-        return;
-      }
+    async runBalanceCheck() {
+      const payBtn = this.container.querySelector('#sp-pay-btn');
+      if (!payBtn || !this.connectedWallet || !this.selectedChain) return;
 
+      const amt = parseFloat(this.options.amount || 0);
       const chainConfig = this.selectedChain.config;
+      const tokenConfig = chainConfig?.tokens?.[this.selectedToken];
 
-      // Solana — skip balance check for now
-      if (chainConfig.type === 'solana') {
-        this.tokenBalance = null;
-        this.updatePayButton();
+      if (!tokenConfig?.address) {
+        this._enablePayBtn(payBtn, amt);
         return;
       }
 
-      // Only check for EVM wallets with valid addresses
-      const wallet = this.connectedWallet;
-      if (!wallet.startsWith('0x') || wallet.length !== 42) {
-        this.tokenBalance = null;
-        this.updatePayButton();
-        return;
-      }
-
-      const tokenConfig = chainConfig.tokens?.[this.selectedToken];
-      if (!tokenConfig || !tokenConfig.address) { this.tokenBalance = null; this.updatePayButton(); return; }
+      payBtn.disabled = true;
+      payBtn.textContent = 'Checking balance...';
+      payBtn.style.background = 'var(--sp-card)';
+      payBtn.style.color = 'var(--sp-muted)';
 
       try {
-        // Load ethers if not loaded yet
-        if (!window.ethers) {
-          await this.loadScript('https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js');
-        }
-        const ethers = window.ethers;
-        if (!ethers) return;
+        let balance = null;
 
-        // Use the wallet's own provider — already on the correct chain after switchEthereumChain
-        // This is more reliable than public RPCs which often return BAD_DATA
-        const browserProvider = new ethers.BrowserProvider(this.provider || window.ethereum);
-        const contract = new ethers.Contract(tokenConfig.address, ERC20_ABI, browserProvider);
-        const raw = await contract.balanceOf(this.connectedWallet);
-        this.tokenBalance = parseFloat(ethers.formatUnits(raw, tokenConfig.decimals || 6));
-        this.updatePayButton();
+        if (chainConfig.type === 'solana') {
+          balance = await this._getSolanaBalance(tokenConfig.address);
+        } else if (this.connectedWallet.startsWith('0x') && chainConfig.rpcUrls?.[0]) {
+          balance = await this._getEVMBalance(chainConfig.rpcUrls[0], tokenConfig.address, tokenConfig.decimals || 6);
+        }
+
+        if (balance !== null) {
+          this.tokenBalance = balance;
+          if (balance < amt) {
+            payBtn.disabled = true;
+            payBtn.textContent = `Insufficient ${this.selectedToken} (${balance.toFixed(2)} available)`;
+            payBtn.style.background = '#ef4444';
+            payBtn.style.color = '#fff';
+            return;
+          }
+          payBtn.disabled = false;
+          payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken} (${balance.toFixed(2)} available)`;
+          payBtn.style.background = '#00E5FF';
+          payBtn.style.color = '#000';
+        } else {
+          this._enablePayBtn(payBtn, amt);
+        }
       } catch (err) {
-        console.warn('[StablePay] Balance check failed, skipping:', err.message);
-        // Don't block payment — just skip balance display
-        this.tokenBalance = null;
-        this.updatePayButton();
+        console.warn('[StablePay] Balance check failed:', err.message);
+        this._enablePayBtn(payBtn, amt);
       }
+    }
+
+    _enablePayBtn(payBtn, amt) {
+      payBtn.disabled = false;
+      payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken}`;
+      payBtn.style.background = '#00E5FF';
+      payBtn.style.color = '#000';
+    }
+
+    async _getEVMBalance(rpcUrl, tokenAddress, decimals) {
+      await this.loadScript('https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js');
+      const ethers = window.ethers;
+      if (!ethers) return null;
+
+      // Use JsonRpcProvider with the chain's own RPC — guaranteed correct chain
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
+      const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+      const raw = await contract.balanceOf(this.connectedWallet);
+      return parseFloat(ethers.formatUnits(raw, decimals));
+    }
+
+    async _getSolanaBalance(mintAddress) {
+      try {
+        // Use Solana JSON-RPC directly — no need for @solana/web3.js
+        const response = await fetch('https://api.mainnet-beta.solana.com', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 1,
+            method: 'getTokenAccountsByOwner',
+            params: [
+              this.connectedWallet,
+              { mint: mintAddress },
+              { encoding: 'jsonParsed' }
+            ]
+          })
+        });
+
+        const data = await response.json();
+        const accounts = data.result?.value || [];
+        let total = 0;
+        for (const acc of accounts) {
+          total += acc.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0;
+        }
+        return total;
+      } catch (err) {
+        console.warn('[StablePay] Solana balance check failed:', err.message);
+        return null;
+      }
+    }
+
+    async checkTokenBalance() {
+      // Called from showConnectedState and selectChain/selectToken
+      await this.runBalanceCheck();
     }
 
     updatePayButton() {
@@ -1329,8 +1333,21 @@
 
     loadScript(src) {
       return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${src}"]`)) {
-          resolve();
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) {
+          // Script tag exists — but it may not have finished loading
+          // Wait for the global to be available (ethers, solanaWeb3)
+          const check = () => {
+            if (src.includes('ethers') && window.ethers) return resolve();
+            if (src.includes('solana') && window.solanaWeb3) return resolve();
+            resolve(); // For other scripts, assume ready
+          };
+          if ((src.includes('ethers') && !window.ethers) || (src.includes('solana') && !window.solanaWeb3)) {
+            existing.addEventListener('load', check);
+            setTimeout(check, 2000); // Fallback timeout
+          } else {
+            check();
+          }
           return;
         }
         const script = document.createElement('script');
