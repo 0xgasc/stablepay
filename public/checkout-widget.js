@@ -253,7 +253,7 @@
             <div style="font-size: 11px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">
               ${this.options.productName || 'Pay with Stablecoins'}
             </div>
-            <div style="font-size: 28px; font-weight: 700; color: #000;">
+            <div id="sp-amount-display" style="font-size: 28px; font-weight: 700; color: #000;">
               $${parseFloat(this.options.amount || 0).toFixed(2)}
             </div>
           </div>
@@ -624,7 +624,38 @@
     selectToken(token) {
       this.selectedToken = token;
 
+      // EURC needs USD → EUR conversion
+      if (token === 'EURC') {
+        this.fetchEURCRate();
+      } else {
+        this.eurcRate = null;
+        this.updateAmountDisplay();
+      }
+
       this.updatePayButton();
+    }
+
+    async fetchEURCRate() {
+      try {
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=euro-coin&vs_currencies=usd');
+        const data = await res.json();
+        this.eurcRate = data['euro-coin']?.usd || 1.15; // fallback 1.15
+      } catch {
+        this.eurcRate = 1.15; // fallback
+      }
+      this.updateAmountDisplay();
+    }
+
+    updateAmountDisplay() {
+      const amountEl = this.container.querySelector('#sp-amount-display');
+      if (!amountEl) return;
+      const usdAmount = parseFloat(this.options.amount || 0);
+      if (this.selectedToken === 'EURC' && this.eurcRate) {
+        const eurAmount = (usdAmount / this.eurcRate).toFixed(2);
+        amountEl.innerHTML = `€${eurAmount} <span style="font-size:14px;opacity:0.7;">EURC</span> <span style="font-size:12px;opacity:0.5;">($${usdAmount.toFixed(2)} USD)</span>`;
+      } else {
+        amountEl.innerHTML = `$${usdAmount.toFixed(2)}`;
+      }
     }
 
     async connectWallet() {
@@ -851,7 +882,12 @@
         const chainConfig = this.selectedChain.config;
         const tokenConfig = chainConfig.tokens[this.selectedToken];
         const recipientAddress = this.selectedChain.address;
-        const amount = parseFloat(this.options.amount);
+        let amount = parseFloat(this.options.amount);
+
+        // Convert USD to EUR for EURC payments
+        if (this.selectedToken === 'EURC' && this.eurcRate) {
+          amount = parseFloat((amount / this.eurcRate).toFixed(2));
+        }
 
         // Step 1: Create order in our backend BEFORE submitting the transaction
         if (!this.currentOrderId) {
@@ -933,8 +969,68 @@
     }
 
     async processSolanaPayment(tokenConfig, recipient, amount) {
-      // Simplified Solana payment - would need @solana/web3.js for full implementation
-      this.showError('Solana payments require additional setup. Please use the hosted checkout.');
+      // Load Solana web3 if not already loaded
+      if (!window.solanaWeb3) {
+        await this.loadScript('https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js');
+      }
+      if (!window.splToken) {
+        await this.loadScript('https://unpkg.com/@solana/spl-token@0.3.8/lib/cjs/index.js').catch(() => {});
+      }
+
+      const solana = window.solanaWeb3;
+      if (!solana) {
+        this.showError('Failed to load Solana libraries');
+        return;
+      }
+
+      const connection = new solana.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+      const fromPubkey = new solana.PublicKey(this.connectedWallet);
+      const toPubkey = new solana.PublicKey(recipient);
+      const mintPubkey = new solana.PublicKey(tokenConfig.address);
+
+      // Get associated token accounts
+      const TOKEN_PROGRAM_ID = new solana.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+      const ASSOCIATED_TOKEN_PROGRAM_ID = new solana.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+
+      function getATA(owner, mint) {
+        return solana.PublicKey.findProgramAddressSync(
+          [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )[0];
+      }
+
+      const fromATA = getATA(fromPubkey, mintPubkey);
+      const toATA = getATA(toPubkey, mintPubkey);
+
+      // Build transfer instruction (SPL token transfer, 6 decimals)
+      const amountLamports = Math.round(amount * 1e6);
+      const transferIx = new solana.TransactionInstruction({
+        keys: [
+          { pubkey: fromATA, isSigner: false, isWritable: true },
+          { pubkey: toATA, isSigner: false, isWritable: true },
+          { pubkey: fromPubkey, isSigner: true, isWritable: false },
+        ],
+        programId: TOKEN_PROGRAM_ID,
+        data: Buffer.from([3, ...new Uint8Array(new BigUint64Array([BigInt(amountLamports)]).buffer)]),
+      });
+
+      const { blockhash } = await connection.getLatestBlockhash();
+      const tx = new solana.Transaction().add(transferIx);
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = fromPubkey;
+
+      try {
+        const signed = await this.provider.signTransaction(tx);
+        const sig = await connection.sendRawTransaction(signed.serialize());
+
+        this.showProcessing(sig);
+
+        await connection.confirmTransaction(sig, 'confirmed');
+        this.showSuccess(sig);
+        if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: sig, amount, token: this.selectedToken });
+      } catch (err) {
+        throw new Error('Solana transaction failed: ' + err.message);
+      }
     }
 
     loadScript(src) {
