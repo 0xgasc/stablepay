@@ -1009,6 +1009,15 @@
         return;
       }
 
+      const chainConfig = this.selectedChain.config;
+
+      // Solana — skip balance check for now
+      if (chainConfig.type === 'solana') {
+        this.tokenBalance = null;
+        this.updatePayButton();
+        return;
+      }
+
       // Only check for EVM wallets with valid addresses
       const wallet = this.connectedWallet;
       if (!wallet.startsWith('0x') || wallet.length !== 42) {
@@ -1017,16 +1026,10 @@
         return;
       }
 
+      const tokenConfig = chainConfig.tokens?.[this.selectedToken];
+      if (!tokenConfig || !tokenConfig.address) { this.tokenBalance = null; this.updatePayButton(); return; }
+
       try {
-        const chainConfig = this.selectedChain.config;
-        const tokenConfig = chainConfig.tokens?.[this.selectedToken];
-        if (!tokenConfig || !tokenConfig.address) { this.tokenBalance = null; this.updatePayButton(); return; }
-
-        if (chainConfig.type === 'solana') {
-          this.tokenBalance = null;
-          return;
-        }
-
         // Load ethers if not loaded yet
         if (!window.ethers) {
           await this.loadScript('https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js');
@@ -1034,16 +1037,16 @@
         const ethers = window.ethers;
         if (!ethers) return;
 
-        // Use direct RPC provider (not BrowserProvider) to query balance on the correct chain
-        const rpcUrl = chainConfig.rpcUrls?.[0];
-        if (!rpcUrl) { this.tokenBalance = null; return; }
-        const rpcProvider = new ethers.JsonRpcProvider(rpcUrl);
-        const contract = new ethers.Contract(tokenConfig.address, ERC20_ABI, rpcProvider);
+        // Use the wallet's own provider — already on the correct chain after switchEthereumChain
+        // This is more reliable than public RPCs which often return BAD_DATA
+        const browserProvider = new ethers.BrowserProvider(this.provider || window.ethereum);
+        const contract = new ethers.Contract(tokenConfig.address, ERC20_ABI, browserProvider);
         const raw = await contract.balanceOf(this.connectedWallet);
         this.tokenBalance = parseFloat(ethers.formatUnits(raw, tokenConfig.decimals || 6));
         this.updatePayButton();
       } catch (err) {
-        // Balance check failed — don't block payment, just skip balance display
+        console.warn('[StablePay] Balance check failed, skipping:', err.message);
+        // Don't block payment — just skip balance display
         this.tokenBalance = null;
         this.updatePayButton();
       }
