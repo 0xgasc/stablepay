@@ -681,12 +681,20 @@
         const qrAmount = this.container.querySelector('#sp-qr-amount');
         if (qrAmount) qrAmount.textContent = `${amount} ${this.selectedToken}`;
 
-        // Generate QR code
+        // Generate QR code — wait for library if needed
         const canvas = this.container.querySelector('#sp-qr-canvas');
-        if (canvas && typeof QRCode !== 'undefined') {
-          QRCode.toCanvas(canvas, walletAddr, { width: 160, margin: 2 }, (err) => {
-            if (err) console.error('QR generation failed:', err);
-          });
+        if (canvas) {
+          const renderQR = () => {
+            if (typeof QRCode !== 'undefined') {
+              QRCode.toCanvas(canvas, walletAddr, { width: 160, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
+                if (err) console.error('QR generation failed:', err);
+              });
+            } else {
+              // Library not loaded yet — retry in 500ms
+              setTimeout(renderQR, 500);
+            }
+          };
+          renderQR();
         }
       } else {
         const step1 = this.container.querySelector('#sp-addr-step1');
