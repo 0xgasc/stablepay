@@ -1000,15 +1000,23 @@
     }
 
     async checkTokenBalance() {
-      if (!this.connectedWallet || !this.selectedChain || !this.provider) {
+      if (!this.connectedWallet || !this.selectedChain) {
         this.tokenBalance = null;
+        return;
+      }
+
+      // Only check for EVM wallets with valid addresses
+      const wallet = this.connectedWallet;
+      if (!wallet.startsWith('0x') || wallet.length !== 42) {
+        this.tokenBalance = null;
+        this.updatePayButton();
         return;
       }
 
       try {
         const chainConfig = this.selectedChain.config;
         const tokenConfig = chainConfig.tokens?.[this.selectedToken];
-        if (!tokenConfig) return;
+        if (!tokenConfig || !tokenConfig.address) { this.tokenBalance = null; this.updatePayButton(); return; }
 
         if (chainConfig.type === 'solana') {
           this.tokenBalance = null;
