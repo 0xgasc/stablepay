@@ -769,7 +769,13 @@
         }
       } catch (error) {
         console.error('Wallet connection failed:', error);
-        this.showError('Failed to connect wallet: ' + error.message);
+        if (error.code === -32002) {
+          this.showError('Wallet has a pending request. Open your wallet extension, dismiss it, and try again.');
+        } else if (error.code === 4001) {
+          // User rejected — silent
+        } else {
+          this.showError('Failed to connect wallet: ' + (error.shortMessage || error.message));
+        }
       }
     }
 
