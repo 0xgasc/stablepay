@@ -482,7 +482,35 @@
           const addr = sendWalletInput?.value?.trim();
           if (addr && addr.length > 10) {
             this.connectedWallet = addr;
-            this.showManualPaymentDetails('send');
+            const shortAddr = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+            const step1 = this.container.querySelector('#sp-send-step1');
+
+            // Show verification animation in step 1
+            if (step1) {
+              const steps = [
+                { text: 'Verifying address...', delay: 0 },
+                { text: 'Compliance check...', delay: 600 },
+                { text: 'Wallet verified', delay: 1200 },
+              ];
+
+              const showStep = (i) => {
+                if (i >= steps.length) {
+                  setTimeout(() => this.showManualPaymentDetails('send'), 300);
+                  return;
+                }
+                step1.innerHTML = `
+                  <div style="padding: 16px; text-align: center;">
+                    ${i < steps.length - 1
+                      ? '<span class="sp-spinner" style="display:inline-block;width:16px;height:16px;border:2px solid var(--sp-border);border-top-color:#00E5FF;border-radius:50%;margin-bottom:8px;"></span>'
+                      : '<div style="color:#22c55e;font-size:20px;font-weight:700;margin-bottom:4px;">✓</div>'}
+                    <div style="font-size: 11px; color: var(--sp-muted); font-weight: 600; text-transform: uppercase;">${steps[i].text}</div>
+                    <div style="font-size: 10px; color: var(--sp-text); font-family: monospace; margin-top: 4px;">${shortAddr}</div>
+                  </div>
+                `;
+              };
+
+              steps.forEach((s, i) => setTimeout(() => showStep(i), s.delay));
+            }
           }
         });
         sendWalletInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendWalletBtn.click(); });
