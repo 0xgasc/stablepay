@@ -406,14 +406,51 @@ Customer switches to "Copy Address" tab
                         <span>Parameter</span><span>Type</span><span>Description</span>
                     </div>
                     <div class="grid grid-cols-3 gap-2"><code class="text-cyan-400">merchantId</code><span>string</span><span>Required. Your merchant ID.</span></div>
-                    <div class="grid grid-cols-3 gap-2"><code class="text-cyan-400">amount</code><span>number</span><span>Payment amount in USD. Omit for dynamic.</span></div>
-                    <div class="grid grid-cols-3 gap-2"><code>productName</code><span>string</span><span>Optional. Shown in checkout UI.</span></div>
-                    <div class="grid grid-cols-3 gap-2"><code>customerEmail</code><span>string</span><span>Optional. Pre-fill customer email.</span></div>
-                    <div class="grid grid-cols-3 gap-2"><code>allowedChains</code><span>string[]</span><span>Restrict chains: ["BASE_MAINNET", "ETHEREUM_MAINNET"]</span></div>
-                    <div class="grid grid-cols-3 gap-2"><code>allowedTokens</code><span>string[]</span><span>Restrict tokens: ["USDC", "USDT"]</span></div>
-                    <div class="grid grid-cols-3 gap-2"><code>onSuccess</code><span>function</span><span>Callback with { orderId, txHash, amount }</span></div>
-                    <div class="grid grid-cols-3 gap-2"><code>onCancel</code><span>function</span><span>Called when customer closes checkout</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code class="text-cyan-400">amount</code><span>number</span><span>Payment amount in USD.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>productName</code><span>string</span><span>Shown in header. Default: "Pay with Stablecoins"</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>customerEmail</code><span>string</span><span>Pre-fill customer email.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>allowedChains</code><span>string[]</span><span>Restrict chains shown at checkout.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>allowedTokens</code><span>string[]</span><span>Restrict tokens shown.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>onSuccess</code><span>function</span><span>Callback: { orderId, txHash, amount }</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>onCancel</code><span>function</span><span>Called when customer closes checkout.</span></div>
                 </div>
+
+                <p class="text-slate-500 mt-6 mb-2 font-bold">Customization Options:</p>
+                <div class="text-sm text-slate-400 space-y-2">
+                    <div class="grid grid-cols-3 gap-2 border-b border-slate-700 pb-2 font-bold text-slate-300">
+                        <span>Parameter</span><span>Type</span><span>Description</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2"><code>theme</code><span>'dark' | 'light'</span><span>Color scheme. Default: 'light'</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>borderStyle</code><span>'brutal' | 'rounded' | 'minimal'</span><span>Border style. Default: 'brutal' (thick borders + shadow)</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>accentColor</code><span>string</span><span>Accent color (hex). Default: '#00E5FF'</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>headerColor</code><span>string</span><span>Header background color. Default: '#00E5FF'</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>buttonText</code><span>string</span><span>Custom pay button text. Overrides default.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>logoUrl</code><span>string</span><span>URL to your logo. Displayed in header.</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>fontFamily</code><span>string</span><span>Custom font (must be loaded on your page).</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>customCSS</code><span>string</span><span>Additional CSS rules scoped to .sp-widget</span></div>
+                    <div class="grid grid-cols-3 gap-2"><code>hideFooter</code><span>boolean</span><span>Hide "Powered by StablePay" footer.</span></div>
+                </div>
+
+                <details class="mt-4">
+                    <summary class="text-slate-300 font-bold text-sm cursor-pointer">Example: Custom styled checkout</summary>
+                    <div class="mt-3">
+<pre>StablePay.checkout({
+  merchantId: 'your-id',
+  amount: 25.00,
+  // Style it your way:
+  theme: 'dark',
+  borderStyle: 'rounded',
+  headerColor: '#8B5CF6',
+  accentColor: '#8B5CF6',
+  logoUrl: 'https://yoursite.com/logo.png',
+  buttonText: 'Complete Purchase',
+  fontFamily: 'Inter',
+  hideFooter: true,
+  customCSS: 'border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);',
+  onSuccess: (data) => window.location.href = '/thanks'
+});</pre>
+                    </div>
+                </details>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 p-5 mt-6">

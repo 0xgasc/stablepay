@@ -112,7 +112,15 @@
         merchantId: options.merchantId || container.dataset.merchant,
         productName: options.productName || container.dataset.product || 'Payment',
         theme: options.theme || container.dataset.theme || 'light',
-        accentColor: options.accentColor || container.dataset.accent || '#3b82f6',
+        accentColor: options.accentColor || container.dataset.accent || '#00E5FF',
+        // Customization options
+        borderStyle: options.borderStyle || 'brutal',     // 'brutal' | 'rounded' | 'minimal'
+        buttonText: options.buttonText || null,            // Custom pay button text
+        logoUrl: options.logoUrl || null,                  // Merchant logo URL
+        headerColor: options.headerColor || '#00E5FF',     // Header background color
+        fontFamily: options.fontFamily || null,             // Custom font (must be loaded by merchant)
+        customCSS: options.customCSS || null,              // Additional CSS scoped to .sp-widget
+        hideFooter: options.hideFooter || false,           // Hide "Powered by StablePay"
         ...options
       };
 
@@ -239,17 +247,21 @@
       }
 
       this.container.innerHTML = `
+        ${this.options.customCSS ? `<style>.sp-widget { ${this.options.customCSS} }</style>` : ''}
         <div class="sp-widget ${this.options.theme}" style="
           --sp-accent: ${accent};
           background: var(--sp-bg);
-          border: 4px solid #000;
-          box-shadow: 8px 8px 0px #000;
+          ${this.options.borderStyle === 'brutal' ? 'border: 4px solid #000; box-shadow: 8px 8px 0px #000;' : ''}
+          ${this.options.borderStyle === 'rounded' ? 'border: 1px solid var(--sp-border); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.12);' : ''}
+          ${this.options.borderStyle === 'minimal' ? 'border: 1px solid var(--sp-border);' : ''}
+          ${this.options.fontFamily ? `font-family: ${this.options.fontFamily}, sans-serif;` : ''}
           padding: 0;
           max-width: 420px;
           overflow: hidden;
         ">
           <!-- Header -->
-          <div style="background: #00E5FF; padding: 16px 20px; border-bottom: 4px solid #000;">
+          <div style="background: ${this.options.headerColor}; padding: 16px 20px; ${this.options.borderStyle === 'brutal' ? 'border-bottom: 4px solid #000;' : 'border-bottom: 1px solid var(--sp-border);'}">
+            ${this.options.logoUrl ? `<img src="${this.options.logoUrl}" style="height: 24px; margin-bottom: 8px;" alt="logo">` : ''}
             <div style="font-size: 11px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">
               ${this.options.productName || 'Pay with Stablecoins'}
             </div>
@@ -419,10 +431,10 @@
             </div>
           </div>
 
-          <!-- Footer -->
+          ${this.options.hideFooter ? '' : `<!-- Footer -->
           <div style="margin-top: 16px; text-align: center; font-size: 10px; color: var(--sp-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
             Powered by <a href="${STABLEPAY_URL}" target="_blank" style="color: #000; text-decoration: none; font-weight: 700;">StablePay</a>
-          </div>
+          </div>`}
           </div>
         </div>
       `;
@@ -1014,7 +1026,7 @@
         const displayAmt = (this.selectedToken === 'EURC' && this.eurcRate)
           ? `€${(amount / this.eurcRate).toFixed(2)}`
           : `$${amount.toFixed(2)}`;
-        payBtn.textContent = `Pay ${displayAmt} ${this.selectedToken}`;
+        payBtn.textContent = this.options.buttonText || `Pay ${displayAmt} ${this.selectedToken}`;
         payBtn.style.background = '#00E5FF';
         payBtn.style.color = '#000';
       }
