@@ -1653,6 +1653,64 @@ onMounted(() => {
                             </div>
                         </div>
 
+                        <!-- Widget Customizer -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-white mb-4">Widget Customizer</h3>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Controls -->
+                                <div class="bg-slate-950 border p-6 space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Style</label>
+                                        <select id="wcBorderStyle" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800">
+                                            <option value="brutal">Neo-Brutalist (default)</option>
+                                            <option value="rounded">Rounded / Soft</option>
+                                            <option value="minimal">Minimal</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Theme</label>
+                                        <select id="wcTheme" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800">
+                                            <option value="light">Light</option>
+                                            <option value="dark">Dark</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Header Color</label>
+                                        <div class="flex gap-2">
+                                            <input type="color" id="wcHeaderColor" value="#00E5FF" onchange="document.getElementById('wcHeaderHex').value=this.value;updateWidgetPreview()" class="w-10 h-10 border border-slate-800 cursor-pointer bg-transparent">
+                                            <input type="text" id="wcHeaderHex" value="#00E5FF" onchange="document.getElementById('wcHeaderColor').value=this.value;updateWidgetPreview()" class="flex-1 px-3 py-2 bg-black text-white border border-slate-800 font-mono text-sm">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Logo URL <span class="text-slate-500">(optional)</span></label>
+                                        <input type="text" id="wcLogoUrl" placeholder="https://yoursite.com/logo.png" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Button Text <span class="text-slate-500">(optional)</span></label>
+                                        <input type="text" id="wcButtonText" placeholder="Pay Now" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800 text-sm">
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <input type="checkbox" id="wcHideFooter" onchange="updateWidgetPreview()" class="w-4 h-4">
+                                        <label for="wcHideFooter" class="text-sm text-slate-300">Hide "Powered by StablePay" footer</label>
+                                    </div>
+
+                                    <div class="pt-4 border-t border-slate-800">
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Embed Code</label>
+                                        <textarea id="wcEmbedCode" readonly rows="6" class="w-full px-3 py-2 bg-black text-green-400 border border-slate-800 font-mono text-xs"></textarea>
+                                        <button onclick="navigator.clipboard.writeText(document.getElementById('wcEmbedCode').value);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Embed Code',1500)" class="mt-2 bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 transition-colors w-full">
+                                            Copy Embed Code
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Live Preview -->
+                                <div class="bg-slate-800 border p-6">
+                                    <div class="text-xs text-slate-400 uppercase font-medium mb-3">Live Preview</div>
+                                    <div id="wcPreviewContainer" style="transform: scale(0.85); transform-origin: top left; max-height: 500px;"></div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -5230,6 +5288,82 @@ onMounted(() => {
         // Load settings
         function loadSettings() {
             // Settings are already loaded in loadMerchantData
+            updateWidgetPreview();
+        }
+
+        function updateWidgetPreview() {
+            const merchantId = currentMerchant?.id || 'YOUR_MERCHANT_ID';
+            const borderStyle = document.getElementById('wcBorderStyle')?.value || 'brutal';
+            const theme = document.getElementById('wcTheme')?.value || 'light';
+            const headerColor = document.getElementById('wcHeaderHex')?.value || '#00E5FF';
+            const logoUrl = document.getElementById('wcLogoUrl')?.value || '';
+            const buttonText = document.getElementById('wcButtonText')?.value || '';
+            const hideFooter = document.getElementById('wcHideFooter')?.checked || false;
+
+            // Build options object
+            const opts = {};
+            if (borderStyle !== 'brutal') opts['data-border-style'] = borderStyle;
+            if (theme !== 'light') opts['data-theme'] = theme;
+            if (headerColor !== '#00E5FF') opts['data-header-color'] = headerColor;
+            if (logoUrl) opts['data-logo'] = logoUrl;
+            if (buttonText) opts['data-button-text'] = buttonText;
+            if (hideFooter) opts['data-hide-footer'] = 'true';
+
+            // Generate embed code
+            let attrs = `data-merchant="${merchantId}" data-amount="25.00" data-product="Your Product"`;
+            for (const [k, v] of Object.entries(opts)) {
+                attrs += ` ${k}="${v}"`;
+            }
+
+            const embedCode = `<div class="stablepay-checkout" ${attrs}></div>\n<script src="https://wetakestables.shop/checkout-widget.js"><\/script>`;
+            const embedEl = document.getElementById('wcEmbedCode');
+            if (embedEl) embedEl.value = embedCode;
+
+            // Render preview
+            const container = document.getElementById('wcPreviewContainer');
+            if (!container) return;
+
+            const previewBorder = borderStyle === 'brutal'
+                ? 'border: 4px solid #000; box-shadow: 8px 8px 0px #000;'
+                : borderStyle === 'rounded'
+                ? 'border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.12);'
+                : 'border: 1px solid #e2e8f0;';
+
+            const bg = theme === 'dark' ? '#0f172a' : '#fff';
+            const text = theme === 'dark' ? '#fff' : '#000';
+            const muted = theme === 'dark' ? '#94a3b8' : '#64748b';
+            const card = theme === 'dark' ? '#1e293b' : '#f1f5f9';
+            const headerBorder = borderStyle === 'brutal' ? 'border-bottom: 4px solid #000;' : 'border-bottom: 1px solid ' + (theme === 'dark' ? '#334155' : '#e2e8f0') + ';';
+
+            container.innerHTML = `
+                <div style="background: ${bg}; color: ${text}; font-family: 'Space Grotesk', system-ui, sans-serif; max-width: 380px; ${previewBorder}">
+                    <div style="background: ${headerColor}; padding: 16px 20px; ${headerBorder}">
+                        ${logoUrl ? `<img src="${logoUrl}" style="height: 24px; margin-bottom: 8px;" alt="logo" onerror="this.style.display='none'">` : ''}
+                        <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: rgba(0,0,0,0.6);">Payment</div>
+                        <div style="font-size: 28px; font-weight: 700; color: #000;">$25.00</div>
+                    </div>
+                    <div style="padding: 16px 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                            <div>
+                                <div style="font-size: 9px; color: ${muted}; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Network</div>
+                                <div style="padding: 8px 12px; border: ${borderStyle === 'brutal' ? '2px solid #000' : '1px solid ' + (theme === 'dark' ? '#334155' : '#e2e8f0')}; font-size: 13px; background: ${card}; ${borderStyle === 'rounded' ? 'border-radius: 8px;' : ''}">Base</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 9px; color: ${muted}; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Stablecoin</div>
+                                <div style="padding: 8px 12px; border: ${borderStyle === 'brutal' ? '2px solid #000' : '1px solid ' + (theme === 'dark' ? '#334155' : '#e2e8f0')}; font-size: 13px; background: ${card}; ${borderStyle === 'rounded' ? 'border-radius: 8px;' : ''}">USDC</div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 12px;">
+                            <div style="padding: 10px; background: #000; color: #fff; text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; ${borderStyle === 'rounded' ? 'border-radius: 8px 0 0 8px;' : ''}">Connect Wallet</div>
+                            <div style="padding: 10px; background: ${card}; color: ${muted}; text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; ${borderStyle === 'rounded' ? 'border-radius: 0 8px 8px 0;' : ''}">Send Manually</div>
+                        </div>
+                        <button style="width: 100%; padding: 14px; background: ${headerColor}; color: #000; border: ${borderStyle === 'brutal' ? '3px solid #000; box-shadow: 4px 4px 0px #000;' : 'none;'} font-size: 14px; font-weight: 700; cursor: pointer; text-transform: uppercase; ${borderStyle === 'rounded' ? 'border-radius: 12px;' : ''}">
+                            ${buttonText || 'Pay $25.00 USDC'}
+                        </button>
+                    </div>
+                    ${hideFooter ? '' : `<div style="text-align: center; padding: 8px; font-size: 10px; color: ${muted}; border-top: 1px solid ${theme === 'dark' ? '#334155' : '#e2e8f0'};">Powered by <strong>STABLEPAY</strong></div>`}
+                </div>
+            `;
         }
 
         // Modal functions (unused, wallet modal was replaced with inline form)
