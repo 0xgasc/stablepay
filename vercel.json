@@ -1,5 +1,13 @@
 {
   "outputDirectory": "public",
+  "headers": [
+    {
+      "source": "/checkout-widget.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=60, must-revalidate" }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/dashboard",
