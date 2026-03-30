@@ -775,23 +775,35 @@
 
     detectEVMProviders() {
       const providers = [];
+      const seen = new Set();
+
+      const classify = (p) => {
+        if (!p || typeof p.request !== 'function') return;
+        // Brave wallet masquerades as MetaMask — detect and label correctly
+        if (p.isBraveWallet) {
+          if (!seen.has('brave')) { providers.push({ name: 'Brave Wallet', provider: p, icon: '🦁' }); seen.add('brave'); }
+          return;
+        }
+        if (p.isMetaMask && !p.isBraveWallet) {
+          if (!seen.has('metamask')) { providers.push({ name: 'MetaMask', provider: p, icon: '🦊' }); seen.add('metamask'); }
+        } else if (p.isRabby) {
+          if (!seen.has('rabby')) { providers.push({ name: 'Rabby', provider: p, icon: '🐰' }); seen.add('rabby'); }
+        } else if (p.isCoinbaseWallet) {
+          if (!seen.has('coinbase')) { providers.push({ name: 'Coinbase', provider: p, icon: '🔵' }); seen.add('coinbase'); }
+        } else if (p.isRainbow) {
+          if (!seen.has('rainbow')) { providers.push({ name: 'Rainbow', provider: p, icon: '🌈' }); seen.add('rainbow'); }
+        } else if (!seen.has('unknown')) {
+          providers.push({ name: 'Wallet', provider: p, icon: '👛' }); seen.add('unknown');
+        }
+      };
+
       // Check for multiple injected providers (EIP-6963 style)
       if (window.ethereum?.providers?.length) {
-        window.ethereum.providers.forEach(p => {
-          if (p.isMetaMask) providers.push({ name: 'MetaMask', provider: p, icon: '🦊' });
-          else if (p.isRabby) providers.push({ name: 'Rabby', provider: p, icon: '🐰' });
-          else if (p.isCoinbaseWallet) providers.push({ name: 'Coinbase', provider: p, icon: '🔵' });
-          else if (p.isRainbow) providers.push({ name: 'Rainbow', provider: p, icon: '🌈' });
-          else providers.push({ name: 'Wallet', provider: p, icon: '👛' });
-        });
-      } else if (window.ethereum) {
-        // Single provider
-        const p = window.ethereum;
-        if (p.isMetaMask) providers.push({ name: 'MetaMask', provider: p, icon: '🦊' });
-        else if (p.isCoinbaseWallet) providers.push({ name: 'Coinbase', provider: p, icon: '🔵' });
-        else if (p.isRainbow) providers.push({ name: 'Rainbow', provider: p, icon: '🌈' });
-        else providers.push({ name: 'Wallet', provider: p, icon: '👛' });
+        window.ethereum.providers.forEach(classify);
       }
+      // Also classify the top-level ethereum object
+      if (window.ethereum) classify(window.ethereum);
+
       return providers;
     }
 
@@ -808,27 +820,39 @@
       if (providers.length === 1) {
         selectedProvider = providers[0].provider;
       } else {
-        // Show wallet picker
+        // Always show picker when multiple wallets detected
         selectedProvider = await this.showWalletPicker(providers);
         if (!selectedProvider) return; // User cancelled
       }
 
-      const accounts = await selectedProvider.request({ method: 'eth_requestAccounts' });
-      if (accounts.length === 0) throw new Error('No accounts found');
+      try {
+        const accounts = await selectedProvider.request({ method: 'eth_requestAccounts' });
+        if (accounts.length === 0) throw new Error('No accounts found');
 
-      this.connectedWallet = accounts[0];
-      this.provider = selectedProvider;
+        this.connectedWallet = accounts[0];
+        this.provider = selectedProvider;
+      } catch (err) {
+        if (err.code === -32002) {
+          this.showError('Your wallet has a pending request. Open MetaMask and approve or reject it, then try again.');
+          return;
+        }
+        if (err.code === 4001) {
+          // User rejected — don't show error
+          return;
+        }
+        throw err;
+      }
 
-      // Switch to correct chain
+      // Switch to correct chain — use selectedProvider, not window.ethereum
       const chainConfig = this.selectedChain.config;
       try {
-        await window.ethereum.request({
+        await selectedProvider.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: chainConfig.chainId }]
         });
       } catch (switchError) {
         if (switchError.code === 4902) {
-          await window.ethereum.request({
+          await selectedProvider.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: chainConfig.chainId,
