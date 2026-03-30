@@ -35,12 +35,12 @@ const CHAIN_TOKENS = {
     ETHEREUM_SEPOLIA: ['USDC'],
     ARBITRUM_SEPOLIA: ['USDC'],
     SOLANA_DEVNET: ['USDC'],
-    BASE_MAINNET: ['USDC', 'EURC'],
+    BASE_MAINNET: ['USDC', 'USDT', 'EURC'],
     ETHEREUM_MAINNET: ['USDC', 'USDT', 'EURC'],
-    POLYGON_MAINNET: ['USDC', 'USDT'],
+    POLYGON_MAINNET: ['USDC', 'USDT', 'EURC'],
     POLYGON_MUMBAI: ['USDC'],
-    ARBITRUM_MAINNET: ['USDC', 'USDT'],
-    SOLANA_MAINNET: ['USDC', 'USDT'],
+    ARBITRUM_MAINNET: ['USDC', 'USDT', 'EURC'],
+    SOLANA_MAINNET: ['USDC', 'USDT', 'EURC'],
 };
 
 // Render chain toggles for wallet configuration

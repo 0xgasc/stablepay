@@ -10,6 +10,7 @@
   const WIDGET_VERSION = '3.0.0';
 
   // Chain configurations (subset for widget)
+  // All verified contract addresses from Circle (USDC/EURC) and Tether (USDT)
   const CHAIN_CONFIG = {
     BASE_SEPOLIA: {
       type: 'evm', chainId: '0x14a34', chainName: 'Base Sepolia', network: 'testnet',
@@ -26,6 +27,7 @@
       rpcUrls: ['https://mainnet.base.org'], blockExplorerUrls: ['https://basescan.org'],
       tokens: {
         USDC: { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
+        USDT: { address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', decimals: 6 },
         EURC: { address: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42', decimals: 6 }
       }
     },
@@ -43,14 +45,25 @@
       rpcUrls: ['https://polygon-rpc.com'], blockExplorerUrls: ['https://polygonscan.com'],
       tokens: {
         USDC: { address: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', decimals: 6 },
-        USDT: { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6 }
+        USDT: { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6 },
+        EURC: { address: '0x390f28e7b2a5Ce76b67F0cD10EA0950A3a19F803', decimals: 6 }
+      }
+    },
+    ARBITRUM_MAINNET: {
+      type: 'evm', chainId: '0xa4b1', chainName: 'Arbitrum', network: 'mainnet',
+      rpcUrls: ['https://arb1.arbitrum.io/rpc'], blockExplorerUrls: ['https://arbiscan.io'],
+      tokens: {
+        USDC: { address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', decimals: 6 },
+        USDT: { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', decimals: 6 },
+        EURC: { address: '0x7Cb7cA2D5c848a1b3e6eCc8De1d8E4F79dAF96c8', decimals: 6 }
       }
     },
     SOLANA_MAINNET: {
       type: 'solana', chainName: 'Solana', network: 'mainnet',
       tokens: {
         USDC: { address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6 },
-        USDT: { address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', decimals: 6 }
+        USDT: { address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', decimals: 6 },
+        EURC: { address: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr', decimals: 6 }
       }
     },
     SOLANA_DEVNET: {
