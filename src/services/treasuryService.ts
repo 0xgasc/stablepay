@@ -1,10 +1,18 @@
 import { ethers } from 'ethers';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { db } from '../config/database';
 
 const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
   'function decimals() view returns (uint8)',
 ];
+
+const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+const SOLANA_TOKEN_MINTS: Record<string, string> = {
+  USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+  EURC: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr',
+};
 
 // RPC endpoints + token addresses per chain
 const CHAIN_TOKENS: Record<string, { rpc: string; tokens: Record<string, string> }> = {
@@ -67,14 +75,15 @@ class TreasuryService {
     let totalUSD = 0;
 
     for (const wallet of merchant.wallets) {
-      const chainConfig = CHAIN_TOKENS[wallet.chain];
-      if (!chainConfig) continue;
+      let balances: { token: string; balance: string; balanceUSD: number }[];
 
-      const balances = await this.getWalletTokenBalances(
-        wallet.address,
-        wallet.chain,
-        wallet.supportedTokens
-      );
+      if (wallet.chain === 'SOLANA_MAINNET') {
+        balances = await this.getSolanaTokenBalances(wallet.address, wallet.supportedTokens);
+      } else {
+        const chainConfig = CHAIN_TOKENS[wallet.chain];
+        if (!chainConfig) continue;
+        balances = await this.getWalletTokenBalances(wallet.address, wallet.chain, wallet.supportedTokens);
+      }
 
       const walletTotal = balances.reduce((sum, b) => sum + b.balanceUSD, 0);
       totalUSD += walletTotal;
@@ -129,6 +138,56 @@ class TreasuryService {
       } catch (err) {
         // RPC failure — skip this token
         results.push({ token, balance: '0', balanceUSD: 0 });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Get SPL token balances for a Solana wallet
+   */
+  async getSolanaTokenBalances(
+    address: string,
+    supportedTokens: string[]
+  ): Promise<{ token: string; balance: string; balanceUSD: number }[]> {
+    const results: { token: string; balance: string; balanceUSD: number }[] = [];
+
+    try {
+      const connection = new Connection(SOLANA_RPC, 'confirmed');
+      const ownerPubkey = new PublicKey(address);
+      const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+
+      // Get all token accounts for this owner
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(ownerPubkey, {
+        programId: TOKEN_PROGRAM_ID,
+      });
+
+      // Build mint → balance map
+      const mintBalances: Record<string, number> = {};
+      for (const account of tokenAccounts.value) {
+        const info = account.account.data.parsed?.info;
+        if (info) {
+          mintBalances[info.mint] = (mintBalances[info.mint] || 0) + (info.tokenAmount?.uiAmount || 0);
+        }
+      }
+
+      for (const token of supportedTokens) {
+        const mint = SOLANA_TOKEN_MINTS[token];
+        if (!mint) continue;
+        const balance = mintBalances[mint] || 0;
+        results.push({
+          token,
+          balance: balance.toFixed(6),
+          balanceUSD: balance,
+        });
+      }
+    } catch (err) {
+      // RPC failure — return zeros
+      for (const token of supportedTokens) {
+        if (SOLANA_TOKEN_MINTS[token]) {
+          results.push({ token, balance: '0', balanceUSD: 0 });
+        }
       }
     }
 
