@@ -567,33 +567,6 @@
       if (step1) step1.style.display = 'none';
     }
 
-    initSenderWalletInput() {
-      const input = this.container.querySelector('#sp-sender-wallet');
-      const btn = this.container.querySelector('#sp-sender-wallet-btn');
-      const inputDiv = this.container.querySelector('#sp-manual-wallet-input');
-
-      // Hide wallet input if already connected via Connect Wallet tab
-      if (this.connectedWallet) {
-        if (inputDiv) inputDiv.style.display = 'none';
-      }
-
-      if (btn) {
-        btn.addEventListener('click', () => {
-          const addr = input?.value?.trim();
-          if (addr && addr.length > 10) {
-            this.connectedWallet = addr;
-            if (inputDiv) inputDiv.style.display = 'none';
-            this.showManualPaymentDetails(this.container.querySelector('#sp-method-qr')?.style.display !== 'none' ? 'qr' : 'address');
-          }
-        });
-      }
-      if (input) {
-        input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') btn?.click();
-        });
-      }
-    }
-
     switchPaymentMethod(method) {
       // Update tabs — neo-brutalist active state
       this.container.querySelectorAll('.sp-method-tab').forEach(tab => {
@@ -1060,8 +1033,9 @@
         this.tokenBalance = parseFloat(ethers.formatUnits(raw, tokenConfig.decimals || 6));
         this.updatePayButton();
       } catch (err) {
-        console.error('Balance check failed:', err);
+        // Balance check failed — don't block payment, just skip balance display
         this.tokenBalance = null;
+        this.updatePayButton();
       }
     }
 
