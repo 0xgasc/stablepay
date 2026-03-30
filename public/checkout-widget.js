@@ -1241,28 +1241,45 @@
       `;
     }
 
-    showSuccess(txHash) {
-      const explorer = this.selectedChain.config.blockExplorerUrls?.[0];
+    showSuccess(txHashOrData) {
+      // Handle both string txHash and object {txHash, explorerLink, ...} from polling
+      const hash = typeof txHashOrData === 'string' ? txHashOrData : (txHashOrData?.txHash || null);
+      const explorerLink = typeof txHashOrData === 'object' ? txHashOrData?.explorerLink : null;
+
+      // Build explorer URL
+      const explorerUrls = {
+        BASE_MAINNET: 'https://basescan.org/tx/',
+        ETHEREUM_MAINNET: 'https://etherscan.io/tx/',
+        POLYGON_MAINNET: 'https://polygonscan.com/tx/',
+        ARBITRUM_MAINNET: 'https://arbiscan.io/tx/',
+        SOLANA_MAINNET: 'https://solscan.io/tx/',
+        BASE_SEPOLIA: 'https://sepolia.basescan.org/tx/',
+        ETHEREUM_SEPOLIA: 'https://sepolia.etherscan.io/tx/',
+      };
+      const chainKey = this.selectedChain?.chain || '';
+      const txUrl = explorerLink || (hash && explorerUrls[chainKey] ? explorerUrls[chainKey] + hash : null);
 
       this.container.querySelector('.sp-widget').innerHTML = `
         <div style="text-align: center; padding: 32px;">
-          <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
-          <div style="font-size: 20px; font-weight: 600; color: var(--sp-text); margin-bottom: 8px;">
-            Payment Successful!
+          <div style="font-size: 48px; margin-bottom: 16px;">&#10003;</div>
+          <div style="font-size: 20px; font-weight: 700; color: var(--sp-text); margin-bottom: 8px; text-transform: uppercase;">
+            Payment Confirmed
           </div>
           <div style="font-size: 14px; color: var(--sp-muted); margin-bottom: 16px;">
             $${parseFloat(this.options.amount).toFixed(2)} paid with ${this.selectedToken}
           </div>
-          ${explorer ? `
-            <a href="${explorer}/tx/${txHash}" target="_blank" style="
+          ${txUrl ? `
+            <a href="${txUrl}" target="_blank" style="
               display: inline-block;
-              padding: 10px 20px;
-              background: var(--sp-accent);
-              color: white;
-              border-radius: 6px;
+              padding: 12px 24px;
+              background: #00E5FF;
+              color: #000;
+              border: 3px solid #000;
               text-decoration: none;
-              font-size: 13px;
-              font-weight: 500;
+              font-size: 12px;
+              font-weight: 700;
+              text-transform: uppercase;
+              box-shadow: 4px 4px 0px #000;
             ">View Transaction</a>
           ` : ''}
         </div>

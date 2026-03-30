@@ -138,7 +138,29 @@ async function startServer() {
       }
     });
 
-    console.log('Cron jobs scheduled: fee check (every 6h), webhook retries (every 5m)');
+    // Cron: Expire stale PENDING orders every 5 minutes
+    cron.schedule('*/5 * * * *', async () => {
+      try {
+        const { db } = await import('./config/database');
+        const { OrderService } = await import('./services/orderService');
+        const orderService = new OrderService();
+        const staleOrders = await db.order.findMany({
+          where: { status: 'PENDING', expiresAt: { lt: new Date() } },
+          select: { id: true },
+          take: 50,
+        });
+        for (const order of staleOrders) {
+          await orderService.expireOrder(order.id);
+        }
+        if (staleOrders.length > 0) {
+          logger.info('Expired stale orders', { count: staleOrders.length, event: 'cron.order_expiry' });
+        }
+      } catch (error) {
+        logger.error('Cron order expiry failed', error as Error, { event: 'cron.order_expiry_error' });
+      }
+    });
+
+    console.log('Cron jobs scheduled: fee check (every 6h), webhook retries (every 5m), order expiry (every 5m)');
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

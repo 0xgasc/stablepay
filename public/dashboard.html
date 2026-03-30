@@ -2917,7 +2917,7 @@ onMounted(() => {
                 }
 
                 // Fetch orders for this merchant (authed)
-                const response = await fetch('/api/orders', {
+                const response = await fetch('/api/orders?includeTransactions=true', {
                     headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('merchantToken') }
                 });
 
@@ -3024,6 +3024,32 @@ onMounted(() => {
             document.getElementById('totalVolume').textContent = '$' + totalVolume.toFixed(2);
         }
 
+        async function promptTxHash(orderId) {
+            const txHash = prompt('Enter the transaction hash (0x...):');
+            if (!txHash || !txHash.startsWith('0x')) return;
+            try {
+                const token = sessionStorage.getItem('merchantToken');
+                const res = await fetch(`/api/orders/${orderId}/transaction`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ txHash })
+                });
+                if (res.ok) {
+                    // Try to confirm the order
+                    await fetch(`/api/orders/${orderId}/confirm`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ txHash })
+                    });
+                    loadOrders();
+                } else {
+                    alert('Failed to register transaction');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
         function renderOrdersTable(orders) {
             const tbody = document.getElementById('ordersTableBody');
             
@@ -3034,17 +3060,15 @@ onMounted(() => {
             
             tbody.innerHTML = orders.map(order => {
                 const statusClass = `status-${order.status.toLowerCase()}`;
-                const shortId = order.id.slice(0, 8) + '...';
+                const shortId = order.id.slice(0, 10) + '...';
                 const createdAt = new Date(order.createdAt).toLocaleDateString();
                 const amount = typeof order.amount === 'object' ? order.amount.toString() : order.amount;
 
-                // Get transaction hash from transactions array
                 const txHash = order.transactions && order.transactions.length > 0
                     ? order.transactions[0].txHash
                     : null;
                 const explorerUrl = txHash ? getExplorerUrl(order.chain, txHash) : null;
 
-                // Truncate customer email
                 const customerDisplay = order.customerEmail
                     ? (order.customerEmail.length > 15 ? order.customerEmail.slice(0, 12) + '...' : order.customerEmail)
                     : 'Anon';
@@ -3052,13 +3076,16 @@ onMounted(() => {
                 return `
                     <tr class="hover:bg-slate-900/50">
                         <td class="px-3 py-3 whitespace-nowrap">
-                            <div class="text-xs font-medium text-white font-mono">${shortId}</div>
+                            <button onclick="navigator.clipboard.writeText('${order.id}');this.textContent='Copied!';setTimeout(()=>this.textContent='${shortId}',1500)"
+                                class="text-xs font-medium text-cyan-400 hover:text-cyan-300 font-mono cursor-pointer" title="${order.id}">
+                                ${shortId}
+                            </button>
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
-                            <div class="text-xs font-semibold text-white">${amount}</div>
+                            <div class="text-xs font-semibold text-white">$${parseFloat(amount).toFixed(2)}</div>
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
-                            <div class="text-xs text-slate-400">${order.chain.replace('_', ' ')}</div>
+                            <div class="text-xs text-slate-400">${order.chain.replace(/_/g, ' ')}</div>
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
                             <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
@@ -3067,9 +3094,13 @@ onMounted(() => {
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
                             ${txHash ? `
-                                <a href="${explorerUrl}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs font-mono">
-                                    ${txHash.slice(0, 6)}...
+                                <a href="${explorerUrl}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs font-mono" title="${txHash}">
+                                    ${txHash.slice(0, 8)}...${txHash.slice(-4)}
                                 </a>
+                            ` : order.status === 'PENDING' ? `
+                                <button onclick="promptTxHash('${order.id}')" class="text-yellow-400 hover:text-yellow-300 text-xs font-bold">
+                                    Enter TX
+                                </button>
                             ` : '<span class="text-slate-500 text-xs">-</span>'}
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
