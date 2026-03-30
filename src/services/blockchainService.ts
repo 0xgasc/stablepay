@@ -60,6 +60,7 @@ export class BlockchainService {
           expiresAt: { gt: new Date() },
         },
         select: { id: true, paymentAddress: true, amount: true, customerWallet: true },
+        orderBy: { createdAt: 'desc' }, // Most recent first — avoids matching stale orders
       });
 
       if (pendingOrders.length === 0) return 0;
