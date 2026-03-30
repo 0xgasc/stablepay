@@ -259,6 +259,28 @@ export class BlockchainService {
     }
     // Solana scanning (separate flow)
     await this.scanSolanaPayments();
+    // Expire stale orders
+    await this.expireStaleOrders();
+  }
+
+  private async expireStaleOrders(): Promise<void> {
+    try {
+      const stale = await db.order.findMany({
+        where: { status: 'PENDING', expiresAt: { lt: new Date() } },
+        select: { id: true },
+        take: 50,
+      });
+      if (stale.length > 0) {
+        const now = new Date();
+        await db.order.updateMany({
+          where: { id: { in: stale.map(s => s.id) } },
+          data: { status: 'EXPIRED' },
+        });
+        console.log(`[scanner] Expired ${stale.length} stale orders`);
+      }
+    } catch (err: any) {
+      console.error('[scanner] Order expiry error:', err.message);
+    }
   }
 
   async scanSolanaPayments(): Promise<void> {

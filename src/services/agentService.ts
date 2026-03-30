@@ -295,6 +295,18 @@ const TOOLS: Anthropic.Tool[] = [
     description: 'Get the merchant\'s stablecoin balances across all chains. Shows USDC/USDT/EURC balance per wallet, total holdings, fees owed, and net available. Use when merchant asks about their balance or holdings.',
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
+  {
+    name: 'process_refund',
+    description: 'Process a refund for a confirmed order. Sends stablecoins back to the customer from the managed wallet. Gas is automatically sponsored if needed. Only works for merchants with managed wallets.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        orderId: { type: 'string', description: 'The order ID to refund' },
+        refundToAddress: { type: 'string', description: 'Customer wallet address to refund to. If not provided, uses the customerWallet from the order.' },
+      },
+      required: ['orderId'],
+    },
+  },
 ];
 
 // ─── Tool execution ─────────────────────────────────────────────────────────
@@ -806,6 +818,34 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
           totalUSD: w.totalUSD,
         })),
       });
+    }
+
+    case 'process_refund': {
+      const { RefundService } = await import('./refundService');
+      const refundSvc = new RefundService();
+      const order = await db.order.findUnique({
+        where: { id: input.orderId },
+        select: { merchantId: true, customerWallet: true, amount: true, token: true, chain: true, status: true },
+      });
+
+      if (!order) return JSON.stringify({ error: 'Order not found' });
+      if (order.merchantId !== merchantId) return JSON.stringify({ error: 'This order does not belong to you' });
+
+      const refundTo = input.refundToAddress || order.customerWallet;
+      if (!refundTo) return JSON.stringify({ error: 'No refund address provided and no customer wallet on record. Please provide the customer wallet address.' });
+
+      const result = await refundSvc.processManagedRefund(input.orderId, refundTo);
+
+      if (result.success) {
+        return JSON.stringify({
+          success: true,
+          message: `Refund of $${result.amount} ${order.token} sent to ${refundTo.slice(0, 8)}...${refundTo.slice(-4)} on ${order.chain}.`,
+          txHash: result.txHash,
+          gasTxHash: result.gasTxHash || null,
+          gasSponsored: !!result.gasTxHash,
+        });
+      }
+      return JSON.stringify({ error: result.error });
     }
 
     default:
