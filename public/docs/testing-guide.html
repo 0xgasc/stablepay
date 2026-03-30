@@ -310,7 +310,7 @@ curl -s -X POST $API/api/refunds \
     "amount": "2.00",
     "reason": "Testing refund on pending order"
   }' | python3 -m json.tool</pre>
-<div class="expect"><span class="badge badge-critical">Fix 2</span> Status 400, <code>"Order not eligible for refund"</code> — only CONFIRMED/PAID orders can be refunded</div>
+<div class="expect"><span class="badge badge-critical">Fix 2</span> Status 400, <code>"Order not eligible for refund"</code> — only CONFIRMED orders can be refunded</div>
 
 <h3>7.2 Create Refund on CONFIRMED Order</h3>
 <pre><span class="comment"># Use the confirmed ORDER_ID from section 5.3</span>

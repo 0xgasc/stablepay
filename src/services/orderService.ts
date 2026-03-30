@@ -179,9 +179,9 @@ export class OrderService {
       });
     }
 
-    // Update order status to PAID using raw SQL
+    // Update order status to CONFIRMED using raw SQL
     const now = new Date();
-    await db.$executeRaw`UPDATE orders SET status = 'PAID'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId}`;
+    await db.$executeRaw`UPDATE orders SET status = 'CONFIRMED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId}`;
 
     const updatedOrder = await db.order.findUnique({
       where: { id: orderId },

@@ -3260,10 +3260,10 @@ onMounted(() => {
 
         function updateStats(data) {
             const total = data.pagination ? data.pagination.total : data.orders.length;
-            const confirmed = data.orders.filter(o => o.status === 'PAID' || o.status === 'CONFIRMED').length;
+            const confirmed = data.orders.filter(o => o.status === 'CONFIRMED').length;
             const pending = data.orders.filter(o => o.status === 'PENDING').length;
             const totalVolume = data.orders
-                .filter(o => o.status === 'CONFIRMED' || o.status === 'PAID')
+                .filter(o => o.status === 'CONFIRMED')
                 .reduce((sum, o) => {
                     const amount = typeof o.amount === 'object' ? parseFloat(o.amount.toString()) : parseFloat(o.amount || 0);
                     return sum + amount;
@@ -3355,7 +3355,7 @@ onMounted(() => {
                             ` : '<span class="text-slate-500 text-xs">-</span>'}
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
-                            ${(order.status === 'CONFIRMED' || order.status === 'PAID') ? `
+                            ${(order.status === 'CONFIRMED') ? `
                                 <button onclick="viewReceipt('${order.id}')" class="text-blue-400 hover:text-blue-300 text-xs">
                                     View
                                 </button>
@@ -3368,7 +3368,7 @@ onMounted(() => {
                             ${createdAt}
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
-                            ${(order.status === 'CONFIRMED' || order.status === 'PAID') ? `
+                            ${(order.status === 'CONFIRMED') ? `
                                 <div class="flex gap-1">
                                     <button onclick="openRefundModal('${order.id}', '${amount}', '${order.chain}')"
                                             class="text-orange-400 hover:text-orange-300 text-xs">

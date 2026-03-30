@@ -59,8 +59,8 @@ export class RefundService {
       throw new Error('Order not found');
     }
 
-    if (order.status !== 'PAID' && order.status !== 'CONFIRMED') {
-      throw new Error('Order must be paid or confirmed to request refund');
+    if (order.status !== 'CONFIRMED') {
+      throw new Error('Order must be confirmed to request refund');
     }
 
     const orderAge = Date.now() - order.createdAt.getTime();
@@ -282,7 +282,7 @@ export class RefundService {
     });
 
     if (!order) return { success: false, error: 'Order not found' };
-    if (order.status !== 'CONFIRMED' && order.status !== 'PAID') {
+    if (order.status !== 'CONFIRMED') {
       return { success: false, error: `Cannot refund order with status ${order.status}` };
     }
     if (!order.merchantId) return { success: false, error: 'No merchant on this order' };

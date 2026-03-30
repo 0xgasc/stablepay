@@ -55,9 +55,9 @@ function updateStats(orders) {
     }
 
     const total = orders.length;
-    const confirmed = orders.filter(o => o.status === 'CONFIRMED' || o.status === 'PAID').length;
+    const confirmed = orders.filter(o => o.status === 'CONFIRMED').length;
     const volume = orders
-        .filter(o => o.status === 'CONFIRMED' || o.status === 'PAID')
+        .filter(o => o.status === 'CONFIRMED')
         .reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
 
     if (orderCount) orderCount.textContent = total;
@@ -113,7 +113,6 @@ function renderOrdersTable(orders) {
     ordersTableBody.innerHTML = filteredOrders.map(order => {
         const statusColors = {
             'PENDING': 'bg-yellow-500/20 text-yellow-300',
-            'PAID': 'bg-blue-500/20 text-blue-300',
             'CONFIRMED': 'bg-green-500/20 text-green-300',
             'EXPIRED': 'bg-red-500/20 text-red-300',
             'REFUNDED': 'bg-purple-500/20 text-purple-300'

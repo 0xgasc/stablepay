@@ -1819,14 +1819,14 @@
                 if (storedOrder) {
                     storedOrder.txHash = tx.hash;
                     storedOrder.fromAddress = connectedAddress;
-                    storedOrder.status = 'PAID';
+                    storedOrder.status = 'CONFIRMED';
                     localStorage.setItem('currentOrder', JSON.stringify(storedOrder));
                     
                     // Update demo orders list (only if using localStorage fallback)
                     const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
                     const orderIndex = demoOrders.findIndex(o => o.id === order.id);
                     if (orderIndex >= 0) {
-                        demoOrders[orderIndex].status = 'PAID';
+                        demoOrders[orderIndex].status = 'CONFIRMED';
                         demoOrders[orderIndex].txHash = tx.hash;
                         demoOrders[orderIndex].fromAddress = connectedAddress;
                         localStorage.setItem('demoOrders', JSON.stringify(demoOrders));
@@ -2171,7 +2171,7 @@
                     try {
                         const res = await fetch('/api/embed/order/' + window.currentOrderId);
                         const data = await res.json();
-                        if (data.status === 'CONFIRMED' || data.status === 'PAID') {
+                        if (data.status === 'CONFIRMED') {
                             clearInterval(window._cpPolling);
                             document.getElementById('cpQRWaiting').textContent = 'Payment confirmed!';
                             document.getElementById('cpCopyWaiting').textContent = 'Payment confirmed!';

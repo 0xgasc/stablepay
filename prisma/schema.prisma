@@ -28,7 +28,6 @@ enum Chain {
 
 enum OrderStatus {
   PENDING
-  PAID
   CONFIRMED
   REFUNDED
   EXPIRED

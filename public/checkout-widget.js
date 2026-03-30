@@ -673,7 +673,7 @@
         try {
           const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}`);
           const data = await res.json();
-          if (data.status === 'CONFIRMED' || data.status === 'PAID') {
+          if (data.status === 'CONFIRMED') {
             clearInterval(this._pollingInterval);
             this._pollingInterval = null;
             this.showSuccess(data);

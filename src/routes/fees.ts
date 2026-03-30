@@ -55,7 +55,7 @@ router.get('/balance', requireMerchantAuth, async (req, res) => {
     const orders = await db.order.findMany({
       where: {
         merchantId: merchant.id,
-        status: { in: ['PAID', 'CONFIRMED'] },
+        status: 'CONFIRMED',
         createdAt: { gte: merchant.lastFeeCalculation || merchant.billingCycleStart }
       },
       include: { transactions: true }

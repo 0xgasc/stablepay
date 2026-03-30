@@ -123,7 +123,7 @@ router.post('/managed', requireMerchantAuth, async (req, res) => {
 
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.merchantId !== merchant.id) return res.status(403).json({ error: 'Not your order' });
-    if (order.status !== 'CONFIRMED' && order.status !== 'PAID') {
+    if (order.status !== 'CONFIRMED') {
       return res.status(400).json({ error: `Cannot refund order with status ${order.status}` });
     }
 
@@ -252,11 +252,11 @@ router.post('/', rateLimit({
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Only allow refunds on CONFIRMED or PAID orders
-    if (order.status !== 'CONFIRMED' && order.status !== 'PAID') {
+    // Only allow refunds on CONFIRMED orders
+    if (order.status !== 'CONFIRMED') {
       return res.status(400).json({
         error: 'Order not eligible for refund',
-        message: `Cannot refund an order with status ${order.status}. Only CONFIRMED or PAID orders can be refunded.`,
+        message: `Cannot refund an order with status ${order.status}. Only CONFIRMED orders can be refunded.`,
       });
     }
 

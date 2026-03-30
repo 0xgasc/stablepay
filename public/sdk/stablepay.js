@@ -355,7 +355,7 @@
           try {
             const status = await this.getOrder(order.orderId);
 
-            if (status.status === 'CONFIRMED' || status.status === 'PAID') {
+            if (status.status === 'CONFIRMED') {
               clearInterval(pollInterval);
               popup.close();
               if (this.onPaymentSuccess) this.onPaymentSuccess(status);
