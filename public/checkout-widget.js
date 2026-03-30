@@ -508,6 +508,8 @@
               };
 
               steps.forEach((s, i) => setTimeout(() => showStep(i), s.delay));
+              // After last step, trigger transition to step 2
+              setTimeout(() => showStep(steps.length), 1800);
             }
           }
         });
@@ -1353,16 +1355,19 @@
       const errorDiv = document.createElement('div');
       errorDiv.style.cssText = `
         position: fixed;
-        bottom: 20px;
+        top: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background: #ef4444;
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 10000;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        background: #000;
+        color: #fff;
+        padding: 14px 24px;
+        border: 3px solid #ef4444;
+        font-size: 13px;
+        font-weight: 700;
+        z-index: 999999;
+        box-shadow: 6px 6px 0px #ef4444;
+        max-width: 90vw;
+        text-align: center;
       `;
       errorDiv.textContent = message;
       document.body.appendChild(errorDiv);
