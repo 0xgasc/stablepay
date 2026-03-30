@@ -792,6 +792,16 @@
                         </div>
                     </div>
 
+                    <!-- Status Filter Pills -->
+                    <div class="flex flex-wrap gap-2 mb-4" id="statusFilters">
+                        <button data-status="ALL" class="status-pill px-3 py-1 text-xs font-medium rounded-full border transition-colors bg-white text-black border-white">All</button>
+                        <button data-status="CONFIRMED" class="status-pill px-3 py-1 text-xs font-medium rounded-full border transition-colors border-green-600 text-green-400 hover:bg-green-900/30">Confirmed</button>
+                        <button data-status="PENDING" class="status-pill px-3 py-1 text-xs font-medium rounded-full border transition-colors border-yellow-600 text-yellow-400 hover:bg-yellow-900/30">Pending</button>
+                        <button data-status="REFUNDED" class="status-pill px-3 py-1 text-xs font-medium rounded-full border transition-colors border-purple-600 text-purple-400 hover:bg-purple-900/30">Refunded</button>
+                        <button data-status="EXPIRED" class="status-pill px-3 py-1 text-xs font-medium rounded-full border transition-colors border-slate-600 text-slate-400 hover:bg-slate-800">Expired</button>
+                        <button data-status="CANCELLED" class="status-pill px-3 py-1 text-xs font-medium rounded-full border transition-colors border-slate-600 text-slate-400 hover:bg-slate-800">Cancelled</button>
+                    </div>
+
                     <div class="overflow-x-auto">
                         <table class="w-full table-fixed">
                             <thead class="bg-slate-950">
@@ -3308,19 +3318,54 @@ onMounted(() => {
             renderOrdersTable(sorted);
         }
 
-        // Search/filter orders
-        document.getElementById('orderSearchInput')?.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const filtered = allOrders.filter(order => {
-                return (
-                    order.id.toLowerCase().includes(searchTerm) ||
-                    order.chain.toLowerCase().includes(searchTerm) ||
-                    order.status.toLowerCase().includes(searchTerm) ||
-                    (order.customerEmail && order.customerEmail.toLowerCase().includes(searchTerm)) ||
-                    (order.amount && order.amount.toString().includes(searchTerm))
-                );
-            });
+        // Status filter state
+        let activeStatusFilter = 'ALL';
+
+        function applyOrderFilters() {
+            const searchTerm = (document.getElementById('orderSearchInput')?.value || '').toLowerCase();
+            let filtered = allOrders;
+
+            // Apply status filter
+            if (activeStatusFilter !== 'ALL') {
+                filtered = filtered.filter(o => o.status === activeStatusFilter);
+            }
+
+            // Apply search filter
+            if (searchTerm) {
+                filtered = filtered.filter(order => {
+                    return (
+                        order.id.toLowerCase().includes(searchTerm) ||
+                        order.chain.toLowerCase().includes(searchTerm) ||
+                        order.status.toLowerCase().includes(searchTerm) ||
+                        (order.customerEmail && order.customerEmail.toLowerCase().includes(searchTerm)) ||
+                        (order.amount && order.amount.toString().includes(searchTerm))
+                    );
+                });
+            }
+
             renderOrdersTable(filtered);
+        }
+
+        // Status pill click handlers
+        document.querySelectorAll('.status-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                activeStatusFilter = pill.dataset.status;
+                // Update pill styles
+                document.querySelectorAll('.status-pill').forEach(p => {
+                    if (p.dataset.status === activeStatusFilter) {
+                        p.classList.add('bg-white', 'text-black', 'border-white');
+                        p.classList.remove('hover:bg-green-900/30', 'hover:bg-yellow-900/30', 'hover:bg-purple-900/30', 'hover:bg-slate-800');
+                    } else {
+                        p.classList.remove('bg-white', 'text-black', 'border-white');
+                    }
+                });
+                applyOrderFilters();
+            });
+        });
+
+        // Search/filter orders
+        document.getElementById('orderSearchInput')?.addEventListener('input', () => {
+            applyOrderFilters();
         });
 
         // Load wallets
