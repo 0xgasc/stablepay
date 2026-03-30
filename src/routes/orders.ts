@@ -95,7 +95,9 @@ router.get('/', requireMerchantAuth, async (req, res) => {
     });
     const total = await db.order.count({ where: { merchantId } });
 
-    res.json({ orders, total, page, limit });
+    // Serialize BigInt values (blockNumber) to strings for JSON
+    const safeOrders = JSON.parse(JSON.stringify(orders, (_, v) => typeof v === 'bigint' ? v.toString() : v));
+    res.json({ orders: safeOrders, total, page, limit });
   } catch (error) {
     console.error('Get orders error:', error);
     res.status(500).json({ error: 'Internal server error' });
