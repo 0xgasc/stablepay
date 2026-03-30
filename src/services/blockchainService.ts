@@ -257,6 +257,115 @@ export class BlockchainService {
       await this.scanForPayments(chain);
       await this.updatePendingConfirmations(chain);
     }
+    // Solana scanning (separate flow)
+    await this.scanSolanaPayments();
+  }
+
+  async scanSolanaPayments(): Promise<void> {
+    try {
+      // Get pending Solana orders
+      const pendingOrders = await db.order.findMany({
+        where: {
+          chain: 'SOLANA_MAINNET',
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true, paymentAddress: true, amount: true, customerWallet: true },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (pendingOrders.length === 0) return;
+
+      const { Connection, PublicKey } = await import('@solana/web3.js');
+      const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+
+      // USDC and USDT mint addresses on Solana
+      const TOKEN_MINTS: Record<string, string> = {
+        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
+        'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
+        'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr': 'EURC',
+      };
+
+      // Group orders by payment address
+      const addressMap = new Map<string, typeof pendingOrders>();
+      for (const order of pendingOrders) {
+        const existing = addressMap.get(order.paymentAddress) || [];
+        existing.push(order);
+        addressMap.set(order.paymentAddress, existing);
+      }
+
+      for (const [address, orders] of addressMap) {
+        try {
+          const pubkey = new PublicKey(address);
+          // Get recent signatures for this address
+          const sigs = await connection.getSignaturesForAddress(pubkey, { limit: 20 });
+
+          for (const sigInfo of sigs) {
+            // Skip if already processed
+            const existing = await db.transaction.findUnique({ where: { txHash: sigInfo.signature } });
+            if (existing) continue;
+
+            // Get parsed transaction
+            const tx = await connection.getParsedTransaction(sigInfo.signature, { maxSupportedTransactionVersion: 0 });
+            if (!tx || tx.meta?.err) continue;
+
+            // Look for SPL token transfers in the instructions
+            const instructions = tx.transaction.message.instructions;
+            for (const ix of instructions) {
+              if ('parsed' in ix && ix.parsed?.type === 'transferChecked' && ix.program === 'spl-token') {
+                const info = ix.parsed.info;
+                const mint = info.mint;
+                const tokenName = TOKEN_MINTS[mint];
+                if (!tokenName) continue;
+
+                const amount = parseFloat(info.tokenAmount?.uiAmountString || '0');
+                const fromAuthority = info.authority;
+
+                // Match against pending orders
+                for (const order of orders) {
+                  const orderAmount = Number(order.amount);
+                  if (Math.abs(orderAmount - amount) >= 0.01) continue;
+                  if (order.customerWallet && fromAuthority.toLowerCase() !== order.customerWallet.toLowerCase()) continue;
+
+                  // Match found — create transaction + confirm
+                  await db.transaction.create({
+                    data: {
+                      orderId: order.id,
+                      txHash: sigInfo.signature,
+                      chain: 'SOLANA_MAINNET',
+                      amount: amount,
+                      fromAddress: fromAuthority,
+                      toAddress: address,
+                      status: 'CONFIRMED',
+                      confirmations: 1,
+                      blockTimestamp: tx.blockTime ? new Date(tx.blockTime * 1000) : new Date(),
+                    },
+                  });
+
+                  // Compliance screening
+                  const { complianceService } = await import('./complianceService');
+                  const screening = await complianceService.screenTransaction(order.id, fromAuthority);
+
+                  if (screening.riskLevel !== 'BLOCKED') {
+                    await this.orderService.confirmOrder(order.id, {
+                      txHash: sigInfo.signature,
+                    });
+                    console.log(`[scanner] ✅ Solana confirmed order ${order.id} — ${amount} ${tokenName}`);
+                  } else {
+                    console.log(`[scanner] ❌ Solana BLOCKED order ${order.id} — ${screening.flags.join(', ')}`);
+                  }
+                  break;
+                }
+              }
+            }
+          }
+        } catch (err: any) {
+          console.error(`[scanner] Solana scan error for ${address}:`, err.message);
+        }
+      }
+    } catch (error: any) {
+      console.error('[scanner] Solana scan cycle error:', error.message);
+    }
   }
 
   private scanning = false;
