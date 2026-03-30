@@ -617,10 +617,11 @@
       const panel = this.container.querySelector(`#sp-method-${method}`);
       if (panel) panel.style.display = 'block';
 
-      // For QR and address methods, create order + show details
-      if (method === 'qr' || method === 'address') {
+      // For QR and address methods — only show step 2 if wallet already known
+      if ((method === 'qr' || method === 'address') && this.connectedWallet) {
         this.showManualPaymentDetails(method);
       }
+      // Otherwise step 1 (enter wallet) is already visible by default
     }
 
     async showManualPaymentDetails(method) {
@@ -999,11 +1000,14 @@
         if (!tokenConfig) return;
 
         if (chainConfig.type === 'solana') {
-          // Solana balance check would need SPL token query — skip for now
           this.tokenBalance = null;
           return;
         }
 
+        // Load ethers if not loaded yet
+        if (!window.ethers) {
+          await this.loadScript('https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js');
+        }
         const ethers = window.ethers;
         if (!ethers) return;
 
