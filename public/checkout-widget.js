@@ -392,40 +392,32 @@
       `;
     }
 
-    renderTokenButtons() {
-      if (!this.selectedChain) return '';
-
+    renderTokenOptions() {
+      if (!this.selectedChain) return '<option>USDC</option>';
       const tokens = this.selectedChain.supportedTokens;
       const chainTokens = this.selectedChain.config.tokens;
-
       return tokens
         .filter(t => chainTokens[t])
-        .map((token, i) => `
-          <button class="sp-token-btn ${i === 0 ? 'selected' : ''}" data-token="${token}" style="
-            padding: 8px 16px;
-            border: 1px solid var(--sp-border);
-            border-radius: 6px;
-            background: var(--sp-card);
-            color: var(--sp-text);
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-          ">${token}</button>
-        `).join('');
+        .map((token, i) => `<option value="${token}" ${i === 0 ? 'selected' : ''}>${token}</option>`)
+        .join('');
+    }
+
+    renderTokenButtons() {
+      return this.renderTokenOptions();
     }
 
     attachEventListeners() {
-      // Chain selection
-      this.container.querySelectorAll('.sp-chain-btn').forEach(btn => {
-        btn.addEventListener('click', () => this.selectChain(btn.dataset.chain));
-      });
+      // Chain dropdown
+      const chainSelect = this.container.querySelector('#sp-chain-select');
+      if (chainSelect) {
+        chainSelect.addEventListener('change', (e) => this.selectChain(e.target.value));
+      }
 
-      // Token selection
-      this.container.addEventListener('click', (e) => {
-        if (e.target.classList.contains('sp-token-btn')) {
-          this.selectToken(e.target.dataset.token);
-        }
-      });
+      // Token dropdown
+      const tokenSelect = this.container.querySelector('#sp-token-select');
+      if (tokenSelect) {
+        tokenSelect.addEventListener('change', (e) => this.selectToken(e.target.value));
+      }
 
       // Connect wallet
       const connectBtn = this.container.querySelector('#sp-connect-btn');
@@ -618,27 +610,17 @@
       this.selectedChain = this.merchantChains.find(mc => mc.chain === chainKey);
       this.selectedToken = this.selectedChain?.supportedTokens[0] || 'USDC';
 
-      // Update UI
-      this.container.querySelectorAll('.sp-chain-btn').forEach(btn => {
-        btn.classList.toggle('selected', btn.dataset.chain === chainKey);
-      });
-
-      // Re-render tokens
-      const tokenContainer = this.container.querySelector('#sp-token-container');
-      if (tokenContainer) {
-        tokenContainer.innerHTML = this.renderTokenButtons();
+      // Update token dropdown options
+      const tokenSelect = this.container.querySelector('#sp-token-select');
+      if (tokenSelect) {
+        tokenSelect.innerHTML = this.renderTokenOptions();
       }
 
-      // If wallet connected to different chain type, may need to reconnect
       this.updatePayButton();
     }
 
     selectToken(token) {
       this.selectedToken = token;
-
-      this.container.querySelectorAll('.sp-token-btn').forEach(btn => {
-        btn.classList.toggle('selected', btn.dataset.token === token);
-      });
 
       this.updatePayButton();
     }
