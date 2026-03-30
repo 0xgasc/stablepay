@@ -253,38 +253,35 @@
             </div>
           </div>
 
-          <!-- Chain Selection -->
-          <div style="margin-bottom: 16px;">
-            <div style="font-size: 12px; font-weight: 600; color: var(--sp-muted); margin-bottom: 8px; text-transform: uppercase;">
-              Select Network
+          <!-- Chain + Token Selection (dropdowns) -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+            <div>
+              <label style="font-size: 11px; font-weight: 600; color: var(--sp-muted); text-transform: uppercase; display: block; margin-bottom: 4px;">Network</label>
+              <select id="sp-chain-select" style="
+                width: 100%; padding: 10px 12px; font-size: 14px; font-weight: 500;
+                background: var(--sp-card); color: var(--sp-text); border: 2px solid var(--sp-border);
+                border-radius: 8px; cursor: pointer; outline: none;
+                appearance: none; -webkit-appearance: none;
+                background-image: url('data:image/svg+xml;utf8,<svg fill=\\"gray\\" viewBox=\\"0 0 24 24\\" xmlns=\\"http://www.w3.org/2000/svg\\"><path d=\\"M7 10l5 5 5-5z\\"/></svg>');
+                background-repeat: no-repeat; background-position: right 8px center; background-size: 18px;
+              ">
+                ${this.merchantChains.map((mc, i) => `
+                  <option value="${mc.chain}" ${i === 0 ? 'selected' : ''}>${mc.config.chainName}</option>
+                `).join('')}
+              </select>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
-              ${this.merchantChains.map((mc, i) => `
-                <button class="sp-chain-btn ${i === 0 ? 'selected' : ''}" data-chain="${mc.chain}" style="
-                  padding: 12px;
-                  border: 2px solid var(--sp-border);
-                  border-radius: 8px;
-                  background: var(--sp-card);
-                  color: var(--sp-text);
-                  font-size: 13px;
-                  font-weight: 500;
-                ">
-                  ${mc.config.chainName}
-                  <div style="font-size: 10px; color: var(--sp-muted); margin-top: 2px;">
-                    ${mc.config.network}
-                  </div>
-                </button>
-              `).join('')}
-            </div>
-          </div>
-
-          <!-- Token Selection -->
-          <div style="margin-bottom: 20px;">
-            <div style="font-size: 12px; font-weight: 600; color: var(--sp-muted); margin-bottom: 8px; text-transform: uppercase;">
-              Pay With
-            </div>
-            <div id="sp-token-container" style="display: flex; gap: 8px; flex-wrap: wrap;">
-              ${this.renderTokenButtons()}
+            <div>
+              <label style="font-size: 11px; font-weight: 600; color: var(--sp-muted); text-transform: uppercase; display: block; margin-bottom: 4px;">Stablecoin</label>
+              <select id="sp-token-select" style="
+                width: 100%; padding: 10px 12px; font-size: 14px; font-weight: 500;
+                background: var(--sp-card); color: var(--sp-text); border: 2px solid var(--sp-border);
+                border-radius: 8px; cursor: pointer; outline: none;
+                appearance: none; -webkit-appearance: none;
+                background-image: url('data:image/svg+xml;utf8,<svg fill=\\"gray\\" viewBox=\\"0 0 24 24\\" xmlns=\\"http://www.w3.org/2000/svg\\"><path d=\\"M7 10l5 5 5-5z\\"/></svg>');
+                background-repeat: no-repeat; background-position: right 8px center; background-size: 18px;
+              ">
+                ${this.renderTokenOptions()}
+              </select>
             </div>
           </div>
 

@@ -198,14 +198,28 @@ router.get('/order/:orderId', async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
+    const txHash = order.transactions[0]?.txHash || null;
+    const explorerUrls: Record<string, string> = {
+      BASE_MAINNET: 'https://basescan.org/tx/',
+      ETHEREUM_MAINNET: 'https://etherscan.io/tx/',
+      POLYGON_MAINNET: 'https://polygonscan.com/tx/',
+      ARBITRUM_MAINNET: 'https://arbiscan.io/tx/',
+      SOLANA_MAINNET: 'https://solscan.io/tx/',
+      BASE_SEPOLIA: 'https://sepolia.basescan.org/tx/',
+      ETHEREUM_SEPOLIA: 'https://sepolia.etherscan.io/tx/',
+    };
+
     res.json({
       id: order.id,
       status: order.status,
       amount: Number(order.amount),
       token: order.token,
       chain: order.chain,
-      txHash: order.transactions[0]?.txHash || null,
-      confirmedAt: order.transactions[0]?.blockTimestamp?.toISOString() || null
+      paymentAddress: order.paymentAddress,
+      txHash,
+      explorerLink: txHash && explorerUrls[order.chain] ? explorerUrls[order.chain] + txHash : null,
+      confirmedAt: order.transactions[0]?.blockTimestamp?.toISOString() || null,
+      expiresAt: order.expiresAt.toISOString(),
     });
   } catch (error) {
     console.error('Get embed order error:', error);

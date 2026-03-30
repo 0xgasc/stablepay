@@ -322,14 +322,36 @@ export class OrderService {
         event: 'order.fee_recorded'
       });
 
+      // Build explorer link for the transaction
+      const explorerUrls: Record<string, string> = {
+        BASE_MAINNET: 'https://basescan.org/tx/',
+        ETHEREUM_MAINNET: 'https://etherscan.io/tx/',
+        POLYGON_MAINNET: 'https://polygonscan.com/tx/',
+        ARBITRUM_MAINNET: 'https://arbiscan.io/tx/',
+        SOLANA_MAINNET: 'https://solscan.io/tx/',
+        BASE_SEPOLIA: 'https://sepolia.basescan.org/tx/',
+        ETHEREUM_SEPOLIA: 'https://sepolia.etherscan.io/tx/',
+      };
+      const explorerLink = txData?.txHash && explorerUrls[confirmedOrder.chain]
+        ? explorerUrls[confirmedOrder.chain] + txData.txHash
+        : null;
+
       // Send webhook for order confirmation
       webhookService.sendWebhook(confirmedOrder.merchantId, 'order.confirmed', {
         orderId: confirmedOrder.id,
         amount: orderAmount,
+        token: confirmedOrder.token,
         chain: confirmedOrder.chain,
-        txHash: txData?.txHash,
+        status: 'CONFIRMED',
+        txHash: txData?.txHash || null,
+        explorerLink,
+        customerEmail: confirmedOrder.customerEmail || null,
+        customerWallet: confirmedOrder.customerWallet || null,
+        paymentAddress: confirmedOrder.paymentAddress,
         feePercent,
         feeAmount,
+        netAmount: orderAmount - feeAmount,
+        confirmedAt: new Date().toISOString(),
       }).catch(err => {
         logger.error('Failed to send order.confirmed webhook', err as Error, { orderId });
       });
