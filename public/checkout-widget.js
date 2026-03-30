@@ -595,9 +595,6 @@
         return;
       }
 
-      const payAddress = this.container.querySelector('#sp-pay-address');
-      const payAmount = this.container.querySelector('#sp-pay-amount');
-
       // Get merchant wallet for this chain
       const chain = this.selectedChain;
       const walletAddr = chain.address;
