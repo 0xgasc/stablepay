@@ -366,30 +366,36 @@
               </div>
               <!-- Step 2: QR + Address + Amount (hidden until step 1 done) -->
               <div id="sp-send-step2" style="display: none; padding: 12px;">
-                <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 8px;">Step 2: Send Payment</div>
+                <!-- Toggle: QR / Address -->
+                <div style="display: flex; gap: 0; margin-bottom: 12px; border: 2px solid #000;">
+                  <button id="sp-send-toggle-qr" style="flex:1; padding: 6px; font-size: 9px; font-weight: 700; border: none; background: #000; color: #fff; cursor: pointer; text-transform: uppercase;">QR Code</button>
+                  <button id="sp-send-toggle-addr" style="flex:1; padding: 6px; font-size: 9px; font-weight: 700; border: none; border-left: 2px solid #000; background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase;">Copy Address</button>
+                </div>
 
-                <!-- QR Code -->
-                <div style="text-align: center; margin-bottom: 12px;">
-                  <div style="background: white; padding: 10px; display: inline-block; border: 3px solid #000;">
+                <!-- QR View (default) -->
+                <div id="sp-send-view-qr" style="text-align: center; margin-bottom: 12px;">
+                  <div style="background: white; padding: 10px; display: inline-block; border: 3px solid #000; margin-bottom: 8px;">
                     <canvas id="sp-qr-canvas" width="140" height="140"></canvas>
                   </div>
+                  <p style="font-size: 11px; color: var(--sp-text); font-weight: 600;">Send exactly <span id="sp-send-amount-display" style="color: #00E5FF;"></span></p>
+                  <p style="font-size: 9px; color: var(--sp-muted);">Scan with your wallet app and send the exact amount.</p>
                 </div>
 
-                <!-- Address -->
-                <div style="background: var(--sp-card); border: 3px solid #000; padding: 10px; margin-bottom: 8px;">
-                  <div style="font-size: 9px; color: var(--sp-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Send to</div>
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <code id="sp-pay-address" style="font-size: 10px; color: var(--sp-text); word-break: break-all; flex: 1; font-weight: 600;"></code>
-                    <button id="sp-copy-addr-btn" style="padding: 4px 10px; background: #000; color: #fff; border: none; font-size: 10px; font-weight: 700; cursor: pointer;">COPY</button>
+                <!-- Address View (hidden by default) -->
+                <div id="sp-send-view-addr" style="display: none; margin-bottom: 12px;">
+                  <div style="background: var(--sp-card); border: 3px solid #000; padding: 10px; margin-bottom: 8px;">
+                    <div style="font-size: 9px; color: var(--sp-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Send to</div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <code id="sp-pay-address" style="font-size: 10px; color: var(--sp-text); word-break: break-all; flex: 1; font-weight: 600;"></code>
+                      <button id="sp-copy-addr-btn" style="padding: 4px 10px; background: #000; color: #fff; border: none; font-size: 10px; font-weight: 700; cursor: pointer;">COPY</button>
+                    </div>
                   </div>
-                </div>
-
-                <!-- Amount -->
-                <div style="background: var(--sp-card); border: 3px solid #000; padding: 10px; margin-bottom: 12px;">
-                  <div style="font-size: 9px; color: var(--sp-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Exact amount</div>
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <span id="sp-pay-amount" style="font-size: 20px; font-weight: 700; color: var(--sp-text);"></span>
-                    <button id="sp-copy-amt-btn" style="padding: 4px 10px; background: #000; color: #fff; border: none; font-size: 10px; font-weight: 700; cursor: pointer;">COPY</button>
+                  <div style="background: var(--sp-card); border: 3px solid #000; padding: 10px;">
+                    <div style="font-size: 9px; color: var(--sp-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Exact amount</div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span id="sp-pay-amount" style="font-size: 20px; font-weight: 700; color: var(--sp-text);"></span>
+                      <button id="sp-copy-amt-btn" style="padding: 4px 10px; background: #000; color: #fff; border: none; font-size: 10px; font-weight: 700; cursor: pointer;">COPY</button>
+                    </div>
                   </div>
                 </div>
 
@@ -489,6 +495,24 @@
           this.container.querySelector('#sp-send-step2').style.display = 'none';
           this.container.querySelector('#sp-send-step3').style.display = 'block';
           this.startPaymentPolling();
+        });
+      }
+
+      // QR / Address toggle inside Send tab
+      const toggleQR = this.container.querySelector('#sp-send-toggle-qr');
+      const toggleAddr = this.container.querySelector('#sp-send-toggle-addr');
+      if (toggleQR && toggleAddr) {
+        toggleQR.addEventListener('click', () => {
+          this.container.querySelector('#sp-send-view-qr').style.display = 'block';
+          this.container.querySelector('#sp-send-view-addr').style.display = 'none';
+          toggleQR.style.background = '#000'; toggleQR.style.color = '#fff';
+          toggleAddr.style.background = 'var(--sp-card)'; toggleAddr.style.color = 'var(--sp-muted)';
+        });
+        toggleAddr.addEventListener('click', () => {
+          this.container.querySelector('#sp-send-view-qr').style.display = 'none';
+          this.container.querySelector('#sp-send-view-addr').style.display = 'block';
+          toggleAddr.style.background = '#000'; toggleAddr.style.color = '#fff';
+          toggleQR.style.background = 'var(--sp-card)'; toggleQR.style.color = 'var(--sp-muted)';
         });
       }
 
@@ -617,11 +641,13 @@
       if (step1) step1.style.display = 'none';
       if (step2) step2.style.display = 'block';
 
-      // Show address + amount
+      // Show address + amount in both views
       const payAddress = this.container.querySelector('#sp-pay-address');
       const payAmount = this.container.querySelector('#sp-pay-amount');
+      const sendAmountDisplay = this.container.querySelector('#sp-send-amount-display');
       if (payAddress) payAddress.textContent = walletAddr;
       if (payAmount) payAmount.textContent = `${amount} ${this.selectedToken}`;
+      if (sendAmountDisplay) sendAmountDisplay.textContent = `${amount} ${this.selectedToken}`;
 
       // Generate QR code — wait for library if needed
       const canvas = this.container.querySelector('#sp-qr-canvas');
