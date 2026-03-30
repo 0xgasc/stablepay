@@ -353,7 +353,37 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         });
       }
 
-      return JSON.stringify({ success: true, chain, address, tokens, message: `Wallet configured for ${chain} accepting ${tokens.join(', ')}${isMainnet ? '. Network mode set to MAINNET.' : ''}` });
+      // Auto-sweep: if there was a managed wallet for this chain, transfer funds to new address
+      let sweepResult = null;
+      const managedWallet = await db.managedWallet.findUnique({
+        where: { merchantId_chain: { merchantId, chain } },
+      });
+      if (managedWallet && !managedWallet.migratedToOwn && managedWallet.address.toLowerCase() !== address.toLowerCase()) {
+        try {
+          const chainConf = CHAIN_RPC[chain];
+          if (chainConf && ENCRYPTION_KEY) {
+            const privateKey = decryptKey(managedWallet.encryptedKey);
+            const provider = new ethers.JsonRpcProvider(chainConf.rpc);
+            const wallet = new ethers.Wallet(privateKey, provider);
+            const tokenContract = new ethers.Contract(chainConf.usdc, ERC20_ABI, wallet);
+            const balance = await tokenContract.balanceOf(managedWallet.address);
+            if (balance > 0n) {
+              const tx = await tokenContract.transfer(address, balance);
+              sweepResult = `Auto-transferred ${ethers.formatUnits(balance, 6)} USDC from managed wallet to your new address. TX: ${tx.hash}`;
+            }
+            // Mark as migrated
+            await db.managedWallet.update({
+              where: { id: managedWallet.id },
+              data: { migratedToOwn: true },
+            });
+          }
+        } catch (err: any) {
+          sweepResult = `Managed wallet migration note: could not auto-transfer funds (${err.message}). You can withdraw manually later.`;
+        }
+      }
+
+      const msg = `Wallet configured for ${chain} accepting ${tokens.join(', ')}${isMainnet ? '. Network mode set to MAINNET.' : ''}`;
+      return JSON.stringify({ success: true, chain, address, tokens, message: sweepResult ? `${msg}\n\n${sweepResult}` : msg });
     }
 
     case 'create_managed_wallet': {

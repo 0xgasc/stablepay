@@ -1013,4 +1013,127 @@ router.post('/migrate-receipts', requireAdminKey, async (_req, res) => {
   }
 });
 
+// ─── Managed Wallets Admin ──────────────────────────────────────────────────
+
+// List all managed wallets with merchant info
+router.get('/managed-wallets', requireAdminKey, async (req, res) => {
+  try {
+    const wallets = await db.managedWallet.findMany({
+      where: { isActive: true },
+      include: {
+        merchant: {
+          select: { id: true, email: true, companyName: true, plan: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json({
+      total: wallets.length,
+      wallets: wallets.map(w => ({
+        id: w.id,
+        merchantId: w.merchantId,
+        merchantEmail: w.merchant.email,
+        merchantName: w.merchant.companyName,
+        chain: w.chain,
+        address: w.address,
+        migratedToOwn: w.migratedToOwn,
+        createdAt: w.createdAt,
+      }))
+    });
+  } catch (error) {
+    console.error('Admin managed wallets error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Sweep funds from a managed wallet to a destination address
+router.post('/managed-wallets/:walletId/sweep', requireAdminKey, async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const { toAddress, chain, token } = req.body;
+
+    if (!toAddress) {
+      return res.status(400).json({ error: 'toAddress required' });
+    }
+
+    const managedWallet = await db.managedWallet.findUnique({
+      where: { id: walletId },
+    });
+
+    if (!managedWallet) {
+      return res.status(404).json({ error: 'Managed wallet not found' });
+    }
+
+    // Decrypt and sweep
+    const { ethers } = await import('ethers');
+    const crypto = await import('crypto');
+
+    const ENCRYPTION_KEY = process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
+    if (!ENCRYPTION_KEY) {
+      return res.status(500).json({ error: 'Encryption key not configured' });
+    }
+
+    function decryptKey(encrypted: string): string {
+      const [ivHex, encData] = encrypted.split(':');
+      const iv = Buffer.from(ivHex, 'hex');
+      const key = crypto.scryptSync(ENCRYPTION_KEY!, 'salt', 32);
+      const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+      let decrypted = decipher.update(encData, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+    }
+
+    const CHAIN_RPC: Record<string, { rpc: string; usdc: string }> = {
+      BASE_MAINNET: { rpc: process.env.BASE_MAINNET_RPC_URL || 'https://mainnet.base.org', usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' },
+      ETHEREUM_MAINNET: { rpc: process.env.ETHEREUM_MAINNET_RPC_URL || 'https://ethereum-rpc.publicnode.com', usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' },
+      POLYGON_MAINNET: { rpc: process.env.POLYGON_MAINNET_RPC_URL || 'https://polygon-bor-rpc.publicnode.com', usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359' },
+      ARBITRUM_MAINNET: { rpc: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arbitrum-one-rpc.publicnode.com', usdc: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' },
+    };
+
+    const sweepChain = chain || managedWallet.chain;
+    const chainConf = CHAIN_RPC[sweepChain];
+    if (!chainConf) {
+      return res.status(400).json({ error: `Unsupported chain: ${sweepChain}` });
+    }
+
+    const privateKey = decryptKey(managedWallet.encryptedKey);
+    const provider = new ethers.JsonRpcProvider(chainConf.rpc);
+    const wallet = new ethers.Wallet(privateKey, provider);
+    const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'];
+    const tokenContract = new ethers.Contract(chainConf.usdc, ERC20_ABI, wallet);
+
+    // Get full balance
+    const balance = await tokenContract.balanceOf(managedWallet.address);
+    if (balance === 0n) {
+      return res.json({ success: true, message: 'No balance to sweep', amount: '0' });
+    }
+
+    // Transfer all
+    const tx = await tokenContract.transfer(toAddress, balance);
+    const formatted = ethers.formatUnits(balance, 6);
+
+    logger.info('Admin sweep executed', {
+      walletId,
+      from: managedWallet.address,
+      to: toAddress,
+      amount: formatted,
+      chain: sweepChain,
+      txHash: tx.hash,
+    });
+
+    res.json({
+      success: true,
+      txHash: tx.hash,
+      amount: formatted,
+      from: managedWallet.address,
+      to: toAddress,
+      chain: sweepChain,
+    });
+  } catch (error: any) {
+    console.error('Admin sweep error:', error);
+    res.status(500).json({ error: 'Sweep failed: ' + error.message });
+  }
+});
+
 export const adminRouter = router;
