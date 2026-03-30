@@ -138,21 +138,25 @@
 
       const style = document.createElement('style');
       style.id = 'stablepay-widget-styles';
+      // Load Space Grotesk font
+      if (!document.querySelector('link[href*="Space+Grotesk"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap';
+        document.head.appendChild(link);
+      }
       style.textContent = `
-        .sp-widget { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .sp-widget { font-family: 'Space Grotesk', system-ui, sans-serif; }
         .sp-widget * { box-sizing: border-box; }
-        .sp-widget.dark { --sp-bg: #1a1a1a; --sp-card: #252525; --sp-border: #333; --sp-text: #fff; --sp-muted: #888; }
-        .sp-widget.light { --sp-bg: #fff; --sp-card: #f9fafb; --sp-border: #e5e7eb; --sp-text: #111; --sp-muted: #6b7280; }
-        .sp-chain-btn { transition: all 0.2s; cursor: pointer; }
-        .sp-chain-btn:hover { transform: translateY(-1px); }
-        .sp-chain-btn.selected { border-color: var(--sp-accent) !important; background: color-mix(in srgb, var(--sp-accent) 10%, transparent); }
-        .sp-token-btn { transition: all 0.15s; }
-        .sp-token-btn.selected { background: var(--sp-accent) !important; color: white !important; }
-        .sp-pay-btn { transition: all 0.2s; }
-        .sp-pay-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .sp-pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .sp-widget.dark { --sp-bg: #0f172a; --sp-card: #1e293b; --sp-border: #000; --sp-text: #fff; --sp-muted: #94a3b8; }
+        .sp-widget.light { --sp-bg: #fff; --sp-card: #f1f5f9; --sp-border: #000; --sp-text: #000; --sp-muted: #64748b; }
+        .sp-pay-btn { transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sp-pay-btn:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #000; }
+        .sp-pay-btn:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: 2px 2px 0px #000; }
+        .sp-pay-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .sp-spinner { animation: sp-spin 1s linear infinite; }
         @keyframes sp-spin { to { transform: rotate(360deg); } }
+        .sp-widget select { font-family: 'Space Grotesk', system-ui, sans-serif; }
       `;
       document.head.appendChild(style);
     }
@@ -238,32 +242,32 @@
         <div class="sp-widget ${this.options.theme}" style="
           --sp-accent: ${accent};
           background: var(--sp-bg);
-          border: 1px solid var(--sp-border);
-          border-radius: 12px;
-          padding: 24px;
+          border: 4px solid #000;
+          box-shadow: 8px 8px 0px #000;
+          padding: 0;
           max-width: 420px;
+          overflow: hidden;
         ">
           <!-- Header -->
-          <div style="margin-bottom: 20px; text-align: center;">
-            <div style="font-size: 14px; color: var(--sp-muted); margin-bottom: 4px;">
-              ${this.options.productName}
+          <div style="background: #00E5FF; padding: 16px 20px; border-bottom: 4px solid #000;">
+            <div style="font-size: 11px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">
+              ${this.options.productName || 'Pay with Stablecoins'}
             </div>
-            <div style="font-size: 32px; font-weight: 700; color: var(--sp-text);">
-              $${parseFloat(this.options.amount).toFixed(2)}
+            <div style="font-size: 28px; font-weight: 700; color: #000;">
+              $${parseFloat(this.options.amount || 0).toFixed(2)}
             </div>
           </div>
 
-          <!-- Chain + Token Selection (dropdowns) -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+          <div style="padding: 20px;">
+
+          <!-- Chain + Token Selection -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
             <div>
-              <label style="font-size: 11px; font-weight: 600; color: var(--sp-muted); text-transform: uppercase; display: block; margin-bottom: 4px;">Network</label>
+              <label style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Network</label>
               <select id="sp-chain-select" style="
-                width: 100%; padding: 10px 12px; font-size: 14px; font-weight: 500;
-                background: var(--sp-card); color: var(--sp-text); border: 2px solid var(--sp-border);
-                border-radius: 8px; cursor: pointer; outline: none;
-                appearance: none; -webkit-appearance: none;
-                background-image: url('data:image/svg+xml;utf8,<svg fill=\\"gray\\" viewBox=\\"0 0 24 24\\" xmlns=\\"http://www.w3.org/2000/svg\\"><path d=\\"M7 10l5 5 5-5z\\"/></svg>');
-                background-repeat: no-repeat; background-position: right 8px center; background-size: 18px;
+                width: 100%; padding: 10px 12px; font-size: 13px; font-weight: 600;
+                background: var(--sp-card); color: var(--sp-text); border: 3px solid #000;
+                cursor: pointer; outline: none;
               ">
                 ${this.merchantChains.map((mc, i) => `
                   <option value="${mc.chain}" ${i === 0 ? 'selected' : ''}>${mc.config.chainName}</option>
@@ -271,14 +275,11 @@
               </select>
             </div>
             <div>
-              <label style="font-size: 11px; font-weight: 600; color: var(--sp-muted); text-transform: uppercase; display: block; margin-bottom: 4px;">Stablecoin</label>
+              <label style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Stablecoin</label>
               <select id="sp-token-select" style="
-                width: 100%; padding: 10px 12px; font-size: 14px; font-weight: 500;
-                background: var(--sp-card); color: var(--sp-text); border: 2px solid var(--sp-border);
-                border-radius: 8px; cursor: pointer; outline: none;
-                appearance: none; -webkit-appearance: none;
-                background-image: url('data:image/svg+xml;utf8,<svg fill=\\"gray\\" viewBox=\\"0 0 24 24\\" xmlns=\\"http://www.w3.org/2000/svg\\"><path d=\\"M7 10l5 5 5-5z\\"/></svg>');
-                background-repeat: no-repeat; background-position: right 8px center; background-size: 18px;
+                width: 100%; padding: 10px 12px; font-size: 13px; font-weight: 600;
+                background: var(--sp-card); color: var(--sp-text); border: 3px solid #000;
+                cursor: pointer; outline: none;
               ">
                 ${this.renderTokenOptions()}
               </select>
@@ -287,40 +288,41 @@
 
           <!-- Payment Method Tabs -->
           <div style="margin-bottom: 12px;">
-            <div id="sp-method-tabs" style="display: flex; gap: 4px; margin-bottom: 12px;">
+            <div id="sp-method-tabs" style="display: flex; gap: 0; margin-bottom: 12px; border: 3px solid #000;">
               <button class="sp-method-tab" data-method="wallet" style="
-                flex: 1; padding: 8px; font-size: 11px; font-weight: 600; border: 1px solid var(--sp-border);
-                background: ${accent}; color: white; border-radius: 6px; cursor: pointer; text-transform: uppercase;
-              ">Connect Wallet</button>
+                flex: 1; padding: 10px 6px; font-size: 10px; font-weight: 700; border: none;
+                background: #000; color: #fff; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
+              ">Wallet</button>
               <button class="sp-method-tab" data-method="qr" style="
-                flex: 1; padding: 8px; font-size: 11px; font-weight: 600; border: 1px solid var(--sp-border);
-                background: var(--sp-card); color: var(--sp-muted); border-radius: 6px; cursor: pointer; text-transform: uppercase;
+                flex: 1; padding: 10px 6px; font-size: 10px; font-weight: 700; border: none; border-left: 2px solid #000;
+                background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
               ">QR Code</button>
               <button class="sp-method-tab" data-method="address" style="
-                flex: 1; padding: 8px; font-size: 11px; font-weight: 600; border: 1px solid var(--sp-border);
-                background: var(--sp-card); color: var(--sp-muted); border-radius: 6px; cursor: pointer; text-transform: uppercase;
-              ">Copy Address</button>
+                flex: 1; padding: 10px 6px; font-size: 10px; font-weight: 700; border: none; border-left: 2px solid #000;
+                background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
+              ">Address</button>
             </div>
 
             <!-- Method: Connect Wallet -->
             <div id="sp-method-wallet" class="sp-method-panel">
               <div id="sp-wallet-status" style="
-                background: var(--sp-card); border: 1px solid var(--sp-border);
-                border-radius: 8px; padding: 12px; margin-bottom: 12px;
+                background: var(--sp-card); border: 3px solid #000;
+                padding: 12px; margin-bottom: 12px;
                 display: flex; align-items: center; justify-content: space-between;
               ">
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></div>
-                  <span style="font-size: 13px; color: var(--sp-muted);">Wallet not connected</span>
+                  <span style="font-size: 12px; color: var(--sp-muted); font-weight: 600;">Not connected</span>
                 </div>
                 <button id="sp-connect-btn" style="
-                  padding: 6px 12px; background: ${accent}; color: white;
-                  border: none; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;
+                  padding: 6px 14px; background: #000; color: #fff;
+                  border: 2px solid #000; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
                 ">Connect</button>
               </div>
               <button id="sp-pay-btn" class="sp-pay-btn" disabled style="
-                width: 100%; padding: 14px; background: ${accent}; color: white;
-                border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+                width: 100%; padding: 14px; background: #00E5FF; color: #000;
+                border: 3px solid #000; font-size: 14px; font-weight: 700; cursor: pointer;
+                box-shadow: 4px 4px 0px #000;
               ">Connect Wallet to Pay</button>
             </div>
 
@@ -385,8 +387,9 @@
           </div>
 
           <!-- Footer -->
-          <div style="margin-top: 16px; text-align: center; font-size: 11px; color: var(--sp-muted);">
-            Powered by <a href="${STABLEPAY_URL}" target="_blank" style="color: ${accent}; text-decoration: none;">StablePay</a>
+          <div style="margin-top: 16px; text-align: center; font-size: 10px; color: var(--sp-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+            Powered by <a href="${STABLEPAY_URL}" target="_blank" style="color: #000; text-decoration: none; font-weight: 700;">StablePay</a>
+          </div>
           </div>
         </div>
       `;
@@ -490,12 +493,11 @@
     }
 
     switchPaymentMethod(method) {
-      const accent = this.options.accentColor || '#3b82f6';
-      // Update tabs
+      // Update tabs — neo-brutalist active state
       this.container.querySelectorAll('.sp-method-tab').forEach(tab => {
         if (tab.dataset.method === method) {
-          tab.style.background = accent;
-          tab.style.color = 'white';
+          tab.style.background = '#000';
+          tab.style.color = '#fff';
         } else {
           tab.style.background = 'var(--sp-card)';
           tab.style.color = 'var(--sp-muted)';
