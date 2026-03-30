@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { ethers } from 'ethers';
 import { db } from '../config/database';
 import { PRICING_TIERS } from '../config/pricing';
 import { logger } from '../utils/logger';
@@ -1133,6 +1134,102 @@ router.post('/managed-wallets/:walletId/sweep', requireAdminKey, async (req, res
   } catch (error: any) {
     console.error('Admin sweep error:', error);
     res.status(500).json({ error: 'Sweep failed: ' + error.message });
+  }
+});
+
+// GET agent wallet status — balances across all chains
+router.get('/agent-wallets', requireAdminKey, async (req, res) => {
+  try {
+    const evmAddress = process.env.AGENT_WALLET_ADDRESS;
+    const solAddress = process.env.AGENT_SOLANA_ADDRESS;
+
+    const CHAINS: Record<string, { rpc: string; native: string; tokens: Record<string, string> }> = {
+      BASE: { rpc: process.env.BASE_MAINNET_RPC_URL || 'https://mainnet.base.org', native: 'ETH', tokens: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2' } },
+      ETHEREUM: { rpc: process.env.ETHEREUM_MAINNET_RPC_URL || 'https://ethereum-rpc.publicnode.com', native: 'ETH', tokens: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7' } },
+      POLYGON: { rpc: process.env.POLYGON_MAINNET_RPC_URL || 'https://polygon-bor-rpc.publicnode.com', native: 'MATIC', tokens: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' } },
+      ARBITRUM: { rpc: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arbitrum-one-rpc.publicnode.com', native: 'ETH', tokens: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' } },
+    };
+
+    const ERC20 = ['function balanceOf(address) view returns (uint256)'];
+    const evmChains: any[] = [];
+
+    if (evmAddress) {
+      for (const [chain, conf] of Object.entries(CHAINS)) {
+        try {
+          const provider = new ethers.JsonRpcProvider(conf.rpc);
+          const nativeRaw = await provider.getBalance(evmAddress);
+          const nativeBalance = ethers.formatEther(nativeRaw);
+
+          const tokens: Record<string, string> = {};
+          for (const [token, addr] of Object.entries(conf.tokens)) {
+            try {
+              const contract = new ethers.Contract(addr, ERC20, provider);
+              const raw = await contract.balanceOf(evmAddress);
+              tokens[token] = ethers.formatUnits(raw, 6);
+            } catch { tokens[token] = '0'; }
+          }
+
+          evmChains.push({ chain, native: conf.native, nativeBalance, tokens });
+        } catch (err: any) {
+          evmChains.push({ chain, error: err.message });
+        }
+      }
+    }
+
+    // Solana balances
+    let solana: any = null;
+    if (solAddress) {
+      try {
+        const solRes = await fetch('https://api.mainnet-beta.solana.com', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [solAddress] })
+        });
+        const solData: any = await solRes.json();
+        const solBalance = (solData.result?.value || 0) / 1e9;
+
+        // SPL token balances
+        const tokenRes = await fetch('https://api.mainnet-beta.solana.com', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 2, method: 'getTokenAccountsByOwner',
+            params: [solAddress, { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' }, { encoding: 'jsonParsed' }]
+          })
+        });
+        const tokenData: any = await tokenRes.json();
+
+        const MINTS: Record<string, string> = {
+          'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
+          'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
+          'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr': 'EURC',
+        };
+
+        const tokens: Record<string, number> = {};
+        for (const acc of (tokenData.result?.value || [])) {
+          const info = acc.account?.data?.parsed?.info;
+          if (info) {
+            const name = MINTS[info.mint];
+            if (name) tokens[name] = (tokens[name] || 0) + (info.tokenAmount?.uiAmount || 0);
+          }
+        }
+
+        solana = { address: solAddress, solBalance, tokens };
+      } catch (err: any) {
+        solana = { address: solAddress, error: err.message };
+      }
+    }
+
+    // Managed wallets count
+    const managedWalletCount = await db.managedWallet.count();
+
+    res.json({
+      evm: { address: evmAddress || 'NOT SET', chains: evmChains },
+      solana: solana || { address: 'NOT SET' },
+      managedWallets: managedWalletCount,
+      configured: { evmKey: !!process.env.AGENT_WALLET_KEY, solKey: !!process.env.AGENT_SOLANA_KEY },
+    });
+  } catch (error: any) {
+    console.error('Agent wallet status error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

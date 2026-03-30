@@ -365,6 +365,9 @@
                     <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="billing">
                         Billing & Fees
                     </button>
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="agentWallets">
+                        Agent Wallets
+                    </button>
                 </nav>
             </div>
 
@@ -900,6 +903,61 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Agent Wallets Tab -->
+            <div id="agentWalletsTab" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Agent Wallets</h2>
+                        <p class="text-sm text-slate-400 mt-1">Gas sponsor wallets for refunds, withdrawals & consolidation</p>
+                    </div>
+                    <button onclick="loadAgentWallets()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 transition-colors">Refresh</button>
+                </div>
+
+                <!-- Config Status -->
+                <div id="agentConfigStatus" class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-slate-950 border border-slate-800 p-4">
+                        <div class="text-xs text-slate-400 uppercase font-medium mb-1">EVM Key</div>
+                        <div id="agentEvmKeyStatus" class="text-sm font-bold">—</div>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 p-4">
+                        <div class="text-xs text-slate-400 uppercase font-medium mb-1">Solana Key</div>
+                        <div id="agentSolKeyStatus" class="text-sm font-bold">—</div>
+                    </div>
+                </div>
+
+                <!-- EVM Wallet -->
+                <div class="bg-slate-950 border border-slate-800 mb-6">
+                    <div class="p-4 border-b border-slate-800">
+                        <div class="text-sm font-bold text-white uppercase">EVM Agent Wallet</div>
+                        <div id="agentEvmAddress" class="text-xs text-cyan-400 font-mono mt-1 cursor-pointer" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='Copied!';setTimeout(()=>loadAgentWallets(),1500)">—</div>
+                    </div>
+                    <div id="agentEvmChains" class="divide-y divide-slate-800">
+                        <div class="p-4 text-sm text-slate-500">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Solana Wallet -->
+                <div class="bg-slate-950 border border-slate-800 mb-6">
+                    <div class="p-4 border-b border-slate-800">
+                        <div class="text-sm font-bold text-white uppercase">Solana Agent Wallet</div>
+                        <div id="agentSolAddress" class="text-xs text-purple-400 font-mono mt-1 cursor-pointer" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='Copied!';setTimeout(()=>loadAgentWallets(),1500)">—</div>
+                    </div>
+                    <div id="agentSolBalances" class="p-4">
+                        <div class="text-sm text-slate-500">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Managed Wallets Count -->
+                <div class="bg-slate-950 border border-slate-800 p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-slate-400">Total Managed Wallets (merchants)</div>
+                        <div id="agentManagedCount" class="text-lg font-bold text-white">—</div>
+                    </div>
+                </div>
+            </div>
+
+            </div>
         </div>
     </div>
 
@@ -1278,6 +1336,7 @@
                 if (tab === 'billing') loadBillingData();
                 if (tab === 'refunds') loadRefunds();
                 if (tab === 'receipts') loadReceipts();
+                if (tab === 'agentWallets') loadAgentWallets();
             });
         });
 
@@ -2391,6 +2450,69 @@
         // ============================================
 
         let feePayments = [];
+
+        async function loadAgentWallets() {
+            try {
+                const res = await fetch(`${API_BASE}/admin/agent-wallets`, {
+                    headers: { 'x-admin-key': adminKey }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+
+                // Config status
+                document.getElementById('agentEvmKeyStatus').innerHTML = data.configured.evmKey
+                    ? '<span class="text-green-400">Configured</span>'
+                    : '<span class="text-red-400">NOT SET</span>';
+                document.getElementById('agentSolKeyStatus').innerHTML = data.configured.solKey
+                    ? '<span class="text-green-400">Configured</span>'
+                    : '<span class="text-red-400">NOT SET</span>';
+
+                // EVM address
+                document.getElementById('agentEvmAddress').textContent = data.evm.address;
+
+                // EVM chains
+                const chainsDiv = document.getElementById('agentEvmChains');
+                if (data.evm.chains && data.evm.chains.length > 0) {
+                    chainsDiv.innerHTML = data.evm.chains.map(c => {
+                        if (c.error) return `<div class="p-3 flex justify-between"><span class="text-sm text-slate-400">${c.chain}</span><span class="text-xs text-red-400">${c.error}</span></div>`;
+                        const tokenBadges = Object.entries(c.tokens || {}).map(([t, bal]) =>
+                            `<span class="text-xs ${parseFloat(bal) > 0 ? 'text-green-400' : 'text-slate-500'}">${t}: $${parseFloat(bal).toFixed(2)}</span>`
+                        ).join(' &middot; ');
+                        const nativeLow = parseFloat(c.nativeBalance) < 0.001;
+                        return `<div class="p-3 flex items-center justify-between">
+                            <div>
+                                <span class="text-sm font-medium text-white">${c.chain}</span>
+                                <span class="text-xs ml-2 ${nativeLow ? 'text-red-400 font-bold' : 'text-slate-400'}">${parseFloat(c.nativeBalance).toFixed(5)} ${c.native}${nativeLow ? ' ⚠️ LOW' : ''}</span>
+                            </div>
+                            <div class="flex gap-3">${tokenBadges}</div>
+                        </div>`;
+                    }).join('');
+                }
+
+                // Solana
+                document.getElementById('agentSolAddress').textContent = data.solana.address;
+                const solDiv = document.getElementById('agentSolBalances');
+                if (data.solana.error) {
+                    solDiv.innerHTML = `<span class="text-red-400 text-sm">${data.solana.error}</span>`;
+                } else if (data.solana.solBalance !== undefined) {
+                    const solLow = data.solana.solBalance < 0.01;
+                    const tokenLines = Object.entries(data.solana.tokens || {}).map(([t, bal]) =>
+                        `<span class="text-xs ${bal > 0 ? 'text-green-400' : 'text-slate-500'}">${t}: $${parseFloat(bal).toFixed(2)}</span>`
+                    ).join(' &middot; ');
+                    solDiv.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm ${solLow ? 'text-red-400 font-bold' : 'text-slate-300'}">${data.solana.solBalance.toFixed(5)} SOL${solLow ? ' ⚠️ LOW' : ''}</span>
+                            <div class="flex gap-3">${tokenLines || '<span class="text-xs text-slate-500">No tokens</span>'}</div>
+                        </div>
+                    `;
+                }
+
+                // Managed wallets count
+                document.getElementById('agentManagedCount').textContent = data.managedWallets;
+            } catch (err) {
+                console.error('Load agent wallets error:', err);
+            }
+        }
 
         async function loadBillingData() {
             try {
