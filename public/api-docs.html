@@ -223,20 +223,26 @@ export default async function handler(req, res) {
             </div>
 
             <div class="bg-slate-900 border border-slate-800 p-5">
-                <h3 class="text-white font-bold mb-3">Webhook Payload</h3>
-                <p class="text-slate-400 text-sm mb-4">We POST this JSON to your webhook URL:</p>
+                <h3 class="text-white font-bold mb-3">Webhook Payload (order.confirmed)</h3>
+                <p class="text-slate-400 text-sm mb-4">When a payment confirms, we POST this to your webhook URL:</p>
 <pre>{
-  "event": "order.confirmed",           // Event type
+  "event": "order.confirmed",
   "orderId": "cmXXXXXX",
-  "merchantId": "cmXXXXXX",
-  "amount": "99.99",
+  "amount": 99.99,
   "token": "USDC",
   "chain": "BASE_MAINNET",
-  "txHash": "0xabc...",
-  "customerEmail": "buyer@email.com",
   "status": "CONFIRMED",
-  "timestamp": "2026-03-28T12:00:00Z"
+  "txHash": "0xabc123...",
+  "explorerLink": "https://basescan.org/tx/0xabc123...",
+  "customerEmail": "buyer@email.com",
+  "customerWallet": "0x742d...",
+  "paymentAddress": "0x42f8...",
+  "feePercent": 0.01,
+  "feeAmount": 0.99,
+  "netAmount": 99.00,
+  "confirmedAt": "2026-03-29T14:30:00Z"
 }</pre>
+                <p class="text-slate-500 text-xs mt-2">The <code class="text-cyan-400">explorerLink</code> lets you verify the transaction on-chain (BaseScan, Etherscan, etc.)</p>
                 <p class="text-slate-500 mt-4 mb-2 font-bold">Events:</p>
                 <ul class="text-sm text-slate-400 space-y-1 ml-4">
                     <li><code class="text-cyan-400">order.created</code> — New payment order created</li>
@@ -294,10 +300,62 @@ Payment lands in YOUR wallet (direct, non-custodial)
         |
 Our scanner detects the on-chain transfer (15-30 seconds)
         |
-Webhook fires to your server: { event: "order.confirmed", amount, txHash }
+Webhook fires to your server with:
+  orderId, amount, token, txHash, explorerLink, netAmount, confirmedAt
         |
-Customer redirected to your success page
+Customer sees success screen
 </pre>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-5 mb-6">
+                <h3 class="text-white font-bold mb-4">How Each Payment Method Works</h3>
+                <div class="space-y-6 text-sm text-slate-400">
+                    <div>
+                        <p class="text-white font-bold mb-2">1. Connect Wallet</p>
+<pre style="font-size: 11px; background: transparent; border: none; padding: 0; color: #94a3b8;">
+Customer clicks "Connect Wallet"
+  → Widget detects installed wallets (MetaMask, Rainbow, etc.)
+  → If multiple: shows wallet picker
+  → Wallet connects, customer address captured
+  → Order created in our DB (with customerWallet)
+  → Widget calls ERC20 transfer() directly through wallet
+  → Wallet popup → customer approves → tx submitted
+  → txHash registered with our API immediately
+  → Scanner also confirms as backup
+  → Webhook fires with txHash + explorerLink
+</pre>
+                    </div>
+                    <div>
+                        <p class="text-white font-bold mb-2">2. QR Code</p>
+<pre style="font-size: 11px; background: transparent; border: none; padding: 0; color: #94a3b8;">
+Customer switches to "QR Code" tab
+  → Enters their wallet address (for matching)
+  → Order created in our DB
+  → QR code generated with merchant's payment address
+  → Customer scans QR with mobile wallet app
+  → Sends payment from their wallet
+  → Widget polls GET /api/embed/order/:id every 5 seconds
+  → Scanner detects Transfer event on-chain
+  → Matches by FROM + TO + amount → confirms order
+  → Poll picks up CONFIRMED → shows success
+  → Webhook fires
+</pre>
+                    </div>
+                    <div>
+                        <p class="text-white font-bold mb-2">3. Copy Address</p>
+<pre style="font-size: 11px; background: transparent; border: none; padding: 0; color: #94a3b8;">
+Customer switches to "Copy Address" tab
+  → Enters their wallet address (for matching)
+  → Order created in our DB
+  → Shows: merchant address (with Copy button) + exact amount
+  → Customer copies address → opens Coinbase/Binance/any wallet
+  → Sends exact amount on the correct chain
+  → Scanner detects → matches → confirms
+  → Widget polling picks up confirmation
+  → Webhook fires
+</pre>
+                    </div>
+                </div>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 p-5">
