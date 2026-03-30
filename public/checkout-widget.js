@@ -1320,7 +1320,7 @@
   // Load QR code library
   if (typeof QRCode === 'undefined') {
     const qrScript = document.createElement('script');
-    qrScript.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+    qrScript.src = 'https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js';
     qrScript.async = true;
     document.head.appendChild(qrScript);
   }
