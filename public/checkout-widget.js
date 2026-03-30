@@ -527,7 +527,7 @@
 
       // Get merchant wallet for this chain
       const chain = this.selectedChain;
-      const walletAddr = chain.walletAddress || this.merchantConfig?.wallets?.find(w => w.chain === chain.chain)?.address;
+      const walletAddr = chain.address;
 
       if (!walletAddr) {
         this.showError('No wallet configured for this chain');
