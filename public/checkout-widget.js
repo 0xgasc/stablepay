@@ -164,17 +164,15 @@
       }
 
       try {
-        const response = await fetch(`${STABLEPAY_URL}/api/merchant-profile?id=${this.options.merchantId}`);
+        const response = await fetch(`${STABLEPAY_URL}/api/embed/chains?merchantId=${this.options.merchantId}`);
         if (!response.ok) throw new Error('Failed to load merchant');
 
         const data = await response.json();
-
-        // Store full merchant data for fee calculation
         this.merchantData = data;
 
         if (data.wallets && data.wallets.length > 0) {
           this.merchantChains = data.wallets
-            .filter(w => w.isActive && CHAIN_CONFIG[w.chain])
+            .filter(w => CHAIN_CONFIG[w.chain])
             .map(w => ({
               chain: w.chain,
               address: w.address,

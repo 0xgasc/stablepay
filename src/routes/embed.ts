@@ -43,19 +43,17 @@ router.get('/chains', async (req, res) => {
       return res.status(400).json({ error: 'merchantId is required' });
     }
 
-    // Get merchant's configured wallets
-    const wallets = await db.merchantWallet.findMany({
-      where: {
-        merchantId: merchantId as string,
-        isActive: true
-      },
-      select: { chain: true }
-    });
-
-    // Check if merchant exists and is active
+    // Get merchant + wallets in one query
     const merchant = await db.merchant.findUnique({
       where: { id: merchantId as string },
-      select: { id: true, isActive: true, isSuspended: true, companyName: true }
+      select: {
+        id: true, isActive: true, isSuspended: true, companyName: true,
+        wallets: {
+          where: { isActive: true },
+          orderBy: { priority: 'asc' },
+          select: { chain: true, address: true, supportedTokens: true }
+        }
+      }
     });
 
     if (!merchant) {
@@ -69,7 +67,8 @@ router.get('/chains', async (req, res) => {
     res.json({
       merchantId,
       merchantName: merchant.companyName,
-      chains: wallets.map(w => w.chain)
+      chains: merchant.wallets.map(w => w.chain),
+      wallets: merchant.wallets,
     });
   } catch (error) {
     console.error('Get embed chains error:', error);
