@@ -790,7 +790,9 @@
           if (!seen.has('brave')) { providers.push({ name: 'Brave Wallet', provider: p, icon: '🦁' }); seen.add('brave'); }
           return;
         }
-        if (p.isMetaMask && !p.isBraveWallet) {
+        if (p.isPhantom && !p.isMetaMask) {
+          if (!seen.has('phantom')) { providers.push({ name: 'Phantom', provider: p, icon: '👻' }); seen.add('phantom'); }
+        } else if (p.isMetaMask && !p.isBraveWallet) {
           if (!seen.has('metamask')) { providers.push({ name: 'MetaMask', provider: p, icon: '🦊' }); seen.add('metamask'); }
         } else if (p.isRabby) {
           if (!seen.has('rabby')) { providers.push({ name: 'Rabby', provider: p, icon: '🐰' }); seen.add('rabby'); }
@@ -809,6 +811,8 @@
       }
       // Also classify the top-level ethereum object
       if (window.ethereum) classify(window.ethereum);
+      // Phantom EVM provider (separate from window.ethereum)
+      if (window.phantom?.ethereum) classify(window.phantom.ethereum);
 
       return providers;
     }
