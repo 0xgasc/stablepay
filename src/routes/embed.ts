@@ -119,6 +119,19 @@ router.post('/checkout', rateLimit({
     }
 
     // Create order
+    // Cancel any existing pending orders for this merchant + customer wallet combo
+    // Prevents duplicate order matching confusion
+    if (data.customerWallet) {
+      await db.order.updateMany({
+        where: {
+          merchantId: data.merchantId,
+          customerWallet: data.customerWallet,
+          status: 'PENDING',
+        },
+        data: { status: 'CANCELLED' },
+      });
+    }
+
     const order = await db.order.create({
       data: {
         merchantId: data.merchantId,
@@ -130,7 +143,7 @@ router.post('/checkout', rateLimit({
         paymentAddress: wallet.address,
         customerWallet: data.customerWallet || null,
         status: 'PENDING',
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 min expiry
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000)
       }
     });
 
