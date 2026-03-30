@@ -697,6 +697,7 @@
     }
 
     selectChain(chainKey) {
+      const prevType = this.selectedChain?.config?.type;
       this.selectedChain = this.merchantChains.find(mc => mc.chain === chainKey);
       this.selectedToken = this.selectedChain?.supportedTokens[0] || 'USDC';
 
@@ -706,7 +707,19 @@
         tokenSelect.innerHTML = this.renderTokenOptions();
       }
 
-      this.updatePayButton();
+      // Auto-disconnect if switching between EVM and Solana
+      const newType = this.selectedChain?.config?.type;
+      if (prevType && newType && prevType !== newType && this.connectedWallet) {
+        this.connectedWallet = null;
+        this.provider = null;
+        this.tokenBalance = null;
+        this.updateWalletStatus();
+        return; // updatePayButton called by updateWalletStatus
+      }
+
+      // Re-check balance for new chain/token
+      if (this.connectedWallet) this.checkTokenBalance();
+      else this.updatePayButton();
     }
 
     selectToken(token) {
@@ -720,7 +733,9 @@
         this.updateAmountDisplay();
       }
 
-      this.updatePayButton();
+      // Re-check balance for new token
+      if (this.connectedWallet) this.checkTokenBalance();
+      else this.updatePayButton();
     }
 
     async fetchEURCRate() {
@@ -944,18 +959,64 @@
       }
 
       this.updatePayButton();
+      if (this.connectedWallet) this.checkTokenBalance();
+    }
+
+    async checkTokenBalance() {
+      if (!this.connectedWallet || !this.selectedChain || !this.provider) {
+        this.tokenBalance = null;
+        return;
+      }
+
+      try {
+        const chainConfig = this.selectedChain.config;
+        const tokenConfig = chainConfig.tokens?.[this.selectedToken];
+        if (!tokenConfig) return;
+
+        if (chainConfig.type === 'solana') {
+          // Solana balance check would need SPL token query — skip for now
+          this.tokenBalance = null;
+          return;
+        }
+
+        const ethers = window.ethers;
+        if (!ethers) return;
+
+        const provider = new ethers.BrowserProvider(this.provider);
+        const contract = new ethers.Contract(tokenConfig.address, ERC20_ABI, provider);
+        const raw = await contract.balanceOf(this.connectedWallet);
+        this.tokenBalance = parseFloat(ethers.formatUnits(raw, tokenConfig.decimals || 6));
+        this.updatePayButton();
+      } catch (err) {
+        console.error('Balance check failed:', err);
+        this.tokenBalance = null;
+      }
     }
 
     updatePayButton() {
       const payBtn = this.container.querySelector('#sp-pay-btn');
       if (!payBtn) return;
 
-      if (this.connectedWallet) {
-        payBtn.disabled = false;
-        payBtn.textContent = `Pay $${parseFloat(this.options.amount).toFixed(2)} with ${this.selectedToken}`;
-      } else {
+      const amount = parseFloat(this.options.amount || 0);
+
+      if (!this.connectedWallet) {
         payBtn.disabled = true;
         payBtn.textContent = 'Connect Wallet to Pay';
+        payBtn.style.background = 'var(--sp-card)';
+        payBtn.style.color = 'var(--sp-muted)';
+      } else if (this.tokenBalance !== null && this.tokenBalance !== undefined && this.tokenBalance < amount) {
+        payBtn.disabled = true;
+        payBtn.textContent = `Insufficient ${this.selectedToken} (${this.tokenBalance.toFixed(2)} available)`;
+        payBtn.style.background = '#ef4444';
+        payBtn.style.color = '#fff';
+      } else {
+        payBtn.disabled = false;
+        const displayAmt = (this.selectedToken === 'EURC' && this.eurcRate)
+          ? `€${(amount / this.eurcRate).toFixed(2)}`
+          : `$${amount.toFixed(2)}`;
+        payBtn.textContent = `Pay ${displayAmt} ${this.selectedToken}`;
+        payBtn.style.background = '#00E5FF';
+        payBtn.style.color = '#000';
       }
     }
 
