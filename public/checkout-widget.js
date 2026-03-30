@@ -908,15 +908,78 @@
         ? `${this.connectedWallet.slice(0, 6)}...${this.connectedWallet.slice(-4)}`
         : null;
 
+      if (this.connectedWallet && !this._verified) {
+        // Show verification animation
+        this._verified = true;
+        const steps = [
+          { text: 'Connecting wallet...', icon: '◌', delay: 0 },
+          { text: 'Verifying address...', icon: '◌', delay: 600 },
+          { text: 'Compliance check...', icon: '◌', delay: 1200 },
+          { text: 'Wallet verified', icon: '✓', delay: 1800 },
+        ];
+
+        statusDiv.style.flexDirection = 'column';
+        statusDiv.style.gap = '4px';
+        statusDiv.style.padding = '16px 12px';
+
+        const updateStep = (i) => {
+          if (i >= steps.length) {
+            // Show final connected state
+            setTimeout(() => this.showConnectedState(statusDiv, shortAddr), 300);
+            return;
+          }
+          statusDiv.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+              ${i < steps.length - 1
+                ? '<span class="sp-spinner" style="display:inline-block;width:14px;height:14px;border:2px solid var(--sp-border);border-top-color:#00E5FF;border-radius:50%;"></span>'
+                : '<span style="color:#22c55e;font-size:16px;font-weight:700;">✓</span>'}
+              <span style="font-size: 11px; color: var(--sp-muted); font-weight: 600; text-transform: uppercase;">${steps[i].text}</span>
+            </div>
+            <div style="font-size: 10px; color: var(--sp-text); font-family: monospace; margin-top: 2px;">${shortAddr}</div>
+          `;
+        };
+
+        steps.forEach((step, i) => setTimeout(() => updateStep(i), step.delay));
+        return;
+      }
+
       if (this.connectedWallet) {
-        statusDiv.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></div>
-            <span style="font-size: 13px; color: var(--sp-text); font-family: monospace;">${shortAddr}</span>
-          </div>
-          <button id="sp-disconnect-btn" style="
-            padding: 6px 12px;
-            background: transparent;
+        this.showConnectedState(statusDiv, shortAddr);
+        return;
+      }
+
+      // Not connected
+      statusDiv.style.flexDirection = '';
+      statusDiv.style.gap = '';
+      statusDiv.style.padding = '12px';
+      statusDiv.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></div>
+          <span style="font-size: 12px; color: var(--sp-muted); font-weight: 600;">Not connected</span>
+        </div>
+        <button id="sp-connect-btn" style="
+          padding: 6px 14px; background: #000; color: #fff;
+          border: 2px solid #000; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+        ">Connect</button>
+      `;
+      statusDiv.querySelector('#sp-connect-btn')?.addEventListener('click', () => this.connectWallet());
+      this._verified = false;
+      this.updatePayButton();
+    }
+
+    showConnectedState(statusDiv, shortAddr) {
+      statusDiv.style.flexDirection = '';
+      statusDiv.style.gap = '';
+      statusDiv.style.padding = '12px';
+      statusDiv.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></div>
+          <span style="font-size: 12px; color: var(--sp-text); font-family: monospace;">${shortAddr}</span>
+          <span style="font-size: 9px; color: #22c55e; font-weight: 700; text-transform: uppercase;">Verified</span>
+        </div>
+        <button id="sp-disconnect-btn" style="
+          padding: 6px 12px;
+          background: transparent;
             color: var(--sp-muted);
             border: 1px solid var(--sp-border);
             border-radius: 6px;
@@ -928,28 +991,10 @@
         statusDiv.querySelector('#sp-disconnect-btn')?.addEventListener('click', () => {
           this.connectedWallet = null;
           this.provider = null;
+          this._verified = false;
+          this.tokenBalance = null;
           this.updateWalletStatus();
         });
-      } else {
-        statusDiv.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></div>
-            <span style="font-size: 13px; color: var(--sp-muted);">Wallet not connected</span>
-          </div>
-          <button id="sp-connect-btn" style="
-            padding: 6px 12px;
-            background: var(--sp-accent);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-          ">Connect</button>
-        `;
-
-        statusDiv.querySelector('#sp-connect-btn')?.addEventListener('click', () => this.connectWallet());
-      }
 
       this.updatePayButton();
       if (this.connectedWallet) this.checkTokenBalance();
