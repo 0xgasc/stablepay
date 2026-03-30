@@ -942,7 +942,18 @@
 
         steps.forEach((step, i) => setTimeout(() => updateStep(i), step.delay));
         // After last step, trigger transition to connected state
-        setTimeout(() => updateStep(steps.length), 2200);
+        setTimeout(() => {
+          this.showConnectedState(statusDiv, shortAddr);
+          // Force-enable pay button as fallback
+          const payBtn = this.container.querySelector('#sp-pay-btn');
+          if (payBtn && this.connectedWallet) {
+            payBtn.disabled = false;
+            const amt = parseFloat(this.options.amount || 0);
+            payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken}`;
+            payBtn.style.background = '#00E5FF';
+            payBtn.style.color = '#000';
+          }
+        }, 2400);
         return;
       }
 
