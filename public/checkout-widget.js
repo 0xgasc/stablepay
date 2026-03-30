@@ -941,14 +941,56 @@
         };
 
         steps.forEach((step, i) => setTimeout(() => updateStep(i), step.delay));
-        // After last step, trigger transition to connected state
-        setTimeout(() => {
+        // After last step, show connected state + check balance
+        setTimeout(async () => {
           this.showConnectedState(statusDiv, shortAddr);
-          // Force-enable pay button as fallback
+
           const payBtn = this.container.querySelector('#sp-pay-btn');
-          if (payBtn && this.connectedWallet) {
+          if (!payBtn || !this.connectedWallet) return;
+
+          const amt = parseFloat(this.options.amount || 0);
+          const chainConfig = this.selectedChain?.config;
+          const tokenConfig = chainConfig?.tokens?.[this.selectedToken];
+
+          // Check balance using wallet's provider
+          if (chainConfig?.type !== 'solana' && tokenConfig?.address && this.connectedWallet.startsWith('0x')) {
+            payBtn.disabled = true;
+            payBtn.textContent = 'Checking balance...';
+            payBtn.style.background = 'var(--sp-card)';
+            payBtn.style.color = 'var(--sp-muted)';
+
+            try {
+              if (!window.ethers) await this.loadScript('https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js');
+              const ethers = window.ethers;
+              const browserProvider = new ethers.BrowserProvider(this.provider || window.ethereum);
+              const contract = new ethers.Contract(tokenConfig.address, ERC20_ABI, browserProvider);
+              const raw = await contract.balanceOf(this.connectedWallet);
+              this.tokenBalance = parseFloat(ethers.formatUnits(raw, tokenConfig.decimals || 6));
+
+              if (this.tokenBalance < amt) {
+                payBtn.disabled = true;
+                payBtn.textContent = `Insufficient ${this.selectedToken} (${this.tokenBalance.toFixed(2)} available)`;
+                payBtn.style.background = '#ef4444';
+                payBtn.style.color = '#fff';
+                return;
+              }
+
+              // Balance OK
+              payBtn.disabled = false;
+              payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken} (${this.tokenBalance.toFixed(2)} available)`;
+              payBtn.style.background = '#00E5FF';
+              payBtn.style.color = '#000';
+            } catch (err) {
+              console.warn('[StablePay] Balance check failed:', err.message);
+              // Don't block — just enable without balance info
+              payBtn.disabled = false;
+              payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken}`;
+              payBtn.style.background = '#00E5FF';
+              payBtn.style.color = '#000';
+            }
+          } else {
+            // Solana or no token config — enable without balance
             payBtn.disabled = false;
-            const amt = parseFloat(this.options.amount || 0);
             payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken}`;
             payBtn.style.background = '#00E5FF';
             payBtn.style.color = '#000';
