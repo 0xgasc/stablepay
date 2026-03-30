@@ -311,21 +311,17 @@
             </div>
           </div>
 
-          <!-- Payment Method Tabs -->
+          <!-- Payment Method Tabs: CONNECT vs SEND -->
           <div style="margin-bottom: 12px;">
             <div id="sp-method-tabs" style="display: flex; gap: 0; margin-bottom: 12px; border: 3px solid #000;">
               <button class="sp-method-tab" data-method="wallet" style="
-                flex: 1; padding: 10px 6px; font-size: 10px; font-weight: 700; border: none;
+                flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 700; border: none;
                 background: #000; color: #fff; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
-              ">Wallet</button>
-              <button class="sp-method-tab" data-method="qr" style="
-                flex: 1; padding: 10px 6px; font-size: 10px; font-weight: 700; border: none; border-left: 2px solid #000;
+              ">Connect Wallet</button>
+              <button class="sp-method-tab" data-method="send" style="
+                flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 700; border: none; border-left: 2px solid #000;
                 background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
-              ">QR Code</button>
-              <button class="sp-method-tab" data-method="address" style="
-                flex: 1; padding: 10px 6px; font-size: 10px; font-weight: 700; border: none; border-left: 2px solid #000;
-                background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
-              ">Address</button>
+              ">Send Manually</button>
             </div>
 
             <!-- Method: Connect Wallet -->
@@ -351,11 +347,10 @@
               ">Connect Wallet to Pay</button>
             </div>
 
-            <!-- Method: QR Code -->
-            <!-- Method: QR Code -->
-            <div id="sp-method-qr" class="sp-method-panel" style="display: none;">
+            <!-- Method: Send Manually (QR + Address merged) -->
+            <div id="sp-method-send" class="sp-method-panel" style="display: none;">
               <!-- Step 1: Enter wallet -->
-              <div id="sp-qr-step1" style="padding: 12px;">
+              <div id="sp-send-step1" style="padding: 12px;">
                 <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 6px;">Step 1: Your wallet address</div>
                 <div style="display: flex; gap: 6px;">
                   <input id="sp-sender-wallet" type="text" placeholder="0x... or SOL address" style="
@@ -369,72 +364,43 @@
                 </div>
                 <p style="font-size: 9px; color: var(--sp-muted); margin-top: 4px;">The address you'll send from — so we can match your payment.</p>
               </div>
-              <!-- Step 2: QR + instructions (hidden until step 1 done) -->
-              <div id="sp-qr-step2" style="display: none; text-align: center; padding: 12px;">
-                <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 8px;">Step 2: Scan & Send</div>
-                <div style="background: white; padding: 12px; display: inline-block; border: 3px solid #000; margin-bottom: 10px;">
-                  <canvas id="sp-qr-canvas" width="160" height="160"></canvas>
-                </div>
-                <p style="font-size: 11px; color: var(--sp-text); font-weight: 600; margin-bottom: 4px;">Send exactly <span id="sp-qr-amount" style="color: #00E5FF;"></span></p>
-                <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 12px;">Scan QR with your wallet app, enter the exact amount, and send.</p>
-                <button id="sp-qr-sent-btn" style="
-                  width: 100%; padding: 12px; background: #00E5FF; color: #000; border: 3px solid #000;
-                  font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; box-shadow: 4px 4px 0px #000;
-                ">I've Sent the Payment</button>
-              </div>
-              <!-- Step 3: Listening (hidden until step 2 done) -->
-              <div id="sp-qr-step3" style="display: none; text-align: center; padding: 20px;">
-                <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 8px;">Step 3: Confirming</div>
-                <div style="margin: 12px 0;">
-                  <span class="sp-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid var(--sp-border); border-top-color: #00E5FF; border-radius: 50%;"></span>
-                </div>
-                <p style="font-size: 12px; color: var(--sp-text); font-weight: 600;">Listening for your payment...</p>
-                <p style="font-size: 10px; color: var(--sp-muted); margin-top: 4px;">This usually takes 15-30 seconds. Don't close this window.</p>
-              </div>
-            </div>
-
-            <!-- Method: Copy Address -->
-            <div id="sp-method-address" class="sp-method-panel" style="display: none;">
-              <!-- Step 1: Enter wallet -->
-              <div id="sp-addr-step1" style="padding: 12px;">
-                <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 6px;">Step 1: Your wallet address</div>
-                <div style="display: flex; gap: 6px;">
-                  <input id="sp-sender-wallet-addr" type="text" placeholder="0x... or SOL address" style="
-                    flex: 1; padding: 8px; font-size: 11px; font-family: monospace; border: 3px solid #000;
-                    background: var(--sp-card); color: var(--sp-text); outline: none;
-                  ">
-                  <button id="sp-sender-wallet-addr-btn" style="
-                    padding: 6px 14px; background: #000; color: #fff; border: none;
-                    font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
-                  ">Next</button>
-                </div>
-                <p style="font-size: 9px; color: var(--sp-muted); margin-top: 4px;">The address you'll send from — so we can match your payment.</p>
-              </div>
-              <!-- Step 2: Address + Amount (hidden until step 1 done) -->
-              <div id="sp-addr-step2" style="display: none; padding: 12px;">
+              <!-- Step 2: QR + Address + Amount (hidden until step 1 done) -->
+              <div id="sp-send-step2" style="display: none; padding: 12px;">
                 <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 8px;">Step 2: Send Payment</div>
-                <div style="background: var(--sp-card); border: 3px solid #000; padding: 12px; margin-bottom: 8px;">
+
+                <!-- QR Code -->
+                <div style="text-align: center; margin-bottom: 12px;">
+                  <div style="background: white; padding: 10px; display: inline-block; border: 3px solid #000;">
+                    <canvas id="sp-qr-canvas" width="140" height="140"></canvas>
+                  </div>
+                </div>
+
+                <!-- Address -->
+                <div style="background: var(--sp-card); border: 3px solid #000; padding: 10px; margin-bottom: 8px;">
                   <div style="font-size: 9px; color: var(--sp-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Send to</div>
                   <div style="display: flex; align-items: center; gap: 6px;">
                     <code id="sp-pay-address" style="font-size: 10px; color: var(--sp-text); word-break: break-all; flex: 1; font-weight: 600;"></code>
                     <button id="sp-copy-addr-btn" style="padding: 4px 10px; background: #000; color: #fff; border: none; font-size: 10px; font-weight: 700; cursor: pointer;">COPY</button>
                   </div>
                 </div>
-                <div style="background: var(--sp-card); border: 3px solid #000; padding: 12px; margin-bottom: 10px;">
+
+                <!-- Amount -->
+                <div style="background: var(--sp-card); border: 3px solid #000; padding: 10px; margin-bottom: 12px;">
                   <div style="font-size: 9px; color: var(--sp-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Exact amount</div>
                   <div style="display: flex; align-items: center; gap: 6px;">
                     <span id="sp-pay-amount" style="font-size: 20px; font-weight: 700; color: var(--sp-text);"></span>
                     <button id="sp-copy-amt-btn" style="padding: 4px 10px; background: #000; color: #fff; border: none; font-size: 10px; font-weight: 700; cursor: pointer;">COPY</button>
                   </div>
                 </div>
-                <button id="sp-addr-sent-btn" style="
+
+                <button id="sp-send-sent-btn" style="
                   width: 100%; padding: 12px; background: #00E5FF; color: #000; border: 3px solid #000;
                   font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; box-shadow: 4px 4px 0px #000;
                 ">I've Sent the Payment</button>
               </div>
-              <!-- Step 3: Listening (hidden until step 2 done) -->
-              <div id="sp-addr-step3" style="display: none; text-align: center; padding: 20px;">
-                <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 8px;">Step 3: Confirming</div>
+              <!-- Step 3: Listening -->
+              <div id="sp-send-step3" style="display: none; text-align: center; padding: 20px;">
+                <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 8px;">Confirming</div>
                 <div style="margin: 12px 0;">
                   <span class="sp-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid var(--sp-border); border-top-color: #00E5FF; border-radius: 50%;"></span>
                 </div>
@@ -502,55 +468,31 @@
     }
 
     initManualPaymentFlows() {
-      // QR tab: Step 1 → Step 2 → Step 3
-      const qrWalletBtn = this.container.querySelector('#sp-sender-wallet-btn');
-      const qrWalletInput = this.container.querySelector('#sp-sender-wallet');
-      if (qrWalletBtn) {
-        qrWalletBtn.addEventListener('click', () => {
-          const addr = qrWalletInput?.value?.trim();
+      // Send tab: Step 1 → Step 2 → Step 3
+      const sendWalletBtn = this.container.querySelector('#sp-sender-wallet-btn');
+      const sendWalletInput = this.container.querySelector('#sp-sender-wallet');
+      if (sendWalletBtn) {
+        sendWalletBtn.addEventListener('click', () => {
+          const addr = sendWalletInput?.value?.trim();
           if (addr && addr.length > 10) {
             this.connectedWallet = addr;
-            this.showManualPaymentDetails('qr');
+            this.showManualPaymentDetails('send');
           }
         });
-        qrWalletInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') qrWalletBtn.click(); });
+        sendWalletInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendWalletBtn.click(); });
       }
 
-      // QR "I've sent it" button
-      const qrSentBtn = this.container.querySelector('#sp-qr-sent-btn');
-      if (qrSentBtn) {
-        qrSentBtn.addEventListener('click', () => {
-          this.container.querySelector('#sp-qr-step2').style.display = 'none';
-          this.container.querySelector('#sp-qr-step3').style.display = 'block';
+      // "I've sent it" button
+      const sentBtn = this.container.querySelector('#sp-send-sent-btn');
+      if (sentBtn) {
+        sentBtn.addEventListener('click', () => {
+          this.container.querySelector('#sp-send-step2').style.display = 'none';
+          this.container.querySelector('#sp-send-step3').style.display = 'block';
           this.startPaymentPolling();
         });
       }
 
-      // Address tab: Step 1 → Step 2 → Step 3
-      const addrWalletBtn = this.container.querySelector('#sp-sender-wallet-addr-btn');
-      const addrWalletInput = this.container.querySelector('#sp-sender-wallet-addr');
-      if (addrWalletBtn) {
-        addrWalletBtn.addEventListener('click', () => {
-          const addr = addrWalletInput?.value?.trim();
-          if (addr && addr.length > 10) {
-            this.connectedWallet = addr;
-            this.showManualPaymentDetails('address');
-          }
-        });
-        addrWalletInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') addrWalletBtn.click(); });
-      }
-
-      // Address "I've sent it" button
-      const addrSentBtn = this.container.querySelector('#sp-addr-sent-btn');
-      if (addrSentBtn) {
-        addrSentBtn.addEventListener('click', () => {
-          this.container.querySelector('#sp-addr-step2').style.display = 'none';
-          this.container.querySelector('#sp-addr-step3').style.display = 'block';
-          this.startPaymentPolling();
-        });
-      }
-
-      // Copy buttons (delegated since they appear in step 2)
+      // Copy buttons (delegated)
       this.container.addEventListener('click', (e) => {
         if (e.target.id === 'sp-copy-addr-btn') {
           const addr = this.container.querySelector('#sp-pay-address')?.textContent;
@@ -617,11 +559,10 @@
       const panel = this.container.querySelector(`#sp-method-${method}`);
       if (panel) panel.style.display = 'block';
 
-      // For QR and address methods — only show step 2 if wallet already known
-      if ((method === 'qr' || method === 'address') && this.connectedWallet) {
-        this.showManualPaymentDetails(method);
+      // For send method — only show step 2 if wallet already known
+      if (method === 'send' && this.connectedWallet) {
+        this.showManualPaymentDetails('send');
       }
-      // Otherwise step 1 (enter wallet) is already visible by default
     }
 
     async showManualPaymentDetails(method) {
@@ -671,42 +612,30 @@
       }
 
       // Show step 2, hide step 1
-      if (method === 'qr') {
-        const step1 = this.container.querySelector('#sp-qr-step1');
-        const step2 = this.container.querySelector('#sp-qr-step2');
-        if (step1) step1.style.display = 'none';
-        if (step2) step2.style.display = 'block';
+      const step1 = this.container.querySelector('#sp-send-step1');
+      const step2 = this.container.querySelector('#sp-send-step2');
+      if (step1) step1.style.display = 'none';
+      if (step2) step2.style.display = 'block';
 
-        // Set amount display
-        const qrAmount = this.container.querySelector('#sp-qr-amount');
-        if (qrAmount) qrAmount.textContent = `${amount} ${this.selectedToken}`;
+      // Show address + amount
+      const payAddress = this.container.querySelector('#sp-pay-address');
+      const payAmount = this.container.querySelector('#sp-pay-amount');
+      if (payAddress) payAddress.textContent = walletAddr;
+      if (payAmount) payAmount.textContent = `${amount} ${this.selectedToken}`;
 
-        // Generate QR code — wait for library if needed
-        const canvas = this.container.querySelector('#sp-qr-canvas');
-        if (canvas) {
-          const renderQR = () => {
-            if (typeof QRCode !== 'undefined') {
-              QRCode.toCanvas(canvas, walletAddr, { width: 160, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
-                if (err) console.error('QR generation failed:', err);
-              });
-            } else {
-              // Library not loaded yet — retry in 500ms
-              setTimeout(renderQR, 500);
-            }
-          };
-          renderQR();
-        }
-      } else {
-        const step1 = this.container.querySelector('#sp-addr-step1');
-        const step2 = this.container.querySelector('#sp-addr-step2');
-        if (step1) step1.style.display = 'none';
-        if (step2) step2.style.display = 'block';
-
-        // Show address + amount
-        const payAddress = this.container.querySelector('#sp-pay-address');
-        const payAmount = this.container.querySelector('#sp-pay-amount');
-        if (payAddress) payAddress.textContent = walletAddr;
-        if (payAmount) payAmount.textContent = `${amount} ${this.selectedToken}`;
+      // Generate QR code — wait for library if needed
+      const canvas = this.container.querySelector('#sp-qr-canvas');
+      if (canvas) {
+        const renderQR = () => {
+          if (typeof QRCode !== 'undefined') {
+            QRCode.toCanvas(canvas, walletAddr, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
+              if (err) console.error('QR generation failed:', err);
+            });
+          } else {
+            setTimeout(renderQR, 500);
+          }
+        };
+        renderQR();
       }
 
       // Polling starts when user clicks "I've sent it" — handled in initManualPaymentFlows
