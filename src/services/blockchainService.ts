@@ -330,11 +330,35 @@ export class BlockchainService {
         addressMap.set(order.paymentAddress, existing);
       }
 
+      // Helper: derive Associated Token Account address
+      const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+      const ATA_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+
       for (const [address, orders] of addressMap) {
         try {
-          const pubkey = new PublicKey(address);
-          // Get recent signatures for this address
-          const sigs = await connection.getSignaturesForAddress(pubkey, { limit: 10 });
+          const walletPubkey = new PublicKey(address);
+
+          // Scan ATAs for each token mint (transfers go to ATA, not wallet directly)
+          const allSigs: any[] = [];
+          for (const mint of Object.keys(TOKEN_MINTS)) {
+            try {
+              const [ata] = PublicKey.findProgramAddressSync(
+                [walletPubkey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), new PublicKey(mint).toBuffer()],
+                ATA_PROGRAM_ID
+              );
+              const ataSigs = await connection.getSignaturesForAddress(ata, { limit: 10 });
+              allSigs.push(...ataSigs);
+            } catch { /* ATA may not exist yet for this mint */ }
+          }
+          // Also check the wallet address itself (for first-time ATA creation txs)
+          try {
+            const walletSigs = await connection.getSignaturesForAddress(walletPubkey, { limit: 5 });
+            allSigs.push(...walletSigs);
+          } catch { /* ignore */ }
+
+          // Deduplicate by signature
+          const seen = new Set<string>();
+          const sigs = allSigs.filter(s => { if (seen.has(s.signature)) return false; seen.add(s.signature); return true; });
 
           for (const sigInfo of sigs) {
             // Skip if already processed
