@@ -76,6 +76,20 @@ router.get('/', requireMerchantAuth, rateLimit({
   }
 });
 
+// Public: find receipt by orderId (for customer receipt page)
+router.get('/for-order/:orderId', async (req, res) => {
+  try {
+    const receipt = await db.receipt.findFirst({
+      where: { orderId: req.params.orderId },
+      select: { id: true },
+    });
+    if (!receipt) return res.status(404).json({ error: 'Receipt not found for this order' });
+    res.json({ receiptId: receipt.id });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ============================================
 // PARAMETERIZED ROUTES LAST
 // ============================================

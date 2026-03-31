@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Receipt — StablePay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Space Grotesk', system-ui, sans-serif; background: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .receipt { background: #fff; max-width: 480px; width: 100%; border: 4px solid #000; box-shadow: 8px 8px 0px #000; }
+        .header { background: #000; color: #fff; padding: 24px; text-align: center; }
+        .header .check { width: 48px; height: 48px; background: #22c55e; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 12px; }
+        .header h1 { font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .amount-bar { background: #00E5FF; padding: 20px 24px; border-bottom: 4px solid #000; }
+        .amount-bar .label { font-size: 10px; text-transform: uppercase; font-weight: 700; color: rgba(0,0,0,0.5); letter-spacing: 1px; }
+        .amount-bar .value { font-size: 36px; font-weight: 700; color: #000; }
+        .details { padding: 24px; }
+        .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+        .row:last-child { border-bottom: none; }
+        .row .label { font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 600; }
+        .row .value { font-size: 14px; font-weight: 600; color: #0f172a; }
+        .row .value a { color: #2563eb; text-decoration: none; }
+        .row .value a:hover { text-decoration: underline; }
+        .row .value.mono { font-family: 'SF Mono', monospace; font-size: 12px; }
+        .actions { padding: 0 24px 24px; display: flex; gap: 8px; }
+        .btn { flex: 1; padding: 12px; border: 3px solid #000; font-size: 12px; font-weight: 700; text-transform: uppercase; cursor: pointer; text-align: center; text-decoration: none; display: block; }
+        .btn-primary { background: #000; color: #fff; }
+        .btn-secondary { background: #fff; color: #000; }
+        .footer { text-align: center; padding: 12px; font-size: 10px; color: #94a3b8; border-top: 1px solid #f1f5f9; }
+        .loading { text-align: center; padding: 48px; color: #64748b; }
+        .error { text-align: center; padding: 48px; color: #ef4444; }
+        @media print { body { background: #fff; } .receipt { border: none; box-shadow: none; } .actions { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="receipt" id="receipt">
+        <div class="loading" id="loading">
+            <p>Loading receipt...</p>
+        </div>
+    </div>
+
+    <script>
+        const pathId = window.location.pathname.split('/').pop();
+        const BASE_URL = window.location.origin;
+        // Can be a receiptId or orderId — try both
+        const EXPLORERS = {
+            BASE_MAINNET: 'https://basescan.org/tx/',
+            ETHEREUM_MAINNET: 'https://etherscan.io/tx/',
+            POLYGON_MAINNET: 'https://polygonscan.com/tx/',
+            ARBITRUM_MAINNET: 'https://arbiscan.io/tx/',
+            BNB_MAINNET: 'https://bscscan.com/tx/',
+            SOLANA_MAINNET: 'https://solscan.io/tx/',
+            TRON_MAINNET: 'https://tronscan.org/#/transaction/',
+        };
+        const CHAIN_NAMES = {
+            BASE_MAINNET: 'Base', ETHEREUM_MAINNET: 'Ethereum', POLYGON_MAINNET: 'Polygon',
+            ARBITRUM_MAINNET: 'Arbitrum', BNB_MAINNET: 'BNB Chain', SOLANA_MAINNET: 'Solana', TRON_MAINNET: 'TRON',
+        };
+
+        async function loadReceipt() {
+            try {
+                // Try as receiptId first, then as orderId
+                let res = await fetch(`${BASE_URL}/api/receipts/${pathId}`);
+                if (!res.ok) {
+                    // Maybe it's an orderId — look up receipt by order
+                    const lookup = await fetch(`${BASE_URL}/api/receipts/for-order/${pathId}`);
+                    if (lookup.ok) {
+                        const { receiptId } = await lookup.json();
+                        res = await fetch(`${BASE_URL}/api/receipts/${receiptId}`);
+                    }
+                }
+                if (!res.ok) throw new Error('Receipt not found');
+                const data = await res.json();
+                const r = data.receipt;
+                const order = r.order || {};
+                const txHash = order.transactions?.[0]?.txHash || r.txHash;
+                const chain = order.chain || '';
+                const explorerUrl = txHash && EXPLORERS[chain] ? EXPLORERS[chain] + txHash : null;
+                const chainName = CHAIN_NAMES[chain] || chain;
+                const amount = Number(r.amount || order.amount || 0);
+                const token = r.token || order.token || 'USDC';
+                const merchantName = r.merchant?.companyName || 'Merchant';
+                const date = new Date(r.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                document.getElementById('receipt').innerHTML = `
+                    <div class="header">
+                        <div class="check">✓</div>
+                        <h1>Payment Confirmed</h1>
+                    </div>
+                    <div class="amount-bar">
+                        <div class="label">Amount Paid</div>
+                        <div class="value">$${amount.toFixed(2)} <span style="font-size:16px;opacity:0.6">${token}</span></div>
+                    </div>
+                    <div class="details">
+                        <div class="row"><span class="label">Receipt #</span><span class="value mono">${r.receiptNumber || r.id.slice(0, 12)}</span></div>
+                        <div class="row"><span class="label">Merchant</span><span class="value">${merchantName}</span></div>
+                        <div class="row"><span class="label">Network</span><span class="value">${chainName}</span></div>
+                        <div class="row"><span class="label">Date</span><span class="value">${date}</span></div>
+                        ${txHash ? `<div class="row"><span class="label">Transaction</span><span class="value mono"><a href="${explorerUrl}" target="_blank">${txHash.slice(0, 12)}...${txHash.slice(-6)}</a></span></div>` : ''}
+                        ${order.customerEmail ? `<div class="row"><span class="label">Email</span><span class="value">${order.customerEmail}</span></div>` : ''}
+                    </div>
+                    <div class="actions">
+                        ${explorerUrl ? `<a href="${explorerUrl}" target="_blank" class="btn btn-primary">View on Explorer</a>` : ''}
+                        <a href="${BASE_URL}/api/receipts/${r.id}/pdf" class="btn btn-secondary">Download PDF</a>
+                    </div>
+                    <div class="footer">Powered by <strong>StablePay</strong></div>
+                `;
+
+                document.title = `Receipt ${r.receiptNumber || ''} — $${amount.toFixed(2)} ${token}`;
+            } catch (err) {
+                document.getElementById('receipt').innerHTML = `
+                    <div class="error">
+                        <p style="font-size:48px;margin-bottom:12px;">🔍</p>
+                        <p style="font-weight:700;font-size:16px;">Receipt not found</p>
+                        <p style="font-size:12px;color:#94a3b8;margin-top:8px;">This receipt may have expired or the link is incorrect.</p>
+                    </div>
+                `;
+            }
+        }
+
+        loadReceipt();
+    </script>
+</body>
+</html>

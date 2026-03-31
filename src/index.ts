@@ -75,6 +75,11 @@ app.get('/api/widget.js', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'checkout-widget.js'));
 });
 
+// Customer receipt page
+app.get('/receipt/:receiptId', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'receipt.html'));
+});
+
 // Payment link short URLs → resolve and redirect to checkout
 app.get('/pay/:slug', async (req, res) => {
   try {

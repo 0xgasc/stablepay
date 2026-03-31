@@ -1685,29 +1685,34 @@
       const chainKey = this.selectedChain?.chain || '';
       const txUrl = explorerLink || (hash && explorerUrls[chainKey] ? explorerUrls[chainKey] + hash : null);
 
+      // Receipt URL — uses orderId (receipt page resolves to receiptId)
+      const receiptUrl = this.currentOrderId ? `${STABLEPAY_URL}/receipt/${this.currentOrderId}` : null;
+
       this.container.querySelector('.sp-widget').innerHTML = `
         <div style="text-align: center; padding: 32px;">
-          <div style="font-size: 48px; margin-bottom: 16px;">&#10003;</div>
-          <div style="font-size: 20px; font-weight: 700; color: var(--sp-text); margin-bottom: 8px; text-transform: uppercase;">
+          <div style="width: 56px; height: 56px; background: #22c55e; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; margin-bottom: 16px;">&#10003;</div>
+          <div style="font-size: 20px; font-weight: 700; color: var(--sp-text); margin-bottom: 4px; text-transform: uppercase;">
             Payment Confirmed
           </div>
-          <div style="font-size: 14px; color: var(--sp-muted); margin-bottom: 16px;">
+          <div style="font-size: 14px; color: var(--sp-muted); margin-bottom: 20px;">
             $${parseFloat(this.options.amount).toFixed(2)} paid with ${this.selectedToken}
           </div>
-          ${txUrl ? `
-            <a href="${txUrl}" target="_blank" style="
-              display: inline-block;
-              padding: 12px 24px;
-              background: #00E5FF;
-              color: #000;
-              border: 3px solid #000;
-              text-decoration: none;
-              font-size: 12px;
-              font-weight: 700;
-              text-transform: uppercase;
-              box-shadow: 4px 4px 0px #000;
-            ">View Transaction</a>
-          ` : ''}
+          <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+            ${txUrl ? `
+              <a href="${txUrl}" target="_blank" style="
+                padding: 10px 20px; background: var(--sp-card); color: var(--sp-text);
+                border: 2px solid var(--sp-border); text-decoration: none;
+                font-size: 11px; font-weight: 700; text-transform: uppercase;
+              ">View Transaction</a>
+            ` : ''}
+            ${receiptUrl ? `
+              <a href="${receiptUrl}" target="_blank" style="
+                padding: 10px 20px; background: #000; color: #fff;
+                border: 2px solid #000; text-decoration: none;
+                font-size: 11px; font-weight: 700; text-transform: uppercase;
+              ">View Receipt</a>
+            ` : ''}
+          </div>
         </div>
       `;
     }
