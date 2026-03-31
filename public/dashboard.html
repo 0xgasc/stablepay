@@ -598,6 +598,31 @@
     </nav>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Fee overdue warning banner -->
+        <div id="feeOverdueBanner" class="hidden bg-yellow-900/40 border-2 border-yellow-600 p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-yellow-400 text-xl">!</span>
+                    <div>
+                        <div class="text-yellow-300 font-bold text-sm">Fees Overdue</div>
+                        <div class="text-yellow-400/70 text-xs" id="feeOverdueDetails">You have outstanding fees. Pay to avoid account suspension.</div>
+                    </div>
+                </div>
+                <button onclick="switchTab('fees')" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-1.5 text-xs font-bold uppercase">Pay Fees</button>
+            </div>
+        </div>
+
+        <!-- Suspended account banner -->
+        <div id="suspendedBanner" class="hidden bg-red-900/40 border-2 border-red-600 p-4 mb-4">
+            <div class="flex items-center gap-3">
+                <span class="text-red-400 text-xl">X</span>
+                <div>
+                    <div class="text-red-300 font-bold text-sm">Account Suspended</div>
+                    <div class="text-red-400/70 text-xs">Your account is suspended due to unpaid fees. Payments are disabled until fees are paid.</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Hidden profile fields for JS compatibility -->
         <div class="hidden">
             <span id="profileInitial"></span>
@@ -2395,6 +2420,14 @@ onMounted(() => {
                 if (currentMerchant.createdAt) {
                     const created = new Date(currentMerchant.createdAt);
                     document.getElementById('profileCreatedAt').textContent = created.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                }
+
+                // Show fee/suspension banners
+                if (currentMerchant.isSuspended) {
+                    document.getElementById('suspendedBanner').classList.remove('hidden');
+                } else if (Number(currentMerchant.feesDue) >= 5) {
+                    document.getElementById('feeOverdueBanner').classList.remove('hidden');
+                    document.getElementById('feeOverdueDetails').textContent = `$${Number(currentMerchant.feesDue).toFixed(2)} in outstanding fees. Pay before your account is suspended.`;
                 }
 
                 // Auto-open chat panel for new merchants (no auto-message)

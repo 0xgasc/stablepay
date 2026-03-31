@@ -288,12 +288,11 @@ router.post('/check-overdue', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Get all non-suspended merchants with fees due
+    // Get all non-suspended merchants with fees due (all plans accumulate fees now)
     const merchantsWithFees = await db.merchant.findMany({
       where: {
         isSuspended: false,
-        feesDue: { gt: 0 },
-        plan: { not: 'FREE' } // FREE plan doesn't have billing
+        feesDue: { gt: BILLING_CONFIG.minInvoiceAmount },
       },
       select: {
         id: true,
