@@ -479,6 +479,14 @@
                 <p style="font-size: 12px; color: var(--sp-text); font-weight: 600;">Listening for your payment...</p>
                 <p id="sp-poll-timer" style="font-size: 10px; color: var(--sp-muted); margin-top: 4px;">Checking... 0:00</p>
 
+                <!-- Speed up button (appears at 10s) -->
+                <button id="sp-speedup-btn" style="
+                  display: none; margin-top: 12px; padding: 8px 16px;
+                  background: var(--sp-card); color: var(--sp-text); border: 2px solid var(--sp-border);
+                  font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+                ">Speed Up Verification</button>
+                <p id="sp-speedup-status" style="font-size: 9px; color: var(--sp-muted); margin-top: 4px; display: none;"></p>
+
                 <!-- Manual TX entry (hidden until timeout) -->
                 <div id="sp-manual-tx" style="display: none; margin-top: 16px; text-align: left;">
                   <div style="background: var(--sp-card); border: 2px solid var(--sp-border); padding: 12px;">
@@ -934,8 +942,40 @@
       if (this._pollingInterval) return; // Don't double-poll
 
       const pollStartTime = Date.now();
+      const SPEEDUP_TIMEOUT = 10000;   // Show speed-up button after 10s
       const MANUAL_TX_TIMEOUT = 30000; // Show manual entry after 30s
+      let speedupShown = false;
       let manualShown = false;
+
+      // Speed-up button handler
+      const speedupBtn = this.container.querySelector('#sp-speedup-btn');
+      if (speedupBtn) {
+        speedupBtn.addEventListener('click', async () => {
+          const statusEl = this.container.querySelector('#sp-speedup-status');
+          speedupBtn.disabled = true;
+          speedupBtn.textContent = 'Scanning...';
+          if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Querying blockchain directly...'; }
+
+          try {
+            // Trigger a direct chain lookup via the manual TX endpoint with empty hash
+            // This makes the backend check the chain for recent txs to this address
+            const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}`);
+            const data = await res.json();
+            if (data.status === 'CONFIRMED') {
+              clearInterval(this._pollingInterval);
+              clearInterval(this._timerInterval);
+              this.showSuccess(data);
+              return;
+            }
+            if (statusEl) statusEl.textContent = 'Not found yet — scanner will keep checking. You can also enter TX below.';
+            speedupBtn.textContent = 'Checked';
+          } catch (e) {
+            if (statusEl) statusEl.textContent = 'Check failed — scanner will keep trying.';
+            speedupBtn.textContent = 'Retry';
+            speedupBtn.disabled = false;
+          }
+        });
+      }
 
       // Timer display
       this._timerInterval = setInterval(() => {
@@ -944,6 +984,13 @@
         const secs = elapsed % 60;
         const timerEl = this.container.querySelector('#sp-poll-timer');
         if (timerEl) timerEl.textContent = `Checking... ${mins}:${secs.toString().padStart(2, '0')}`;
+
+        // Show speed-up button after 10s
+        if (!speedupShown && Date.now() - pollStartTime > SPEEDUP_TIMEOUT) {
+          speedupShown = true;
+          const btn = this.container.querySelector('#sp-speedup-btn');
+          if (btn) btn.style.display = 'inline-block';
+        }
 
         // Show manual TX entry after timeout
         if (!manualShown && Date.now() - pollStartTime > MANUAL_TX_TIMEOUT) {

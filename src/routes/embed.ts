@@ -287,10 +287,22 @@ router.post('/order/:orderId/tx', async (req, res) => {
       return res.status(400).json({ error: `Order status is ${order.status}`, status: order.status });
     }
 
-    // Check if TX already recorded
+    // Check if TX already recorded (duplicate prevention)
     const existingTx = await db.transaction.findUnique({ where: { txHash } });
     if (existingTx) {
-      return res.status(400).json({ error: 'Transaction already recorded' });
+      // If already confirmed for this order, return success
+      if (existingTx.orderId === orderId && existingTx.status === 'CONFIRMED') {
+        return res.json({ success: true, status: 'CONFIRMED', message: 'Already confirmed' });
+      }
+      return res.status(400).json({ error: 'This transaction has already been submitted' });
+    }
+
+    // Check if order already has a pending manual submission
+    const pendingManualTx = await db.transaction.findFirst({
+      where: { orderId, status: 'PENDING' },
+    });
+    if (pendingManualTx) {
+      return res.status(400).json({ error: 'A transaction is already pending review for this order', txHash: pendingManualTx.txHash });
     }
 
     // Try auto-verification on-chain
