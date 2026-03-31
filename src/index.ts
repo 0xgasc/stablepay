@@ -67,6 +67,8 @@ app.use('/public', express.static(path.join(process.cwd(), 'public')));
 app.get('/api/widget.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+  res.setHeader('Vercel-CDN-Cache-Control', 'public, max-age=60, must-revalidate');
+  res.setHeader('CDN-Cache-Control', 'public, max-age=60, must-revalidate');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.sendFile(path.join(process.cwd(), 'public', 'checkout-widget.js'));
 });
