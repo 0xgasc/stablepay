@@ -723,12 +723,28 @@
       if (payAmount) payAmount.textContent = `${amount} ${this.selectedToken}`;
       if (sendAmountDisplay) sendAmountDisplay.textContent = `${amount} ${this.selectedToken}`;
 
-      // Generate QR code — wait for library if needed
+      // Generate QR code with proper payment URI
       const canvas = this.container.querySelector('#sp-qr-canvas');
       if (canvas) {
+        // Build payment URI based on chain type
+        let qrData = walletAddr;
+        const chainConfig = this.selectedChain?.config;
+        const tokenConfig = chainConfig?.tokens?.[this.selectedToken];
+
+        if (chainConfig?.type === 'solana' && tokenConfig?.address) {
+          // Solana Pay URI: solana:<recipient>?amount=<amount>&spl-token=<mint>
+          qrData = `solana:${walletAddr}?amount=${amount}&spl-token=${tokenConfig.address}`;
+        } else if (chainConfig?.type === 'evm' && tokenConfig?.address) {
+          // EIP-681: ethereum:<token_address>/transfer?address=<recipient>&uint256=<amount_raw>
+          const decimals = tokenConfig.decimals || 6;
+          const rawAmount = BigInt(Math.round(parseFloat(amount) * (10 ** decimals))).toString();
+          qrData = `ethereum:${tokenConfig.address}/transfer?address=${walletAddr}&uint256=${rawAmount}`;
+        }
+        // TRON: just the address (wallets handle it)
+
         const renderQR = () => {
           if (typeof QRCode !== 'undefined') {
-            QRCode.toCanvas(canvas, walletAddr, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
+            QRCode.toCanvas(canvas, qrData, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
               if (err) console.error('QR generation failed:', err);
             });
           } else {
