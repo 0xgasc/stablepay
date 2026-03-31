@@ -17,6 +17,8 @@ import { embedRouter } from './routes/embed';
 import { agentRouter } from './routes/agent';
 import { complianceRouter } from './routes/compliance';
 import { treasuryRouter } from './routes/treasury';
+import { paymentLinksRouter } from './routes/paymentLinks';
+import { db } from './config/database';
 import { validateEnv } from './utils/env';
 import { logger } from './utils/logger';
 import cron from 'node-cron';
@@ -73,6 +75,29 @@ app.get('/api/widget.js', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'checkout-widget.js'));
 });
 
+// Payment link short URLs → resolve and redirect to checkout
+app.get('/pay/:slug', async (req, res) => {
+  try {
+    const link = await db.paymentLink.findUnique({ where: { slug: req.params.slug } });
+    if (!link || !link.isActive) {
+      return res.status(404).send('Payment link not found or expired');
+    }
+    await db.paymentLink.update({ where: { id: link.id }, data: { viewCount: { increment: 1 } } });
+    const params = new URLSearchParams({
+      merchantId: link.merchantId,
+      amount: Number(link.amount).toString(),
+      token: link.token,
+    });
+    if (link.productName) params.set('productName', link.productName);
+    if (link.chains.length > 0) params.set('chains', link.chains.join(','));
+    if (link.externalId) params.set('externalId', link.externalId);
+    params.set('linkId', link.id);
+    res.redirect(`/crypto-pay.html?${params.toString()}`);
+  } catch (err) {
+    res.status(500).send('Error loading payment link');
+  }
+});
+
 // Serve invoice payment page at /pay/:invoiceId
 app.get('/pay/:invoiceId', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'invoice-pay.html'));
@@ -95,6 +120,7 @@ app.use('/api/embed', embedRouter);
 app.use('/api/agent', agentRouter);
 app.use('/api/compliance', complianceRouter);
 app.use('/api/treasury', treasuryRouter);
+app.use('/api/payment-links', paymentLinksRouter);
 app.use('/api', authRouter);
 
 // ─── Legacy v1 redirects (old unprotected routes removed) ──────────────────
