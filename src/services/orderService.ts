@@ -504,14 +504,7 @@ export class OrderService {
     const networkMode = merchant.networkMode;
 
     if (merchant.plan === 'FREE') {
-      // Use mainnet-specific tracking for FREE tier
-      const result = canProcessPayment(
-        merchant.plan,
-        currentMainnetVolume,
-        orderAmount,
-        networkMode,
-        currentMainnetTxns
-      );
+      const result = canProcessPayment(merchant.plan, currentMainnetVolume, orderAmount);
       return { ...result, feePercent, feeAmount, volumeTier: volumeTier.name };
     }
 

@@ -64,8 +64,8 @@ enum UserRole {
 
 enum PlanType {
   FREE
-  STARTER
-  GROWTH
+  STARTER    // Legacy — treated as FREE
+  GROWTH     // Legacy — treated as PRO
   PRO
   ENTERPRISE
 
@@ -141,6 +141,18 @@ model Merchant {
 
   // Receipt settings
   autoSendReceipts      Boolean     @default(false)   // Auto-email receipts to customers
+
+  // PRO subscription
+  proExpiresAt          DateTime?   // If paying $19/mo, when does PRO expire? null = not subscribed (auto-unlock or free)
+
+  // Email notification preferences
+  emailOnPayment        Boolean     @default(true)    // Email merchant when payment received
+  emailOnRefund         Boolean     @default(true)    // Email merchant when refund processed
+  emailOnExpiry         Boolean     @default(false)   // Email merchant when order expires
+
+  // Webhook health tracking
+  webhookLastSuccess    DateTime?
+  webhookLastFailure    DateTime?
 
   // Widget customization (JSON stored as string)
   widgetConfig          Json?       // { borderStyle, theme, headerColor, headerTextColor, logoUrl, buttonText, hideFooter }

@@ -8,7 +8,9 @@ import {
   getBillingConfig,
   isBillingDue,
   shouldSuspend,
-  PLAN_CONFIG
+  BILLING_CONFIG,
+  VOLUME_TIERS,
+  normalizePlan,
 } from '../config/pricing';
 
 const router = Router();
@@ -102,7 +104,7 @@ router.get('/balance', requireMerchantAuth, async (req, res) => {
     // Get billing cycle config for merchant's plan
     const billingConfig = getBillingConfig(merchant.plan);
     const lastBillingDate = merchant.lastFeeCalculation || merchant.billingCycleStart;
-    const billingStatus = isBillingDue(merchant.plan, lastBillingDate, totalOwed);
+    const billingStatus = isBillingDue(lastBillingDate, totalOwed);
 
     // Calculate next billing date
     const nextBillingDate = billingConfig.billingCycleDays
@@ -116,12 +118,10 @@ router.get('/balance', requireMerchantAuth, async (req, res) => {
 
       // Billing cycle info
       billing: {
-        cycleDays: billingConfig.billingCycleDays,
-        cycleLabel: billingConfig.billingCycleDays === 7 ? 'Weekly' :
-                    billingConfig.billingCycleDays === 14 ? 'Bi-weekly' :
-                    billingConfig.billingCycleDays === 30 ? 'Monthly' : 'N/A',
-        gracePeriodDays: billingConfig.gracePeriodDays,
-        minInvoiceAmount: billingConfig.minInvoiceAmount,
+        cycleDays: BILLING_CONFIG.cycleDays,
+        cycleLabel: 'Monthly',
+        gracePeriodDays: BILLING_CONFIG.gracePeriodDays,
+        minInvoiceAmount: BILLING_CONFIG.minInvoiceAmount,
         lastBillingDate,
         nextBillingDate,
         isDue: billingStatus.due,
@@ -314,7 +314,7 @@ router.post('/check-overdue', async (req, res) => {
       const feesDue = Number(merchant.feesDue);
 
       // Check if this merchant should be suspended based on their plan's billing cycle
-      if (shouldSuspend(merchant.plan, lastBillingDate, feesDue)) {
+      if (shouldSuspend(lastBillingDate, feesDue)) {
         await db.merchant.update({
           where: { id: merchant.id },
           data: {
@@ -333,7 +333,7 @@ router.post('/check-overdue', async (req, res) => {
         suspended.push(merchant.id);
       } else {
         // Check if they're in grace period (warning)
-        const billingStatus = isBillingDue(merchant.plan, lastBillingDate, feesDue);
+        const billingStatus = isBillingDue(lastBillingDate, feesDue);
         if (billingStatus.inGracePeriod) {
           warnings.push({
             id: merchant.id,
@@ -394,32 +394,25 @@ router.post('/suspend', async (req, res) => {
 
 // Public: Get pricing tiers and billing info
 router.get('/pricing', (_req, res) => {
-  const tiers = Object.entries(PLAN_CONFIG).map(([key, config]) => ({
-    plan: key,
-    name: config.name,
-    description: config.description,
-    feePercent: config.feePercent,
-    feeDisplay: `${(config.feePercent * 100).toFixed(1)}%`,
-    volumeLimit: config.volumeLimit,
-    volumeLimitDisplay: config.volumeLimit
-      ? `$${config.volumeLimit.toLocaleString()}/mo`
-      : 'Unlimited',
-    billingCycle: config.billingCycleDays
-      ? config.billingCycleDays === 7 ? 'Weekly'
-        : config.billingCycleDays === 14 ? 'Bi-weekly'
-        : 'Monthly'
-      : 'N/A',
-    billingCycleDays: config.billingCycleDays,
-    gracePeriodDays: config.gracePeriodDays,
-  }));
-
   res.json({
-    model: 'invoice',
-    description: 'Merchants receive 100% of payments. Fees are invoiced based on billing cycle.',
-    tiers,
+    model: 'volume-based fees + PRO feature unlock',
+    description: 'Everyone pays volume-based transaction fees. PRO unlocks refunds, receipts, branding at $5k/mo or $19/mo.',
+    volumeTiers: VOLUME_TIERS.map(t => ({
+      name: t.name,
+      minVolume: t.minVolume,
+      maxVolume: t.maxVolume === Infinity ? null : t.maxVolume,
+      feePercent: t.feePercent,
+      feeDisplay: `${(t.feePercent * 100).toFixed(1)}%`,
+    })),
+    plans: {
+      FREE: { features: 'Basic payments, webhooks, 5 payment links' },
+      PRO: { features: 'Refunds, receipts, custom branding, unlimited links', unlock: 'Auto at $5k/mo OR $19/mo crypto' },
+      ENTERPRISE: { features: 'Custom rates, dedicated support', unlock: 'Contact us' },
+    },
+    billing: { cycleDays: BILLING_CONFIG.cycleDays, gracePeriodDays: BILLING_CONFIG.gracePeriodDays },
     feeWallet: process.env.STABLEPAY_FEE_WALLET || '0x2e8D1eAd7Ba51e04c2A8ec40a8A3eD49CC4E1ceF',
     acceptedTokens: ['USDC', 'USDT'],
-    acceptedChains: ['BASE_SEPOLIA', 'BASE_MAINNET', 'ETHEREUM_MAINNET'],
+    acceptedChains: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'BNB_MAINNET', 'SOLANA_MAINNET', 'TRON_MAINNET'],
   });
 });
 
