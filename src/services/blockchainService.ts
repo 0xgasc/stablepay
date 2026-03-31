@@ -296,6 +296,8 @@ export class BlockchainService {
   }
 
   async scanSolanaPayments(): Promise<void> {
+    const startTime = Date.now();
+    console.log('[scanner] Solana scan starting...');
     try {
       // Get pending Solana orders
       const pendingOrders = await db.order.findMany({
@@ -308,21 +310,23 @@ export class BlockchainService {
         orderBy: { createdAt: 'desc' },
       });
 
-      if (pendingOrders.length === 0) return;
+      if (pendingOrders.length === 0) {
+        console.log('[scanner] Solana: no pending orders');
+        return;
+      }
+
+      console.log(`[scanner] Solana: ${pendingOrders.length} pending order(s)`);
 
       const { Connection, PublicKey } = await import('@solana/web3.js');
-      // Use env RPC or fallback — public endpoint has strict rate limits
-      const solRpc = process.env.SOLANA_MAINNET_RPC_URL || 'https://api.mainnet-beta.solana.com';
+      const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
       const connection = new Connection(solRpc, { commitment: 'confirmed', disableRetryOnRateLimit: true });
 
-      // USDC and USDT mint addresses on Solana
       const TOKEN_MINTS: Record<string, string> = {
         'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
         'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
         'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr': 'EURC',
       };
 
-      // Group orders by payment address
       const addressMap = new Map<string, typeof pendingOrders>();
       for (const order of pendingOrders) {
         const existing = addressMap.get(order.paymentAddress) || [];
@@ -330,35 +334,45 @@ export class BlockchainService {
         addressMap.set(order.paymentAddress, existing);
       }
 
-      // Helper: derive Associated Token Account address
       const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
       const ATA_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 
+      // Timeout helper — abort if RPC hangs
+      const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+        return Promise.race([
+          promise,
+          new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout: ${label} after ${ms}ms`)), ms))
+        ]);
+      };
+
       for (const [address, orders] of addressMap) {
         try {
-          const walletPubkey = new PublicKey(address);
+          // Timeout per address: 12 seconds max
+          await withTimeout((async () => {
+            const walletPubkey = new PublicKey(address);
+            const allSigs: any[] = [];
 
-          // Scan ATAs for each token mint (transfers go to ATA, not wallet directly)
-          const allSigs: any[] = [];
-          for (const mint of Object.keys(TOKEN_MINTS)) {
-            try {
-              const [ata] = PublicKey.findProgramAddressSync(
-                [walletPubkey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), new PublicKey(mint).toBuffer()],
-                ATA_PROGRAM_ID
-              );
-              const ataSigs = await connection.getSignaturesForAddress(ata, { limit: 10 });
-              allSigs.push(...ataSigs);
-            } catch { /* ATA may not exist yet for this mint */ }
-          }
-          // Also check the wallet address itself (for first-time ATA creation txs)
-          try {
-            const walletSigs = await connection.getSignaturesForAddress(walletPubkey, { limit: 5 });
-            allSigs.push(...walletSigs);
-          } catch { /* ignore */ }
+            // Scan ATAs for each token mint
+            for (const mint of Object.keys(TOKEN_MINTS)) {
+              try {
+                const [ata] = PublicKey.findProgramAddressSync(
+                  [walletPubkey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), new PublicKey(mint).toBuffer()],
+                  ATA_PROGRAM_ID
+                );
+                const ataSigs = await withTimeout(
+                  connection.getSignaturesForAddress(ata, { limit: 10 }),
+                  8000, `getSignatures ATA ${TOKEN_MINTS[mint]}`
+                );
+                console.log(`[scanner] Solana ATA ${TOKEN_MINTS[mint]}: ${ataSigs.length} sigs for ${address.slice(0, 8)}...`);
+                allSigs.push(...ataSigs);
+              } catch (e: any) {
+                console.log(`[scanner] Solana ATA scan skip (${TOKEN_MINTS[mint]}): ${e.message}`);
+              }
+            }
 
-          // Deduplicate by signature
-          const seen = new Set<string>();
-          const sigs = allSigs.filter(s => { if (seen.has(s.signature)) return false; seen.add(s.signature); return true; });
+            // Deduplicate
+            const seen = new Set<string>();
+            const sigs = allSigs.filter(s => { if (seen.has(s.signature)) return false; seen.add(s.signature); return true; });
 
           for (const sigInfo of sigs) {
             // Skip if already processed
@@ -442,10 +456,12 @@ export class BlockchainService {
               }
             }
           }
+          })(), 12000, `scanAddress ${address.slice(0, 8)}`);
         } catch (err: any) {
-          console.error(`[scanner] Solana scan error for ${address}:`, err.message);
+          console.error(`[scanner] Solana scan error for ${address.slice(0, 8)}...:`, err.message);
         }
       }
+      console.log(`[scanner] Solana scan done in ${Date.now() - startTime}ms`);
     } catch (error: any) {
       console.error('[scanner] Solana scan cycle error:', error.message);
     }
@@ -589,18 +605,22 @@ export class BlockchainService {
     // Initial scan
     await runCycle();
 
-    // Smart interval: 5s when pending orders exist, 30s when idle
+    // Smart interval: 5s when pending orders exist, expire check every 6th cycle when idle
+    let idleCycles = 0;
     setInterval(async () => {
       const hasPending = await db.order.count({
         where: { status: 'PENDING', expiresAt: { gt: new Date() } }
       }).catch(() => 0);
 
       if (hasPending > 0) {
+        idleCycles = 0;
         await runCycle();
-      } else if (Date.now() % 30000 < intervalMs) {
-        // Check for expiry every ~30s when idle
-        await this.expireStaleOrders().catch(() => {});
+      } else {
+        idleCycles++;
+        if (idleCycles % 6 === 0) { // Every 30s when idle (6 × 5s)
+          await this.expireStaleOrders().catch(() => {});
+        }
       }
-    }, 5000); // Check every 5s (but only scan if pending orders)
+    }, 5000);
   }
 }
