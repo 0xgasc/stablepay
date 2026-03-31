@@ -128,7 +128,8 @@
         borderStyle: options.borderStyle || 'brutal',     // 'brutal' | 'rounded' | 'minimal'
         buttonText: options.buttonText || null,            // Custom pay button text
         logoUrl: options.logoUrl || null,                  // Merchant logo URL
-        headerColor: options.headerColor || '#00E5FF',     // Header background color
+        headerColor: options.headerColor || container.dataset.headerColor || '#00E5FF',
+        headerTextColor: options.headerTextColor || container.dataset.headerTextColor || 'dark', // 'dark' | 'light'
         fontFamily: options.fontFamily || null,             // Custom font (must be loaded by merchant)
         customCSS: options.customCSS || null,              // Additional CSS scoped to .sp-widget
         hideFooter: options.hideFooter || false,           // Hide "Powered by StablePay"
@@ -273,10 +274,10 @@
           <!-- Header -->
           <div style="background: ${this.options.headerColor}; padding: 16px 20px; ${this.options.borderStyle === 'brutal' ? 'border-bottom: 4px solid #000;' : 'border-bottom: 1px solid var(--sp-border);'}">
             ${this.options.logoUrl ? `<img src="${this.options.logoUrl}" style="height: 24px; margin-bottom: 8px;" alt="logo">` : ''}
-            <div style="font-size: 11px; font-weight: 700; color: #000; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">
+            <div style="font-size: 11px; font-weight: 700; color: ${this.options.headerTextColor === 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">
               ${this.options.productName || 'Pay with Stablecoins'}
             </div>
-            <div id="sp-amount-display" style="font-size: 28px; font-weight: 700; color: #000;">
+            <div id="sp-amount-display" style="font-size: 28px; font-weight: 700; color: ${this.options.headerTextColor === 'light' ? '#fff' : '#000'};">
               $${parseFloat(this.options.amount || 0).toFixed(2)}
             </div>
           </div>

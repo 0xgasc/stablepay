@@ -1682,6 +1682,13 @@ onMounted(() => {
                                         </div>
                                     </div>
                                     <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Header Text Color</label>
+                                        <select id="wcHeaderTextColor" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800">
+                                            <option value="dark">Dark (for light backgrounds)</option>
+                                            <option value="light">White (for dark backgrounds)</option>
+                                        </select>
+                                    </div>
+                                    <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Logo URL <span class="text-slate-500">(optional)</span></label>
                                         <input type="text" id="wcLogoUrl" placeholder="https://yoursite.com/logo.png" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800 text-sm">
                                     </div>
@@ -1689,9 +1696,10 @@ onMounted(() => {
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Button Text <span class="text-slate-500">(optional)</span></label>
                                         <input type="text" id="wcButtonText" placeholder="Pay Now" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800 text-sm">
                                     </div>
-                                    <div class="flex items-center gap-3">
+                                    <div class="flex items-center gap-3" id="wcHideFooterRow">
                                         <input type="checkbox" id="wcHideFooter" onchange="updateWidgetPreview()" class="w-4 h-4">
                                         <label for="wcHideFooter" class="text-sm text-slate-300">Hide "Powered by StablePay" footer</label>
+                                        <span id="wcHideFooterBadge" class="text-[10px] px-2 py-0.5 bg-yellow-900/30 text-yellow-400 border border-yellow-700 rounded-full hidden">GROWTH+</span>
                                     </div>
 
                                     <div class="pt-4 border-t border-slate-800">
@@ -5293,18 +5301,36 @@ onMounted(() => {
 
         function updateWidgetPreview() {
             const merchantId = currentMerchant?.id || 'YOUR_MERCHANT_ID';
+            const merchantPlan = currentMerchant?.plan || 'FREE';
             const borderStyle = document.getElementById('wcBorderStyle')?.value || 'brutal';
             const theme = document.getElementById('wcTheme')?.value || 'light';
             const headerColor = document.getElementById('wcHeaderHex')?.value || '#00E5FF';
+            const headerTextColor = document.getElementById('wcHeaderTextColor')?.value || 'dark';
             const logoUrl = document.getElementById('wcLogoUrl')?.value || '';
             const buttonText = document.getElementById('wcButtonText')?.value || '';
-            const hideFooter = document.getElementById('wcHideFooter')?.checked || false;
+            const hideFooterCheckbox = document.getElementById('wcHideFooter');
+            const hideFooterBadge = document.getElementById('wcHideFooterBadge');
+
+            // Gate hide footer to GROWTH+ plans
+            const canHideFooter = ['GROWTH', 'SCALE', 'ENTERPRISE'].includes(merchantPlan);
+            if (hideFooterCheckbox) {
+                if (!canHideFooter) {
+                    hideFooterCheckbox.disabled = true;
+                    hideFooterCheckbox.checked = false;
+                    if (hideFooterBadge) hideFooterBadge.classList.remove('hidden');
+                } else {
+                    hideFooterCheckbox.disabled = false;
+                    if (hideFooterBadge) hideFooterBadge.classList.add('hidden');
+                }
+            }
+            const hideFooter = canHideFooter && (hideFooterCheckbox?.checked || false);
 
             // Build options object
             const opts = {};
             if (borderStyle !== 'brutal') opts['data-border-style'] = borderStyle;
             if (theme !== 'light') opts['data-theme'] = theme;
             if (headerColor !== '#00E5FF') opts['data-header-color'] = headerColor;
+            if (headerTextColor !== 'dark') opts['data-header-text-color'] = headerTextColor;
             if (logoUrl) opts['data-logo'] = logoUrl;
             if (buttonText) opts['data-button-text'] = buttonText;
             if (hideFooter) opts['data-hide-footer'] = 'true';
@@ -5334,13 +5360,16 @@ onMounted(() => {
             const muted = theme === 'dark' ? '#94a3b8' : '#64748b';
             const card = theme === 'dark' ? '#1e293b' : '#f1f5f9';
             const headerBorder = borderStyle === 'brutal' ? 'border-bottom: 4px solid #000;' : 'border-bottom: 1px solid ' + (theme === 'dark' ? '#334155' : '#e2e8f0') + ';';
+            const hdrText = headerTextColor === 'light' ? '#fff' : '#000';
+            const hdrMuted = headerTextColor === 'light' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)';
+            const btnText = headerTextColor === 'light' ? '#fff' : '#000';
 
             container.innerHTML = `
                 <div style="background: ${bg}; color: ${text}; font-family: 'Space Grotesk', system-ui, sans-serif; max-width: 380px; ${previewBorder}">
                     <div style="background: ${headerColor}; padding: 16px 20px; ${headerBorder}">
                         ${logoUrl ? `<img src="${logoUrl}" style="height: 24px; margin-bottom: 8px;" alt="logo" onerror="this.style.display='none'">` : ''}
-                        <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: rgba(0,0,0,0.6);">Payment</div>
-                        <div style="font-size: 28px; font-weight: 700; color: #000;">$25.00</div>
+                        <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: ${hdrMuted};">Payment</div>
+                        <div style="font-size: 28px; font-weight: 700; color: ${hdrText};">$25.00</div>
                     </div>
                     <div style="padding: 16px 20px;">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
@@ -5357,7 +5386,7 @@ onMounted(() => {
                             <div style="padding: 10px; background: #000; color: #fff; text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; ${borderStyle === 'rounded' ? 'border-radius: 8px 0 0 8px;' : ''}">Connect Wallet</div>
                             <div style="padding: 10px; background: ${card}; color: ${muted}; text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; ${borderStyle === 'rounded' ? 'border-radius: 0 8px 8px 0;' : ''}">Send Manually</div>
                         </div>
-                        <button style="width: 100%; padding: 14px; background: ${headerColor}; color: #000; border: ${borderStyle === 'brutal' ? '3px solid #000; box-shadow: 4px 4px 0px #000;' : 'none;'} font-size: 14px; font-weight: 700; cursor: pointer; text-transform: uppercase; ${borderStyle === 'rounded' ? 'border-radius: 12px;' : ''}">
+                        <button style="width: 100%; padding: 14px; background: ${headerColor}; color: ${btnText}; border: ${borderStyle === 'brutal' ? '3px solid #000; box-shadow: 4px 4px 0px #000;' : 'none;'} font-size: 14px; font-weight: 700; cursor: pointer; text-transform: uppercase; ${borderStyle === 'rounded' ? 'border-radius: 12px;' : ''}">
                             ${buttonText || 'Pay $25.00 USDC'}
                         </button>
                     </div>
