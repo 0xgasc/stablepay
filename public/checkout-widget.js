@@ -470,14 +470,33 @@
                   font-size: 11px; cursor: pointer; margin-top: 6px; text-decoration: underline;
                 ">← Change wallet address</button>
               </div>
-              <!-- Step 3: Listening -->
+              <!-- Step 3: Listening + Manual TX fallback -->
               <div id="sp-send-step3" style="display: none; text-align: center; padding: 20px;">
                 <div style="font-size: 11px; font-weight: 700; color: var(--sp-text); margin-bottom: 8px;">Waiting for Confirmation</div>
                 <div style="margin: 12px 0;">
                   <span class="sp-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid var(--sp-border); border-top-color: #00E5FF; border-radius: 50%;"></span>
                 </div>
                 <p style="font-size: 12px; color: var(--sp-text); font-weight: 600;">Listening for your payment...</p>
-                <p style="font-size: 10px; color: var(--sp-muted); margin-top: 4px;">This usually takes 15-30 seconds. Don't close this window.</p>
+                <p id="sp-poll-timer" style="font-size: 10px; color: var(--sp-muted); margin-top: 4px;">Checking... 0:00</p>
+
+                <!-- Manual TX entry (hidden until timeout) -->
+                <div id="sp-manual-tx" style="display: none; margin-top: 16px; text-align: left;">
+                  <div style="background: var(--sp-card); border: 2px solid var(--sp-border); padding: 12px;">
+                    <p style="font-size: 11px; font-weight: 700; color: var(--sp-text); margin-bottom: 4px;">Taking longer than expected?</p>
+                    <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Paste your transaction hash or block explorer link below to speed up verification.</p>
+                    <div style="display: flex; gap: 6px;">
+                      <input id="sp-manual-tx-input" type="text" placeholder="TX hash or explorer link..." style="
+                        flex: 1; padding: 8px; font-size: 10px; font-family: monospace; border: 2px solid var(--sp-border);
+                        background: var(--sp-bg); color: var(--sp-text); outline: none;
+                      ">
+                      <button id="sp-manual-tx-btn" style="
+                        padding: 8px 14px; background: #000; color: #fff; border: none;
+                        font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+                      ">Submit</button>
+                    </div>
+                    <p id="sp-manual-tx-status" style="font-size: 9px; color: var(--sp-muted); margin-top: 6px; display: none;"></p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -913,6 +932,75 @@
 
     startPaymentPolling() {
       if (this._pollingInterval) return; // Don't double-poll
+
+      const pollStartTime = Date.now();
+      const MANUAL_TX_TIMEOUT = 30000; // Show manual entry after 30s
+      let manualShown = false;
+
+      // Timer display
+      this._timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - pollStartTime) / 1000);
+        const mins = Math.floor(elapsed / 60);
+        const secs = elapsed % 60;
+        const timerEl = this.container.querySelector('#sp-poll-timer');
+        if (timerEl) timerEl.textContent = `Checking... ${mins}:${secs.toString().padStart(2, '0')}`;
+
+        // Show manual TX entry after timeout
+        if (!manualShown && Date.now() - pollStartTime > MANUAL_TX_TIMEOUT) {
+          manualShown = true;
+          const manualDiv = this.container.querySelector('#sp-manual-tx');
+          if (manualDiv) manualDiv.style.display = 'block';
+          const timerText = this.container.querySelector('#sp-poll-timer');
+          if (timerText) timerText.textContent = 'Still listening... You can also submit your TX below.';
+
+          // Attach manual TX submit handler
+          const submitBtn = this.container.querySelector('#sp-manual-tx-btn');
+          if (submitBtn) {
+            submitBtn.addEventListener('click', async () => {
+              const input = this.container.querySelector('#sp-manual-tx-input');
+              const statusEl = this.container.querySelector('#sp-manual-tx-status');
+              const value = input?.value?.trim();
+              if (!value) return;
+
+              submitBtn.disabled = true;
+              submitBtn.textContent = '...';
+              if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Verifying on-chain...'; statusEl.style.color = 'var(--sp-muted)'; }
+
+              try {
+                const isLink = value.startsWith('http');
+                const body = isLink ? { explorerLink: value } : { txHash: value };
+                const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}/tx`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(body),
+                });
+                const data = await res.json();
+
+                if (data.status === 'CONFIRMED') {
+                  // Auto-verified — show success immediately
+                  clearInterval(this._pollingInterval);
+                  clearInterval(this._timerInterval);
+                  this.showSuccess({ txHash: value, status: 'CONFIRMED' });
+                } else if (data.success) {
+                  // Queued for review
+                  if (statusEl) { statusEl.textContent = 'Submitted for review. You\'ll be notified once confirmed.'; statusEl.style.color = '#22c55e'; }
+                  submitBtn.textContent = 'Submitted';
+                } else {
+                  if (statusEl) { statusEl.textContent = data.error || 'Submission failed'; statusEl.style.color = '#ef4444'; }
+                  submitBtn.disabled = false;
+                  submitBtn.textContent = 'Submit';
+                }
+              } catch (err) {
+                if (statusEl) { statusEl.textContent = 'Network error — please try again'; statusEl.style.color = '#ef4444'; }
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+              }
+            });
+          }
+        }
+      }, 1000);
+
+      // Polling for confirmation (continues even after manual TX shown)
       this._pollingInterval = setInterval(async () => {
         if (!this.currentOrderId) return;
         try {
@@ -920,7 +1008,9 @@
           const data = await res.json();
           if (data.status === 'CONFIRMED') {
             clearInterval(this._pollingInterval);
+            clearInterval(this._timerInterval);
             this._pollingInterval = null;
+            this._timerInterval = null;
             this.showSuccess(data);
           }
         } catch (err) {

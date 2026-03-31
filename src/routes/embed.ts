@@ -258,6 +258,142 @@ router.get('/order/:orderId', async (req, res) => {
 });
 
 /**
+ * Manual TX submission — customer enters txHash when scanner doesn't catch it
+ * Auto-verifies on-chain, falls back to manual review
+ */
+router.post('/order/:orderId/tx', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    let { txHash, explorerLink } = req.body;
+
+    // Parse txHash from explorer link if provided
+    if (!txHash && explorerLink) {
+      // Extract hash from URLs like https://basescan.org/tx/0x123... or https://solscan.io/tx/abc...
+      const match = explorerLink.match(/(?:\/tx\/|\/transaction\/)([a-zA-Z0-9]+)/);
+      if (match) txHash = match[1];
+    }
+
+    if (!txHash) {
+      return res.status(400).json({ error: 'txHash or explorerLink required' });
+    }
+
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: { merchant: { select: { id: true, email: true } } },
+    });
+
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status !== 'PENDING') {
+      return res.status(400).json({ error: `Order status is ${order.status}`, status: order.status });
+    }
+
+    // Check if TX already recorded
+    const existingTx = await db.transaction.findUnique({ where: { txHash } });
+    if (existingTx) {
+      return res.status(400).json({ error: 'Transaction already recorded' });
+    }
+
+    // Try auto-verification on-chain
+    let verified = false;
+    try {
+      if (order.chain === 'SOLANA_MAINNET') {
+        // Verify Solana TX via RPC
+        const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
+        const solRes = await fetch(solRpc, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 1, method: 'getTransaction',
+            params: [txHash, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]
+          }),
+          signal: AbortSignal.timeout(10000),
+        });
+        const solData: any = await solRes.json();
+        if (solData.result && !solData.result.meta?.err) {
+          verified = true;
+          // Create confirmed transaction
+          await db.transaction.create({
+            data: {
+              orderId, txHash, chain: order.chain,
+              amount: Number(order.amount),
+              fromAddress: order.customerWallet || 'manual',
+              toAddress: order.paymentAddress,
+              status: 'CONFIRMED', confirmations: 1,
+              blockTimestamp: solData.result.blockTime ? new Date(solData.result.blockTime * 1000) : new Date(),
+            },
+          });
+          const { OrderService } = await import('../services/orderService');
+          await new OrderService().confirmOrder(orderId, { txHash });
+        }
+      } else if (['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'BNB_MAINNET'].includes(order.chain)) {
+        // Verify EVM TX via RPC
+        const { ethers } = await import('ethers');
+        const { CHAIN_CONFIGS } = await import('../config/chains');
+        const config = CHAIN_CONFIGS[order.chain as keyof typeof CHAIN_CONFIGS];
+        if (config?.rpcUrl) {
+          const provider = new ethers.JsonRpcProvider(config.rpcUrl);
+          const receipt = await provider.getTransactionReceipt(txHash);
+          if (receipt && receipt.status === 1) {
+            verified = true;
+            await db.transaction.create({
+              data: {
+                orderId, txHash, chain: order.chain,
+                amount: Number(order.amount),
+                fromAddress: receipt.from,
+                toAddress: order.paymentAddress,
+                blockNumber: BigInt(receipt.blockNumber),
+                status: 'CONFIRMED', confirmations: 1,
+                blockTimestamp: new Date(),
+              },
+            });
+            const { OrderService } = await import('../services/orderService');
+            await new OrderService().confirmOrder(orderId, { txHash, blockNumber: receipt.blockNumber });
+          }
+        }
+      }
+    } catch (verifyErr: any) {
+      console.error(`[manual-tx] Auto-verify failed for ${orderId}:`, verifyErr.message);
+    }
+
+    if (verified) {
+      return res.json({ success: true, status: 'CONFIRMED', message: 'Payment verified and confirmed!' });
+    }
+
+    // Auto-verify failed — queue for manual review
+    await db.transaction.create({
+      data: {
+        orderId, txHash, chain: order.chain,
+        amount: Number(order.amount),
+        fromAddress: order.customerWallet || 'manual_submission',
+        toAddress: order.paymentAddress,
+        status: 'PENDING', confirmations: 0,
+        blockTimestamp: new Date(),
+      },
+    });
+
+    // Notify merchant + admin
+    if (order.merchant?.id) {
+      webhookService.sendWebhook(order.merchant.id, 'order.created', {
+        orderId, txHash, status: 'PENDING_REVIEW',
+        message: 'Customer submitted TX hash manually — please verify',
+      }).catch(() => {});
+    }
+
+    logger.info('Manual TX submitted for review', {
+      orderId, txHash, chain: order.chain, event: 'order.manual_tx_submitted',
+    });
+
+    res.json({
+      success: true,
+      status: 'PENDING_REVIEW',
+      message: 'Transaction submitted for review. You\'ll be notified once confirmed.',
+    });
+  } catch (error) {
+    console.error('Manual TX submission error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * Save widget configuration (merchant auth required)
  */
 router.put('/widget-config', requireMerchantAuth, async (req, res) => {
