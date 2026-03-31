@@ -129,6 +129,21 @@ router.post('/withdraw', requireMerchantAuth, async (req, res) => {
     const tx = await tokenContract.transfer(toAddress, amountRaw);
     await tx.wait();
 
+    // Record treasury move
+    await db.treasuryMove.create({
+      data: {
+        merchantId: merchant.id,
+        type: 'WITHDRAWAL',
+        chain, token: tokenName,
+        amount,
+        fromAddress: managedWallet.address,
+        toAddress,
+        txHash: tx.hash,
+        gasTxHash,
+        status: 'COMPLETED',
+      },
+    });
+
     logger.info('Managed wallet withdrawal', {
       merchantId: merchant.id,
       chain, token: tokenName, amount,
@@ -166,6 +181,22 @@ router.get('/managed-wallets', requireMerchantAuth, async (req, res) => {
     res.json({ wallets });
   } catch (error) {
     console.error('Get managed wallets error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get treasury moves (audit log)
+router.get('/moves', requireMerchantAuth, async (req, res) => {
+  try {
+    const merchant = (req as AuthenticatedRequest).merchant;
+    const moves = await db.treasuryMove.findMany({
+      where: { merchantId: merchant.id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    res.json({ moves });
+  } catch (error) {
+    console.error('Get treasury moves error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

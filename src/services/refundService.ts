@@ -357,6 +357,22 @@ export class RefundService {
         },
       });
 
+      // Record treasury move
+      await db.treasuryMove.create({
+        data: {
+          merchantId: order.merchantId!,
+          type: 'REFUND',
+          chain: order.chain,
+          token: order.token,
+          amount,
+          fromAddress: managedWallet.address,
+          toAddress: refundToAddress,
+          txHash: refundTx.hash,
+          gasTxHash,
+          status: 'COMPLETED',
+        },
+      });
+
       logger.info('Managed refund processed', {
         orderId, amount, token: order.token, chain: order.chain,
         refundTxHash: refundTx.hash, gasTxHash, to: refundToAddress,

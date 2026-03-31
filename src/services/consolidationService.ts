@@ -149,6 +149,9 @@ export class ConsolidationService {
           result.transfers.push({ chain, token: tokenName, amount: amount.toFixed(2), txHash: tx.hash, type: 'direct' });
           result.totalConsolidated += amount;
 
+          await db.treasuryMove.create({
+            data: { merchantId, type: 'CONSOLIDATION', chain, token: tokenName, amount, fromAddress: mw.address, toAddress, txHash: tx.hash, status: 'COMPLETED' },
+          });
           logger.info('Consolidation: direct transfer', {
             merchantId, chain, token: tokenName, amount, txHash: tx.hash, to: toAddress,
           });
@@ -158,6 +161,9 @@ export class ConsolidationService {
           result.transfers.push({ chain, token: 'USDC', amount: amount.toFixed(2), txHash: cctpResult.txHash, type: 'cctp' });
           result.totalConsolidated += amount;
 
+          await db.treasuryMove.create({
+            data: { merchantId, type: 'BRIDGE', chain, token: 'USDC', amount, fromAddress: mw.address, toAddress, txHash: cctpResult.txHash, status: 'COMPLETED', metadata: { toChain } },
+          });
           logger.info('Consolidation: CCTP bridge', {
             merchantId, fromChain: chain, toChain, amount, txHash: cctpResult.txHash,
           });

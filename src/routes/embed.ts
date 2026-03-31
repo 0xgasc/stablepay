@@ -31,6 +31,7 @@ const checkoutSchema = z.object({
   paymentMethod: z.enum(['WALLET_CONNECT', 'MANUAL_SEND']).optional(),
   source: z.enum(['EMBED_WIDGET', 'CHECKOUT_LINK', 'DASHBOARD', 'API', 'INVOICE']).optional(),
   productName: z.string().optional(),
+  externalId: z.string().optional(),   // Merchant's own order/reference ID
   metadata: z.record(z.any()).optional()
 });
 
@@ -153,6 +154,8 @@ router.post('/checkout', rateLimit({
         customerWallet: data.customerWallet || null,
         paymentMethod: data.paymentMethod || null,
         source: data.source || 'EMBED_WIDGET',
+        externalId: data.externalId || null,
+        metadata: data.metadata || undefined,
         status: 'PENDING',
         expiresAt: new Date(Date.now() + 30 * 60 * 1000)
       }
@@ -163,6 +166,7 @@ router.post('/checkout', rateLimit({
       merchantId: data.merchantId,
       amount: data.amount,
       chain: data.chain,
+      externalId: data.externalId,
       source: 'embed_widget'
     });
 

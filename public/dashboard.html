@@ -884,6 +884,14 @@
                             <p class="text-sm text-slate-500">Loading...</p>
                         </div>
                     </div>
+
+                    <!-- Treasury Moves Log -->
+                    <div class="border-t border-slate-800 pt-6 mt-6">
+                        <h3 class="text-sm font-bold text-white uppercase mb-4">Treasury Activity</h3>
+                        <div id="treasuryMoves" class="space-y-2">
+                            <p class="text-sm text-slate-500">Loading...</p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Orders Tab -->
@@ -3250,7 +3258,21 @@ onMounted(() => {
 
             const btn = document.getElementById('executeWithdrawBtn');
             btn.disabled = true;
-            btn.textContent = 'Sending...';
+
+            // Step animation
+            const steps = [
+                { text: 'Checking balance...', delay: 0 },
+                { text: 'Sponsoring gas...', delay: 800 },
+                { text: 'Sending tokens...', delay: 1600 },
+                { text: 'Confirming on-chain...', delay: 2400 },
+            ];
+            let stepIndex = 0;
+            const stepInterval = setInterval(() => {
+                if (stepIndex < steps.length) {
+                    btn.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border:2px solid #ffffff40;border-top-color:#fff;border-radius:50;animation:spin 1s linear infinite;margin-right:6px;vertical-align:middle;"></span>${steps[stepIndex].text}`;
+                    stepIndex++;
+                }
+            }, 800);
 
             try {
                 const authToken = sessionStorage.getItem('merchantToken');
@@ -3263,13 +3285,23 @@ onMounted(() => {
                     body: JSON.stringify({ toAddress, amount, chain, token }),
                 });
 
+                clearInterval(stepInterval);
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Withdrawal failed');
 
-                alert(`Withdrawal successful!\n\nAmount: $${data.amount} ${data.token}\nChain: ${data.chain}\nTX: ${data.txHash}${data.gasTxHash ? '\nGas TX: ' + data.gasTxHash : ''}`);
-                document.getElementById('withdrawModal').classList.add('hidden');
-                loadTreasury(); // Refresh balances
+                btn.textContent = 'Sent!';
+                btn.style.background = '#22c55e';
+                setTimeout(() => {
+                    document.getElementById('withdrawModal').classList.add('hidden');
+                    btn.style.background = '';
+                    loadTreasury();
+                }, 1500);
+
+                // Show success details
+                const chainNames = { BASE_MAINNET: 'Base', ETHEREUM_MAINNET: 'Ethereum', POLYGON_MAINNET: 'Polygon', ARBITRUM_MAINNET: 'Arbitrum', BNB_MAINNET: 'BNB Chain' };
+                alert(`Withdrawal complete!\n\n$${data.amount} ${data.token} on ${chainNames[data.chain] || data.chain}\nTX: ${data.txHash}${data.gasTxHash ? '\nGas sponsored: ' + data.gasTxHash : ''}`);
             } catch (error) {
+                clearInterval(stepInterval);
                 alert('Withdrawal failed: ' + error.message);
             } finally {
                 btn.disabled = false;
@@ -3281,9 +3313,10 @@ onMounted(() => {
         async function loadTreasury() {
             const token = sessionStorage.getItem('merchantToken');
             try {
-                const [balRes, inRes] = await Promise.all([
+                const [balRes, inRes, movesRes] = await Promise.all([
                     fetch('/api/treasury/balances', { headers: { 'Authorization': 'Bearer ' + token } }),
                     fetch('/api/treasury/incoming?days=7', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch('/api/treasury/moves', { headers: { 'Authorization': 'Bearer ' + token } }),
                 ]);
 
                 const bal = await balRes.json();
@@ -3332,6 +3365,30 @@ onMounted(() => {
                     `;
                 } else {
                     incEl.innerHTML = '<p class="text-sm text-slate-500">No confirmed payments in the last 7 days.</p>';
+                }
+
+                // Treasury moves
+                const moves = await movesRes.json();
+                const movesEl = document.getElementById('treasuryMoves');
+                const typeIcons = { WITHDRAWAL: '↗', REFUND: '↩', CONSOLIDATION: '⊕', BRIDGE: '⇄', GAS_SPONSOR: '⛽' };
+                const typeColors = { WITHDRAWAL: 'text-orange-400', REFUND: 'text-purple-400', CONSOLIDATION: 'text-cyan-400', BRIDGE: 'text-blue-400', GAS_SPONSOR: 'text-slate-400' };
+                if (moves.moves?.length) {
+                    movesEl.innerHTML = moves.moves.map(m => `
+                        <div class="flex items-center justify-between text-xs py-2 border-b border-slate-800/50">
+                            <div class="flex items-center gap-2">
+                                <span class="${typeColors[m.type] || 'text-slate-400'} font-bold">${typeIcons[m.type] || '•'}</span>
+                                <span class="text-white font-medium">${m.type}</span>
+                                <span class="text-slate-500">${m.chain.replace('_MAINNET', '')}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-white font-bold">$${Number(m.amount).toFixed(2)} ${m.token}</span>
+                                ${m.txHash ? `<a href="${getExplorerUrl(m.chain, m.txHash)}" target="_blank" class="text-blue-400 font-mono">${m.txHash.slice(0, 6)}...</a>` : ''}
+                                <span class="text-slate-600">${new Date(m.createdAt).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    movesEl.innerHTML = '<p class="text-sm text-slate-500">No treasury activity yet.</p>';
                 }
             } catch (err) {
                 console.error('Treasury load error:', err);
@@ -3397,7 +3454,7 @@ onMounted(() => {
             
             tbody.innerHTML = orders.map(order => {
                 const statusClass = `status-${order.status.toLowerCase()}`;
-                const shortId = order.id.slice(0, 10) + '...';
+                const shortId = order.externalId || (order.id.slice(0, 10) + '...');
                 const createdAt = new Date(order.createdAt).toLocaleDateString();
                 const amount = typeof order.amount === 'object' ? order.amount.toString() : order.amount;
 
