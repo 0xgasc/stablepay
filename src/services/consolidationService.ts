@@ -76,13 +76,13 @@ export class ConsolidationService {
     const agentWallet = new ethers.Wallet(AGENT_WALLET_KEY, provider);
     const agentBalance = await provider.getBalance(agentWallet.address);
 
-    if (agentBalance < ethers.parseEther('0.002')) {
+    if (agentBalance < ethers.parseEther('0.0005')) {
       throw new Error(`Agent wallet needs funding on ${chain}. Address: ${agentWallet.address}, Balance: ${ethers.formatEther(agentBalance)} ${conf.native}`);
     }
 
     const gasTx = await agentWallet.sendTransaction({
       to: targetAddress,
-      value: ethers.parseEther('0.001'),
+      value: ethers.parseEther('0.0003'),
     });
     await gasTx.wait();
     return gasTx.hash;
