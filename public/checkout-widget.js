@@ -547,6 +547,11 @@
                     <p id="sp-manual-tx-status" style="font-size: 9px; color: var(--sp-muted); margin-top: 6px; display: none;"></p>
                   </div>
                 </div>
+
+                <button id="sp-cancel-listen-btn" style="
+                  margin-top: 12px; padding: 6px; background: transparent; color: var(--sp-muted); border: none;
+                  font-size: 10px; cursor: pointer; text-decoration: underline;
+                ">← Cancel and go back</button>
               </div>
             </div>
           </div>
@@ -815,6 +820,25 @@
           this.container.querySelector('#sp-send-step3').style.display = 'block';
           this.updateStepIndicator(3);
           this.startPaymentPolling();
+        });
+      }
+
+      // Cancel from step 3 (listening) — go back to step 2
+      const cancelListenBtn = this.container.querySelector('#sp-cancel-listen-btn');
+      if (cancelListenBtn) {
+        cancelListenBtn.addEventListener('click', () => {
+          // Stop polling
+          if (this._pollingInterval) { clearInterval(this._pollingInterval); this._pollingInterval = null; }
+          if (this._timerInterval) { clearInterval(this._timerInterval); this._timerInterval = null; }
+          // Show step 2, hide step 3
+          this.container.querySelector('#sp-send-step3').style.display = 'none';
+          this.container.querySelector('#sp-send-step2').style.display = 'block';
+          this.updateStepIndicator(2);
+          // Reset manual TX section
+          const manualDiv = this.container.querySelector('#sp-manual-tx');
+          if (manualDiv) manualDiv.style.display = 'none';
+          const speedupBtn = this.container.querySelector('#sp-speedup-btn');
+          if (speedupBtn) { speedupBtn.style.display = 'none'; speedupBtn.disabled = false; speedupBtn.textContent = 'Speed Up Verification'; }
         });
       }
 
