@@ -523,27 +523,58 @@ export class BlockchainService {
   }
 
   private scanning = false;
+  private lastPendingCount = 0;
 
   async startScanning(intervalMs = 15000): Promise<void> {
-    console.log(`[scanner] Starting blockchain scanner — ${SCAN_CHAINS.length} chains, ${intervalMs}ms interval`);
+    console.log(`[scanner] Starting smart scanner — sleeps when idle, wakes on pending orders`);
 
-    // Initial scan
-    await this.scanAll();
-
-    // Continuous scanning with lock to prevent overlap
-    setInterval(async () => {
-      if (this.scanning) {
-        console.log('[scanner] Previous scan still running, skipping');
-        return;
-      }
+    const runCycle = async () => {
+      if (this.scanning) return;
       this.scanning = true;
       try {
+        // Check how many pending orders exist
+        const pendingCount = await db.order.count({
+          where: { status: 'PENDING', expiresAt: { gt: new Date() } }
+        });
+
+        if (pendingCount === 0) {
+          // No pending orders — just expire stale ones and sleep
+          await this.expireStaleOrders();
+          if (this.lastPendingCount > 0) {
+            console.log('[scanner] No pending orders — sleeping');
+          }
+          this.lastPendingCount = 0;
+          return;
+        }
+
+        if (this.lastPendingCount === 0) {
+          console.log(`[scanner] Waking up — ${pendingCount} pending order(s)`);
+        }
+        this.lastPendingCount = pendingCount;
+
         await this.scanAll();
       } catch (error: any) {
         console.error('[scanner] Scan cycle error:', error.message);
       } finally {
         this.scanning = false;
       }
-    }, intervalMs);
+    };
+
+    // Initial scan
+    await runCycle();
+
+    // Smart interval: 5s when pending orders exist, 30s when idle
+    setInterval(async () => {
+      const hasPending = await db.order.count({
+        where: { status: 'PENDING', expiresAt: { gt: new Date() } }
+      }).catch(() => 0);
+
+      if (hasPending > 0) {
+        await runCycle();
+      } else if (Date.now() % 30000 < intervalMs) {
+        // Check for expiry every ~30s when idle
+        await this.expireStaleOrders().catch(() => {});
+      }
+    }, 5000); // Check every 5s (but only scan if pending orders)
   }
 }

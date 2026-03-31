@@ -663,10 +663,7 @@
             if (newInput) newInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') newBtn?.click(); });
           }
           // Unlock selectors
-          const chainSelect = this.container.querySelector('#sp-chain-select');
-          const tokenSelect = this.container.querySelector('#sp-token-select');
-          if (chainSelect) chainSelect.disabled = false;
-          if (tokenSelect) tokenSelect.disabled = false;
+          this.unlockSelectors();
           this.updateStepIndicator(1);
           this.connectedWallet = null;
           this.currentOrderId = null;
@@ -712,6 +709,48 @@
       // If wallet connected via Connect Wallet tab, skip step 1 on Send tab
       const step1 = this.container.querySelector('#sp-send-step1');
       if (step1) step1.style.display = 'none';
+    }
+
+    lockSelectors() {
+      const chainSelect = this.container.querySelector('#sp-chain-select');
+      const tokenSelect = this.container.querySelector('#sp-token-select');
+      if (chainSelect) {
+        chainSelect.disabled = true;
+        chainSelect.style.appearance = 'none';
+        chainSelect.style.webkitAppearance = 'none';
+        chainSelect.style.opacity = '0.7';
+        chainSelect.style.cursor = 'default';
+        chainSelect.style.pointerEvents = 'none';
+      }
+      if (tokenSelect) {
+        tokenSelect.disabled = true;
+        tokenSelect.style.appearance = 'none';
+        tokenSelect.style.webkitAppearance = 'none';
+        tokenSelect.style.opacity = '0.7';
+        tokenSelect.style.cursor = 'default';
+        tokenSelect.style.pointerEvents = 'none';
+      }
+    }
+
+    unlockSelectors() {
+      const chainSelect = this.container.querySelector('#sp-chain-select');
+      const tokenSelect = this.container.querySelector('#sp-token-select');
+      if (chainSelect) {
+        chainSelect.disabled = false;
+        chainSelect.style.appearance = '';
+        chainSelect.style.webkitAppearance = '';
+        chainSelect.style.opacity = '1';
+        chainSelect.style.cursor = 'pointer';
+        chainSelect.style.pointerEvents = '';
+      }
+      if (tokenSelect) {
+        tokenSelect.disabled = false;
+        tokenSelect.style.appearance = '';
+        tokenSelect.style.webkitAppearance = '';
+        tokenSelect.style.opacity = '1';
+        tokenSelect.style.cursor = 'pointer';
+        tokenSelect.style.pointerEvents = '';
+      }
     }
 
     updateStepIndicator(activeStep) {
@@ -867,10 +906,7 @@
       }
 
       // Lock chain + token selectors during payment
-      const chainSelect = this.container.querySelector('#sp-chain-select');
-      const tokenSelect = this.container.querySelector('#sp-token-select');
-      if (chainSelect) chainSelect.disabled = true;
-      if (tokenSelect) tokenSelect.disabled = true;
+      this.lockSelectors();
 
       // Polling starts when user clicks "I've sent it" — handled in initManualPaymentFlows
     }
@@ -969,10 +1005,7 @@
       if (!chainConfig) return;
 
       // Lock selectors while connecting
-      const chainSelect = this.container.querySelector('#sp-chain-select');
-      const tokenSelect = this.container.querySelector('#sp-token-select');
-      if (chainSelect) chainSelect.disabled = true;
-      if (tokenSelect) tokenSelect.disabled = true;
+      this.lockSelectors();
 
       try {
         if (chainConfig.type === 'solana') {
@@ -983,8 +1016,7 @@
       } catch (error) {
         console.error('Wallet connection failed:', error);
         // Unlock selectors on failure
-        if (chainSelect) chainSelect.disabled = false;
-        if (tokenSelect) tokenSelect.disabled = false;
+        this.unlockSelectors();
         if (error.code === -32002) {
           this.showError('Wallet has a pending request. Open your wallet extension, dismiss it, and try again.');
         } else if (error.code === 4001) {
