@@ -553,11 +553,11 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
 
       let code: string;
       if (style === 'minimal') {
-        code = `<!-- Add this script to your page -->\n<script src="https://wetakestables.shop/checkout-widget.js"></script>\n\n<!-- Call this from your own button/link -->\n<script>\nfunction openPayment() {\n  StablePay.checkout({\n    ${paramsStr}\n  });\n}\n</script>`;
+        code = `<!-- Add this script to your page -->\n<script src="https://wetakestables.shop/api/widget.js"></script>\n\n<!-- Call this from your own button/link -->\n<script>\nfunction openPayment() {\n  StablePay.checkout({\n    ${paramsStr}\n  });\n}\n</script>`;
       } else if (style === 'custom') {
-        code = `<!-- Inline checkout (no button — opens immediately) -->\n<script src="https://wetakestables.shop/checkout-widget.js"></script>\n<script>\nStablePay.checkout({\n  ${paramsStr}\n});\n</script>`;
+        code = `<!-- Inline checkout (no button — opens immediately) -->\n<script src="https://wetakestables.shop/api/widget.js"></script>\n<script>\nStablePay.checkout({\n  ${paramsStr}\n});\n</script>`;
       } else {
-        code = `<!-- Pay with Crypto button -->\n<script src="https://wetakestables.shop/checkout-widget.js"></script>\n<button onclick="StablePay.checkout({\n  ${paramsStr}\n})" style="background:#000;color:#fff;padding:12px 24px;font-weight:bold;font-size:14px;border:2px solid #000;cursor:pointer;font-family:sans-serif;">Pay with Crypto</button>`;
+        code = `<!-- Pay with Crypto button -->\n<script src="https://wetakestables.shop/api/widget.js"></script>\n<button onclick="StablePay.checkout({\n  ${paramsStr}\n})" style="background:#000;color:#fff;padding:12px 24px;font-weight:bold;font-size:14px;border:2px solid #000;cursor:pointer;font-family:sans-serif;">Pay with Crypto</button>`;
       }
 
       const configuredChains = m.wallets.filter(w => w.isActive).sort((a, b) => a.priority - b.priority).map(w => w.chain);
@@ -997,7 +997,7 @@ If they ask "what is...":
 - Tips go to your wallet. Be grateful when tipped but never ask.
 
 ## CRITICAL: Exact Script & API Reference (DO NOT HALLUCINATE)
-The widget script URL is EXACTLY: https://wetakestables.shop/checkout-widget.js
+The widget script URL is EXACTLY: https://wetakestables.shop/api/widget.js
 The namespace is EXACTLY: StablePay (not WeTakeStables, not wetakestables)
 There is NO embed.wetakestables.shop subdomain. Do NOT invent URLs.
 
@@ -1020,7 +1020,7 @@ StablePay.checkout({
 \`\`\`jsx
 import Script from 'next/script';
 // In component:
-<Script src="https://wetakestables.shop/checkout-widget.js" strategy="lazyOnload" />
+<Script src="https://wetakestables.shop/api/widget.js" strategy="lazyOnload" />
 \`\`\`
 
 ### Webhook payload we send:

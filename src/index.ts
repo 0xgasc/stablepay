@@ -63,6 +63,14 @@ app.use(express.json());
 // Serve static files from public directory
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
+// Serve widget JS with short cache (Vercel static cache is 4h, too long for rapid iteration)
+app.get('/api/widget.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.sendFile(path.join(process.cwd(), 'public', 'checkout-widget.js'));
+});
+
 // Serve invoice payment page at /pay/:invoiceId
 app.get('/pay/:invoiceId', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'invoice-pay.html'));
