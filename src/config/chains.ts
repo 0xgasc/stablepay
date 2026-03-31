@@ -117,6 +117,28 @@ export const CHAIN_CONFIGS: Record<Chain, ChainConfig> = {
     isTestnet: false,
     chainId: 900,
   },
+  BNB_MAINNET: {
+    name: 'BNB Chain',
+    rpcUrl: process.env.BNB_MAINNET_RPC_URL || 'https://bsc-dataseed.binance.org',
+    usdcAddress: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', // Binance-Peg USDC (18 decimals!)
+    paymentAddress: '',
+    requiredConfirms: 15,
+    blockTimeSeconds: 3,
+    explorerUrl: 'https://bscscan.com',
+    isTestnet: false,
+    chainId: 56,
+  },
+  TRON_MAINNET: {
+    name: 'TRON',
+    rpcUrl: 'https://api.trongrid.io',
+    usdcAddress: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8', // TRC-20 USDC (6 decimals)
+    paymentAddress: '',
+    requiredConfirms: 19,
+    blockTimeSeconds: 3,
+    explorerUrl: 'https://tronscan.org',
+    isTestnet: false,
+    chainId: 728126428,
+  },
   SOLANA_DEVNET: {
     name: 'Solana Devnet',
     rpcUrl: process.env.SOLANA_DEVNET_RPC_URL || 'https://api.devnet.solana.com',

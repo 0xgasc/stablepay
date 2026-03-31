@@ -2113,46 +2113,62 @@ onMounted(() => {
             });
         }
 
-        // Chain configuration - grouped by blockchain
+        // Chain configuration - grouped by blockchain (mainnet only for merchants)
         const CHAIN_GROUPS = [
             {
                 name: 'Base',
                 color: '#0052FF',
+                icon: '🔵',
                 networks: [
-                    { id: 'BASE_MAINNET', label: 'Mainnet', type: 'mainnet' },
-                    { id: 'BASE_SEPOLIA', label: 'Sepolia (Testnet)', type: 'testnet' }
+                    { id: 'BASE_MAINNET', label: 'Base', type: 'mainnet', addrFormat: '0x...' }
                 ]
             },
             {
                 name: 'Ethereum',
                 color: '#627EEA',
+                icon: '⟠',
                 networks: [
-                    { id: 'ETHEREUM_MAINNET', label: 'Mainnet', type: 'mainnet' },
-                    { id: 'ETHEREUM_SEPOLIA', label: 'Sepolia (Testnet)', type: 'testnet' }
+                    { id: 'ETHEREUM_MAINNET', label: 'Ethereum', type: 'mainnet', addrFormat: '0x...' }
                 ]
             },
             {
                 name: 'Polygon',
                 color: '#8247E5',
+                icon: '🟣',
                 networks: [
-                    { id: 'POLYGON_MAINNET', label: 'Mainnet', type: 'mainnet' },
-                    { id: 'POLYGON_MUMBAI', label: 'Mumbai (Testnet)', type: 'testnet' }
+                    { id: 'POLYGON_MAINNET', label: 'Polygon', type: 'mainnet', addrFormat: '0x...' }
                 ]
             },
             {
                 name: 'Arbitrum',
                 color: '#28A0F0',
+                icon: '🔷',
                 networks: [
-                    { id: 'ARBITRUM_MAINNET', label: 'Mainnet', type: 'mainnet' },
-                    { id: 'ARBITRUM_SEPOLIA', label: 'Sepolia (Testnet)', type: 'testnet' }
+                    { id: 'ARBITRUM_MAINNET', label: 'Arbitrum', type: 'mainnet', addrFormat: '0x...' }
+                ]
+            },
+            {
+                name: 'BNB Chain',
+                color: '#F0B90B',
+                icon: '🟡',
+                networks: [
+                    { id: 'BNB_MAINNET', label: 'BNB Smart Chain', type: 'mainnet', addrFormat: '0x...' }
                 ]
             },
             {
                 name: 'Solana',
                 color: '#9945FF',
+                icon: '◎',
                 networks: [
-                    { id: 'SOLANA_MAINNET', label: 'Mainnet', type: 'mainnet' },
-                    { id: 'SOLANA_DEVNET', label: 'Devnet (Testnet)', type: 'testnet' }
+                    { id: 'SOLANA_MAINNET', label: 'Solana', type: 'mainnet', addrFormat: 'base58' }
+                ]
+            },
+            {
+                name: 'TRON',
+                color: '#FF0013',
+                icon: '🔺',
+                networks: [
+                    { id: 'TRON_MAINNET', label: 'TRON', type: 'mainnet', addrFormat: 'T...' }
                 ]
             }
         ];
@@ -2227,20 +2243,15 @@ onMounted(() => {
             ENTERPRISE: { name: 'Enterprise', blockchains: 6, refunds: true, webhooks: true }
         };
 
-        // Tokens available per chain (must match crypto-pay.html CHAIN_CONFIG)
+        // Tokens available per chain
         const CHAIN_TOKENS = {
-            // Testnets - only USDC
-            BASE_SEPOLIA: ['USDC'],
-            ETHEREUM_SEPOLIA: ['USDC'],
-            POLYGON_MUMBAI: ['USDC'],
-            ARBITRUM_SEPOLIA: ['USDC'],
-            SOLANA_DEVNET: ['USDC'],
-            // Mainnets - multiple tokens
             BASE_MAINNET: ['USDC', 'USDT', 'EURC'],
             ETHEREUM_MAINNET: ['USDC', 'USDT', 'EURC'],
             POLYGON_MAINNET: ['USDC', 'USDT'],
             ARBITRUM_MAINNET: ['USDC', 'USDT'],
-            SOLANA_MAINNET: ['USDC', 'USDT', 'EURC']
+            BNB_MAINNET: ['USDC', 'USDT'],
+            SOLANA_MAINNET: ['USDC', 'USDT', 'EURC'],
+            TRON_MAINNET: ['USDC', 'USDT'],
         };
 
         function getVolumeTier(monthlyVolume) {
@@ -3591,78 +3602,60 @@ onMounted(() => {
             console.log('renderChainToggles: Rendering', CHAIN_GROUPS.length, 'chain groups with', merchantWallets.length, 'existing wallets');
 
             container.innerHTML = CHAIN_GROUPS.map(group => {
-                // Check if any network in this group has a wallet
-                const hasAnyWallet = group.networks.some(net =>
-                    merchantWallets.find(w => w.chain === net.id)
-                );
+                const network = group.networks[0]; // One network per group now (mainnet only)
+                const wallet = merchantWallets.find(w => w.chain === network.id);
+                const isEnabled = !!wallet;
+                const address = wallet?.address || '';
+                const existingTokens = wallet?.supportedTokens || ['USDC'];
+                const availableTokens = CHAIN_TOKENS[network.id] || ['USDC'];
+                const addrPlaceholder = network.id.includes('SOLANA') ? 'Solana address (base58)' : network.id.includes('TRON') ? 'TRON address (T...)' : '0x... EVM address';
 
                 return `
-                    <div class="bg-slate-950 border p-5 border-slate-800 hover:border-slate-700 transition">
-                        <div class="flex items-center space-x-3 mb-4">
-                            <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: ${group.color}20; border: 2px solid ${group.color}">
-                                <div class="w-4 h-4 rounded-full" style="background: ${group.color}"></div>
+                    <div class="bg-slate-950 border p-4 ${isEnabled ? 'border-green-700' : 'border-slate-800'} hover:border-slate-600 transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg" style="background: ${group.color}15; border: 2px solid ${isEnabled ? '#22c55e' : group.color + '40'}">
+                                ${group.icon}
                             </div>
                             <div class="flex-1">
-                                <div class="font-semibold text-white text-lg">${group.name}</div>
-                                <div class="text-xs text-slate-500">Configure wallet addresses</div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-white">${group.name}</span>
+                                    ${isEnabled
+                                        ? '<span class="text-[10px] px-2 py-0.5 bg-green-900/40 text-green-400 border border-green-700 rounded-full font-bold uppercase">Active</span>'
+                                        : '<span class="text-[10px] px-2 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded-full font-bold uppercase">Not set up</span>'}
+                                </div>
+                                <div class="text-xs text-slate-500 mt-0.5">${isEnabled ? address.slice(0, 10) + '...' + address.slice(-6) : 'Add a wallet to accept payments on this chain'}</div>
                             </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox"
+                                       class="chain-toggle sr-only peer"
+                                       data-chain="${network.id}"
+                                       ${isEnabled ? 'checked' : ''}
+                                       onchange="toggleChainInput('${network.id}')">
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-green-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                            </label>
                         </div>
 
-                        <div class="space-y-3 ml-11">
-                            ${group.networks.map(network => {
-                                const wallet = merchantWallets.find(w => w.chain === network.id);
-                                const isEnabled = !!wallet;
-                                const address = wallet?.address || '';
-
-                                return `
-                                    <div class="border border-slate-800 bg-slate-900/50 rounded p-3">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <label class="flex items-center space-x-3 cursor-pointer flex-1">
-                                                <input type="checkbox"
-                                                       class="chain-toggle w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
-                                                       data-chain="${network.id}"
-                                                       ${isEnabled ? 'checked' : ''}
-                                                       onchange="toggleChainInput('${network.id}')">
-                                                <div>
-                                                    <div class="font-medium text-white text-sm">${network.label}</div>
-                                                    <div class="text-xs text-slate-500">${network.type === 'mainnet' ? 'Production' : 'Testing'}</div>
-                                                </div>
-                                            </label>
-                                        </div>
-                                        <div id="wallet-input-${network.id}" class="${isEnabled ? '' : 'hidden'}">
-                                            <input type="text"
-                                                   class="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 text-white font-mono rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                                   placeholder="${network.id.includes('SOLANA') ? 'Solana address...' : '0x... Ethereum address'}"
-                                                   data-wallet-chain="${network.id}"
-                                                   value="${address}">
-                                            <!-- Token Selection -->
-                                            <div class="mt-3 pt-3 border-t border-slate-700">
-                                                <label class="text-xs text-slate-400 mb-2 block">Accepted Stablecoins</label>
-                                                <div class="flex flex-wrap gap-3">
-                                                    ${(() => {
-                                                        const existingWallet = merchantWallets.find(w => w.chain === network.id);
-                                                        const selectedTokens = existingWallet?.supportedTokens || ['USDC'];
-                                                        const availableTokens = CHAIN_TOKENS[network.id] || ['USDC'];
-                                                        if (availableTokens.length === 1) {
-                                                            return `<span class="text-sm text-slate-400">USDC only (testnet)</span>`;
-                                                        }
-                                                        return availableTokens.map(token => `
-                                                            <label class="flex items-center space-x-2 cursor-pointer">
-                                                                <input type="checkbox"
-                                                                       class="token-checkbox w-4 h-4 text-green-600 bg-slate-900 border-slate-600 rounded focus:ring-green-500"
-                                                                       data-chain="${network.id}"
-                                                                       data-token="${token}"
-                                                                       ${selectedTokens.includes(token) ? 'checked' : ''}>
-                                                                <span class="text-sm text-slate-300">${token}</span>
-                                                            </label>
-                                                        `).join('');
-                                                    })()}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
+                        <div id="wallet-input-${network.id}" class="${isEnabled ? 'mt-4' : 'hidden mt-4'}">
+                            <input type="text"
+                                   class="w-full px-3 py-2.5 text-sm bg-slate-900 border border-slate-700 text-white font-mono rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                   placeholder="${addrPlaceholder}"
+                                   data-wallet-chain="${network.id}"
+                                   value="${address}">
+                            <div class="mt-3 pt-3 border-t border-slate-800">
+                                <label class="text-xs text-slate-400 mb-2 block">Accepted Stablecoins</label>
+                                <div class="flex flex-wrap gap-3">
+                                    ${availableTokens.map(token => `
+                                        <label class="flex items-center gap-2 cursor-pointer bg-slate-900 border border-slate-700 rounded px-3 py-1.5 hover:border-slate-500 transition">
+                                            <input type="checkbox"
+                                                   class="token-checkbox w-3.5 h-3.5 text-green-600 bg-slate-900 border-slate-600 rounded focus:ring-green-500"
+                                                   data-chain="${network.id}"
+                                                   data-token="${token}"
+                                                   ${existingTokens.includes(token) ? 'checked' : ''}>
+                                            <span class="text-xs text-slate-300 font-medium">${token}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;

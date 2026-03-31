@@ -22,6 +22,8 @@ enum Chain {
   ARBITRUM_SEPOLIA
   SOLANA_MAINNET
   SOLANA_DEVNET
+  BNB_MAINNET
+  TRON_MAINNET
 
   @@schema("public")
 }

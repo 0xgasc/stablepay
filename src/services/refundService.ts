@@ -9,6 +9,7 @@ const CHAIN_RPC: Record<string, { rpc: string; tokens: Record<string, string> }>
   ETHEREUM_MAINNET: { rpc: process.env.ETHEREUM_MAINNET_RPC_URL || 'https://ethereum-rpc.publicnode.com', tokens: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7', EURC: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c' } },
   POLYGON_MAINNET: { rpc: process.env.POLYGON_MAINNET_RPC_URL || 'https://polygon-bor-rpc.publicnode.com', tokens: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', EURC: '0x390f28e7b2a5Ce76b67F0cD10EA0950A3a19F803' } },
   ARBITRUM_MAINNET: { rpc: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arbitrum-one-rpc.publicnode.com', tokens: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', EURC: '0x7Cb7cA2D5c848a1b3e6eCc8De1d8E4F79dAF96c8' } },
+  BNB_MAINNET: { rpc: process.env.BNB_MAINNET_RPC_URL || 'https://bsc-dataseed.binance.org', tokens: { USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', USDT: '0x55d398326f99059fF775485246999027B3197955' } },
 };
 const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'];
 const ENCRYPTION_KEY = process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
@@ -300,7 +301,8 @@ export class RefundService {
 
     const tokenAddress = chainConf.tokens[order.token] || chainConf.tokens.USDC;
     const amount = Number(order.amount);
-    const amountRaw = ethers.parseUnits(amount.toString(), 6);
+    const decimals = order.chain === 'BNB_MAINNET' ? 18 : 6;
+    const amountRaw = ethers.parseUnits(amount.toString(), decimals);
 
     try {
       const privateKey = decryptManagedKey(managedWallet.encryptedKey);
@@ -333,7 +335,7 @@ export class RefundService {
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, merchantWallet);
       const tokenBalance = await tokenContract.balanceOf(managedWallet.address);
       if (tokenBalance < amountRaw) {
-        const available = ethers.formatUnits(tokenBalance, 6);
+        const available = ethers.formatUnits(tokenBalance, decimals);
         return { success: false, error: `Insufficient ${order.token} for refund. Available: $${available}, needed: $${amount}` };
       }
 

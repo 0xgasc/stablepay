@@ -64,6 +64,21 @@
         EURC: { address: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr', decimals: 6 }
       }
     },
+    BNB_MAINNET: {
+      type: 'evm', chainId: '0x38', chainName: 'BNB Chain', network: 'mainnet',
+      rpcUrls: ['https://bsc-dataseed.binance.org'], blockExplorerUrls: ['https://bscscan.com'],
+      tokens: {
+        USDC: { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 18 },
+        USDT: { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 }
+      }
+    },
+    TRON_MAINNET: {
+      type: 'tron', chainName: 'TRON', network: 'mainnet',
+      tokens: {
+        USDC: { address: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8', decimals: 6 },
+        USDT: { address: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', decimals: 6 }
+      }
+    },
     SOLANA_DEVNET: {
       type: 'solana', chainName: 'Solana Devnet', network: 'testnet',
       tokens: { USDC: { address: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU', decimals: 6 } }

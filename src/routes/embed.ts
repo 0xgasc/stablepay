@@ -228,7 +228,9 @@ router.get('/order/:orderId', async (req, res) => {
       ETHEREUM_MAINNET: 'https://etherscan.io/tx/',
       POLYGON_MAINNET: 'https://polygonscan.com/tx/',
       ARBITRUM_MAINNET: 'https://arbiscan.io/tx/',
+      BNB_MAINNET: 'https://bscscan.com/tx/',
       SOLANA_MAINNET: 'https://solscan.io/tx/',
+      TRON_MAINNET: 'https://tronscan.org/#/transaction/',
       BASE_SEPOLIA: 'https://sepolia.basescan.org/tx/',
       ETHEREUM_SEPOLIA: 'https://sepolia.etherscan.io/tx/',
     };

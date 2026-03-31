@@ -45,6 +45,18 @@ const CHAIN_TOKENS: Record<string, { rpc: string; tokens: Record<string, string>
       USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
     },
   },
+  BNB_MAINNET: {
+    rpc: process.env.BNB_MAINNET_RPC_URL || 'https://bsc-dataseed.binance.org',
+    tokens: {
+      USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
+      USDT: '0x55d398326f99059fF775485246999027B3197955',
+    },
+  },
+};
+
+// BNB stablecoins use 18 decimals, all others use 6
+const TOKEN_DECIMALS: Record<string, number> = {
+  BNB_MAINNET: 18,
 };
 
 interface WalletBalance {
@@ -79,6 +91,8 @@ class TreasuryService {
 
       if (wallet.chain === 'SOLANA_MAINNET') {
         balances = await this.getSolanaTokenBalances(wallet.address, wallet.supportedTokens);
+      } else if (wallet.chain === 'TRON_MAINNET') {
+        balances = await this.getTronTokenBalances(wallet.address, wallet.supportedTokens);
       } else {
         const chainConfig = CHAIN_TOKENS[wallet.chain];
         if (!chainConfig) continue;
@@ -127,7 +141,8 @@ class TreasuryService {
       try {
         const contract = new ethers.Contract(tokenAddr, ERC20_ABI, provider);
         const rawBalance = await contract.balanceOf(address);
-        const formatted = ethers.formatUnits(rawBalance, 6); // All stablecoins are 6 decimals
+        const decimals = TOKEN_DECIMALS[chain] || 6; // BNB uses 18, others use 6
+        const formatted = ethers.formatUnits(rawBalance, decimals);
         const balanceNum = parseFloat(formatted);
 
         results.push({
@@ -191,6 +206,49 @@ class TreasuryService {
       }
     }
 
+    return results;
+  }
+
+  /**
+   * Get TRC-20 token balances for a TRON wallet
+   */
+  async getTronTokenBalances(
+    address: string,
+    supportedTokens: string[]
+  ): Promise<{ token: string; balance: string; balanceUSD: number }[]> {
+    const TRON_TOKENS: Record<string, string> = {
+      USDT: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+      USDC: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8',
+    };
+    const results: { token: string; balance: string; balanceUSD: number }[] = [];
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const apiKey = process.env.TRONGRID_API_KEY;
+      if (apiKey) headers['TRON-PRO-API-KEY'] = apiKey;
+
+      // Query account info for TRC-20 balances
+      const res = await fetch(`https://api.trongrid.io/v1/accounts/${address}`, { headers });
+      const data: any = await res.json();
+      const trc20Balances = data.data?.[0]?.trc20 || [];
+
+      for (const token of supportedTokens) {
+        const contractAddr = TRON_TOKENS[token];
+        if (!contractAddr) continue;
+
+        let balance = 0;
+        for (const entry of trc20Balances) {
+          if (entry[contractAddr]) {
+            balance = parseFloat(entry[contractAddr]) / 1e6; // TRC-20 stables are 6 decimals
+          }
+        }
+        results.push({ token, balance: balance.toFixed(6), balanceUSD: balance });
+      }
+    } catch (err) {
+      for (const token of supportedTokens) {
+        if (TRON_TOKENS[token]) results.push({ token, balance: '0', balanceUSD: 0 });
+      }
+    }
     return results;
   }
 

@@ -11,12 +11,13 @@ const USDC_ABI = [
   "function balanceOf(address owner) view returns (uint256)"
 ];
 
-// Chains to scan (mainnet only)
+// EVM chains to scan (mainnet only)
 const SCAN_CHAINS: Chain[] = [
   'BASE_MAINNET',
   'ETHEREUM_MAINNET',
   'POLYGON_MAINNET',
   'ARBITRUM_MAINNET',
+  'BNB_MAINNET',
 ];
 
 export class BlockchainService {
@@ -110,7 +111,9 @@ export class BlockchainService {
         if (!toAddress || !watchAddresses.has(toAddress)) continue;
 
         const txHash = log.transactionHash;
-        const amount = ethers.formatUnits(log.args.value, 6);
+        // BNB stablecoins use 18 decimals, all others use 6
+        const decimals = chain === 'BNB_MAINNET' ? 18 : 6;
+        const amount = ethers.formatUnits(log.args.value, decimals);
         const fromAddress = log.args.from;
 
         // Skip if we already processed this tx
@@ -259,6 +262,8 @@ export class BlockchainService {
     }
     // Solana scanning (separate flow)
     await this.scanSolanaPayments();
+    // TRON scanning (separate flow)
+    await this.scanTronPayments();
     // Expire stale orders
     await this.expireStaleOrders();
   }
@@ -409,6 +414,102 @@ export class BlockchainService {
       }
     } catch (error: any) {
       console.error('[scanner] Solana scan cycle error:', error.message);
+    }
+  }
+
+  async scanTronPayments(): Promise<void> {
+    try {
+      const pendingOrders = await db.order.findMany({
+        where: {
+          chain: 'TRON_MAINNET',
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true, paymentAddress: true, amount: true, customerWallet: true },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (pendingOrders.length === 0) return;
+
+      const TOKEN_CONTRACTS: Record<string, string> = {
+        'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t': 'USDT',
+        'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8': 'USDC',
+      };
+
+      // Group by payment address
+      const addressMap = new Map<string, typeof pendingOrders>();
+      for (const order of pendingOrders) {
+        const existing = addressMap.get(order.paymentAddress) || [];
+        existing.push(order);
+        addressMap.set(order.paymentAddress, existing);
+      }
+
+      for (const [address, orders] of addressMap) {
+        try {
+          // Query TronGrid for TRC-20 incoming transfers
+          const apiKey = process.env.TRONGRID_API_KEY || '';
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (apiKey) headers['TRON-PRO-API-KEY'] = apiKey;
+
+          const url = `https://api.trongrid.io/v1/accounts/${address}/transactions/trc20?only_confirmed=true&only_to=true&limit=50`;
+          const res = await fetch(url, { headers });
+          const data = await res.json() as any;
+
+          if (!data.data) continue;
+
+          for (const tx of data.data) {
+            const txHash = tx.transaction_id;
+            const tokenAddr = tx.token_info?.address;
+            const tokenName = TOKEN_CONTRACTS[tokenAddr];
+            if (!tokenName) continue;
+
+            // Skip if already processed
+            const existing = await db.transaction.findUnique({ where: { txHash } });
+            if (existing) continue;
+
+            const amount = parseFloat(tx.value) / 1e6; // TRC-20 stables are 6 decimals
+            const fromAddress = tx.from;
+
+            // Match against pending orders
+            for (const order of orders) {
+              const orderAmount = Number(order.amount);
+              if (Math.abs(orderAmount - amount) >= 0.01) continue;
+              if (order.customerWallet && fromAddress !== order.customerWallet) continue;
+
+              // Match found
+              await db.transaction.create({
+                data: {
+                  orderId: order.id,
+                  txHash,
+                  chain: 'TRON_MAINNET',
+                  amount,
+                  fromAddress,
+                  toAddress: address,
+                  status: 'CONFIRMED',
+                  confirmations: 1,
+                  blockTimestamp: new Date(tx.block_timestamp),
+                },
+              });
+
+              // Compliance screening
+              const { complianceService } = await import('./complianceService');
+              const screening = await complianceService.screenTransaction(order.id, fromAddress);
+
+              if (screening.riskLevel !== 'BLOCKED') {
+                await this.orderService.confirmOrder(order.id, { txHash });
+                console.log(`[scanner] ✅ TRON confirmed order ${order.id} — ${amount} ${tokenName}`);
+              } else {
+                console.log(`[scanner] ❌ TRON BLOCKED order ${order.id} — ${screening.flags.join(', ')}`);
+              }
+              break;
+            }
+          }
+        } catch (err: any) {
+          console.error(`[scanner] TRON scan error for ${address}:`, err.message);
+        }
+      }
+    } catch (error: any) {
+      console.error('[scanner] TRON scan cycle error:', error.message);
     }
   }
 
