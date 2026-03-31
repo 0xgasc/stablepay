@@ -97,6 +97,15 @@ router.post('/withdraw', requireMerchantAuth, async (req, res) => {
         return res.status(400).json({ error: 'Insufficient gas and no agent wallet to sponsor' });
       }
       const agentWallet = new ethers.Wallet(AGENT_WALLET_KEY, provider);
+      const agentBalance = await provider.getBalance(agentWallet.address);
+      if (agentBalance < ethers.parseEther('0.002')) {
+        return res.status(400).json({
+          error: `Agent wallet needs funding for gas sponsorship on ${chain}`,
+          agentWallet: agentWallet.address,
+          agentBalance: ethers.formatEther(agentBalance) + ' ' + (chain.includes('POLYGON') ? 'MATIC' : 'ETH'),
+          needed: '~0.002 ' + (chain.includes('POLYGON') ? 'MATIC' : 'ETH'),
+        });
+      }
       const gasTx = await agentWallet.sendTransaction({
         to: managedWallet.address,
         value: ethers.parseEther('0.001'),

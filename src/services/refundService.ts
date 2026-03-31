@@ -315,6 +315,11 @@ export class RefundService {
           return { success: false, error: 'Agent wallet not configured — cannot sponsor gas' };
         }
         const agentWallet = new ethers.Wallet(AGENT_WALLET_KEY, provider);
+        const agentBalance = await provider.getBalance(agentWallet.address);
+        if (agentBalance < ethers.parseEther('0.002')) {
+          const native = order.chain.includes('POLYGON') ? 'MATIC' : 'ETH';
+          return { success: false, error: `Agent wallet needs funding for gas on ${order.chain}. Address: ${agentWallet.address}, Balance: ${ethers.formatEther(agentBalance)} ${native}, Needed: ~0.002 ${native}` };
+        }
         const gasTx = await agentWallet.sendTransaction({
           to: managedWallet.address,
           value: ethers.parseEther('0.001'),
