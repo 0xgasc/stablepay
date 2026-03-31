@@ -53,8 +53,10 @@
             <a href="#treasury" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Treasury</a>
             <a href="#compliance" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Compliance</a>
             <a href="#managed-wallets" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Managed Wallets</a>
+            <a href="#payment-links" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Payment Links</a>
+            <a href="#receipts" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Receipts</a>
             <a href="#agent" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">AI Agent</a>
-            <a href="#widget-features" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Smart Features</a>
+            <a href="#pricing" class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 hover:border-cyan-400">Pricing</a>
         </div>
 
         <!-- ═══ Authentication ═══ -->
@@ -793,8 +795,92 @@ Customer switches to "Copy Address" tab
             </div>
         </section>
 
+        <!-- ═══ Payment Links ═══ -->
+        <section id="payment-links" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Payment Links</h2>
+            <p class="text-slate-400 mb-6">Create shareable checkout links — no code needed. Links redirect to the checkout widget with pre-filled parameters.</p>
+
+            <div class="endpoint bg-slate-800/50 p-4 mb-4">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="method-post font-bold text-sm">POST</span>
+                    <code class="text-white">/api/payment-links</code>
+                    <span class="text-xs text-slate-500">Auth required</span>
+                </div>
+                <p class="text-sm text-slate-400 mb-3">Create a new payment link</p>
+<pre>{
+  "amount": 25.00,
+  "token": "USDC",
+  "productName": "Premium Plan",
+  "chains": ["BASE_MAINNET", "SOLANA_MAINNET"]  // optional — empty = all
+}</pre>
+                <p class="text-sm text-slate-400 mt-2">Response includes <code class="text-cyan-400">url</code> like <code class="text-cyan-400">https://wetakestables.shop/pay/a1b2c3d4</code></p>
+            </div>
+
+            <div class="endpoint bg-slate-800/50 p-4 mb-4">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="method-get font-bold text-sm">GET</span>
+                    <code class="text-white">/api/payment-links</code>
+                    <span class="text-xs text-slate-500">Auth required</span>
+                </div>
+                <p class="text-sm text-slate-400">List all your payment links with analytics (views, paid count, total collected)</p>
+            </div>
+
+            <div class="endpoint bg-slate-800/50 p-4 mb-4">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="method-get font-bold text-sm">GET</span>
+                    <code class="text-white">/pay/:slug</code>
+                    <span class="text-xs text-slate-500">Public</span>
+                </div>
+                <p class="text-sm text-slate-400">Public URL — redirects customer to checkout widget with link parameters. Increments view count.</p>
+            </div>
+
+            <div class="bg-slate-800 border border-slate-700 p-4 mt-4">
+                <p class="text-sm text-slate-400"><strong class="text-white">Free plan:</strong> 5 active links. <strong class="text-white">Pro:</strong> Unlimited.</p>
+            </div>
+        </section>
+
+        <!-- ═══ Customer Receipts ═══ -->
+        <section id="receipts" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Customer Receipts</h2>
+
+            <div class="endpoint bg-slate-800/50 p-4 mb-4">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="method-get font-bold text-sm">GET</span>
+                    <code class="text-white">/receipt/:receiptId</code>
+                    <span class="text-xs text-slate-500">Public</span>
+                </div>
+                <p class="text-sm text-slate-400">Customer-facing receipt page. Shows amount, merchant, chain, tx explorer link, PDF download. Also accepts orderId (auto-resolves to receipt).</p>
+            </div>
+
+            <div class="endpoint bg-slate-800/50 p-4 mb-4">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="method-get font-bold text-sm">GET</span>
+                    <code class="text-white">/api/receipts/:receiptId/pdf</code>
+                    <span class="text-xs text-slate-500">Public</span>
+                </div>
+                <p class="text-sm text-slate-400">Download receipt as PDF</p>
+            </div>
+        </section>
+
+        <!-- ═══ Pricing ═══ -->
+        <section id="pricing" class="mb-16">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-800 pb-3">Pricing</h2>
+            <div class="space-y-4 text-sm text-slate-400">
+                <p><strong class="text-white">Volume-based fees for everyone:</strong></p>
+                <div class="bg-slate-800 p-4 space-y-2 font-mono">
+                    <div class="flex justify-between"><span>$0 - $10k/month</span><span class="text-white font-bold">1.0%</span></div>
+                    <div class="flex justify-between"><span>$10k - $50k/month</span><span class="text-white font-bold">0.8%</span></div>
+                    <div class="flex justify-between"><span>$50k - $250k/month</span><span class="text-white font-bold">0.5%</span></div>
+                    <div class="flex justify-between"><span>$250k+/month</span><span class="text-white font-bold">0.3%</span></div>
+                </div>
+                <p><strong class="text-white">PRO features</strong> (refunds, receipts, custom branding, unlimited links) unlock at <strong class="text-cyan-400">$5k/mo volume</strong> or <strong class="text-cyan-400">$19/mo</strong> paid in crypto via StablePay.</p>
+                <p><strong class="text-white">Supported chains:</strong> Base, Ethereum, Polygon, Arbitrum, BNB Chain, Solana, TRON</p>
+                <p><strong class="text-white">Supported tokens:</strong> USDC, USDT, EURC</p>
+            </div>
+        </section>
+
         <footer class="border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
-            <p>WeTakeStables — Stablecoin payment infrastructure</p>
+            <p>WeTakeStables — Stablecoin payment infrastructure for the internet</p>
         </footer>
     </div>
 </body>
