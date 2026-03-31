@@ -91,7 +91,7 @@ export class BlockchainService {
       }
 
       const fromBlock = Number(chainConfig.lastScannedBlock);
-      const toBlock = Math.min(fromBlock + 500, currentBlock); // Scan 500 blocks max per cycle
+      const toBlock = Math.min(fromBlock + 50, currentBlock); // Scan 50 blocks max per cycle (keeps scan fast)
 
       if (fromBlock >= toBlock) return 0;
 
@@ -256,15 +256,22 @@ export class BlockchainService {
   }
 
   async scanAll(): Promise<void> {
+    // Run Solana + TRON in parallel with EVM (don't let EVM block them)
+    const nonEvmScans = Promise.all([
+      this.scanSolanaPayments().catch(e => console.error('[scanner] Solana error:', e.message)),
+      this.scanTronPayments().catch(e => console.error('[scanner] TRON error:', e.message)),
+    ]);
+
+    // EVM chains — only scan chains that have pending orders (skip idle chains)
     for (const chain of SCAN_CHAINS) {
-      await this.scanForPayments(chain);
-      await this.updatePendingConfirmations(chain);
+      const hasPending = await db.order.count({ where: { chain, status: 'PENDING', expiresAt: { gt: new Date() } } });
+      if (hasPending > 0) {
+        await this.scanForPayments(chain);
+        await this.updatePendingConfirmations(chain);
+      }
     }
-    // Solana scanning (separate flow)
-    await this.scanSolanaPayments();
-    // TRON scanning (separate flow)
-    await this.scanTronPayments();
-    // Expire stale orders
+
+    await nonEvmScans;
     await this.expireStaleOrders();
   }
 

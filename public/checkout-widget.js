@@ -410,6 +410,13 @@
 
                 <!-- QR View (default) -->
                 <div id="sp-send-view-qr" style="text-align: center; margin-bottom: 12px;">
+                  <!-- Solana Pay toggle (only visible on Solana) -->
+                  <div id="sp-solanapay-toggle" style="display: none; margin-bottom: 8px;">
+                    <label style="display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+                      <input type="checkbox" id="sp-solanapay-check" style="width: 14px; height: 14px;">
+                      <span style="font-size: 9px; color: var(--sp-muted); font-weight: 600; text-transform: uppercase;">Solana Pay QR (for Phantom, Solflare)</span>
+                    </label>
+                  </div>
                   <div style="background: white; padding: 10px; display: inline-block; border: 3px solid #000; margin-bottom: 8px;">
                     <canvas id="sp-qr-canvas" width="140" height="140"></canvas>
                   </div>
@@ -796,20 +803,39 @@
       if (payAmount) payAmount.textContent = `${amount} ${this.selectedToken}`;
       if (sendAmountDisplay) sendAmountDisplay.textContent = `${amount} ${this.selectedToken}`;
 
-      // Generate QR code — always use raw address (universal across all wallet scanners)
-      // Solana Pay / EIP-681 URIs break in some wallets (Phantom camera, Trust Wallet)
+      // Generate QR code
       const canvas = this.container.querySelector('#sp-qr-canvas');
+      const chainConfig = this.selectedChain?.config;
+      const tokenConfig = chainConfig?.tokens?.[this.selectedToken];
+
+      // Show Solana Pay toggle only for Solana
+      const solPayToggle = this.container.querySelector('#sp-solanapay-toggle');
+      const solPayCheck = this.container.querySelector('#sp-solanapay-check');
+      if (solPayToggle) solPayToggle.style.display = chainConfig?.type === 'solana' ? 'block' : 'none';
+
+      const generateQR = (useSolanaPay = false) => {
+        if (!canvas || typeof QRCode === 'undefined') return;
+        let qrData = walletAddr;
+        if (useSolanaPay && chainConfig?.type === 'solana' && tokenConfig?.address) {
+          qrData = `solana:${walletAddr}?amount=${amount}&spl-token=${tokenConfig.address}`;
+        }
+        QRCode.toCanvas(canvas, qrData, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
+          if (err) console.error('QR generation failed:', err);
+        });
+      };
+
+      // Render QR (default: raw address)
       if (canvas) {
-        const renderQR = () => {
-          if (typeof QRCode !== 'undefined') {
-            QRCode.toCanvas(canvas, walletAddr, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
-              if (err) console.error('QR generation failed:', err);
-            });
-          } else {
-            setTimeout(renderQR, 500);
-          }
+        const waitAndRender = () => {
+          if (typeof QRCode !== 'undefined') { generateQR(false); } else { setTimeout(waitAndRender, 500); }
         };
-        renderQR();
+        waitAndRender();
+      }
+
+      // Solana Pay toggle handler
+      if (solPayCheck) {
+        solPayCheck.checked = false;
+        solPayCheck.onchange = () => generateQR(solPayCheck.checked);
       }
 
       // Lock chain + token selectors during payment
@@ -914,6 +940,12 @@
       const chainConfig = this.selectedChain?.config;
       if (!chainConfig) return;
 
+      // Lock selectors while connecting
+      const chainSelect = this.container.querySelector('#sp-chain-select');
+      const tokenSelect = this.container.querySelector('#sp-token-select');
+      if (chainSelect) chainSelect.disabled = true;
+      if (tokenSelect) tokenSelect.disabled = true;
+
       try {
         if (chainConfig.type === 'solana') {
           await this.connectSolanaWallet();
@@ -922,6 +954,9 @@
         }
       } catch (error) {
         console.error('Wallet connection failed:', error);
+        // Unlock selectors on failure
+        if (chainSelect) chainSelect.disabled = false;
+        if (tokenSelect) tokenSelect.disabled = false;
         if (error.code === -32002) {
           this.showError('Wallet has a pending request. Open your wallet extension, dismiss it, and try again.');
         } else if (error.code === 4001) {
