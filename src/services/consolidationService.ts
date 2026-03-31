@@ -19,16 +19,19 @@ const CHAIN_RPC: Record<string, { rpc: string; tokens: Record<string, string>; n
   ARBITRUM_MAINNET: { rpc: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arbitrum-one-rpc.publicnode.com', native: 'ETH', tokens: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' } },
 };
 
-// Circle CCTP v2 contracts
-const CCTP_CONFIG: Record<string, { tokenMessenger: string; domain: number }> = {
-  ETHEREUM_MAINNET: { tokenMessenger: '0xBd3fa81B58Ba92a82136038B25aDec7066af3155', domain: 0 },
-  BASE_MAINNET: { tokenMessenger: '0x1682Ae6375C4E4A97e4B583BC394c861A46D8962', domain: 6 },
-  ARBITRUM_MAINNET: { tokenMessenger: '0x19330d10D9Cc8751218eaf51E8885D058642E08A', domain: 3 },
-  POLYGON_MAINNET: { tokenMessenger: '0x9daF8c91AEFAE50b9c0E69629D3F6Ca40cA3B3FE', domain: 7 },
+// Circle CCTP v2 contracts (same deterministic address on all chains via CREATE2)
+const CCTP_TOKEN_MESSENGER_V2 = '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d';
+const CCTP_MESSAGE_TRANSMITTER_V2 = '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64';
+
+const CCTP_DOMAINS: Record<string, number> = {
+  ETHEREUM_MAINNET: 0,
+  ARBITRUM_MAINNET: 3,
+  BASE_MAINNET: 6,
+  POLYGON_MAINNET: 7,
 };
 
-const TOKEN_MESSENGER_ABI = [
-  'function depositForBurn(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken) returns (uint64)',
+const TOKEN_MESSENGER_V2_ABI = [
+  'function depositForBurn(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken, bytes32 destinationCaller, uint256 maxFee, uint32 minFinalityThreshold) returns (uint64)',
 ];
 
 function decryptKey(encrypted: string): string {
@@ -148,7 +151,7 @@ export class ConsolidationService {
           logger.info('Consolidation: direct transfer', {
             merchantId, chain, token: tokenName, amount, txHash: tx.hash, to: toAddress,
           });
-        } else if (tokenName === 'USDC' && CCTP_CONFIG[chain] && CCTP_CONFIG[toChain]) {
+        } else if (tokenName === 'USDC' && CCTP_DOMAINS[chain] !== undefined && CCTP_DOMAINS[toChain] !== undefined) {
           // Cross-chain USDC via CCTP
           const cctpResult = await this.bridgeViaCCTP(wallet, chain, toChain, toAddress, balance);
           result.transfers.push({ chain, token: 'USDC', amount: amount.toFixed(2), txHash: cctpResult.txHash, type: 'cctp' });
@@ -191,41 +194,47 @@ export class ConsolidationService {
     toAddress: string,
     amount: bigint
   ): Promise<{ txHash: string; burnTx: string }> {
-    const fromConf = CCTP_CONFIG[fromChain];
-    const toConf = CCTP_CONFIG[toChain];
+    const fromDomain = CCTP_DOMAINS[fromChain];
+    const toDomain = CCTP_DOMAINS[toChain];
     const chainConf = CHAIN_RPC[fromChain];
 
-    if (!fromConf || !toConf || !chainConf) {
+    if (fromDomain === undefined || toDomain === undefined || !chainConf) {
       throw new Error(`CCTP not supported for ${fromChain} → ${toChain}`);
     }
 
     const usdcAddress = chainConf.tokens.USDC;
     if (!usdcAddress) throw new Error(`No USDC on ${fromChain}`);
 
-    // Step 1: Approve TokenMessenger to spend USDC
+    // Step 1: Approve TokenMessenger v2 to spend USDC
     const usdc = new ethers.Contract(usdcAddress, ERC20_ABI, wallet);
-    const approveTx = await usdc.approve(fromConf.tokenMessenger, amount);
+    const approveTx = await usdc.approve(CCTP_TOKEN_MESSENGER_V2, amount);
     await approveTx.wait();
 
-    // Step 2: Call depositForBurn
-    const messenger = new ethers.Contract(fromConf.tokenMessenger, TOKEN_MESSENGER_ABI, wallet);
+    // Step 2: Call depositForBurn (v2 — includes destinationCaller, maxFee, minFinalityThreshold)
+    const messenger = new ethers.Contract(CCTP_TOKEN_MESSENGER_V2, TOKEN_MESSENGER_V2_ABI, wallet);
     const mintRecipient = addressToBytes32(toAddress);
+    const zeroCaller = ethers.zeroPadValue('0x', 32); // Allow anyone to relay
+    const maxFee = 0; // No fee cap
+    const minFinality = 1000; // Fast Transfer mode
 
     const burnTx = await messenger.depositForBurn(
       amount,
-      toConf.domain,
+      toDomain,
       mintRecipient,
-      usdcAddress
+      usdcAddress,
+      zeroCaller,
+      maxFee,
+      minFinality
     );
-    const receipt = await burnTx.wait();
+    await burnTx.wait();
 
-    logger.info('CCTP burn initiated', {
+    logger.info('CCTP v2 burn initiated', {
       fromChain, toChain, amount: ethers.formatUnits(amount, 6),
-      burnTxHash: burnTx.hash, toAddress,
+      burnTxHash: burnTx.hash, toAddress, fromDomain, toDomain,
     });
 
-    // Note: The mint on the destination chain happens automatically via Circle's attestation
-    // service (usually 10-20 minutes). We return the burn tx hash for tracking.
+    // Circle's attestation service monitors the burn event and auto-mints on destination.
+    // Fast Transfer mode (~seconds). Track via: https://iris-api.circle.com/v2/messages/{fromDomain}?transactionHash={txHash}
     return { txHash: burnTx.hash, burnTx: burnTx.hash };
   }
 
