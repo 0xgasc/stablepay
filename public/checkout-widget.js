@@ -520,7 +520,27 @@
       if (sendWalletBtn) {
         sendWalletBtn.addEventListener('click', () => {
           const addr = sendWalletInput?.value?.trim();
-          if (addr && addr.length > 10) {
+          const chainType = this.selectedChain?.config?.type;
+
+          // Validate address format matches chain
+          if (!addr || addr.length < 10) {
+            this.showError('Please enter a valid wallet address');
+            return;
+          }
+          if (chainType === 'evm' && !addr.match(/^0x[a-fA-F0-9]{40}$/)) {
+            this.showError('Please enter a valid EVM address (starts with 0x, 42 characters)');
+            return;
+          }
+          if (chainType === 'solana' && addr.startsWith('0x')) {
+            this.showError('Please enter a Solana address (not an EVM 0x address). Solana addresses are base58 encoded.');
+            return;
+          }
+          if (chainType === 'tron' && !addr.startsWith('T')) {
+            this.showError('Please enter a TRON address (starts with T)');
+            return;
+          }
+
+          if (addr) {
             this.connectedWallet = addr;
             const shortAddr = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
             const step1 = this.container.querySelector('#sp-send-step1');
