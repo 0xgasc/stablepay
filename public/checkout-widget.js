@@ -387,10 +387,29 @@
 
               <!-- Step 1: Enter wallet -->
               <div id="sp-send-step1" style="padding: 12px;">
-                <div style="font-size: 11px; font-weight: 700; color: var(--sp-text); margin-bottom: 2px;">Your Wallet Address</div>
-                <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Enter the address you'll send from — so we can match your payment.</p>
+                <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--sp-text);">Your Wallet Address</span>
+                  <button id="sp-wallet-help-btn" style="width: 16px; height: 16px; border-radius: 50%; background: var(--sp-card); border: 1px solid var(--sp-border); color: var(--sp-muted); font-size: 9px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;">?</button>
+                </div>
+                <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Paste the wallet address you'll send from.</p>
+                <!-- Help dropdown -->
+                <div id="sp-wallet-help" style="display: none; background: var(--sp-card); border: 2px solid var(--sp-border); padding: 10px; margin-bottom: 10px; font-size: 10px; color: var(--sp-muted); line-height: 1.5;">
+                  <div style="font-weight: 700; color: var(--sp-text); margin-bottom: 6px; font-size: 10px;">How to find your wallet address:</div>
+                  <div style="margin-bottom: 6px;">
+                    <strong style="color: var(--sp-text);">On your phone:</strong> Open your wallet app (Phantom, MetaMask, Trust Wallet, etc.) and tap <strong>Receive</strong> — copy the address shown.
+                  </div>
+                  <div style="margin-bottom: 6px;">
+                    <strong style="color: var(--sp-text);">On desktop:</strong> Open your browser wallet extension and click your address to copy it.
+                  </div>
+                  <div style="margin-bottom: 6px;">
+                    <strong style="color: var(--sp-text);">iPhone + Mac:</strong> Copy on your phone, then paste here with Cmd+V (Universal Clipboard).
+                  </div>
+                  <div style="border-top: 1px solid var(--sp-border); padding-top: 6px; margin-top: 4px;">
+                    <strong style="color: var(--sp-text);">Which address?</strong> Use the address for <strong>${this.selectedChain?.config?.chainName || 'the selected network'}</strong>. ${this.selectedChain?.config?.type === 'solana' ? 'Solana addresses are ~44 characters, no 0x prefix.' : this.selectedChain?.config?.type === 'tron' ? 'TRON addresses start with T.' : 'EVM addresses start with 0x and are 42 characters.'}
+                  </div>
+                </div>
                 <div style="display: flex; gap: 6px;">
-                  <input id="sp-sender-wallet" type="text" placeholder="${this.selectedChain?.config?.type === 'solana' ? 'Solana address (base58)' : '0x... (EVM address)'}" style="
+                  <input id="sp-sender-wallet" type="text" placeholder="${this.selectedChain?.config?.type === 'solana' ? 'e.g. 7xKXtg2C...' : this.selectedChain?.config?.type === 'tron' ? 'e.g. TJRabPrw...' : 'e.g. 0xd573Be...'}" style="
                     flex: 1; padding: 10px; font-size: 11px; font-family: monospace; border: 3px solid #000;
                     background: var(--sp-card); color: var(--sp-text); outline: none;
                   ">
@@ -497,6 +516,15 @@
       const tokenSelect = this.container.querySelector('#sp-token-select');
       if (tokenSelect) {
         tokenSelect.addEventListener('change', (e) => this.selectToken(e.target.value));
+      }
+
+      // Help toggle
+      const helpBtn = this.container.querySelector('#sp-wallet-help-btn');
+      const helpDiv = this.container.querySelector('#sp-wallet-help');
+      if (helpBtn && helpDiv) {
+        helpBtn.addEventListener('click', () => {
+          helpDiv.style.display = helpDiv.style.display === 'none' ? 'block' : 'none';
+        });
       }
 
       // Connect wallet
