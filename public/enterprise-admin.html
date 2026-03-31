@@ -1417,31 +1417,31 @@
 
             tbody.innerHTML = merchants.map(m => `
                 <tr class="hover:bg-slate-950">
-                    <td class="px-6 py-4">
-                        <div class="font-medium text-white">${m.companyName}</div>
-                        <div class="text-sm text-slate-400">${m.email}</div>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="font-medium text-white text-sm truncate max-w-[160px]" title="${m.companyName}">${m.companyName}</div>
+                        <div class="text-xs text-slate-400 truncate max-w-[160px]" title="${m.email}">${m.email}</div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-white">${m.contactName}</td>
-                    <td class="px-6 py-4">
-                        <span class="px-2 py-1 text-xs  font-medium plan-${(m.plan || 'starter').toLowerCase()}">
+                    <td class="px-4 py-3 text-sm text-white whitespace-nowrap">${m.contactName || '—'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <span class="px-2 py-0.5 text-xs font-medium plan-${(m.plan || 'starter').toLowerCase()}">
                             ${m.plan || 'Starter'}
                         </span>
                     </td>
-                    <td class="px-6 py-4">
-                        <span class="px-2 py-1 text-xs  font-medium status-${m.isActive ? 'active' : 'inactive'}">
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <span class="px-2 py-0.5 text-xs font-medium status-${m.isActive ? 'active' : 'inactive'}">
                             ${m.isActive ? 'Active' : 'Inactive'}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-sm text-white">${m.orderCount || 0}</td>
-                    <td class="px-6 py-4 text-sm font-medium text-white">$${(m.totalVolume || 0).toFixed(2)}</td>
-                    <td class="px-6 py-4 text-sm text-slate-400">${new Date(m.createdAt).toLocaleDateString()}</td>
-                    <td class="px-6 py-4 text-right text-sm">
-                        <button onclick="viewMerchantDetail('${m.id}')" class="text-blue-400 hover:text-blue-300 mr-3">View</button>
-                        <button onclick="editMerchant('${m.id}')" class="text-green-400 hover:text-green-300 mr-3">Edit</button>
-                        <button onclick="toggleMerchantStatus('${m.id}')" class="text-orange-600 hover:text-orange-500 mr-3">
-                            ${m.isActive ? 'Disable' : 'Activate'}
+                    <td class="px-4 py-3 text-sm text-white whitespace-nowrap">${m.orderCount || 0}</td>
+                    <td class="px-4 py-3 text-sm font-medium text-white whitespace-nowrap">$${(m.totalVolume || 0).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">${new Date(m.createdAt).toLocaleDateString()}</td>
+                    <td class="px-4 py-3 text-right text-sm whitespace-nowrap">
+                        <button onclick="viewMerchantDetail('${m.id}')" class="text-blue-400 hover:text-blue-300 mr-2">View</button>
+                        <button onclick="editMerchant('${m.id}')" class="text-green-400 hover:text-green-300 mr-2">Edit</button>
+                        <button onclick="toggleMerchantStatus('${m.id}')" class="text-orange-500 hover:text-orange-400 mr-2">
+                            ${m.isActive ? 'Disable' : 'Enable'}
                         </button>
-                        <button onclick="deleteMerchant('${m.id}')" class="text-red-600 hover:text-red-400">Delete</button>
+                        <button onclick="deleteMerchant('${m.id}')" class="text-red-500 hover:text-red-400">Del</button>
                     </td>
                 </tr>
             `).join('');
@@ -1470,31 +1470,24 @@
 
                 return `
                 <tr class="hover:bg-slate-950">
-                    <td class="px-4 py-4 font-mono text-sm text-white">${o.id.substring(0, 8)}...</td>
-                    <td class="px-4 py-4 text-sm text-white">
-                        ${o.merchant?.companyName || 'Demo/Unassigned'}
-                    </td>
-                    <td class="px-4 py-4 text-sm font-medium text-white">$${Number(o.amount).toFixed(2)}</td>
-                    <td class="px-4 py-4 text-sm text-slate-400">${feePercent.toFixed(2)}%</td>
-                    <td class="px-4 py-4 text-sm ${showFee ? 'text-green-400 font-medium' : 'text-slate-500'}">
+                    <td class="px-3 py-3 font-mono text-xs text-white whitespace-nowrap">${o.id.substring(0, 8)}...</td>
+                    <td class="px-3 py-3 text-xs text-white whitespace-nowrap">${o.merchant?.companyName || 'Demo'}</td>
+                    <td class="px-3 py-3 text-xs font-medium text-white whitespace-nowrap">$${Number(o.amount).toFixed(2)}</td>
+                    <td class="px-3 py-3 text-xs text-slate-400 whitespace-nowrap">${(feePercent * 100).toFixed(1)}%</td>
+                    <td class="px-3 py-3 text-xs whitespace-nowrap ${showFee ? 'text-green-400 font-medium' : 'text-slate-500'}">
                         ${showFee ? '$' + feeAmount.toFixed(4) : '-'}
                     </td>
-                    <td class="px-4 py-4 text-sm text-slate-400">${o.chain}</td>
-                    <td class="px-4 py-4">
-                        <span class="px-2 py-1 text-xs font-medium status-${o.status.toLowerCase()}">
+                    <td class="px-3 py-3 text-xs text-slate-400 whitespace-nowrap">${o.chain.replace('_MAINNET', '')}</td>
+                    <td class="px-3 py-3 whitespace-nowrap">
+                        <span class="px-2 py-0.5 text-xs font-medium status-${o.status.toLowerCase()}">
                             ${o.status}
                         </span>
                     </td>
-                    <td class="px-4 py-4 text-sm text-slate-400">${new Date(o.createdAt).toLocaleString()}</td>
-                    <td class="px-4 py-4 text-right text-sm">
+                    <td class="px-3 py-3 text-xs text-slate-400 whitespace-nowrap">${new Date(o.createdAt).toLocaleDateString()}</td>
+                    <td class="px-3 py-3 text-right text-xs whitespace-nowrap">
                         ${o.status === 'PENDING' ? `
-                            <button onclick="confirmOrder('${o.id}')" class="text-green-400 hover:text-green-300 mr-2">
-                                Confirm
-                            </button>
-                        ` : ''}
-                        ${o.status === 'CONFIRMED' ? `
-                            <span class="text-slate-500">Completed</span>
-                        ` : ''}
+                            <button onclick="confirmOrder('${o.id}')" class="text-green-400 hover:text-green-300">Confirm</button>
+                        ` : o.status === 'CONFIRMED' ? '<span class="text-slate-500">Done</span>' : '-'}
                     </td>
                 </tr>
             `}).join('');
@@ -2453,8 +2446,8 @@
 
         async function loadAgentWallets() {
             try {
-                const res = await fetch(`${API_BASE}/admin/agent-wallets`, {
-                    headers: { 'x-admin-key': adminKey }
+                const res = await fetch(`${API_BASE}/api/v1/admin/agent-wallets`, {
+                    headers: { 'Authorization': getAuthHeader() }
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error);
