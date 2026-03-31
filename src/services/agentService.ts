@@ -296,6 +296,33 @@ const TOOLS: Anthropic.Tool[] = [
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
   {
+    name: 'consolidate_earnings',
+    description: 'Consolidate all merchant earnings from managed wallets across chains into one destination wallet on one chain. Gas is auto-sponsored. Use when merchant wants to collect all their funds into a single wallet. Can consolidate same-chain or cross-chain (via Circle CCTP for USDC).',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        toAddress: { type: 'string', description: 'Destination wallet address (0x...)' },
+        toChain: { type: 'string', enum: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET'], description: 'Destination chain' },
+        token: { type: 'string', enum: ['USDC', 'USDT', 'EURC'], description: 'Token to consolidate. Defaults to USDC.' },
+      },
+      required: ['toAddress', 'toChain'],
+    },
+  },
+  {
+    name: 'bridge_usdc',
+    description: 'Bridge USDC from one chain to another using Circle CCTP (native burn/mint, no wrapped tokens). Use when merchant wants to move USDC between chains. Only works for USDC.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        fromChain: { type: 'string', enum: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET'], description: 'Source chain' },
+        toChain: { type: 'string', enum: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET'], description: 'Destination chain' },
+        toAddress: { type: 'string', description: 'Destination address on target chain' },
+        amount: { type: 'number', description: 'Amount of USDC to bridge' },
+      },
+      required: ['fromChain', 'toChain', 'toAddress', 'amount'],
+    },
+  },
+  {
     name: 'process_refund',
     description: 'Process a refund for a confirmed order. Sends stablecoins back to the customer from the managed wallet. Gas is automatically sponsored if needed. Only works for merchants with managed wallets.',
     input_schema: {
@@ -820,6 +847,58 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       });
     }
 
+    case 'consolidate_earnings': {
+      const { consolidationService } = await import('./consolidationService');
+      const toAddr = input.toAddress;
+      const toChain = input.toChain;
+      const token = input.token || 'USDC';
+
+      if (!/^0x[a-fA-F0-9]{40}$/.test(toAddr)) {
+        return JSON.stringify({ error: 'Invalid destination address' });
+      }
+
+      const result = await consolidationService.consolidateEarnings(merchantId, toAddr, toChain, token);
+
+      return JSON.stringify({
+        success: result.success,
+        totalConsolidated: `$${result.totalConsolidated.toFixed(2)}`,
+        transfers: result.transfers.map(t => ({
+          chain: t.chain,
+          token: t.token,
+          amount: `$${t.amount}`,
+          txHash: t.txHash,
+          type: t.type === 'cctp' ? 'Cross-chain (CCTP)' : 'Direct transfer',
+        })),
+        errors: result.errors,
+        message: result.success
+          ? `Consolidated $${result.totalConsolidated.toFixed(2)} ${token} to ${toAddr.slice(0, 8)}...${toAddr.slice(-4)} on ${toChain}. ${result.transfers.length} transfer(s) completed.`
+          : `Consolidation had issues: ${result.errors.join('; ')}`,
+      });
+    }
+
+    case 'bridge_usdc': {
+      const { consolidationService } = await import('./consolidationService');
+      const { fromChain, toChain, toAddress: bridgeTo, amount: bridgeAmount } = input;
+
+      if (fromChain === toChain) return JSON.stringify({ error: 'Source and destination chain must be different' });
+      if (!/^0x[a-fA-F0-9]{40}$/.test(bridgeTo)) return JSON.stringify({ error: 'Invalid destination address' });
+      if (bridgeAmount <= 0) return JSON.stringify({ error: 'Amount must be positive' });
+
+      const result = await consolidationService.bridgeFromManagedWallet(merchantId, fromChain, toChain, bridgeTo, bridgeAmount);
+
+      if (!result.success) return JSON.stringify({ error: result.error });
+
+      return JSON.stringify({
+        success: true,
+        txHash: result.txHash,
+        fromChain,
+        toChain,
+        amount: `$${bridgeAmount}`,
+        message: `USDC bridge initiated: $${bridgeAmount} from ${fromChain} → ${toChain}. Burn TX: ${result.txHash}. Funds arrive on ${toChain} in ~10-20 minutes via Circle CCTP.`,
+        note: 'Circle CCTP performs native burn/mint — no wrapped tokens. Monitor the burn TX for confirmation.',
+      });
+    }
+
     case 'process_refund': {
       const { RefundService } = await import('./refundService');
       const refundSvc = new RefundService();
@@ -916,6 +995,9 @@ After wallets + domain → generate code → call complete_setup → done.
 - In future conversations, gently remind once if they still have a managed wallet.
 - When mentioning managed wallets, ALWAYS be clear: "WeTakeStables holds the keys for your managed wallet. You can withdraw anytime, but for full control, set up your own wallet."
 - NEVER say "you already have wallets" without clarifying who holds the keys.
+- When a merchant wants to collect/consolidate funds, use consolidate_earnings. This sweeps all managed wallet balances to one destination.
+- When a merchant wants to move USDC between chains, use bridge_usdc. This uses Circle CCTP (native burn/mint, ~10-20 min, no slippage).
+- Cross-chain bridging ONLY works for USDC. For USDT/EURC, funds are sent to the destination address on the same chain — merchant must bridge manually.
 
 **After wallets are set up, ask ONE question:**
 - "What's your website domain?" (e.g. mystore.com, s-o-l-o.fun)
