@@ -439,6 +439,10 @@
                   width: 100%; padding: 12px; background: #00E5FF; color: #000; border: 3px solid #000;
                   font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; box-shadow: 4px 4px 0px #000;
                 ">I've Sent the Payment</button>
+                <button id="sp-send-back-btn" style="
+                  width: 100%; padding: 8px; background: transparent; color: var(--sp-muted); border: none;
+                  font-size: 11px; cursor: pointer; margin-top: 6px; text-decoration: underline;
+                ">← Change wallet address</button>
               </div>
               <!-- Step 3: Listening -->
               <div id="sp-send-step3" style="display: none; text-align: center; padding: 20px;">
@@ -562,6 +566,55 @@
           this.container.querySelector('#sp-send-step3').style.display = 'block';
           this.updateStepIndicator(3);
           this.startPaymentPolling();
+        });
+      }
+
+      // "Back" button — go back to step 1 to change wallet
+      const backBtn = this.container.querySelector('#sp-send-back-btn');
+      if (backBtn) {
+        backBtn.addEventListener('click', () => {
+          const step1 = this.container.querySelector('#sp-send-step1');
+          const step2 = this.container.querySelector('#sp-send-step2');
+          if (step2) step2.style.display = 'none';
+          // Rebuild step 1 input
+          if (step1) {
+            step1.style.display = 'block';
+            const placeholder = this.selectedChain?.config?.type === 'solana' ? 'Solana address (base58)' : this.selectedChain?.config?.type === 'tron' ? 'TRON address (T...)' : '0x... (EVM address)';
+            step1.innerHTML = `
+              <div style="font-size: 11px; font-weight: 700; color: var(--sp-text); margin-bottom: 2px;">Your Wallet Address</div>
+              <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Enter the address you'll send from — so we can match your payment.</p>
+              <div style="display: flex; gap: 6px;">
+                <input id="sp-sender-wallet" type="text" value="${this.connectedWallet || ''}" placeholder="${placeholder}" style="
+                  flex: 1; padding: 10px; font-size: 11px; font-family: monospace; border: 3px solid #000;
+                  background: var(--sp-card); color: var(--sp-text); outline: none;
+                ">
+                <button id="sp-sender-wallet-btn" style="
+                  padding: 8px 16px; background: #000; color: #fff; border: none;
+                  font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+                ">Next</button>
+              </div>
+            `;
+            // Re-attach handlers
+            const newBtn = step1.querySelector('#sp-sender-wallet-btn');
+            const newInput = step1.querySelector('#sp-sender-wallet');
+            if (newBtn) newBtn.addEventListener('click', () => {
+              const addr = newInput?.value?.trim();
+              if (addr && addr.length > 10) {
+                this.connectedWallet = addr;
+                this.showManualPaymentDetails('send');
+                this.updateStepIndicator(2);
+              }
+            });
+            if (newInput) newInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') newBtn?.click(); });
+          }
+          // Unlock selectors
+          const chainSelect = this.container.querySelector('#sp-chain-select');
+          const tokenSelect = this.container.querySelector('#sp-token-select');
+          if (chainSelect) chainSelect.disabled = false;
+          if (tokenSelect) tokenSelect.disabled = false;
+          this.updateStepIndicator(1);
+          this.connectedWallet = null;
+          this.currentOrderId = null;
         });
       }
 
@@ -723,28 +776,13 @@
       if (payAmount) payAmount.textContent = `${amount} ${this.selectedToken}`;
       if (sendAmountDisplay) sendAmountDisplay.textContent = `${amount} ${this.selectedToken}`;
 
-      // Generate QR code with proper payment URI
+      // Generate QR code — always use raw address (universal across all wallet scanners)
+      // Solana Pay / EIP-681 URIs break in some wallets (Phantom camera, Trust Wallet)
       const canvas = this.container.querySelector('#sp-qr-canvas');
       if (canvas) {
-        // Build payment URI based on chain type
-        let qrData = walletAddr;
-        const chainConfig = this.selectedChain?.config;
-        const tokenConfig = chainConfig?.tokens?.[this.selectedToken];
-
-        if (chainConfig?.type === 'solana' && tokenConfig?.address) {
-          // Solana Pay URI: solana:<recipient>?amount=<amount>&spl-token=<mint>
-          qrData = `solana:${walletAddr}?amount=${amount}&spl-token=${tokenConfig.address}`;
-        } else if (chainConfig?.type === 'evm' && tokenConfig?.address) {
-          // EIP-681: ethereum:<token_address>/transfer?address=<recipient>&uint256=<amount_raw>
-          const decimals = tokenConfig.decimals || 6;
-          const rawAmount = BigInt(Math.round(parseFloat(amount) * (10 ** decimals))).toString();
-          qrData = `ethereum:${tokenConfig.address}/transfer?address=${walletAddr}&uint256=${rawAmount}`;
-        }
-        // TRON: just the address (wallets handle it)
-
         const renderQR = () => {
           if (typeof QRCode !== 'undefined') {
-            QRCode.toCanvas(canvas, qrData, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
+            QRCode.toCanvas(canvas, walletAddr, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
               if (err) console.error('QR generation failed:', err);
             });
           } else {
@@ -753,6 +791,12 @@
         };
         renderQR();
       }
+
+      // Lock chain + token selectors during payment
+      const chainSelect = this.container.querySelector('#sp-chain-select');
+      const tokenSelect = this.container.querySelector('#sp-token-select');
+      if (chainSelect) chainSelect.disabled = true;
+      if (tokenSelect) tokenSelect.disabled = true;
 
       // Polling starts when user clicks "I've sent it" — handled in initManualPaymentFlows
     }
