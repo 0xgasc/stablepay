@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { db } from '../config/database';
 import { CHAIN_CONFIGS } from '../config/chains';
 import { Chain } from '../types';
@@ -256,9 +257,10 @@ export class BlockchainService {
   }
 
   async scanAll(): Promise<void> {
+    console.log('[scanner] scanAll starting...');
     // Run Solana + TRON in parallel with EVM (don't let EVM block them)
     const nonEvmScans = Promise.all([
-      this.scanSolanaPayments().catch(e => console.error('[scanner] Solana error:', e.message)),
+      this.scanSolanaPayments().catch(e => console.error('[scanner] Solana error:', e.message, e.stack?.slice(0, 200))),
       this.scanTronPayments().catch(e => console.error('[scanner] TRON error:', e.message)),
     ]);
 
@@ -317,8 +319,8 @@ export class BlockchainService {
 
       console.log(`[scanner] Solana: ${pendingOrders.length} pending order(s)`);
 
-      const { Connection, PublicKey } = await import('@solana/web3.js');
       const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
+      console.log(`[scanner] Solana RPC: ${solRpc.slice(0, 40)}...`);
       const connection = new Connection(solRpc, { commitment: 'confirmed', disableRetryOnRateLimit: true });
 
       const TOKEN_MINTS: Record<string, string> = {

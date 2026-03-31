@@ -321,9 +321,10 @@
                 background: var(--sp-card); color: var(--sp-text); border: 3px solid #000;
                 cursor: pointer; outline: none;
               ">
-                ${this.merchantChains.map((mc, i) => `
-                  <option value="${mc.chain}" ${i === 0 ? 'selected' : ''}>${mc.config.chainName}</option>
-                `).join('')}
+                ${this.merchantChains.map((mc, i) => {
+                  const icons = { BASE_MAINNET: '🔵', ETHEREUM_MAINNET: '⟠', POLYGON_MAINNET: '🟣', ARBITRUM_MAINNET: '🔷', BNB_MAINNET: '🟡', SOLANA_MAINNET: '◎', TRON_MAINNET: '🔺' };
+                  return `<option value="${mc.chain}" ${i === 0 ? 'selected' : ''}>${icons[mc.chain] || '⬡'} ${mc.config.chainName}</option>`;
+                }).join('')}
               </select>
             </div>
             <div>
@@ -524,7 +525,10 @@
       const chainTokens = this.selectedChain.config.tokens;
       return tokens
         .filter(t => chainTokens[t])
-        .map((token, i) => `<option value="${token}" ${i === 0 ? 'selected' : ''}>${token}</option>`)
+        .map((token, i) => {
+          const icons = { USDC: '💲', USDT: '💵', EURC: '💶' };
+          return `<option value="${token}" ${i === 0 ? 'selected' : ''}>${icons[token] || '🪙'} ${token}</option>`;
+        })
         .join('');
     }
 
