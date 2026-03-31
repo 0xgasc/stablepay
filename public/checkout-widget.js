@@ -640,10 +640,49 @@
         sendWalletInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendWalletBtn.click(); });
       }
 
-      // "I've sent it" button
+      // "I've sent it" button — creates order + starts polling
       const sentBtn = this.container.querySelector('#sp-send-sent-btn');
       if (sentBtn) {
-        sentBtn.addEventListener('click', () => {
+        sentBtn.addEventListener('click', async () => {
+          sentBtn.disabled = true;
+          sentBtn.textContent = 'REGISTERING...';
+
+          // Create order NOW (not before) — only register when user says they sent payment
+          if (!this.currentOrderId && this._pendingPayment) {
+            try {
+              const p = this._pendingPayment;
+              const res = await fetch(`${STABLEPAY_URL}/api/embed/checkout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  merchantId: p.merchantId,
+                  amount: p.amount,
+                  chain: p.chain,
+                  token: p.token,
+                  customerEmail: p.customerEmail,
+                  productName: p.productName,
+                  customerWallet: p.customerWallet,
+                  paymentMethod: 'MANUAL_SEND',
+                  source: 'EMBED_WIDGET',
+                })
+              });
+              const data = await res.json();
+              if (data.success) {
+                this.currentOrderId = data.order.id;
+              } else {
+                this.showError(data.error || 'Failed to register payment');
+                sentBtn.disabled = false;
+                sentBtn.textContent = "I'VE SENT THE PAYMENT";
+                return;
+              }
+            } catch (err) {
+              this.showError('Failed to register payment — please try again');
+              sentBtn.disabled = false;
+              sentBtn.textContent = "I'VE SENT THE PAYMENT";
+              return;
+            }
+          }
+
           this.container.querySelector('#sp-send-step2').style.display = 'none';
           this.container.querySelector('#sp-send-step3').style.display = 'block';
           this.updateStepIndicator(3);
@@ -855,33 +894,17 @@
 
       const amount = this.options.amount || 0;
 
-      // Create the order so scanner knows to watch for it
-      if (!this.currentOrderId) {
-        try {
-          const res = await fetch(`${STABLEPAY_URL}/api/embed/checkout`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              merchantId: this.options.merchantId,
-              amount,
-              chain: chain.chain,
-              token: this.selectedToken,
-              customerEmail: this.options.customerEmail,
-              productName: this.options.productName,
-              customerWallet: this.connectedWallet || null,
-              paymentMethod: 'WALLET_CONNECT',
-              source: 'EMBED_WIDGET',
-            })
-          });
-          const data = await res.json();
-          if (data.success) {
-            this.currentOrderId = data.order.id;
-          }
-        } catch (err) {
-          this.showError('Failed to create payment order');
-          return;
-        }
-      }
+      // Store payment details for order creation later (when user clicks "I've sent it")
+      this._pendingPayment = {
+        merchantId: this.options.merchantId,
+        amount,
+        chain: chain.chain,
+        token: this.selectedToken,
+        customerEmail: this.options.customerEmail,
+        productName: this.options.productName,
+        customerWallet: this.connectedWallet || null,
+        walletAddr,
+      };
 
       // Show step 2, hide step 1
       const step1 = this.container.querySelector('#sp-send-step1');
