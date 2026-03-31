@@ -311,7 +311,9 @@ export class BlockchainService {
       if (pendingOrders.length === 0) return;
 
       const { Connection, PublicKey } = await import('@solana/web3.js');
-      const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+      // Use env RPC or fallback — public endpoint has strict rate limits
+      const solRpc = process.env.SOLANA_MAINNET_RPC_URL || 'https://api.mainnet-beta.solana.com';
+      const connection = new Connection(solRpc, { commitment: 'confirmed', disableRetryOnRateLimit: true });
 
       // USDC and USDT mint addresses on Solana
       const TOKEN_MINTS: Record<string, string> = {
@@ -332,7 +334,7 @@ export class BlockchainService {
         try {
           const pubkey = new PublicKey(address);
           // Get recent signatures for this address
-          const sigs = await connection.getSignaturesForAddress(pubkey, { limit: 20 });
+          const sigs = await connection.getSignaturesForAddress(pubkey, { limit: 10 });
 
           for (const sigInfo of sigs) {
             // Skip if already processed
