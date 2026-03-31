@@ -128,8 +128,8 @@ export class BlockchainService {
           const txAmount = Number(amount);
           if (Math.abs(orderAmount - txAmount) >= 0.01) continue;
 
-          // If order has customerWallet, require FROM match (prevents cross-matching)
-          if (order.customerWallet) {
+          // If order has customerWallet AND it's a valid EVM address, require FROM match
+          if (order.customerWallet && order.customerWallet.startsWith('0x')) {
             if (fromAddress.toLowerCase() !== order.customerWallet.toLowerCase()) continue;
           }
 
@@ -375,7 +375,8 @@ export class BlockchainService {
               for (const order of orders) {
                 const orderAmount = Number(order.amount);
                 if (Math.abs(orderAmount - amount) >= 0.01) continue;
-                if (order.customerWallet && fromAuthority !== order.customerWallet) continue;
+                // Only enforce wallet match if the stored wallet is a valid Solana address (not EVM)
+                if (order.customerWallet && !order.customerWallet.startsWith('0x') && fromAuthority !== order.customerWallet) continue;
 
                 // Match found — create transaction + confirm
                 await db.transaction.create({
@@ -474,7 +475,8 @@ export class BlockchainService {
             for (const order of orders) {
               const orderAmount = Number(order.amount);
               if (Math.abs(orderAmount - amount) >= 0.01) continue;
-              if (order.customerWallet && fromAddress !== order.customerWallet) continue;
+              // Only enforce wallet match if it's a TRON address (starts with T)
+              if (order.customerWallet && order.customerWallet.startsWith('T') && fromAddress !== order.customerWallet) continue;
 
               // Match found
               await db.transaction.create({
