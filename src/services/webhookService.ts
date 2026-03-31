@@ -89,7 +89,7 @@ class WebhookService {
       });
 
       // Attempt delivery (fire-and-forget, don't block main flow)
-      this.deliverWebhook(log.id, merchant.webhookUrl, payloadString, signature).catch(err => {
+      this.deliverWebhook(log.id, merchant.webhookUrl, payloadString, signature, merchantId).catch(err => {
         logger.error('Webhook delivery error', err as Error, { logId: log.id, merchantId, event });
       });
 
@@ -105,7 +105,8 @@ class WebhookService {
     logId: string,
     url: string,
     payload: string,
-    signature: string
+    signature: string,
+    merchantId?: string
   ): Promise<boolean> {
     try {
       const controller = new AbortController();
@@ -138,6 +139,11 @@ class WebhookService {
           },
         });
 
+        // Track health on merchant
+        if (merchantId) {
+          db.merchant.update({ where: { id: merchantId }, data: { webhookLastSuccess: new Date() } }).catch(() => {});
+        }
+
         logger.info('Webhook delivered successfully', {
           logId,
           url,
@@ -155,6 +161,11 @@ class WebhookService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Webhook delivery failed', error as Error, { logId, url });
+
+      // Track failure on merchant
+      if (merchantId) {
+        db.merchant.update({ where: { id: merchantId }, data: { webhookLastFailure: new Date() } }).catch(() => {});
+      }
 
       await this.scheduleRetry(logId, null, errorMessage);
       return false;

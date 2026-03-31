@@ -357,6 +357,18 @@ export class OrderService {
         logger.error('Failed to send order.confirmed webhook', err as Error, { orderId });
       });
 
+      // Send merchant payment notification email
+      const { emailService } = await import('./emailService');
+      emailService.sendPaymentNotification(confirmedOrder.merchantId, {
+        id: confirmedOrder.id,
+        amount: orderAmount,
+        token: confirmedOrder.token,
+        chain: confirmedOrder.chain,
+        txHash: txData?.txHash,
+      }).catch(err => {
+        logger.error('Failed to send payment notification email', err as Error, { orderId });
+      });
+
       // Auto-create receipt
       try {
         const receipt = await receiptService.createReceipt(orderId);

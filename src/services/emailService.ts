@@ -624,6 +624,111 @@ class EmailService {
 </html>
     `;
   }
+
+  /**
+   * Send payment notification to merchant
+   */
+  async sendPaymentNotification(merchantId: string, order: {
+    id: string; amount: number; token: string; chain: string; txHash?: string;
+  }): Promise<boolean> {
+    if (!resend) return false;
+
+    try {
+      const merchant = await db.merchant.findUnique({
+        where: { id: merchantId },
+        select: { email: true, companyName: true, emailOnPayment: true },
+      });
+
+      if (!merchant || !merchant.emailOnPayment) return false;
+
+      const chainNames: Record<string, string> = {
+        BASE_MAINNET: 'Base', ETHEREUM_MAINNET: 'Ethereum', POLYGON_MAINNET: 'Polygon',
+        ARBITRUM_MAINNET: 'Arbitrum', BNB_MAINNET: 'BNB Chain', SOLANA_MAINNET: 'Solana', TRON_MAINNET: 'TRON',
+      };
+      const explorerUrls: Record<string, string> = {
+        BASE_MAINNET: 'https://basescan.org/tx/', ETHEREUM_MAINNET: 'https://etherscan.io/tx/',
+        POLYGON_MAINNET: 'https://polygonscan.com/tx/', ARBITRUM_MAINNET: 'https://arbiscan.io/tx/',
+        BNB_MAINNET: 'https://bscscan.com/tx/', SOLANA_MAINNET: 'https://solscan.io/tx/',
+        TRON_MAINNET: 'https://tronscan.org/#/transaction/',
+      };
+
+      const chainName = chainNames[order.chain] || order.chain;
+      const explorerLink = order.txHash && explorerUrls[order.chain] ? explorerUrls[order.chain] + order.txHash : null;
+
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: merchant.email,
+        subject: `Payment received: $${order.amount.toFixed(2)} ${order.token} on ${chainName}`,
+        html: `
+          <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+            <div style="background: #000; color: #fff; padding: 16px 20px; margin-bottom: 20px;">
+              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Payment Received</div>
+              <div style="font-size: 28px; font-weight: 700; margin-top: 4px;">$${order.amount.toFixed(2)} ${order.token}</div>
+            </div>
+            <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+              <tr><td style="padding: 8px 0; color: #666;">Network</td><td style="padding: 8px 0; font-weight: 600;">${chainName}</td></tr>
+              <tr><td style="padding: 8px 0; color: #666;">Order ID</td><td style="padding: 8px 0; font-family: monospace; font-size: 12px;">${order.id}</td></tr>
+              ${order.txHash ? `<tr><td style="padding: 8px 0; color: #666;">Transaction</td><td style="padding: 8px 0;"><a href="${explorerLink}" style="color: #2563eb; font-family: monospace; font-size: 12px;">${order.txHash.slice(0, 12)}...</a></td></tr>` : ''}
+            </table>
+            <div style="margin-top: 20px;">
+              <a href="${BASE_URL}/dashboard#orders" style="display: inline-block; background: #000; color: #fff; padding: 10px 20px; text-decoration: none; font-weight: 600; font-size: 13px;">View Dashboard</a>
+            </div>
+            <div style="margin-top: 24px; font-size: 11px; color: #999;">
+              You received this because payment notifications are enabled. <a href="${BASE_URL}/dashboard#settings" style="color: #999;">Manage preferences</a>
+            </div>
+          </div>
+        `,
+      });
+
+      logger.info('Payment notification email sent', { merchantId, orderId: order.id, event: 'email.payment_notification' });
+      return true;
+    } catch (err) {
+      logger.error('Failed to send payment notification', err as Error, { merchantId });
+      return false;
+    }
+  }
+
+  /**
+   * Send refund notification to merchant
+   */
+  async sendRefundNotification(merchantId: string, refund: {
+    orderId: string; amount: number; txHash?: string;
+  }): Promise<boolean> {
+    if (!resend) return false;
+
+    try {
+      const merchant = await db.merchant.findUnique({
+        where: { id: merchantId },
+        select: { email: true, emailOnRefund: true },
+      });
+
+      if (!merchant || !merchant.emailOnRefund) return false;
+
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: merchant.email,
+        subject: `Refund processed: $${refund.amount.toFixed(2)} for Order ${refund.orderId.slice(0, 10)}`,
+        html: `
+          <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+            <div style="background: #7c3aed; color: #fff; padding: 16px 20px; margin-bottom: 20px;">
+              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Refund Processed</div>
+              <div style="font-size: 28px; font-weight: 700; margin-top: 4px;">$${refund.amount.toFixed(2)}</div>
+            </div>
+            <p style="font-size: 14px; color: #333;">A refund has been processed for order <strong>${refund.orderId}</strong>.</p>
+            ${refund.txHash ? `<p style="font-size: 12px; color: #666;">TX: <code>${refund.txHash.slice(0, 20)}...</code></p>` : ''}
+            <div style="margin-top: 20px;">
+              <a href="${BASE_URL}/dashboard#orders" style="display: inline-block; background: #000; color: #fff; padding: 10px 20px; text-decoration: none; font-weight: 600; font-size: 13px;">View Dashboard</a>
+            </div>
+          </div>
+        `,
+      });
+
+      return true;
+    } catch (err) {
+      logger.error('Failed to send refund notification', err as Error, { merchantId });
+      return false;
+    }
+  }
 }
 
 export const emailService = new EmailService();
