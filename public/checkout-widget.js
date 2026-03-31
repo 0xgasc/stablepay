@@ -316,26 +316,67 @@
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
             <div>
               <label style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Network</label>
-              <select id="sp-chain-select" style="
-                width: 100%; padding: 10px 12px; font-size: 13px; font-weight: 600;
-                background: var(--sp-card); color: var(--sp-text); border: 3px solid #000;
-                cursor: pointer; outline: none;
-              ">
-                ${this.merchantChains.map((mc, i) => {
-                  const icons = { BASE_MAINNET: '🔵', ETHEREUM_MAINNET: '⟠', POLYGON_MAINNET: '🟣', ARBITRUM_MAINNET: '🔷', BNB_MAINNET: '🟡', SOLANA_MAINNET: '◎', TRON_MAINNET: '🔺' };
-                  return `<option value="${mc.chain}" ${i === 0 ? 'selected' : ''}>${icons[mc.chain] || '⬡'} ${mc.config.chainName}</option>`;
-                }).join('')}
-              </select>
+              <div id="sp-chain-select-wrapper" style="position: relative;">
+                <button id="sp-chain-select-btn" type="button" style="
+                  width: 100%; padding: 8px 12px; font-size: 13px; font-weight: 600;
+                  background: var(--sp-card); color: var(--sp-text); border: 3px solid #000;
+                  cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;
+                ">
+                  <img src="${this.getChainIcon(this.merchantChains[0]?.chain)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
+                  <span>${this.merchantChains[0]?.config?.chainName || 'Select'}</span>
+                  <span style="margin-left: auto; font-size: 10px; opacity: 0.5;">▼</span>
+                </button>
+                <div id="sp-chain-dropdown" style="
+                  display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+                  background: var(--sp-card); border: 3px solid #000; border-top: none; max-height: 200px; overflow-y: auto;
+                ">
+                  ${this.merchantChains.map((mc, i) => `
+                    <div class="sp-chain-option" data-chain="${mc.chain}" style="
+                      padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+                      ${i === 0 ? 'background: var(--sp-bg);' : ''}
+                    " onmouseover="this.style.background='var(--sp-bg)'" onmouseout="this.style.background=''">
+                      <img src="${this.getChainIcon(mc.chain)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
+                      <span style="font-size: 13px; font-weight: 600;">${mc.config.chainName}</span>
+                    </div>
+                  `).join('')}
+                </div>
+                <!-- Hidden select for form compatibility -->
+                <select id="sp-chain-select" style="display:none;">
+                  ${this.merchantChains.map((mc, i) => `<option value="${mc.chain}" ${i === 0 ? 'selected' : ''}>${mc.config.chainName}</option>`).join('')}
+                </select>
+              </div>
             </div>
             <div>
               <label style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Stablecoin</label>
-              <select id="sp-token-select" style="
-                width: 100%; padding: 10px 12px; font-size: 13px; font-weight: 600;
-                background: var(--sp-card); color: var(--sp-text); border: 3px solid #000;
-                cursor: pointer; outline: none;
-              ">
-                ${this.renderTokenOptions()}
-              </select>
+              <div id="sp-token-select-wrapper" style="position: relative;">
+                <button id="sp-token-select-btn" type="button" style="
+                  width: 100%; padding: 8px 12px; font-size: 13px; font-weight: 600;
+                  background: var(--sp-card); color: var(--sp-text); border: 3px solid #000;
+                  cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;
+                ">
+                  <img src="${this.getTokenIcon(this.selectedToken)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
+                  <span>${this.selectedToken}</span>
+                  <span style="margin-left: auto; font-size: 10px; opacity: 0.5;">▼</span>
+                </button>
+                <div id="sp-token-dropdown" style="
+                  display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+                  background: var(--sp-card); border: 3px solid #000; border-top: none;
+                ">
+                  ${this.selectedChain ? this.selectedChain.supportedTokens
+                    .filter(t => this.selectedChain.config.tokens[t])
+                    .map(token => `
+                      <div class="sp-token-option" data-token="${token}" style="
+                        padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+                      " onmouseover="this.style.background='var(--sp-bg)'" onmouseout="this.style.background=''">
+                        <img src="${this.getTokenIcon(token)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
+                        <span style="font-size: 13px; font-weight: 600;">${token}</span>
+                      </div>
+                    `).join('') : ''}
+                </div>
+                <select id="sp-token-select" style="display:none;">
+                  ${this.renderTokenOptions()}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -519,16 +560,35 @@
       `;
     }
 
+    getChainIcon(chain) {
+      const icons = {
+        BASE_MAINNET: 'https://raw.githubusercontent.com/base-org/brand-kit/main/logo/symbol/Base_Symbol_Blue.svg',
+        ETHEREUM_MAINNET: 'https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg',
+        POLYGON_MAINNET: 'https://cryptologos.cc/logos/polygon-matic-logo.svg',
+        ARBITRUM_MAINNET: 'https://cryptologos.cc/logos/arbitrum-arb-logo.svg',
+        BNB_MAINNET: 'https://www.svgrepo.com/show/366901/bnb.svg',
+        SOLANA_MAINNET: 'https://www.svgrepo.com/show/470684/solana.svg',
+        TRON_MAINNET: 'https://www.svgrepo.com/show/428648/tron-crypto-cryptocurrency.svg',
+      };
+      return icons[chain] || '';
+    }
+
+    getTokenIcon(token) {
+      const icons = {
+        USDC: 'https://www.svgrepo.com/show/367255/usdc.svg',
+        USDT: 'https://www.svgrepo.com/show/367256/usdt.svg',
+        EURC: 'https://coin-images.coingecko.com/coins/images/26045/large/EURC.png',
+      };
+      return icons[token] || '';
+    }
+
     renderTokenOptions() {
       if (!this.selectedChain) return '<option>USDC</option>';
       const tokens = this.selectedChain.supportedTokens;
       const chainTokens = this.selectedChain.config.tokens;
       return tokens
         .filter(t => chainTokens[t])
-        .map((token, i) => {
-          const icons = { USDC: '💲', USDT: '💵', EURC: '💶' };
-          return `<option value="${token}" ${i === 0 ? 'selected' : ''}>${icons[token] || '🪙'} ${token}</option>`;
-        })
+        .map((token, i) => `<option value="${token}" ${i === 0 ? 'selected' : ''}>${token}</option>`)
         .join('');
     }
 
@@ -537,14 +597,78 @@
     }
 
     attachEventListeners() {
-      // Chain dropdown
+      // Custom chain dropdown
+      const chainBtn = this.container.querySelector('#sp-chain-select-btn');
+      const chainDropdown = this.container.querySelector('#sp-chain-dropdown');
       const chainSelect = this.container.querySelector('#sp-chain-select');
+
+      if (chainBtn && chainDropdown) {
+        chainBtn.addEventListener('click', () => {
+          chainDropdown.style.display = chainDropdown.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!this.container.querySelector('#sp-chain-select-wrapper')?.contains(e.target)) {
+            chainDropdown.style.display = 'none';
+          }
+        });
+
+        // Chain option click
+        this.container.querySelectorAll('.sp-chain-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            const chain = opt.dataset.chain;
+            const mc = this.merchantChains.find(m => m.chain === chain);
+            if (!mc) return;
+
+            // Update button display
+            chainBtn.innerHTML = `
+              <img src="${this.getChainIcon(chain)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
+              <span>${mc.config.chainName}</span>
+              <span style="margin-left: auto; font-size: 10px; opacity: 0.5;">▼</span>
+            `;
+
+            // Update hidden select
+            if (chainSelect) chainSelect.value = chain;
+            chainDropdown.style.display = 'none';
+            this.selectChain(chain);
+          });
+        });
+      }
+
       if (chainSelect) {
         chainSelect.addEventListener('change', (e) => this.selectChain(e.target.value));
       }
 
-      // Token dropdown
+      // Custom token dropdown
+      const tokenBtn = this.container.querySelector('#sp-token-select-btn');
+      const tokenDropdown = this.container.querySelector('#sp-token-dropdown');
       const tokenSelect = this.container.querySelector('#sp-token-select');
+
+      if (tokenBtn && tokenDropdown) {
+        tokenBtn.addEventListener('click', () => {
+          tokenDropdown.style.display = tokenDropdown.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', (e) => {
+          if (!this.container.querySelector('#sp-token-select-wrapper')?.contains(e.target)) {
+            tokenDropdown.style.display = 'none';
+          }
+        });
+        this.container.querySelectorAll('.sp-token-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            const token = opt.dataset.token;
+            tokenBtn.innerHTML = `
+              <img src="${this.getTokenIcon(token)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
+              <span>${token}</span>
+              <span style="margin-left: auto; font-size: 10px; opacity: 0.5;">▼</span>
+            `;
+            if (tokenSelect) tokenSelect.value = token;
+            tokenDropdown.style.display = 'none';
+            this.selectToken(token);
+          });
+        });
+      }
+
       if (tokenSelect) {
         tokenSelect.addEventListener('change', (e) => this.selectToken(e.target.value));
       }
@@ -782,29 +906,43 @@
     }
 
     lockSelectors() {
+      const chainBtn = this.container.querySelector('#sp-chain-select-btn');
       const chainSelect = this.container.querySelector('#sp-chain-select');
       const tokenSelect = this.container.querySelector('#sp-token-select');
-      if (chainSelect) {
-        chainSelect.disabled = true;
-        chainSelect.style.appearance = 'none';
-        chainSelect.style.webkitAppearance = 'none';
-        chainSelect.style.opacity = '0.7';
-        chainSelect.style.cursor = 'default';
-        chainSelect.style.pointerEvents = 'none';
+      if (chainBtn) {
+        chainBtn.style.opacity = '0.7';
+        chainBtn.style.pointerEvents = 'none';
+        chainBtn.querySelector('span:last-child').style.display = 'none'; // hide ▼
       }
-      if (tokenSelect) {
-        tokenSelect.disabled = true;
-        tokenSelect.style.appearance = 'none';
-        tokenSelect.style.webkitAppearance = 'none';
-        tokenSelect.style.opacity = '0.7';
-        tokenSelect.style.cursor = 'default';
-        tokenSelect.style.pointerEvents = 'none';
+      if (chainSelect) { chainSelect.disabled = true; }
+      const tokenBtn = this.container.querySelector('#sp-token-select-btn');
+      if (tokenBtn) {
+        tokenBtn.style.opacity = '0.7';
+        tokenBtn.style.pointerEvents = 'none';
+        const arrow = tokenBtn.querySelector('span:last-child');
+        if (arrow) arrow.style.display = 'none';
       }
+      if (chainSelect) { chainSelect.disabled = true; }
+      if (tokenSelect) { tokenSelect.disabled = true; }
     }
 
     unlockSelectors() {
+      const chainBtn = this.container.querySelector('#sp-chain-select-btn');
+      const tokenBtn = this.container.querySelector('#sp-token-select-btn');
       const chainSelect = this.container.querySelector('#sp-chain-select');
       const tokenSelect = this.container.querySelector('#sp-token-select');
+      if (chainBtn) {
+        chainBtn.style.opacity = '1';
+        chainBtn.style.pointerEvents = '';
+        const arrow = chainBtn.querySelector('span:last-child');
+        if (arrow) arrow.style.display = '';
+      }
+      if (tokenBtn) {
+        tokenBtn.style.opacity = '1';
+        tokenBtn.style.pointerEvents = '';
+        const arrow = tokenBtn.querySelector('span:last-child');
+        if (arrow) arrow.style.display = '';
+      }
       if (chainSelect) {
         chainSelect.disabled = false;
         chainSelect.style.appearance = '';
