@@ -1140,8 +1140,8 @@ router.post('/managed-wallets/:walletId/sweep', requireAdminKey, async (req, res
 // GET agent wallet status — balances across all chains
 router.get('/agent-wallets', requireAdminKey, async (req, res) => {
   try {
-    const evmAddress = process.env.AGENT_WALLET_ADDRESS;
-    const solAddress = process.env.AGENT_SOLANA_ADDRESS;
+    const evmAddress = process.env.AGENT_WALLET_ADDRESS?.trim();
+    const solAddress = process.env.AGENT_SOLANA_ADDRESS?.trim();
 
     const CHAINS: Record<string, { rpc: string; native: string; tokens: Record<string, string> }> = {
       BASE: { rpc: process.env.BASE_MAINNET_RPC_URL || 'https://mainnet.base.org', native: 'ETH', tokens: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2' } },

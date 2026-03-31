@@ -86,6 +86,7 @@ app.use('/api/orders', ordersRouter);
 app.use('/api/refunds', refundsRouter);
 app.use('/api/invoices', invoicesRouter);
 app.use('/api/receipts', receiptsRouter);
+app.use('/api/v1/receipts', receiptsRouter); // Legacy alias
 app.use('/api/pay', invoicePayRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/fees', feesRouter);

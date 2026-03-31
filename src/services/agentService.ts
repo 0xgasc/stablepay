@@ -34,7 +34,7 @@ function decryptKey(encrypted: string): string {
 
 // ─── Agent wallet + chain RPC config ────────────────────────────────────────
 const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY?.trim();
-const AGENT_WALLET_ADDRESS = process.env.AGENT_WALLET_ADDRESS;
+const AGENT_WALLET_ADDRESS = process.env.AGENT_WALLET_ADDRESS?.trim();
 
 const CHAIN_RPC: Record<string, { rpc: string; usdc: string }> = {
   BASE_SEPOLIA: { rpc: 'https://sepolia.base.org', usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' },
