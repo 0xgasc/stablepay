@@ -454,6 +454,9 @@
         #pendingBanner {
             border-bottom: 1px solid #fbbf24;
         }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-slate-950">
@@ -550,80 +553,60 @@
             </div>
         </div>
     </div>
+    <!-- Top nav bar -->
     <nav class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center">
-                    <a href="/" class="text-xl font-bold text-white uppercase tracking-tight">
-                        StablePay
-                    </a>
-                    <span class="ml-2 sm:ml-4 px-2 sm:px-3 py-1 bg-blue-600/20 text-blue-400 border border-blue-600/30 text-xs font-medium uppercase hidden sm:inline" data-i18n="nav.merchantDashboard">
-                        Dashboard
-                    </span>
+            <div class="flex justify-between items-center h-14">
+                <div class="flex items-center gap-3">
+                    <a href="/" class="text-lg font-bold text-white uppercase tracking-tight">StablePay</a>
+                    <span class="font-medium text-white text-sm hidden sm:inline" id="merchantName">Loading...</span>
+                    <div id="merchantInfo" class="hidden"></div>
                 </div>
-                <div class="flex items-center space-x-2 sm:space-x-3">
-                    <div class="text-sm text-slate-400 hidden sm:block" id="merchantInfo">
-                        <span class="font-medium text-white" id="merchantName">Loading...</span>
-                    </div>
-                    <select id="langSelector" onchange="changeLanguage(this.value)" class="bg-slate-800 border border-slate-700 text-white px-2 py-1 text-xs cursor-pointer hover:bg-slate-700">
+                <div class="flex items-center gap-2">
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="bg-slate-800 border border-slate-700 text-white px-2 py-1 text-xs cursor-pointer hover:bg-slate-700 hidden sm:block">
                         <option value="en">EN</option>
                         <option value="es">ES</option>
                         <option value="fr">FR</option>
                         <option value="pt">PT</option>
                     </select>
-                    <button id="nightModeToggle" class="px-3 py-1 border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium uppercase">
+                    <button id="nightModeToggle" class="px-2 py-1 border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium uppercase">
                         <span class="night-icon">Dark</span>
                         <span class="day-icon hidden">Light</span>
                     </button>
-                    <button
-                        id="logoutBtn"
-                        class="bg-slate-800 text-white px-4 py-1.5 font-medium border border-slate-700 hover:bg-slate-700 transition-all text-xs"
-                    >
+                    <button id="logoutBtn" class="bg-slate-800 text-white px-3 py-1 font-medium border border-slate-700 hover:bg-slate-700 text-xs">
                         <span data-i18n="nav.logout">Logout</span>
+                    </button>
+                    <!-- Mobile burger -->
+                    <button id="mobileMenuBtn" class="sm:hidden px-2 py-1 border border-slate-700 bg-slate-800 text-white text-sm" onclick="document.getElementById('tabsNav').classList.toggle('hidden')">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
                 </div>
             </div>
         </div>
+        <!-- Tabs ribbon — scrollable on mobile, inline on desktop -->
+        <div id="tabsNav" class="border-t border-slate-800 hidden sm:block">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto no-scrollbar">
+                <button class="tab-btn border-b-2 border-blue-500 text-blue-400 py-2.5 px-3 text-xs font-bold whitespace-nowrap uppercase tracking-wide" data-tab="orders">Orders</button>
+                <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-white py-2.5 px-3 text-xs font-bold whitespace-nowrap uppercase tracking-wide" data-tab="treasury">Treasury</button>
+                <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-white py-2.5 px-3 text-xs font-bold whitespace-nowrap uppercase tracking-wide" data-tab="wallets">Wallets</button>
+                <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-white py-2.5 px-3 text-xs font-bold whitespace-nowrap uppercase tracking-wide" data-tab="developer">Developer</button>
+                <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-white py-2.5 px-3 text-xs font-bold whitespace-nowrap uppercase tracking-wide" data-tab="fees">Fees</button>
+                <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-white py-2.5 px-3 text-xs font-bold whitespace-nowrap uppercase tracking-wide" data-tab="settings">Settings</button>
+            </div>
+        </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Merchant Profile Card -->
-        <div class="bg-slate-900 border border-slate-800 mb-8 overflow-hidden">
-            <div class="bg-gradient-to-r from-blue-600 to-blue-500 px-4 sm:px-6 py-4 sm:py-5">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-xl font-bold text-white" id="profileInitial">
-                            ?
-                        </div>
-                        <div class="text-white">
-                            <h1 class="text-xl font-bold" id="profileCompanyName">Loading...</h1>
-                            <p class="text-blue-100 text-sm" id="profileEmail">...</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium mb-2" id="profileStatusBadge">
-                            <span>Pending</span>
-                        </div>
-                        <span id="profilePlan" class="hidden"></span>
-                    </div>
-                </div>
-            </div>
-            <div class="px-6 py-4 bg-slate-900">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-sm">
-                    <div>
-                        <div class="text-slate-500 mb-1">Contact</div>
-                        <div class="font-medium text-white" id="profileContact">-</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-500 mb-1">Total Orders</div>
-                        <div class="font-medium text-white" id="profileOrderCount">0</div>
-                    </div>
-                    <div>
-                        <div class="text-slate-500 mb-1">Member Since</div>
-                        <div class="font-medium text-white" id="profileCreatedAt">-</div>
-                    </div>
-                </div>
-            </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Hidden profile fields for JS compatibility -->
+        <div class="hidden">
+            <span id="profileInitial"></span>
+            <span id="profileCompanyName"></span>
+            <span id="profileEmail"></span>
+            <span id="profileStatusBadge"></span>
+            <span id="profilePlan"></span>
+            <span id="profileContact"></span>
+            <span id="profileOrderCount"></span>
+            <span id="profileCreatedAt"></span>
         </div>
 
         <!-- Pricing & Fees Card -->
@@ -808,42 +791,12 @@
             </div>
         </div>
 
-        <!-- Main Content Tabs -->
-        <div class="bg-slate-900 border border-slate-800">
-            <!-- Tab Navigation -->
-            <div class="border-b border-slate-800">
-                <nav class="-mb-px flex space-x-4 sm:space-x-8 px-4 sm:px-6 overflow-x-auto" aria-label="Tabs" style="scrollbar-width: none; -webkit-overflow-scrolling: touch;">
-                    <button class="tab-btn border-blue-500 text-blue-400 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="orders">
-                        Orders
-                    </button>
-                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="treasury">
-                        Treasury
-                    </button>
-                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="refunds">
-                        <span>Refunds</span>
-                        <span id="refundsAlertBadge" class="hidden ml-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">0</span>
-                    </button>
-                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="wallets">
-                        Wallets
-                    </button>
-                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="developer">
-                        Developer
-                    </button>
-                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="payments">
-                        Payment Links
-                    </button>
-                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="fees">
-                        <span id="feesTabLabel">Fees</span>
-                        <span id="feesAlertBadge" class="hidden ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">!</span>
-                    </button>
-                    <button class="tab-btn border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="settings">
-                        Settings
-                    </button>
-                </nav>
-            </div>
-
-            <!-- Tab Content -->
-            <div class="p-6">
+        <!-- Main Content -->
+        <div>
+            <!-- Hidden elements for JS compat -->
+            <span id="refundsAlertBadge" class="hidden"></span>
+            <span id="feesTabLabel" class="hidden"></span>
+            <span id="feesAlertBadge" class="hidden"></span>
                 <!-- Treasury Tab -->
                 <div id="treasuryTab" class="tab-content hidden">
                     <div class="flex justify-between items-center mb-6">
@@ -2195,22 +2148,31 @@ onMounted(() => {
         function switchTab(tabName) {
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
-            
+
             // Show selected tab
-            document.getElementById(tabName + 'Tab').classList.remove('hidden');
-            
-            // Update tab buttons
+            const tabEl = document.getElementById(tabName + 'Tab');
+            if (tabEl) tabEl.classList.remove('hidden');
+
+            // Update ALL tab buttons (both navs in case duplicates)
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('border-blue-500', 'text-blue-400');
-                btn.classList.add('border-transparent', 'text-slate-400', 'hover:text-slate-300', 'hover:border-slate-800');
+                btn.classList.add('border-transparent', 'text-slate-400');
             });
-            
-            // Highlight active tab
-            const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
-            activeBtn.classList.remove('border-transparent', 'text-slate-400', 'hover:text-slate-300', 'hover:border-slate-800');
-            activeBtn.classList.add('border-blue-500', 'text-blue-400');
-            
+
+            // Highlight active tab(s)
+            document.querySelectorAll(`[data-tab="${tabName}"]`).forEach(btn => {
+                btn.classList.remove('border-transparent', 'text-slate-400');
+                btn.classList.add('border-blue-500', 'text-blue-400');
+            });
+
             currentTab = tabName;
+
+            // Update URL hash
+            history.replaceState(null, '', '#' + tabName);
+
+            // Close mobile menu
+            const tabsNav = document.getElementById('tabsNav');
+            if (tabsNav && window.innerWidth < 640) tabsNav.classList.add('hidden');
             
             // Load tab content
             if (tabName === 'orders') {
@@ -2280,7 +2242,7 @@ onMounted(() => {
 
             // Current fee display
             document.getElementById('currentFeeDisplay').textContent = (currentFee * 100).toFixed(1) + '%';
-            document.getElementById('feesOwedDisplay').textContent = '$' + feesDue.toFixed(2);
+            document.getElementById('feesOwedDisplay').textContent = '$' + (feesDue < 0.01 && feesDue > 0 ? feesDue.toFixed(4) : feesDue.toFixed(2));
 
             // Volume display
             const fmtVol = monthlyVolume.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -3324,7 +3286,8 @@ onMounted(() => {
 
                 // Totals
                 document.getElementById('treasuryTotal').textContent = '$' + (bal.totalUSD || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
-                document.getElementById('treasuryFees').textContent = '$' + (bal.feesDue || 0).toFixed(2);
+                const fd = bal.feesDue || 0;
+                document.getElementById('treasuryFees').textContent = '$' + (fd < 0.01 && fd > 0 ? fd.toFixed(4) : fd.toFixed(2));
                 document.getElementById('treasuryNet').textContent = '$' + (bal.netAvailable || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
 
                 // Per-chain wallets
@@ -5539,6 +5502,18 @@ onMounted(() => {
             // Tab switching
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+            });
+
+            // Hash routing — open tab from URL hash
+            const hash = window.location.hash.slice(1);
+            if (hash && document.getElementById(hash + 'Tab')) {
+                switchTab(hash);
+            }
+
+            // Listen for hash changes (back/forward)
+            window.addEventListener('hashchange', () => {
+                const h = window.location.hash.slice(1);
+                if (h && document.getElementById(h + 'Tab')) switchTab(h);
             });
 
 
