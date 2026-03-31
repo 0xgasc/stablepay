@@ -2639,10 +2639,11 @@ onMounted(() => {
             // Update UI
             document.getElementById('daysElapsed').textContent = daysElapsed;
             document.getElementById('daysRemaining').textContent = daysRemaining;
-            document.getElementById('dailyAvgVolume').textContent = `$${dailyAvgVolume.toFixed(2)}`;
-            document.getElementById('dailyAvgFees').textContent = `$${dailyAvgFees.toFixed(2)}`;
+            const fmtFee = (v) => '$' + (v < 0.01 && v > 0 ? v.toFixed(4) : v.toFixed(2));
+            document.getElementById('dailyAvgVolume').textContent = `$${dailyAvgVolume.toFixed(4)}`;
+            document.getElementById('dailyAvgFees').textContent = fmtFee(dailyAvgFees);
             document.getElementById('projectedVolume').textContent = `$${projectedVolume.toFixed(2)}`;
-            document.getElementById('projectedFees').textContent = `$${projectedFees.toFixed(2)}`;
+            document.getElementById('projectedFees').textContent = fmtFee(projectedFees);
 
             // Update badge color based on projected fees (red if high)
             const badge = document.getElementById('projectionBadge');
