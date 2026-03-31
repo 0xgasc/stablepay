@@ -323,21 +323,21 @@
             </div>
           </div>
 
-          <!-- Payment Method Tabs: CONNECT vs SEND -->
+          <!-- Payment Method Tabs: SEND (default) vs CONNECT -->
           <div style="margin-bottom: 12px;">
             <div id="sp-method-tabs" style="display: flex; gap: 0; margin-bottom: 12px; border: 3px solid #000;">
-              <button class="sp-method-tab" data-method="wallet" style="
+              <button class="sp-method-tab" data-method="send" style="
                 flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 700; border: none;
                 background: #000; color: #fff; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
-              ">Connect Wallet</button>
-              <button class="sp-method-tab" data-method="send" style="
+              ">Send Payment</button>
+              <button class="sp-method-tab" data-method="wallet" style="
                 flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 700; border: none; border-left: 2px solid #000;
                 background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
-              ">Send Manually</button>
+              ">Connect Wallet</button>
             </div>
 
             <!-- Method: Connect Wallet -->
-            <div id="sp-method-wallet" class="sp-method-panel">
+            <div id="sp-method-wallet" class="sp-method-panel" style="display: none;">
               <div id="sp-wallet-status" style="
                 background: var(--sp-card); border: 3px solid #000;
                 padding: 12px; margin-bottom: 12px;
@@ -359,22 +359,31 @@
               ">Connect Wallet to Pay</button>
             </div>
 
-            <!-- Method: Send Manually (QR + Address merged) -->
-            <div id="sp-method-send" class="sp-method-panel" style="display: none;">
+            <!-- Method: Send Payment (default) -->
+            <div id="sp-method-send" class="sp-method-panel">
+              <!-- Step indicator -->
+              <div id="sp-step-indicator" style="display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 14px; padding: 0 12px;">
+                <div class="sp-step-dot sp-step-active" data-step="1" style="width: 24px; height: 24px; border-radius: 50%; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">1</div>
+                <div style="flex: 1; height: 2px; background: var(--sp-border);"></div>
+                <div class="sp-step-dot" data-step="2" style="width: 24px; height: 24px; border-radius: 50%; background: var(--sp-card); color: var(--sp-muted); border: 2px solid var(--sp-border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">2</div>
+                <div style="flex: 1; height: 2px; background: var(--sp-border);"></div>
+                <div class="sp-step-dot" data-step="3" style="width: 24px; height: 24px; border-radius: 50%; background: var(--sp-card); color: var(--sp-muted); border: 2px solid var(--sp-border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">3</div>
+              </div>
+
               <!-- Step 1: Enter wallet -->
               <div id="sp-send-step1" style="padding: 12px;">
-                <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 6px;">Step 1: Your wallet address</div>
+                <div style="font-size: 11px; font-weight: 700; color: var(--sp-text); margin-bottom: 2px;">Your Wallet Address</div>
+                <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Enter the address you'll send from — so we can match your payment.</p>
                 <div style="display: flex; gap: 6px;">
                   <input id="sp-sender-wallet" type="text" placeholder="${this.selectedChain?.config?.type === 'solana' ? 'Solana address (base58)' : '0x... (EVM address)'}" style="
-                    flex: 1; padding: 8px; font-size: 11px; font-family: monospace; border: 3px solid #000;
+                    flex: 1; padding: 10px; font-size: 11px; font-family: monospace; border: 3px solid #000;
                     background: var(--sp-card); color: var(--sp-text); outline: none;
                   ">
                   <button id="sp-sender-wallet-btn" style="
-                    padding: 6px 14px; background: #000; color: #fff; border: none;
+                    padding: 8px 16px; background: #000; color: #fff; border: none;
                     font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
                   ">Next</button>
                 </div>
-                <p style="font-size: 9px; color: var(--sp-muted); margin-top: 4px;">The address you'll send from — so we can match your payment.</p>
               </div>
               <!-- Step 2: QR + Address + Amount (hidden until step 1 done) -->
               <div id="sp-send-step2" style="display: none; padding: 12px;">
@@ -418,7 +427,7 @@
               </div>
               <!-- Step 3: Listening -->
               <div id="sp-send-step3" style="display: none; text-align: center; padding: 20px;">
-                <div style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; margin-bottom: 8px;">Confirming</div>
+                <div style="font-size: 11px; font-weight: 700; color: var(--sp-text); margin-bottom: 8px;">Waiting for Confirmation</div>
                 <div style="margin: 12px 0;">
                   <span class="sp-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid var(--sp-border); border-top-color: #00E5FF; border-radius: 50%;"></span>
                 </div>
@@ -523,7 +532,7 @@
 
               steps.forEach((s, i) => setTimeout(() => showStep(i), s.delay));
               // After last step, trigger transition to step 2
-              setTimeout(() => showStep(steps.length), 1800);
+              setTimeout(() => { showStep(steps.length); this.updateStepIndicator(2); }, 1800);
             }
           }
         });
@@ -536,6 +545,7 @@
         sentBtn.addEventListener('click', () => {
           this.container.querySelector('#sp-send-step2').style.display = 'none';
           this.container.querySelector('#sp-send-step3').style.display = 'block';
+          this.updateStepIndicator(3);
           this.startPaymentPolling();
         });
       }
@@ -579,6 +589,40 @@
       // If wallet connected via Connect Wallet tab, skip step 1 on Send tab
       const step1 = this.container.querySelector('#sp-send-step1');
       if (step1) step1.style.display = 'none';
+    }
+
+    updateStepIndicator(activeStep) {
+      const dots = this.container.querySelectorAll('.sp-step-dot');
+      dots.forEach(dot => {
+        const step = parseInt(dot.dataset.step);
+        if (step < activeStep) {
+          // Completed
+          dot.style.background = '#22c55e';
+          dot.style.color = '#fff';
+          dot.style.border = 'none';
+          dot.innerHTML = '✓';
+        } else if (step === activeStep) {
+          // Active
+          dot.style.background = '#000';
+          dot.style.color = '#fff';
+          dot.style.border = 'none';
+          dot.innerHTML = step;
+        } else {
+          // Upcoming
+          dot.style.background = 'var(--sp-card)';
+          dot.style.color = 'var(--sp-muted)';
+          dot.style.border = '2px solid var(--sp-border)';
+          dot.innerHTML = step;
+        }
+      });
+      // Update connecting lines
+      const indicator = this.container.querySelector('#sp-step-indicator');
+      if (indicator) {
+        const lines = indicator.querySelectorAll('div[style*="height: 2px"]');
+        lines.forEach((line, i) => {
+          line.style.background = (i + 1) < activeStep ? '#22c55e' : 'var(--sp-border)';
+        });
+      }
     }
 
     switchPaymentMethod(method) {
