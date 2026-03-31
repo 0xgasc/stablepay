@@ -209,6 +209,19 @@
           this.selectedChain = this.merchantChains[0];
           this.selectedToken = this.selectedChain.supportedTokens[0] || 'USDC';
         }
+
+        // Apply server-side widget config (data-* attributes override)
+        if (data.widgetConfig) {
+          const wc = data.widgetConfig;
+          const c = this.container;
+          if (wc.borderStyle && !c.dataset.borderStyle) this.options.borderStyle = wc.borderStyle;
+          if (wc.theme && !c.dataset.theme) this.options.theme = wc.theme;
+          if (wc.headerColor && !c.dataset.headerColor) this.options.headerColor = wc.headerColor;
+          if (wc.headerTextColor && !c.dataset.headerTextColor) this.options.headerTextColor = wc.headerTextColor;
+          if (wc.logoUrl && !c.dataset.logo) this.options.logoUrl = wc.logoUrl;
+          if (wc.buttonText && !c.dataset.buttonText) this.options.buttonText = wc.buttonText;
+          if (wc.hideFooter && !c.dataset.hideFooter) this.options.hideFooter = true;
+        }
       } catch (error) {
         console.error('StablePay: Error loading merchant config', error);
       }

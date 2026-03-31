@@ -1702,8 +1702,13 @@ onMounted(() => {
                                         <span id="wcHideFooterBadge" class="text-[10px] px-2 py-0.5 bg-yellow-900/30 text-yellow-400 border border-yellow-700 rounded-full hidden">GROWTH+</span>
                                     </div>
 
-                                    <div class="pt-4 border-t border-slate-800">
-                                        <label class="block text-sm font-medium text-slate-300 mb-2">Embed Code</label>
+                                    <button id="saveWidgetConfigBtn" onclick="saveWidgetConfig()" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm font-medium transition-colors mt-2">
+                                        Save Widget Config
+                                    </button>
+                                    <div id="wcSaveStatus" class="text-xs text-green-400 mt-1 hidden">Saved! Changes apply to all embeds automatically.</div>
+
+                                    <div class="pt-4 border-t border-slate-800 mt-4">
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Embed Code <span class="text-slate-500">(optional overrides)</span></label>
                                         <textarea id="wcEmbedCode" readonly rows="6" class="w-full px-3 py-2 bg-black text-green-400 border border-slate-800 font-mono text-xs"></textarea>
                                         <button onclick="navigator.clipboard.writeText(document.getElementById('wcEmbedCode').value);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Embed Code',1500)" class="mt-2 bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 transition-colors w-full">
                                             Copy Embed Code
@@ -5295,8 +5300,74 @@ onMounted(() => {
 
         // Load settings
         function loadSettings() {
-            // Settings are already loaded in loadMerchantData
+            // Load widget config from merchant
+            loadWidgetConfig();
             updateWidgetPreview();
+        }
+
+        async function loadWidgetConfig() {
+            if (!currentMerchant?.id) return;
+            try {
+                const res = await fetch(`/api/embed/widget-config?merchantId=${currentMerchant.id}`);
+                const data = await res.json();
+                if (data.widgetConfig) {
+                    const wc = data.widgetConfig;
+                    if (wc.borderStyle) document.getElementById('wcBorderStyle').value = wc.borderStyle;
+                    if (wc.theme) document.getElementById('wcTheme').value = wc.theme;
+                    if (wc.headerColor) {
+                        document.getElementById('wcHeaderColor').value = wc.headerColor;
+                        document.getElementById('wcHeaderHex').value = wc.headerColor;
+                    }
+                    if (wc.headerTextColor) document.getElementById('wcHeaderTextColor').value = wc.headerTextColor;
+                    if (wc.logoUrl) document.getElementById('wcLogoUrl').value = wc.logoUrl;
+                    if (wc.buttonText) document.getElementById('wcButtonText').value = wc.buttonText;
+                    if (wc.hideFooter) document.getElementById('wcHideFooter').checked = true;
+                    updateWidgetPreview();
+                }
+            } catch (err) {
+                console.error('Load widget config error:', err);
+            }
+        }
+
+        async function saveWidgetConfig() {
+            const btn = document.getElementById('saveWidgetConfigBtn');
+            const status = document.getElementById('wcSaveStatus');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            const config = {
+                borderStyle: document.getElementById('wcBorderStyle')?.value || 'brutal',
+                theme: document.getElementById('wcTheme')?.value || 'light',
+                headerColor: document.getElementById('wcHeaderHex')?.value || '#00E5FF',
+                headerTextColor: document.getElementById('wcHeaderTextColor')?.value || 'dark',
+                logoUrl: document.getElementById('wcLogoUrl')?.value || '',
+                buttonText: document.getElementById('wcButtonText')?.value || '',
+                hideFooter: document.getElementById('wcHideFooter')?.checked || false,
+            };
+
+            // Remove empty values
+            Object.keys(config).forEach(k => { if (!config[k]) delete config[k]; });
+
+            try {
+                const res = await fetch('/api/embed/widget-config', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionStorage.getItem('merchantToken'),
+                    },
+                    body: JSON.stringify(config),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+
+                status.classList.remove('hidden');
+                setTimeout(() => status.classList.add('hidden'), 3000);
+            } catch (err) {
+                alert('Failed to save: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Widget Config';
+            }
         }
 
         function updateWidgetPreview() {

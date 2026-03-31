@@ -12,7 +12,7 @@ const CHAIN_RPC: Record<string, { rpc: string; tokens: Record<string, string> }>
 };
 const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'];
 const ENCRYPTION_KEY = process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
-const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY;
+const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY?.trim();
 
 function decryptManagedKey(encrypted: string): string {
   if (!ENCRYPTION_KEY) throw new Error('Encryption key not configured');

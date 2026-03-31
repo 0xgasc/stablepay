@@ -140,6 +140,9 @@ model Merchant {
   // Receipt settings
   autoSendReceipts      Boolean     @default(false)   // Auto-email receipts to customers
 
+  // Widget customization (JSON stored as string)
+  widgetConfig          Json?       // { borderStyle, theme, headerColor, headerTextColor, logoUrl, buttonText, hideFooter }
+
   wallets               MerchantWallet[]
   orders                Order[]
   feePayments           FeePayment[]

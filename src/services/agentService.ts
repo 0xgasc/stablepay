@@ -33,7 +33,7 @@ function decryptKey(encrypted: string): string {
 }
 
 // ─── Agent wallet + chain RPC config ────────────────────────────────────────
-const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY;
+const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY?.trim();
 const AGENT_WALLET_ADDRESS = process.env.AGENT_WALLET_ADDRESS;
 
 const CHAIN_RPC: Record<string, { rpc: string; usdc: string }> = {

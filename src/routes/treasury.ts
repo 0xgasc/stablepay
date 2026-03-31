@@ -16,7 +16,7 @@ const CHAIN_RPC: Record<string, { rpc: string; tokens: Record<string, string> }>
 };
 const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'];
 const ENCRYPTION_KEY = process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
-const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY;
+const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY?.trim();
 
 function decryptKey(encrypted: string): string {
   if (!ENCRYPTION_KEY) throw new Error('Encryption key not configured');
@@ -85,7 +85,7 @@ router.post('/withdraw', requireMerchantAuth, async (req, res) => {
 
     const amountRaw = ethers.parseUnits(amount.toString(), 6);
 
-    const privateKey = decryptKey(managedWallet.encryptedKey);
+    const privateKey = decryptKey(managedWallet.encryptedKey).trim();
     const provider = new ethers.JsonRpcProvider(chainConf.rpc);
     const wallet = new ethers.Wallet(privateKey, provider);
 

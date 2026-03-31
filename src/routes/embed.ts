@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../config/database';
 import { rateLimit } from '../middleware/rateLimit';
+import { requireMerchantAuth } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { webhookService } from '../services/webhookService';
 
@@ -49,7 +50,7 @@ router.get('/chains', async (req, res) => {
     const merchant = await db.merchant.findUnique({
       where: { id: merchantId as string },
       select: {
-        id: true, isActive: true, isSuspended: true, companyName: true,
+        id: true, isActive: true, isSuspended: true, companyName: true, plan: true, widgetConfig: true,
         wallets: {
           where: { isActive: true },
           orderBy: { priority: 'asc' },
@@ -66,11 +67,17 @@ router.get('/chains', async (req, res) => {
       return res.status(503).json({ error: 'Merchant temporarily unavailable' });
     }
 
+    // Gate hideFooter to GROWTH+ plans
+    const widgetConfig = (merchant.widgetConfig as any) || {};
+    const canHideFooter = ['GROWTH', 'SCALE', 'ENTERPRISE'].includes(merchant.plan);
+    if (!canHideFooter) delete widgetConfig.hideFooter;
+
     res.json({
       merchantId,
       merchantName: merchant.companyName,
       chains: merchant.wallets.map(w => w.chain),
       wallets: merchant.wallets,
+      widgetConfig,
     });
   } catch (error) {
     console.error('Get embed chains error:', error);
@@ -240,6 +247,63 @@ router.get('/order/:orderId', async (req, res) => {
     });
   } catch (error) {
     console.error('Get embed order error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Save widget configuration (merchant auth required)
+ */
+router.put('/widget-config', requireMerchantAuth, async (req, res) => {
+  try {
+    const merchant = (req as any).merchant;
+    const config = req.body;
+
+    // Validate allowed keys
+    const allowed = ['borderStyle', 'theme', 'headerColor', 'headerTextColor', 'logoUrl', 'buttonText', 'hideFooter'];
+    const clean: Record<string, any> = {};
+    for (const key of allowed) {
+      if (config[key] !== undefined) clean[key] = config[key];
+    }
+
+    // Gate hideFooter
+    const canHideFooter = ['GROWTH', 'SCALE', 'ENTERPRISE'].includes(merchant.plan);
+    if (!canHideFooter) delete clean.hideFooter;
+
+    await db.merchant.update({
+      where: { id: merchant.id },
+      data: { widgetConfig: clean },
+    });
+
+    res.json({ success: true, widgetConfig: clean });
+  } catch (error) {
+    console.error('Save widget config error:', error);
+    res.status(500).json({ error: 'Failed to save widget config' });
+  }
+});
+
+/**
+ * Get widget configuration (public)
+ */
+router.get('/widget-config', async (req, res) => {
+  try {
+    const { merchantId } = req.query;
+    if (!merchantId) return res.status(400).json({ error: 'merchantId required' });
+
+    const merchant = await db.merchant.findUnique({
+      where: { id: merchantId as string },
+      select: { widgetConfig: true, plan: true },
+    });
+
+    if (!merchant) return res.status(404).json({ error: 'Merchant not found' });
+
+    const config = (merchant.widgetConfig as any) || {};
+    const canHideFooter = ['GROWTH', 'SCALE', 'ENTERPRISE'].includes(merchant.plan);
+    if (!canHideFooter) delete config.hideFooter;
+
+    res.json({ widgetConfig: config });
+  } catch (error) {
+    console.error('Get widget config error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
