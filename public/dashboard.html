@@ -3900,8 +3900,8 @@ onMounted(() => {
             }
         });
 
-        // Create Demo Store
-        document.getElementById('createDemoStoreBtn').addEventListener('click', async () => {
+        // Create Demo Store (legacy — button may not exist)
+        document.getElementById('createDemoStoreBtn')?.addEventListener('click', async () => {
             if (!currentMerchant) {
                 alert('Please wait for merchant data to load');
                 return;
@@ -3978,7 +3978,7 @@ onMounted(() => {
         let testConnectedWalletAddress = null;
         let testWalletType = null; // 'metamask' or 'phantom'
 
-        document.getElementById('testPaymentBtn').addEventListener('click', () => {
+        document.getElementById('testPaymentBtn')?.addEventListener('click', () => {
             if (merchantWallets.length === 0) {
                 alert('Please configure at least one wallet first');
                 return;
