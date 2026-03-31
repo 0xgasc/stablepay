@@ -258,10 +258,15 @@ export class BlockchainService {
 
   async scanAll(): Promise<void> {
     console.log('[scanner] scanAll starting...');
+
+    // Global timeout wrapper — kill if any scan hangs
+    const timeoutPromise = (p: Promise<any>, ms: number, label: string) =>
+      Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} timed out after ${ms}ms`)), ms))]);
+
     // Run Solana + TRON in parallel with EVM (don't let EVM block them)
     const nonEvmScans = Promise.all([
-      this.scanSolanaPayments().catch(e => console.error('[scanner] Solana error:', e.message, e.stack?.slice(0, 200))),
-      this.scanTronPayments().catch(e => console.error('[scanner] TRON error:', e.message)),
+      timeoutPromise(this.scanSolanaPayments(), 20000, 'Solana scan').catch(e => console.error('[scanner] Solana error:', e.message)),
+      timeoutPromise(this.scanTronPayments(), 15000, 'TRON scan').catch(e => console.error('[scanner] TRON error:', e.message)),
     ]);
 
     // EVM chains — only scan chains that have pending orders (skip idle chains)
