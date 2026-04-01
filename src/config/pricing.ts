@@ -111,7 +111,7 @@ export function getVolumeTier(monthlyVolume: number): typeof VOLUME_TIERS[number
 }
 
 /**
- * Calculate transaction fee based on volume tier OR custom enterprise rate
+ * Get the marginal fee rate for the next dollar at this volume level
  */
 export function getTransactionFeePercent(
   monthlyVolume: number,
@@ -124,14 +124,57 @@ export function getTransactionFeePercent(
 }
 
 /**
- * Calculate fee amount for a transaction
+ * Calculate fee using PROGRESSIVE BRACKETS (like income tax)
+ *
+ * First $10k → 1.0%, $10k-$50k → 0.8%, $50k-$250k → 0.5%, $250k+ → 0.3%
+ * If a transaction crosses a bracket boundary, the fee is split proportionally.
+ *
+ * Example: volume is $8k, new order is $5k
+ *   $2k at 1.0% ($8k→$10k) = $20
+ *   $3k at 0.8% ($10k→$13k) = $24
+ *   Total fee = $44 (effective rate 0.88%)
  */
 export function calculateFee(
   amount: number,
   monthlyVolume: number,
   customFeePercent?: number | null
 ): number {
-  return amount * getTransactionFeePercent(monthlyVolume, customFeePercent);
+  // Enterprise custom rate — flat, no brackets
+  if (customFeePercent !== null && customFeePercent !== undefined) {
+    return amount * customFeePercent;
+  }
+
+  let remaining = amount;
+  let currentVolume = monthlyVolume;
+  let totalFee = 0;
+
+  for (const tier of VOLUME_TIERS) {
+    if (remaining <= 0) break;
+    if (currentVolume >= tier.maxVolume) continue; // Already past this bracket
+
+    // How much room is left in this bracket?
+    const bracketRoom = tier.maxVolume - Math.max(currentVolume, tier.minVolume);
+    const amountInBracket = Math.min(remaining, bracketRoom);
+
+    totalFee += amountInBracket * tier.feePercent;
+    remaining -= amountInBracket;
+    currentVolume += amountInBracket;
+  }
+
+  return totalFee;
+}
+
+/**
+ * Calculate effective fee rate for display purposes
+ */
+export function getEffectiveFeeRate(
+  amount: number,
+  monthlyVolume: number,
+  customFeePercent?: number | null
+): number {
+  if (amount <= 0) return getTransactionFeePercent(monthlyVolume, customFeePercent);
+  const fee = calculateFee(amount, monthlyVolume, customFeePercent);
+  return fee / amount;
 }
 
 /**
@@ -186,15 +229,22 @@ export function getMerchantPricingSummary(
   const currentTierIndex = VOLUME_TIERS.findIndex(t => t.name === volumeTier.name);
   const nextTier = VOLUME_TIERS[currentTierIndex + 1];
 
+  // Calculate total fees using progressive brackets
+  const totalBracketFees = calculateFee(monthlyVolume, 0, customFeePercent);
+  const effectiveRate = monthlyVolume > 0 ? totalBracketFees / monthlyVolume : effectiveFee;
+
   return {
     plan: normalizePlan(plan),
     planName: features.name,
     isPro,
     volumeTier: volumeTier.name,
-    currentFeePercent: effectiveFee,
-    currentFeeDisplay: formatFeePercent(effectiveFee),
+    currentMarginalRate: effectiveFee,
+    currentMarginalDisplay: formatFeePercent(effectiveFee),
+    effectiveFeePercent: effectiveRate,
+    effectiveFeeDisplay: formatFeePercent(effectiveRate),
     monthlyVolume,
     isCustomRate: customFeePercent !== null && customFeePercent !== undefined,
+    bracketModel: 'progressive', // Like income tax — each bracket applies only to volume in that range
     nextTier: nextTier ? {
       name: nextTier.name,
       volumeNeeded: nextTier.minVolume - monthlyVolume,

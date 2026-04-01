@@ -394,8 +394,8 @@ router.post('/suspend', async (req, res) => {
 // Public: Get pricing tiers and billing info
 router.get('/pricing', (_req, res) => {
   res.json({
-    model: 'volume-based fees + PRO feature unlock',
-    description: 'Everyone pays volume-based transaction fees. PRO unlocks refunds, receipts, branding at $5k/mo or $19/mo.',
+    model: 'progressive fee brackets + PRO feature unlock',
+    description: 'Fees apply per bracket (like income tax). First $10k at 1%, next $40k at 0.8%, etc. Only volume above each threshold gets the lower rate. PRO unlocks refunds, receipts, branding at $5k/mo or $19/mo.',
     volumeTiers: VOLUME_TIERS.map(t => ({
       name: t.name,
       minVolume: t.minVolume,

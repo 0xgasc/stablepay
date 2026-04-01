@@ -276,10 +276,11 @@ export class OrderService {
         ? Number(confirmedOrder.merchant.customFeePercent)
         : null;
 
-      // Calculate fee at NEW volume tier (after this order is added)
+      // Calculate fee using progressive brackets (fee applies per bracket, not flat)
+      // currentVolume is BEFORE this order — fee calculated on marginal position
+      const feeAmount = calculateFee(orderAmount, currentVolume, customFee);
+      const feePercent = orderAmount > 0 ? feeAmount / orderAmount : getTransactionFeePercent(currentVolume, customFee);
       const newVolume = currentVolume + orderAmount;
-      const feePercent = getTransactionFeePercent(newVolume, customFee);
-      const feeAmount = orderAmount * feePercent;
 
       const isMainnet = confirmedOrder.merchant.networkMode === 'MAINNET';
 
