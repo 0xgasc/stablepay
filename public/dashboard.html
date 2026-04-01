@@ -3371,7 +3371,7 @@ onMounted(() => {
             loadPaymentLinks();
         }
 
-        function openWithdrawModal() {
+        async function openWithdrawModal() {
             document.getElementById('withdrawModal').classList.remove('hidden');
             document.getElementById('withdrawAmount').value = '';
             document.getElementById('withdrawAddress').value = '';
