@@ -65,12 +65,17 @@ router.post('/withdraw', requireMerchantAuth, async (req, res) => {
       return res.status(400).json({ error: 'toAddress, amount, and chain are required' });
     }
     if (amount <= 0) return res.status(400).json({ error: 'Amount must be positive' });
-    if (!/^0x[a-fA-F0-9]{40}$/.test(toAddress)) {
+
+    // Validate address format per chain
+    if (chain === 'SOLANA_MAINNET') {
+      if (toAddress.startsWith('0x') || toAddress.length < 30) {
+        return res.status(400).json({ error: 'Invalid Solana address' });
+      }
+    } else if (chain === 'TRON_MAINNET') {
+      return res.status(400).json({ error: 'TRON withdrawals coming soon' });
+    } else if (!/^0x[a-fA-F0-9]{40}$/.test(toAddress)) {
       return res.status(400).json({ error: 'Invalid EVM address' });
     }
-
-    const chainConf = CHAIN_RPC[chain];
-    if (!chainConf) return res.status(400).json({ error: `Unsupported chain: ${chain}` });
 
     const managedWallet = await db.managedWallet.findUnique({
       where: { merchantId_chain: { merchantId: merchant.id, chain } },
@@ -81,6 +86,73 @@ router.post('/withdraw', requireMerchantAuth, async (req, res) => {
     }
 
     const tokenName = token || 'USDC';
+
+    // Solana SPL token withdrawal
+    if (chain === 'SOLANA_MAINNET') {
+      try {
+        const { Connection, PublicKey, Keypair, Transaction } = await import('@solana/web3.js');
+        const { createTransferCheckedInstruction, getOrCreateAssociatedTokenAccount } = await import('@solana/spl-token');
+        const bs58 = await import('bs58');
+
+        const MINTS: Record<string, string> = {
+          USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+          USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+          EURC: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr',
+        };
+        const mintAddr = MINTS[tokenName];
+        if (!mintAddr) return res.status(400).json({ error: `${tokenName} not supported on Solana` });
+
+        const solRpc = (process.env.SOLANA_MAINNET_RPC_URL || 'https://api.mainnet-beta.solana.com').trim();
+        const connection = new Connection(solRpc, 'confirmed');
+        const privateKey = decryptKey(managedWallet.encryptedKey).trim();
+        const keypair = Keypair.fromSecretKey(bs58.default.decode(privateKey));
+        const mint = new PublicKey(mintAddr);
+        const recipient = new PublicKey(toAddress);
+        const TOKEN_PROGRAM = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+        const ATA_PROGRAM = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+
+        const [senderAta] = PublicKey.findProgramAddressSync(
+          [keypair.publicKey.toBuffer(), TOKEN_PROGRAM.toBuffer(), mint.toBuffer()], ATA_PROGRAM
+        );
+
+        // Check balance
+        const balRes = await fetch(solRpc, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenAccountBalance', params: [senderAta.toBase58()] }),
+        });
+        const balData: any = await balRes.json();
+        const available = parseFloat(balData.result?.value?.uiAmountString || '0');
+        if (available < amount) {
+          return res.status(400).json({ error: `Insufficient balance. Available: $${available.toFixed(4)}` });
+        }
+
+        const amountRaw = BigInt(Math.round(amount * 1e6));
+        await getOrCreateAssociatedTokenAccount(connection, keypair, mint, recipient);
+        const [recipientAta] = PublicKey.findProgramAddressSync(
+          [recipient.toBuffer(), TOKEN_PROGRAM.toBuffer(), mint.toBuffer()], ATA_PROGRAM
+        );
+
+        const tx = new Transaction().add(
+          createTransferCheckedInstruction(senderAta, mint, recipientAta, keypair.publicKey, amountRaw, 6)
+        );
+        const sig = await connection.sendTransaction(tx, [keypair]);
+        await connection.confirmTransaction(sig, 'confirmed');
+
+        await db.treasuryMove.create({
+          data: { merchantId: merchant.id, type: 'WITHDRAWAL', chain, token: tokenName, amount, fromAddress: managedWallet.address, toAddress, txHash: sig, status: 'COMPLETED' },
+        });
+
+        logger.info('Solana withdrawal', { merchantId: merchant.id, chain, token: tokenName, amount, txHash: sig, to: toAddress });
+        return res.json({ success: true, txHash: sig, amount, token: tokenName, chain, from: managedWallet.address, to: toAddress });
+      } catch (err: any) {
+        logger.error('Solana withdrawal failed', err, { merchantId: merchant.id });
+        return res.status(500).json({ error: 'Solana withdrawal failed: ' + err.message });
+      }
+    }
+
+    // EVM withdrawal
+    const chainConf = CHAIN_RPC[chain];
+    if (!chainConf) return res.status(400).json({ error: `Unsupported chain: ${chain}` });
     const tokenAddress = chainConf.tokens[tokenName];
     if (!tokenAddress) return res.status(400).json({ error: `Token ${tokenName} not supported on ${chain}` });
 

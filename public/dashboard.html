@@ -2012,12 +2012,9 @@ onMounted(() => {
 
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Chain</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Chain <span class="text-slate-500 text-xs">(managed wallets only)</span></label>
                     <select id="withdrawChain" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded">
-                        <option value="BASE_MAINNET">Base</option>
-                        <option value="ETHEREUM_MAINNET">Ethereum</option>
-                        <option value="POLYGON_MAINNET">Polygon</option>
-                        <option value="ARBITRUM_MAINNET">Arbitrum</option>
+                        <!-- Populated dynamically from managed wallets -->
                     </select>
                 </div>
                 <div>
@@ -3378,6 +3375,28 @@ onMounted(() => {
             document.getElementById('withdrawModal').classList.remove('hidden');
             document.getElementById('withdrawAmount').value = '';
             document.getElementById('withdrawAddress').value = '';
+
+            // Populate chain dropdown from managed wallets
+            const token = sessionStorage.getItem('merchantToken');
+            try {
+                const res = await fetch('/api/treasury/managed-wallets', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                const chainNames = { BASE_MAINNET: 'Base', ETHEREUM_MAINNET: 'Ethereum', POLYGON_MAINNET: 'Polygon', ARBITRUM_MAINNET: 'Arbitrum', BNB_MAINNET: 'BNB Chain', SOLANA_MAINNET: 'Solana' };
+                const chainSelect = document.getElementById('withdrawChain');
+                chainSelect.innerHTML = (data.wallets || [])
+                    .filter(w => chainNames[w.chain])
+                    .map(w => `<option value="${w.chain}">${chainNames[w.chain] || w.chain}</option>`)
+                    .join('');
+                if (chainSelect.options.length === 0) {
+                    chainSelect.innerHTML = '<option value="">No managed wallets</option>';
+                }
+                // Update address placeholder on chain change
+                chainSelect.onchange = () => {
+                    const addrInput = document.getElementById('withdrawAddress');
+                    addrInput.placeholder = chainSelect.value === 'SOLANA_MAINNET' ? 'Solana address (base58)' : '0x...';
+                };
+                chainSelect.onchange();
+            } catch (e) { console.error('Failed to load managed wallets', e); }
         }
 
         async function executeWithdraw() {
@@ -3388,7 +3407,11 @@ onMounted(() => {
 
             if (!amount || amount <= 0) return alert('Enter a valid amount');
             if (!toAddress) return alert('Enter a destination address');
-            if (!/^0x[a-fA-F0-9]{40}$/.test(toAddress)) return alert('Invalid EVM address (must start with 0x, 42 characters)');
+            if (chain === 'SOLANA_MAINNET') {
+                if (toAddress.startsWith('0x') || toAddress.length < 30) return alert('Invalid Solana address');
+            } else if (!/^0x[a-fA-F0-9]{40}$/.test(toAddress)) {
+                return alert('Invalid EVM address (must start with 0x, 42 characters)');
+            }
 
             const btn = document.getElementById('executeWithdrawBtn');
             btn.disabled = true;
