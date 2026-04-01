@@ -303,14 +303,18 @@ router.post('/order/:orderId/tx', async (req, res) => {
       return res.status(400).json({ error: `Order status is ${order.status}`, status: order.status });
     }
 
-    // Check if TX already recorded (duplicate prevention)
+    // Check expiry
+    if (order.expiresAt < new Date()) {
+      return res.status(400).json({ error: 'Order has expired', status: 'EXPIRED' });
+    }
+
+    // Check if TX already recorded (duplicate prevention — across ALL orders)
     const existingTx = await db.transaction.findUnique({ where: { txHash } });
     if (existingTx) {
-      // If already confirmed for this order, return success
       if (existingTx.orderId === orderId && existingTx.status === 'CONFIRMED') {
         return res.json({ success: true, status: 'CONFIRMED', message: 'Already confirmed' });
       }
-      return res.status(400).json({ error: 'This transaction has already been submitted' });
+      return res.status(400).json({ error: 'This transaction has already been used for another order' });
     }
 
     // Check if order already has a pending manual submission

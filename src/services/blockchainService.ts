@@ -20,9 +20,18 @@ const SCAN_CHAINS: Chain[] = [
   'BNB_MAINNET',
 ];
 
+// All stablecoin contracts per chain (USDC + USDT + EURC where available)
+const CHAIN_STABLES: Record<string, Record<string, string>> = {
+  BASE_MAINNET: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42' },
+  ETHEREUM_MAINNET: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7', EURC: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c' },
+  POLYGON_MAINNET: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' },
+  ARBITRUM_MAINNET: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' },
+  BNB_MAINNET: { USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', USDT: '0x55d398326f99059fF775485246999027B3197955' },
+};
+
 export class BlockchainService {
   private providers: Record<string, ethers.JsonRpcProvider> = {};
-  private contracts: Record<string, ethers.Contract> = {};
+  private contracts: Record<string, ethers.Contract[]> = {}; // Multiple contracts per chain
   private orderService = new OrderService();
 
   constructor() {
@@ -34,10 +43,10 @@ export class BlockchainService {
       const config = CHAIN_CONFIGS[chain];
       if (!config?.rpcUrl) continue;
       this.providers[chain] = new ethers.JsonRpcProvider(config.rpcUrl);
-      this.contracts[chain] = new ethers.Contract(
-        config.usdcAddress,
-        USDC_ABI,
-        this.providers[chain]
+      // Create contract instances for ALL stablecoins on this chain
+      const stables = CHAIN_STABLES[chain] || { USDC: config.usdcAddress };
+      this.contracts[chain] = Object.values(stables).map(addr =>
+        new ethers.Contract(addr, USDC_ABI, this.providers[chain])
       );
     }
   }
@@ -45,10 +54,10 @@ export class BlockchainService {
   async scanForPayments(chain: Chain): Promise<number> {
     try {
       const provider = this.providers[chain];
-      const contract = this.contracts[chain];
+      const contracts = this.contracts[chain];
       const config = CHAIN_CONFIGS[chain];
 
-      if (!provider || !contract) {
+      if (!provider || !contracts?.length) {
         console.log(`[scanner] Skipping ${chain} — no provider configured`);
         return 0;
       }
@@ -95,9 +104,16 @@ export class BlockchainService {
 
       if (fromBlock >= toBlock) return 0;
 
-      // Query ALL USDC Transfer events (no TO filter)
-      const filter = contract.filters.Transfer();
-      const events = await contract.queryFilter(filter, fromBlock, toBlock);
+      // Query Transfer events from ALL stablecoin contracts (USDC + USDT + EURC)
+      const allEvents: ethers.EventLog[] = [];
+      for (const contract of contracts) {
+        try {
+          const filter = contract.filters.Transfer();
+          const events = await contract.queryFilter(filter, fromBlock, toBlock);
+          allEvents.push(...(events as ethers.EventLog[]));
+        } catch { /* skip failed contract query */ }
+      }
+      const events = allEvents;
 
       let matched = 0;
 
