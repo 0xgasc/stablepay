@@ -2027,8 +2027,12 @@ onMounted(() => {
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Amount</label>
-                    <input type="number" id="withdrawAmount" step="0.01" min="0.01" placeholder="0.00"
-                           class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                    <div class="flex gap-2">
+                        <input type="number" id="withdrawAmount" step="0.000001" min="0.000001" placeholder="0.00"
+                               class="flex-1 px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                        <button id="withdrawMaxBtn" onclick="setWithdrawMax()" class="px-3 py-3 bg-purple-900/40 border border-purple-700 text-purple-300 text-xs font-bold rounded hover:bg-purple-800/40 uppercase">Max</button>
+                    </div>
+                    <div id="withdrawBalanceHint" class="text-xs text-slate-500 mt-1"></div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-2">Destination Address</label>
@@ -3390,13 +3394,39 @@ onMounted(() => {
                 if (chainSelect.options.length === 0) {
                     chainSelect.innerHTML = '<option value="">No managed wallets</option>';
                 }
-                // Update address placeholder on chain change
-                chainSelect.onchange = () => {
+                // Update address placeholder + fetch balance on chain/token change
+                const updateWithdrawBalance = async () => {
                     const addrInput = document.getElementById('withdrawAddress');
                     addrInput.placeholder = chainSelect.value === 'SOLANA_MAINNET' ? 'Solana address (base58)' : '0x...';
+                    const hint = document.getElementById('withdrawBalanceHint');
+                    const tokenSel = document.getElementById('withdrawToken');
+                    if (!hint || !chainSelect.value) return;
+                    hint.textContent = 'Loading balance...';
+                    try {
+                        const balRes = await fetch('/api/treasury/balances', { headers: { 'Authorization': 'Bearer ' + token } });
+                        const balData = await balRes.json();
+                        const wallet = (balData.wallets || []).find(w => w.chain === chainSelect.value);
+                        if (wallet) {
+                            const tokenBal = wallet.tokens.find(t => t.token === (tokenSel?.value || 'USDC'));
+                            const bal = tokenBal ? parseFloat(tokenBal.balance) : 0;
+                            window._withdrawMaxAmount = bal;
+                            hint.textContent = `Available: $${bal < 0.01 && bal > 0 ? bal.toFixed(6) : bal.toFixed(2)} ${tokenSel?.value || 'USDC'}`;
+                            hint.style.color = bal > 0 ? '#22c55e' : '#64748b';
+                        } else {
+                            window._withdrawMaxAmount = 0;
+                            hint.textContent = 'No balance found for this chain';
+                        }
+                    } catch { hint.textContent = ''; }
                 };
-                chainSelect.onchange();
+                chainSelect.onchange = updateWithdrawBalance;
+                document.getElementById('withdrawToken').onchange = updateWithdrawBalance;
+                updateWithdrawBalance();
             } catch (e) { console.error('Failed to load managed wallets', e); }
+        }
+
+        function setWithdrawMax() {
+            const max = window._withdrawMaxAmount || 0;
+            if (max > 0) document.getElementById('withdrawAmount').value = max.toFixed(6);
         }
 
         async function executeWithdraw() {
