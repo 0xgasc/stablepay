@@ -569,8 +569,8 @@
       const icons = {
         BASE_MAINNET: 'https://avatars.githubusercontent.com/u/108554348?s=80&v=4',
         ETHEREUM_MAINNET: 'https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg',
-        POLYGON_MAINNET: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQFI4axCrJbxy8fjqJhZEu_DXCHYAqXjSICXg&s',
-        ARBITRUM_MAINNET: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6mQ1pwxVT3lqCTZWhuUZzKTOqT0ZmYh2oeg&s',
+        POLYGON_MAINNET: 'https://cdn.iconscout.com/icon/premium/png-256-thumb/polygon-matic-icon-svg-download-png-5795452.png?f=webp&w=128',
+        ARBITRUM_MAINNET: 'https://arbitrum.io/_next/image?url=%2Fbrandkit%2F1225_Arbitrum_Logomark_OneColorNavy_ClearSpace.png&w=640&q=75',
         BNB_MAINNET: 'https://www.svgrepo.com/show/366901/bnb.svg',
         SOLANA_MAINNET: 'https://www.svgrepo.com/show/470684/solana.svg',
         TRON_MAINNET: 'https://www.svgrepo.com/show/428648/tron-crypto-cryptocurrency.svg',
