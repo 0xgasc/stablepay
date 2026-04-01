@@ -55,7 +55,7 @@ router.post('/', requireMerchantAuth, async (req, res) => {
       },
     });
 
-    const BASE_URL = process.env.BASE_URL || 'https://wetakestables.shop';
+    const BASE_URL = (process.env.BASE_URL || 'https://wetakestables.shop').trim();
 
     res.status(201).json({
       success: true,
@@ -85,7 +85,7 @@ router.get('/', requireMerchantAuth, async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    const BASE_URL = process.env.BASE_URL || 'https://wetakestables.shop';
+    const BASE_URL = (process.env.BASE_URL || 'https://wetakestables.shop').trim();
 
     res.json({
       links: links.map(l => ({
@@ -165,7 +165,7 @@ router.get('/resolve/:slug', async (req, res) => {
       data: { viewCount: { increment: 1 } },
     });
 
-    const BASE_URL = process.env.BASE_URL || 'https://wetakestables.shop';
+    const BASE_URL = (process.env.BASE_URL || 'https://wetakestables.shop').trim();
     const params = new URLSearchParams({
       merchantId: link.merchantId,
       amount: Number(link.amount).toString(),

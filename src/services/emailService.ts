@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 // Initialize Resend client (will be null if no API key)
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-const BASE_URL = process.env.BASE_URL || 'https://wetakestables.shop';
+const BASE_URL = (process.env.BASE_URL || 'https://wetakestables.shop').trim();
 const FROM_EMAIL = process.env.FROM_EMAIL || 'StablePay <onboarding@resend.dev>';
 
 class EmailService {
