@@ -288,16 +288,22 @@ export class RefundService {
     }
     if (!order.merchantId) return { success: false, error: 'No merchant on this order' };
 
-    if (order.chain === 'SOLANA_MAINNET' || order.chain === 'TRON_MAINNET') {
-      return { success: false, error: `Automated refunds on ${order.chain.replace('_MAINNET', '')} coming soon. For now, send the refund manually from your wallet to the customer address.` };
+    if (order.chain === 'TRON_MAINNET') {
+      return { success: false, error: `Automated refunds on TRON coming soon. For now, send the refund manually from your wallet to the customer address.` };
+    }
+
+    const managedWallet = await db.managedWallet.findUnique({
+      where: { merchantId_chain: { merchantId: order.merchantId!, chain: order.chain } },
+    });
+
+    // Solana SPL token refund
+    if (order.chain === 'SOLANA_MAINNET') {
+      if (!managedWallet) return { success: false, error: 'No managed wallet for Solana. Send refund manually.' };
+      return this.processSolanaRefund(order, managedWallet, refundToAddress, Number(order.amount));
     }
 
     const chainConf = CHAIN_RPC[order.chain];
     if (!chainConf) return { success: false, error: `Refund not supported on ${order.chain}` };
-
-    const managedWallet = await db.managedWallet.findUnique({
-      where: { merchantId_chain: { merchantId: order.merchantId, chain: order.chain } },
-    });
 
     if (!managedWallet) {
       return { success: false, error: 'No managed wallet. Merchant must refund from their own wallet.' };
@@ -386,6 +392,93 @@ export class RefundService {
     } catch (err: any) {
       logger.error('Managed refund failed', err, { orderId });
       return { success: false, error: 'Refund failed: ' + err.message };
+    }
+  }
+
+  /**
+   * Process Solana SPL token refund using @solana/web3.js
+   */
+  private async processSolanaRefund(
+    order: any,
+    managedWallet: any,
+    refundToAddress: string,
+    amount: number
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    try {
+      const { Connection, PublicKey, Keypair, Transaction } = await import('@solana/web3.js');
+
+      const MINTS: Record<string, string> = {
+        USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+        EURC: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr',
+      };
+
+      const mintAddr = MINTS[order.token];
+      if (!mintAddr) return { success: false, error: `Token ${order.token} not supported for Solana refunds` };
+
+      const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
+      const connection = new Connection(solRpc, 'confirmed');
+
+      // Decrypt managed wallet key
+      const privateKey = decryptManagedKey(managedWallet.encryptedKey).trim();
+      // Solana keys are base58 encoded
+      const bs58 = await import('bs58');
+      const keypair = Keypair.fromSecretKey(bs58.default.decode(privateKey));
+
+      const mint = new PublicKey(mintAddr);
+      const recipient = new PublicKey(refundToAddress);
+      const TOKEN_PROGRAM = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+      const ATA_PROGRAM = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+
+      // Derive ATAs
+      const [senderAta] = PublicKey.findProgramAddressSync(
+        [keypair.publicKey.toBuffer(), TOKEN_PROGRAM.toBuffer(), mint.toBuffer()], ATA_PROGRAM
+      );
+      const [recipientAta] = PublicKey.findProgramAddressSync(
+        [recipient.toBuffer(), TOKEN_PROGRAM.toBuffer(), mint.toBuffer()], ATA_PROGRAM
+      );
+
+      const amountRaw = BigInt(Math.round(amount * 1e6)); // 6 decimals
+
+      // Build transfer instruction using raw instruction data
+      // SPL Token transfer instruction = index 3, then amount as u64
+      const dataBuffer = Buffer.alloc(9);
+      dataBuffer.writeUInt8(12, 0); // TransferChecked instruction
+      dataBuffer.writeBigUInt64LE(amountRaw, 1);
+
+      // Use createTransferCheckedInstruction equivalent via raw tx
+      // Simpler: use the token program directly
+      const { createTransferCheckedInstruction, getOrCreateAssociatedTokenAccount } = await import('@solana/spl-token');
+
+      // Ensure recipient ATA exists
+      await getOrCreateAssociatedTokenAccount(connection, keypair, mint, recipient);
+
+      const tx = new Transaction().add(
+        createTransferCheckedInstruction(senderAta, mint, recipientAta, keypair.publicKey, amountRaw, 6)
+      );
+
+      const sig = await connection.sendTransaction(tx, [keypair]);
+      await connection.confirmTransaction(sig, 'confirmed');
+
+      // Update order + create refund record
+      const now = new Date();
+      await db.$executeRaw`UPDATE orders SET status = 'REFUNDED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${order.id}`;
+      await db.refund.create({
+        data: {
+          orderId: order.id, amount: order.amount,
+          reason: 'Refund via managed Solana wallet',
+          status: 'PROCESSED', refundTxHash: sig,
+        },
+      });
+
+      logger.info('Solana refund processed', {
+        orderId: order.id, amount, token: order.token, txHash: sig, to: refundToAddress,
+      });
+
+      return { success: true, txHash: sig };
+    } catch (err: any) {
+      logger.error('Solana refund failed', err, { orderId: order.id });
+      return { success: false, error: 'Solana refund failed: ' + err.message };
     }
   }
 }

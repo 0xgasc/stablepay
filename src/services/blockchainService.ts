@@ -1,5 +1,4 @@
 import { ethers } from 'ethers';
-import { Connection, PublicKey } from '@solana/web3.js';
 import { db } from '../config/database';
 import { CHAIN_CONFIGS } from '../config/chains';
 import { Chain } from '../types';
@@ -306,13 +305,8 @@ export class BlockchainService {
     const startTime = Date.now();
     console.log('[scanner] Solana scan starting...');
     try {
-      // Get pending Solana orders
       const pendingOrders = await db.order.findMany({
-        where: {
-          chain: 'SOLANA_MAINNET',
-          status: 'PENDING',
-          expiresAt: { gt: new Date() },
-        },
+        where: { chain: 'SOLANA_MAINNET', status: 'PENDING', expiresAt: { gt: new Date() } },
         select: { id: true, paymentAddress: true, amount: true, customerWallet: true },
         orderBy: { createdAt: 'desc' },
       });
@@ -321,12 +315,7 @@ export class BlockchainService {
         console.log('[scanner] Solana: no pending orders');
         return;
       }
-
       console.log(`[scanner] Solana: ${pendingOrders.length} pending order(s)`);
-
-      const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
-      console.log(`[scanner] Solana RPC: ${solRpc.slice(0, 40)}...`);
-      const connection = new Connection(solRpc, { commitment: 'confirmed', disableRetryOnRateLimit: true });
 
       const TOKEN_MINTS: Record<string, string> = {
         'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
@@ -334,6 +323,7 @@ export class BlockchainService {
         'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr': 'EURC',
       };
 
+      // Group by payment address
       const addressMap = new Map<string, typeof pendingOrders>();
       for (const order of pendingOrders) {
         const existing = addressMap.get(order.paymentAddress) || [];
@@ -341,131 +331,109 @@ export class BlockchainService {
         addressMap.set(order.paymentAddress, existing);
       }
 
-      const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-      const ATA_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
-
-      // Timeout helper — abort if RPC hangs
-      const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
-        return Promise.race([
-          promise,
-          new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout: ${label} after ${ms}ms`)), ms))
-        ]);
-      };
-
       for (const [address, orders] of addressMap) {
         try {
-          // Timeout per address: 12 seconds max
-          await withTimeout((async () => {
-            const walletPubkey = new PublicKey(address);
-            const allSigs: any[] = [];
+          // Use Helius enhanced API to get token transfers — simple HTTP, no web3.js
+          const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
+          const res = await fetch(solRpc, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0', id: 1,
+              method: 'getSignaturesForAddress',
+              params: [address, { limit: 20 }]
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+          const sigData: any = await res.json();
+          const signatures = sigData.result || [];
+          console.log(`[scanner] Solana: ${signatures.length} sigs for ${address.slice(0, 8)}...`);
 
-            // Scan ATAs for each token mint
-            for (const mint of Object.keys(TOKEN_MINTS)) {
-              try {
-                const [ata] = PublicKey.findProgramAddressSync(
-                  [walletPubkey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), new PublicKey(mint).toBuffer()],
-                  ATA_PROGRAM_ID
-                );
-                const ataSigs = await withTimeout(
-                  connection.getSignaturesForAddress(ata, { limit: 10 }),
-                  8000, `getSignatures ATA ${TOKEN_MINTS[mint]}`
-                );
-                console.log(`[scanner] Solana ATA ${TOKEN_MINTS[mint]}: ${ataSigs.length} sigs for ${address.slice(0, 8)}...`);
-                allSigs.push(...ataSigs);
-              } catch (e: any) {
-                console.log(`[scanner] Solana ATA scan skip (${TOKEN_MINTS[mint]}): ${e.message}`);
-              }
-            }
+          for (const sigInfo of signatures) {
+            if (sigInfo.err) continue;
+            const txHash = sigInfo.signature;
 
-            // Deduplicate
-            const seen = new Set<string>();
-            const sigs = allSigs.filter(s => { if (seen.has(s.signature)) return false; seen.add(s.signature); return true; });
-
-          for (const sigInfo of sigs) {
             // Skip if already processed
-            const existing = await db.transaction.findUnique({ where: { txHash: sigInfo.signature } });
-            if (existing) continue;
+            const existingTx = await db.transaction.findUnique({ where: { txHash } });
+            if (existingTx) continue;
 
-            // Get parsed transaction
-            const tx = await connection.getParsedTransaction(sigInfo.signature, { maxSupportedTransactionVersion: 0 });
+            // Get parsed transaction via RPC
+            const txRes = await fetch(solRpc, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0', id: 2,
+                method: 'getTransaction',
+                params: [txHash, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]
+              }),
+              signal: AbortSignal.timeout(8000),
+            });
+            const txData: any = await txRes.json();
+            const tx = txData.result;
             if (!tx || tx.meta?.err) continue;
 
-            // Collect all SPL token transfers from both top-level and inner instructions
-            const allInstructions: any[] = [
-              ...tx.transaction.message.instructions,
+            // Extract all instructions (top-level + inner)
+            const allIx: any[] = [
+              ...(tx.transaction?.message?.instructions || []),
               ...(tx.meta?.innerInstructions?.flatMap((inner: any) => inner.instructions) || []),
             ];
 
-            // Build map of token account → owner from initializeAccount3 instructions
-            const tokenAccountOwners: Record<string, string> = {};
-            for (const ix of allInstructions) {
-              if ('parsed' in ix && ix.parsed?.type === 'initializeAccount3' && ix.program === 'spl-token') {
-                tokenAccountOwners[ix.parsed.info.account] = ix.parsed.info.owner;
+            // Build token account → owner map
+            const owners: Record<string, string> = {};
+            for (const ix of allIx) {
+              if (ix.parsed?.type === 'initializeAccount3' && ix.program === 'spl-token') {
+                owners[ix.parsed.info.account] = ix.parsed.info.owner;
               }
             }
 
-            for (const ix of allInstructions) {
-              if (!('parsed' in ix) || ix.program !== 'spl-token') continue;
-              if (ix.parsed?.type !== 'transferChecked' && ix.parsed?.type !== 'transfer') continue;
+            // Find SPL token transfers
+            for (const ix of allIx) {
+              if (!ix.parsed || ix.program !== 'spl-token') continue;
+              if (ix.parsed.type !== 'transferChecked' && ix.parsed.type !== 'transfer') continue;
 
               const info = ix.parsed.info;
-              const mint = info.mint;
-              const tokenName = mint ? TOKEN_MINTS[mint] : null;
+              const tokenName = info.mint ? TOKEN_MINTS[info.mint] : null;
               if (ix.parsed.type === 'transferChecked' && !tokenName) continue;
 
-              const amount = parseFloat(info.tokenAmount?.uiAmountString || info.amount || '0');
-              // Sender: authority OR multisigAuthority OR first signer
-              const fromAuthority = info.authority || info.multisigAuthority || info.signers?.[0] || '';
-              if (!fromAuthority) continue;
+              const amount = parseFloat(info.tokenAmount?.uiAmountString || '0');
+              const from = info.authority || info.multisigAuthority || info.signers?.[0] || '';
+              if (!from) continue;
 
-              // Destination could be a token account — resolve to wallet owner
-              const destTokenAccount = info.destination;
-              const destOwner = tokenAccountOwners[destTokenAccount] || destTokenAccount;
-
-              // Check if destination resolves to our watched address
-              if (destOwner !== address && destTokenAccount !== address) continue;
+              // Resolve destination to wallet owner
+              const dest = info.destination;
+              const destOwner = owners[dest] || dest;
+              if (destOwner !== address && dest !== address) continue;
 
               // Match against pending orders
               for (const order of orders) {
-                const orderAmount = Number(order.amount);
-                if (Math.abs(orderAmount - amount) >= 0.01) continue;
-                // Only enforce wallet match if the stored wallet is a valid Solana address (not EVM)
-                if (order.customerWallet && !order.customerWallet.startsWith('0x') && fromAuthority !== order.customerWallet) continue;
+                if (Math.abs(Number(order.amount) - amount) >= 0.01) continue;
+                if (order.customerWallet && !order.customerWallet.startsWith('0x') && from !== order.customerWallet) continue;
 
-                // Match found — create transaction + confirm
+                // Match! Create transaction + confirm
                 await db.transaction.create({
                   data: {
-                    orderId: order.id,
-                    txHash: sigInfo.signature,
-                    chain: 'SOLANA_MAINNET',
-                    amount: amount,
-                    fromAddress: fromAuthority,
-                    toAddress: address,
-                    status: 'CONFIRMED',
-                    confirmations: 1,
+                    orderId: order.id, txHash, chain: 'SOLANA_MAINNET',
+                    amount, fromAddress: from, toAddress: address,
+                    status: 'CONFIRMED', confirmations: 1,
                     blockTimestamp: tx.blockTime ? new Date(tx.blockTime * 1000) : new Date(),
                   },
                 });
 
-                // Compliance screening
                 const { complianceService } = await import('./complianceService');
-                const screening = await complianceService.screenTransaction(order.id, fromAuthority);
+                const screening = await complianceService.screenTransaction(order.id, from);
 
                 if (screening.riskLevel !== 'BLOCKED') {
-                  await this.orderService.confirmOrder(order.id, {
-                    txHash: sigInfo.signature,
-                  });
-                  console.log(`[scanner] ✅ Solana confirmed order ${order.id} — ${amount} ${tokenName || 'SPL'}`);
+                  await this.orderService.confirmOrder(order.id, { txHash });
+                  console.log(`[scanner] ✅ Solana confirmed ${order.id} — ${amount} ${tokenName || 'SPL'}`);
                 } else {
-                  console.log(`[scanner] ❌ Solana BLOCKED order ${order.id} — ${screening.flags.join(', ')}`);
+                  console.log(`[scanner] ❌ Solana BLOCKED ${order.id} — ${screening.flags.join(', ')}`);
                 }
                 break;
               }
             }
           }
-          })(), 12000, `scanAddress ${address.slice(0, 8)}`);
         } catch (err: any) {
-          console.error(`[scanner] Solana scan error for ${address.slice(0, 8)}...:`, err.message);
+          console.error(`[scanner] Solana error for ${address.slice(0, 8)}:`, err.message);
         }
       }
       console.log(`[scanner] Solana scan done in ${Date.now() - startTime}ms`);
