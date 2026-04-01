@@ -367,10 +367,13 @@ router.post('/order/:orderId/tx', async (req, res) => {
             matchedFrom = ix.parsed.info.authority || ix.parsed.info.multisigAuthority || ix.parsed.info.signers?.[0] || '';
           }
 
+          const orderAmt = Number(order.amount);
+          // Use percentage tolerance: must be within 2% of order amount, AND at least 95% paid
+          const pctDiff = orderAmt > 0 ? Math.abs(matchedAmount - orderAmt) / orderAmt : 1;
           if (matchedAmount === 0) {
             verifyError = 'This transaction does not send tokens to the merchant wallet';
-          } else if (Math.abs(matchedAmount - Number(order.amount)) >= 0.01) {
-            verifyError = `Amount mismatch: TX sends $${matchedAmount.toFixed(4)} but order requires $${Number(order.amount).toFixed(4)}`;
+          } else if (matchedAmount < orderAmt * 0.95 || pctDiff > 0.02) {
+            verifyError = `Amount mismatch: TX sends $${matchedAmount.toFixed(6)} but order requires $${orderAmt.toFixed(6)}`;
           } else {
             verified = true;
             await db.transaction.create({
@@ -405,8 +408,10 @@ router.post('/order/:orderId/tx', async (req, res) => {
             } else {
               const decimals = order.chain === 'BNB_MAINNET' ? 18 : 6;
               const txAmount = parseFloat(ethers.formatUnits(BigInt(matchingLog.data), decimals));
-              if (Math.abs(txAmount - Number(order.amount)) >= 0.01) {
-                verifyError = `Amount mismatch: TX sends $${txAmount.toFixed(4)} but order requires $${Number(order.amount).toFixed(4)}`;
+              const evmOrderAmt = Number(order.amount);
+              const evmPctDiff = evmOrderAmt > 0 ? Math.abs(txAmount - evmOrderAmt) / evmOrderAmt : 1;
+              if (txAmount < evmOrderAmt * 0.95 || evmPctDiff > 0.02) {
+                verifyError = `Amount mismatch: TX sends $${txAmount.toFixed(6)} but order requires $${evmOrderAmt.toFixed(6)}`;
               } else {
                 verified = true;
                 await db.transaction.create({
