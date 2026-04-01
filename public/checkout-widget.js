@@ -320,7 +320,7 @@
               <div id="sp-chain-select-wrapper" style="position: relative;">
                 <button id="sp-chain-select-btn" type="button" style="
                   width: 100%; padding: 8px 12px; font-size: 13px; font-weight: 600;
-                  background: var(--sp-card); color: var(--sp-text); border: 3px solid #000;
+                  background: var(--sp-card); color: var(--sp-text); border: 2px solid var(--sp-border);
                   cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;
                 ">
                   <img src="${this.getChainIcon(this.merchantChains[0]?.chain)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
@@ -329,7 +329,7 @@
                 </button>
                 <div id="sp-chain-dropdown" style="
                   display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
-                  background: var(--sp-card); border: 3px solid #000; border-top: none; max-height: 200px; overflow-y: auto;
+                  background: var(--sp-card); border: 2px solid var(--sp-border); border-top: none; max-height: 200px; overflow-y: auto;
                 ">
                   ${this.merchantChains.map((mc, i) => `
                     <div class="sp-chain-option" data-chain="${mc.chain}" style="
@@ -352,7 +352,7 @@
               <div id="sp-token-select-wrapper" style="position: relative;">
                 <button id="sp-token-select-btn" type="button" style="
                   width: 100%; padding: 8px 12px; font-size: 13px; font-weight: 600;
-                  background: var(--sp-card); color: var(--sp-text); border: 3px solid #000;
+                  background: var(--sp-card); color: var(--sp-text); border: 2px solid var(--sp-border);
                   cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px;
                 ">
                   <img src="${this.getTokenIcon(this.selectedToken)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
@@ -361,7 +361,7 @@
                 </button>
                 <div id="sp-token-dropdown" style="
                   display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
-                  background: var(--sp-card); border: 3px solid #000; border-top: none;
+                  background: var(--sp-card); border: 2px solid var(--sp-border); border-top: none;
                 ">
                   ${this.selectedChain ? this.selectedChain.supportedTokens
                     .filter(t => this.selectedChain.config.tokens[t])
@@ -397,7 +397,7 @@
             <!-- Method: Connect Wallet -->
             <div id="sp-method-wallet" class="sp-method-panel" style="display: none;">
               <div id="sp-wallet-status" style="
-                background: var(--sp-card); border: 3px solid #000;
+                background: var(--sp-card); border: 2px solid var(--sp-border);
                 padding: 12px; margin-bottom: 12px;
                 display: flex; align-items: center; justify-content: space-between;
               ">
@@ -407,12 +407,12 @@
                 </div>
                 <button id="sp-connect-btn" style="
                   padding: 6px 14px; background: #000; color: #fff;
-                  border: 2px solid #000; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+                  border: 2px solid var(--sp-border); font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
                 ">Connect</button>
               </div>
               <button id="sp-pay-btn" class="sp-pay-btn" disabled style="
                 width: 100%; padding: 14px; background: #00E5FF; color: #000;
-                border: 3px solid #000; font-size: 14px; font-weight: 700; cursor: pointer;
+                border: 3px solid var(--sp-border); font-size: 14px; font-weight: 700; cursor: pointer;
                 box-shadow: 4px 4px 0px #000;
               ">Connect Wallet to Pay</button>
             </div>
@@ -465,9 +465,9 @@
               <!-- Step 2: QR + Address + Amount (hidden until step 1 done) -->
               <div id="sp-send-step2" style="display: none; padding: 12px;">
                 <!-- Toggle: QR / Address -->
-                <div style="display: flex; gap: 0; margin-bottom: 12px; border: 2px solid #000;">
-                  <button id="sp-send-toggle-qr" style="flex:1; padding: 6px; font-size: 9px; font-weight: 700; border: none; background: #000; color: #fff; cursor: pointer; text-transform: uppercase;">QR Code</button>
-                  <button id="sp-send-toggle-addr" style="flex:1; padding: 6px; font-size: 9px; font-weight: 700; border: none; border-left: 2px solid #000; background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase;">Copy Address</button>
+                <div style="display: flex; gap: 0; margin-bottom: 12px; border: 2px solid var(--sp-border);">
+                  <button id="sp-send-toggle-qr" style="flex:1; padding: 6px; font-size: 9px; font-weight: 700; border: none; background: #00E5FF; color: #000; cursor: pointer; text-transform: uppercase;">QR Code</button>
+                  <button id="sp-send-toggle-addr" style="flex:1; padding: 6px; font-size: 9px; font-weight: 700; border: none; border-left: 2px solid var(--sp-border); background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase;">Copy Address</button>
                 </div>
 
                 <!-- QR View (default) -->
@@ -480,7 +480,7 @@
                       <span style="font-size: 8px; color: var(--sp-muted);">Phantom / Solflare</span>
                     </label>
                   </div>
-                  <div style="background: white; padding: 10px; display: inline-block; border: 3px solid #000; margin-bottom: 8px;">
+                  <div style="background: white; padding: 10px; display: inline-block; border: 2px solid var(--sp-border); margin-bottom: 8px;">
                     <canvas id="sp-qr-canvas" width="140" height="140"></canvas>
                   </div>
                   <p style="font-size: 11px; color: var(--sp-text); font-weight: 600;">Send exactly <span id="sp-send-amount-display" style="color: #00E5FF;"></span></p>
@@ -489,14 +489,14 @@
 
                 <!-- Address View (hidden by default) -->
                 <div id="sp-send-view-addr" style="display: none; margin-bottom: 12px;">
-                  <div style="background: var(--sp-card); border: 3px solid #000; padding: 10px; margin-bottom: 8px;">
+                  <div style="background: var(--sp-card); border: 2px solid var(--sp-border); padding: 10px; margin-bottom: 8px;">
                     <div style="font-size: 9px; color: var(--sp-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Send to</div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                       <code id="sp-pay-address" style="font-size: 10px; color: var(--sp-text); word-break: break-all; flex: 1; font-weight: 600;"></code>
                       <button id="sp-copy-addr-btn" style="padding: 4px 10px; background: #000; color: #fff; border: none; font-size: 10px; font-weight: 700; cursor: pointer;">COPY</button>
                     </div>
                   </div>
-                  <div style="background: var(--sp-card); border: 3px solid #000; padding: 10px;">
+                  <div style="background: var(--sp-card); border: 2px solid var(--sp-border); padding: 10px;">
                     <div style="font-size: 9px; color: var(--sp-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Exact amount</div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                       <span id="sp-pay-amount" style="font-size: 20px; font-weight: 700; color: var(--sp-text);"></span>
@@ -506,7 +506,7 @@
                 </div>
 
                 <button id="sp-send-sent-btn" style="
-                  width: 100%; padding: 12px; background: #00E5FF; color: #000; border: 3px solid #000;
+                  width: 100%; padding: 12px; background: #00E5FF; color: #000; border: 3px solid var(--sp-border);
                   font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; box-shadow: 4px 4px 0px #000;
                 ">I've Sent the Payment</button>
                 <button id="sp-send-back-btn" style="
@@ -555,7 +555,7 @@
 
           ${this.options.hideFooter ? '' : `<!-- Footer -->
           <div style="margin-top: 16px; text-align: center; font-size: 10px; color: var(--sp-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-            Powered by <a href="${STABLEPAY_URL}" target="_blank" style="color: #000; text-decoration: none; font-weight: 700;">StablePay</a>
+            Powered by <a href="${STABLEPAY_URL}" target="_blank" style="color: var(--sp-text); text-decoration: none; font-weight: 700;">StablePay</a>
           </div>`}
           </div>
         </div>
@@ -859,7 +859,7 @@
               <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Enter the address you'll send from — so we can match your payment.</p>
               <div style="display: flex; gap: 6px;">
                 <input id="sp-sender-wallet" type="text" value="${this.connectedWallet || ''}" placeholder="${placeholder}" style="
-                  flex: 1; padding: 10px; font-size: 11px; font-family: monospace; border: 3px solid #000;
+                  flex: 1; padding: 10px; font-size: 11px; font-family: monospace; border: 2px solid var(--sp-border);
                   background: var(--sp-card); color: var(--sp-text); outline: none;
                 ">
                 <button id="sp-sender-wallet-btn" style="
@@ -898,13 +898,13 @@
         toggleQR.addEventListener('click', () => {
           this.container.querySelector('#sp-send-view-qr').style.display = 'block';
           this.container.querySelector('#sp-send-view-addr').style.display = 'none';
-          toggleQR.style.background = '#000'; toggleQR.style.color = '#fff';
+          toggleQR.style.background = '#00E5FF'; toggleQR.style.color = '#000';
           toggleAddr.style.background = 'var(--sp-card)'; toggleAddr.style.color = 'var(--sp-muted)';
         });
         toggleAddr.addEventListener('click', () => {
           this.container.querySelector('#sp-send-view-qr').style.display = 'none';
           this.container.querySelector('#sp-send-view-addr').style.display = 'block';
-          toggleAddr.style.background = '#000'; toggleAddr.style.color = '#fff';
+          toggleAddr.style.background = '#00E5FF'; toggleAddr.style.color = '#000';
           toggleQR.style.background = 'var(--sp-card)'; toggleQR.style.color = 'var(--sp-muted)';
         });
       }
@@ -1666,7 +1666,7 @@
         </div>
         <button id="sp-connect-btn" style="
           padding: 6px 14px; background: #000; color: #fff;
-          border: 2px solid #000; font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+          border: 2px solid var(--sp-border); font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
         ">Connect</button>
       `;
       statusDiv.querySelector('#sp-connect-btn')?.addEventListener('click', () => this.connectWallet());
@@ -2125,7 +2125,7 @@
             ${receiptUrl ? `
               <a href="${receiptUrl}" target="_blank" style="
                 padding: 10px 20px; background: #000; color: #fff;
-                border: 2px solid #000; text-decoration: none;
+                border: 2px solid var(--sp-border); text-decoration: none;
                 font-size: 11px; font-weight: 700; text-transform: uppercase;
               ">View Receipt</a>
             ` : ''}
