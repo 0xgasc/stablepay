@@ -2563,9 +2563,10 @@ onMounted(() => {
                 console.log('Fee data:', currentFeeData);
 
                 // Update UI
-                document.getElementById('previousFeeBalance').textContent = `$${currentFeeData.previousBalance.toFixed(2)}`;
-                document.getElementById('currentPeriodFees').textContent = `$${currentFeeData.currentFees.toFixed(2)}`;
-                document.getElementById('totalFeesOwed').textContent = `$${currentFeeData.totalOwed.toFixed(2)}`;
+                const fmtFee = (v) => '$' + (v > 0 && v < 0.01 ? v.toFixed(4) : v.toFixed(2));
+                document.getElementById('previousFeeBalance').textContent = fmtFee(currentFeeData.previousBalance || 0);
+                document.getElementById('currentPeriodFees').textContent = fmtFee(currentFeeData.currentFees || 0);
+                document.getElementById('totalFeesOwed').textContent = fmtFee(currentFeeData.totalOwed || 0);
 
                 // Current period info
                 if (currentFeeData.currentPeriod) {
@@ -2580,7 +2581,8 @@ onMounted(() => {
                 if (currentFeeData.billing) {
                     const billing = currentFeeData.billing;
                     document.getElementById('billingCycleLabel').textContent = billing.cycleLabel || 'N/A';
-                    document.getElementById('currentPlanName').textContent = currentFeeData.plan || 'Starter';
+                    const planNames = { FREE: 'Free', PRO: 'Pro', ENTERPRISE: 'Enterprise', STARTER: 'Free', GROWTH: 'Pro' };
+                    document.getElementById('currentPlanName').textContent = planNames[currentFeeData.plan] || currentFeeData.plan || 'Free';
                     document.getElementById('gracePeriodDays').textContent = billing.gracePeriodDays ? `${billing.gracePeriodDays} days` : 'N/A';
                     document.getElementById('minInvoiceAmount').textContent = billing.minInvoiceAmount ? `$${billing.minInvoiceAmount.toFixed(2)}` : 'N/A';
 

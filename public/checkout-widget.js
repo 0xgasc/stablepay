@@ -307,7 +307,7 @@
               ${this.options.productName || 'Pay with Stablecoins'}
             </div>
             <div id="sp-amount-display" style="font-size: 28px; font-weight: 700; color: ${this.options.headerTextColor === 'light' ? '#fff' : '#000'};">
-              $${parseFloat(this.options.amount || 0).toFixed(2)}
+              $${parseFloat(this.options.amount || 0) < 0.01 ? parseFloat(this.options.amount || 0).toFixed(4) : parseFloat(this.options.amount || 0).toFixed(2)}
             </div>
           </div>
 
@@ -735,6 +735,10 @@
             const shortAddr = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
             const step1 = this.container.querySelector('#sp-send-step1');
 
+            // Hide tabs — user has committed to Send Payment
+            const tabs = this.container.querySelector('#sp-method-tabs');
+            if (tabs) tabs.style.display = 'none';
+
             // Show verification animation in step 1
             if (step1) {
               const steps = [
@@ -875,8 +879,10 @@
             });
             if (newInput) newInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') newBtn?.click(); });
           }
-          // Unlock selectors
+          // Unlock selectors + show tabs
           this.unlockSelectors();
+          const methodTabs = this.container.querySelector('#sp-method-tabs');
+          if (methodTabs) methodTabs.style.display = 'flex';
           this.updateStepIndicator(1);
           this.connectedWallet = null;
           this.currentOrderId = null;
@@ -1372,6 +1378,10 @@
       const chainConfig = this.selectedChain?.config;
       if (!chainConfig) return;
 
+      // Hide tabs — user has committed to Connect Wallet
+      const tabs = this.container.querySelector('#sp-method-tabs');
+      if (tabs) tabs.style.display = 'none';
+
       // Lock selectors while connecting
       this.lockSelectors();
 
@@ -1383,8 +1393,10 @@
         }
       } catch (error) {
         console.error('Wallet connection failed:', error);
-        // Unlock selectors on failure
+        // Unlock selectors + show tabs on failure
         this.unlockSelectors();
+        const tabsEl = this.container.querySelector('#sp-method-tabs');
+        if (tabsEl) tabsEl.style.display = 'flex';
         if (error.code === -32002) {
           this.showError('Wallet has a pending request. Open your wallet extension, dismiss it, and try again.');
         } else if (error.code === 4001) {
@@ -2063,7 +2075,7 @@
             Payment Confirmed
           </div>
           <div style="font-size: 14px; color: var(--sp-muted); margin-bottom: 20px;">
-            $${parseFloat(this.options.amount).toFixed(2)} paid with ${this.selectedToken}
+            $${parseFloat(this.options.amount) < 0.01 ? parseFloat(this.options.amount).toFixed(4) : parseFloat(this.options.amount).toFixed(2)} paid with ${this.selectedToken}
           </div>
           <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
             ${txUrl ? `
