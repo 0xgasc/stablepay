@@ -183,7 +183,7 @@
       style.textContent = `
         .sp-widget { font-family: 'Space Grotesk', system-ui, sans-serif; }
         .sp-widget * { box-sizing: border-box; }
-        .sp-widget.dark { --sp-bg: #0f172a; --sp-card: #1e293b; --sp-border: #000; --sp-text: #fff; --sp-muted: #94a3b8; }
+        .sp-widget.dark { --sp-bg: #0f172a; --sp-card: #1e293b; --sp-border: #334155; --sp-text: #fff; --sp-muted: #94a3b8; }
         .sp-widget.light { --sp-bg: #fff; --sp-card: #f1f5f9; --sp-border: #000; --sp-text: #000; --sp-muted: #64748b; }
         .sp-pay-btn { transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px; }
         .sp-pay-btn:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #000; }
@@ -383,13 +383,13 @@
 
           <!-- Payment Method Tabs: SEND (default) vs CONNECT -->
           <div style="margin-bottom: 12px;">
-            <div id="sp-method-tabs" style="display: flex; gap: 0; margin-bottom: 12px; border: 3px solid #000;">
+            <div id="sp-method-tabs" style="display: flex; gap: 0; margin-bottom: 12px; border: 2px solid var(--sp-border);">
               <button class="sp-method-tab" data-method="send" style="
                 flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 700; border: none;
-                background: #000; color: #fff; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
+                background: #00E5FF; color: #000; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
               ">Send Payment</button>
               <button class="sp-method-tab" data-method="wallet" style="
-                flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 700; border: none; border-left: 2px solid #000;
+                flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 700; border: none; border-left: 2px solid var(--sp-border);
                 background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
               ">Connect Wallet</button>
             </div>
@@ -453,11 +453,11 @@
                 </div>
                 <div style="display: flex; gap: 6px;">
                   <input id="sp-sender-wallet" type="text" placeholder="${this.selectedChain?.config?.type === 'solana' ? 'e.g. 7xKXtg2C...' : this.selectedChain?.config?.type === 'tron' ? 'e.g. TJRabPrw...' : 'e.g. 0xd573Be...'}" style="
-                    flex: 1; padding: 10px; font-size: 11px; font-family: monospace; border: 3px solid #000;
-                    background: var(--sp-card); color: var(--sp-text); outline: none;
+                    flex: 1; padding: 10px; font-size: 11px; font-family: monospace; border: 2px solid var(--sp-border);
+                    background: var(--sp-bg); color: var(--sp-text); outline: none;
                   ">
                   <button id="sp-sender-wallet-btn" style="
-                    padding: 8px 16px; background: #000; color: #fff; border: none;
+                    padding: 8px 16px; background: #00E5FF; color: #000; border: none;
                     font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
                   ">Next</button>
                 </div>
@@ -1026,8 +1026,8 @@
       // Update tabs — neo-brutalist active state
       this.container.querySelectorAll('.sp-method-tab').forEach(tab => {
         if (tab.dataset.method === method) {
-          tab.style.background = '#000';
-          tab.style.color = '#fff';
+          tab.style.background = '#00E5FF';
+          tab.style.color = '#000';
         } else {
           tab.style.background = 'var(--sp-card)';
           tab.style.color = 'var(--sp-muted)';
