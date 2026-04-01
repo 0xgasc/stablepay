@@ -353,6 +353,13 @@ router.post('/order/:orderId/tx', async (req, res) => {
         else if (tx.meta?.err) { verifyError = 'Transaction failed on-chain'; }
         else {
           // Parse SPL transfers — verify destination is our ATA and amount matches
+          // Valid token mints we accept
+          const VALID_MINTS: Record<string, string> = {
+            'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
+            'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
+            'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr': 'EURC',
+          };
+
           const allIx = [...(tx.transaction?.message?.instructions || []), ...(tx.meta?.innerInstructions?.flatMap((i: any) => i.instructions) || [])];
           let matchedAmount = 0;
           let matchedFrom = '';
@@ -362,6 +369,9 @@ router.post('/order/:orderId/tx', async (req, res) => {
             if (ix.parsed.type !== 'transferChecked' && ix.parsed.type !== 'transfer') continue;
             const dest = ix.parsed.info.destination;
             if (!merchantATAs.has(dest)) continue; // Not to our wallet!
+            // Verify it's a stablecoin we accept (not a random SPL token)
+            const mint = ix.parsed.info.mint;
+            if (mint && !VALID_MINTS[mint]) continue;
             const amt = parseFloat(ix.parsed.info.tokenAmount?.uiAmountString || '0');
             matchedAmount += amt;
             matchedFrom = ix.parsed.info.authority || ix.parsed.info.multisigAuthority || ix.parsed.info.signers?.[0] || '';
@@ -397,10 +407,21 @@ router.post('/order/:orderId/tx', async (req, res) => {
           if (!receipt) { verifyError = 'Transaction not found on this chain'; }
           else if (receipt.status !== 1) { verifyError = 'Transaction failed on-chain'; }
           else {
-            // Parse ERC20 Transfer logs — verify TO is our payment address
+            // Known stablecoin contracts per chain
+            const VALID_TOKENS: Record<string, string[]> = {
+              BASE_MAINNET: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42'],
+              ETHEREUM_MAINNET: ['0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', '0xdAC17F958D2ee523a2206206994597C13D831ec7', '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c'],
+              POLYGON_MAINNET: ['0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'],
+              ARBITRUM_MAINNET: ['0xaf88d065e77c8cC2239327C5EDb3A432268e5831', '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'],
+              BNB_MAINNET: ['0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', '0x55d398326f99059fF775485246999027B3197955'],
+            };
+            const validContracts = new Set((VALID_TOKENS[order.chain] || []).map(a => a.toLowerCase()));
+
+            // Parse ERC20 Transfer logs — verify TO is our address AND from a valid stablecoin contract
             const transferTopic = ethers.id('Transfer(address,address,uint256)');
             const matchingLog = receipt.logs.find(log =>
               log.topics[0] === transferTopic &&
+              validContracts.has(log.address.toLowerCase()) && // Must be a known stablecoin
               log.topics[2] && ethers.getAddress('0x' + log.topics[2].slice(26)).toLowerCase() === order.paymentAddress.toLowerCase()
             );
             if (!matchingLog) {

@@ -210,6 +210,8 @@
         this.merchantData = data;
 
         if (data.wallets && data.wallets.length > 0) {
+          // Sort chains by global usage (Solana > Ethereum > TRON > BNB > Base > rest)
+          const chainPriority = { SOLANA_MAINNET: 0, ETHEREUM_MAINNET: 1, TRON_MAINNET: 2, BNB_MAINNET: 3, BASE_MAINNET: 4, POLYGON_MAINNET: 5, ARBITRUM_MAINNET: 6 };
           this.merchantChains = data.wallets
             .filter(w => CHAIN_CONFIG[w.chain])
             .map(w => ({
@@ -217,7 +219,8 @@
               address: w.address,
               supportedTokens: w.supportedTokens || ['USDC'],
               config: CHAIN_CONFIG[w.chain]
-            }));
+            }))
+            .sort((a, b) => (chainPriority[a.chain] ?? 99) - (chainPriority[b.chain] ?? 99));
         }
 
         if (this.merchantChains.length > 0) {
@@ -586,7 +589,8 @@
 
     renderTokenOptions() {
       if (!this.selectedChain) return '<option>USDC</option>';
-      const tokens = this.selectedChain.supportedTokens;
+      const tokenOrder = { USDC: 0, USDT: 1, EURC: 2 };
+      const tokens = [...this.selectedChain.supportedTokens].sort((a, b) => (tokenOrder[a] ?? 99) - (tokenOrder[b] ?? 99));
       const chainTokens = this.selectedChain.config.tokens;
       return tokens
         .filter(t => chainTokens[t])

@@ -533,7 +533,7 @@ export class BlockchainService {
             // Match against pending orders
             for (const order of orders) {
               const orderAmount = Number(order.amount);
-              if (Math.abs(orderAmount - amount) >= 0.01) continue;
+              if (amount < orderAmount * 0.999 || (orderAmount > 0 && Math.abs(amount - orderAmount) / orderAmount > 0.001)) continue;
               // Only enforce wallet match if it's a TRON address (starts with T)
               if (order.customerWallet && order.customerWallet.startsWith('T') && fromAddress !== order.customerWallet) continue;
 
