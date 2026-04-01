@@ -1179,6 +1179,16 @@
           const manualDiv = this.container.querySelector('#sp-manual-tx');
           if (manualDiv) manualDiv.style.display = 'block';
 
+          // Stop progress bar at current position
+          const bar = this.container.querySelector('#sp-progress-bar');
+          if (bar) bar.style.transition = 'none';
+
+          // Update status
+          const pollStatus = this.container.querySelector('#sp-poll-status');
+          if (pollStatus) pollStatus.textContent = 'Stablo couldn\'t find it automatically';
+          const pollTimer = this.container.querySelector('#sp-poll-timer');
+          if (pollTimer) pollTimer.textContent = 'Paste your transaction ID below to verify';
+
           // Set smart placeholder + hint per chain
           const txInput = this.container.querySelector('#sp-manual-tx-input');
           const txHint = this.container.querySelector('#sp-manual-tx-hint');

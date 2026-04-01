@@ -321,72 +321,122 @@ router.post('/order/:orderId/tx', async (req, res) => {
       return res.status(400).json({ error: 'A transaction is already pending review for this order', txHash: pendingManualTx.txHash });
     }
 
-    // Try auto-verification on-chain
+    // Try auto-verification on-chain — MUST verify destination, token, and amount
     let verified = false;
+    let verifyError = '';
     try {
       if (order.chain === 'SOLANA_MAINNET') {
-        // Verify Solana TX via RPC
         const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
+
+        // Get merchant's ATAs to match against
+        const ataRes = await fetch(solRpc, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 0, method: 'getTokenAccountsByOwner',
+            params: [order.paymentAddress, { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' }, { encoding: 'jsonParsed' }] }),
+          signal: AbortSignal.timeout(8000),
+        });
+        const ataData: any = await ataRes.json();
+        const merchantATAs = new Set((ataData.result?.value || []).map((a: any) => a.pubkey));
+        merchantATAs.add(order.paymentAddress); // Also check wallet itself
+
+        // Get the transaction
         const solRes = await fetch(solRpc, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0', id: 1, method: 'getTransaction',
-            params: [txHash, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]
-          }),
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction',
+            params: [txHash, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
           signal: AbortSignal.timeout(10000),
         });
         const solData: any = await solRes.json();
-        if (solData.result && !solData.result.meta?.err) {
-          verified = true;
-          // Create confirmed transaction
-          await db.transaction.create({
-            data: {
-              orderId, txHash, chain: order.chain,
-              amount: Number(order.amount),
-              fromAddress: order.customerWallet || 'manual',
-              toAddress: order.paymentAddress,
-              status: 'CONFIRMED', confirmations: 1,
-              blockTimestamp: solData.result.blockTime ? new Date(solData.result.blockTime * 1000) : new Date(),
-            },
-          });
-          const { OrderService } = await import('../services/orderService');
-          await new OrderService().confirmOrder(orderId, { txHash });
+        const tx = solData.result;
+
+        if (!tx) { verifyError = 'Transaction not found on Solana'; }
+        else if (tx.meta?.err) { verifyError = 'Transaction failed on-chain'; }
+        else {
+          // Parse SPL transfers — verify destination is our ATA and amount matches
+          const allIx = [...(tx.transaction?.message?.instructions || []), ...(tx.meta?.innerInstructions?.flatMap((i: any) => i.instructions) || [])];
+          let matchedAmount = 0;
+          let matchedFrom = '';
+
+          for (const ix of allIx) {
+            if (!ix.parsed || ix.program !== 'spl-token') continue;
+            if (ix.parsed.type !== 'transferChecked' && ix.parsed.type !== 'transfer') continue;
+            const dest = ix.parsed.info.destination;
+            if (!merchantATAs.has(dest)) continue; // Not to our wallet!
+            const amt = parseFloat(ix.parsed.info.tokenAmount?.uiAmountString || '0');
+            matchedAmount += amt;
+            matchedFrom = ix.parsed.info.authority || ix.parsed.info.multisigAuthority || ix.parsed.info.signers?.[0] || '';
+          }
+
+          if (matchedAmount === 0) {
+            verifyError = 'This transaction does not send tokens to the merchant wallet';
+          } else if (Math.abs(matchedAmount - Number(order.amount)) >= 0.01) {
+            verifyError = `Amount mismatch: TX sends $${matchedAmount.toFixed(4)} but order requires $${Number(order.amount).toFixed(4)}`;
+          } else {
+            verified = true;
+            await db.transaction.create({
+              data: { orderId, txHash, chain: order.chain, amount: matchedAmount,
+                fromAddress: matchedFrom || 'verified', toAddress: order.paymentAddress,
+                status: 'CONFIRMED', confirmations: 1,
+                blockTimestamp: tx.blockTime ? new Date(tx.blockTime * 1000) : new Date() },
+            });
+            const { OrderService } = await import('../services/orderService');
+            await new OrderService().confirmOrder(orderId, { txHash });
+          }
         }
       } else if (['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'BNB_MAINNET'].includes(order.chain)) {
-        // Verify EVM TX via RPC
         const { ethers } = await import('ethers');
         const { CHAIN_CONFIGS } = await import('../config/chains');
         const config = CHAIN_CONFIGS[order.chain as keyof typeof CHAIN_CONFIGS];
-        if (config?.rpcUrl) {
+        if (!config?.rpcUrl) { verifyError = 'Chain not configured'; }
+        else {
           const provider = new ethers.JsonRpcProvider(config.rpcUrl);
           const receipt = await provider.getTransactionReceipt(txHash);
-          if (receipt && receipt.status === 1) {
-            verified = true;
-            await db.transaction.create({
-              data: {
-                orderId, txHash, chain: order.chain,
-                amount: Number(order.amount),
-                fromAddress: receipt.from,
-                toAddress: order.paymentAddress,
-                blockNumber: BigInt(receipt.blockNumber),
-                status: 'CONFIRMED', confirmations: 1,
-                blockTimestamp: new Date(),
-              },
-            });
-            const { OrderService } = await import('../services/orderService');
-            await new OrderService().confirmOrder(orderId, { txHash, blockNumber: receipt.blockNumber });
+          if (!receipt) { verifyError = 'Transaction not found on this chain'; }
+          else if (receipt.status !== 1) { verifyError = 'Transaction failed on-chain'; }
+          else {
+            // Parse ERC20 Transfer logs — verify TO is our payment address
+            const transferTopic = ethers.id('Transfer(address,address,uint256)');
+            const matchingLog = receipt.logs.find(log =>
+              log.topics[0] === transferTopic &&
+              log.topics[2] && ethers.getAddress('0x' + log.topics[2].slice(26)).toLowerCase() === order.paymentAddress.toLowerCase()
+            );
+            if (!matchingLog) {
+              verifyError = 'This transaction does not send tokens to the merchant wallet';
+            } else {
+              const decimals = order.chain === 'BNB_MAINNET' ? 18 : 6;
+              const txAmount = parseFloat(ethers.formatUnits(BigInt(matchingLog.data), decimals));
+              if (Math.abs(txAmount - Number(order.amount)) >= 0.01) {
+                verifyError = `Amount mismatch: TX sends $${txAmount.toFixed(4)} but order requires $${Number(order.amount).toFixed(4)}`;
+              } else {
+                verified = true;
+                await db.transaction.create({
+                  data: { orderId, txHash, chain: order.chain, amount: txAmount,
+                    fromAddress: receipt.from, toAddress: order.paymentAddress,
+                    blockNumber: BigInt(receipt.blockNumber),
+                    status: 'CONFIRMED', confirmations: 1, blockTimestamp: new Date() },
+                });
+                const { OrderService } = await import('../services/orderService');
+                await new OrderService().confirmOrder(orderId, { txHash, blockNumber: receipt.blockNumber });
+              }
+            }
           }
         }
       }
     } catch (verifyErr: any) {
       console.error(`[manual-tx] Auto-verify failed for ${orderId}:`, verifyErr.message);
+      verifyError = 'Verification failed: ' + verifyErr.message;
     }
 
     if (verified) {
       return res.json({ success: true, status: 'CONFIRMED', message: 'Payment verified and confirmed!' });
     }
 
-    // Auto-verify failed — queue for manual review
+    // Verification failed with a specific reason — reject, don't queue
+    if (verifyError) {
+      return res.status(400).json({ error: verifyError, status: 'REJECTED' });
+    }
+
+    // Unknown failure — queue for manual review
     await db.transaction.create({
       data: {
         orderId, txHash, chain: order.chain,
