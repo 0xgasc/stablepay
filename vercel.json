@@ -40,6 +40,14 @@
       "destination": "/crypto-pay.html"
     },
     {
+      "source": "/receipt/:path*",
+      "destination": "/api"
+    },
+    {
+      "source": "/pay/:path*",
+      "destination": "/api"
+    },
+    {
       "source": "/api/cron/:path*",
       "destination": "/api/cron/:path*"
     },
