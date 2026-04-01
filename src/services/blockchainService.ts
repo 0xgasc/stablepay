@@ -127,7 +127,7 @@ export class BlockchainService {
           const orderAmount = Number(order.amount);
           const txAmount = Number(amount);
           // Must be within 2% AND at least 95% of order amount
-          if (txAmount < orderAmount * 0.95 || (orderAmount > 0 && Math.abs(txAmount - orderAmount) / orderAmount > 0.02)) continue;
+          if (txAmount < orderAmount * 0.999 || (orderAmount > 0 && Math.abs(txAmount - orderAmount) / orderAmount > 0.001)) continue;
 
           // If order has customerWallet AND it's a valid EVM address, require FROM match
           if (order.customerWallet && order.customerWallet.startsWith('0x')) {
@@ -438,7 +438,7 @@ export class BlockchainService {
               for (const order of orders) {
                 const orderAmt = Number(order.amount);
                 // Must be within 2% AND at least 95% of order amount
-                if (amount < orderAmt * 0.95 || (orderAmt > 0 && Math.abs(amount - orderAmt) / orderAmt > 0.02)) continue;
+                if (amount < orderAmt * 0.999 || (orderAmt > 0 && Math.abs(amount - orderAmt) / orderAmt > 0.001)) continue;
                 if (order.customerWallet && !order.customerWallet.startsWith('0x') && from !== order.customerWallet) continue;
 
                 // Match! Create transaction + confirm

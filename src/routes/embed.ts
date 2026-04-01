@@ -372,7 +372,7 @@ router.post('/order/:orderId/tx', async (req, res) => {
           const pctDiff = orderAmt > 0 ? Math.abs(matchedAmount - orderAmt) / orderAmt : 1;
           if (matchedAmount === 0) {
             verifyError = 'This transaction does not send tokens to the merchant wallet';
-          } else if (matchedAmount < orderAmt * 0.95 || pctDiff > 0.02) {
+          } else if (matchedAmount < orderAmt * 0.999 || pctDiff > 0.001) {
             verifyError = `Amount mismatch: TX sends $${matchedAmount.toFixed(6)} but order requires $${orderAmt.toFixed(6)}`;
           } else {
             verified = true;
@@ -410,7 +410,7 @@ router.post('/order/:orderId/tx', async (req, res) => {
               const txAmount = parseFloat(ethers.formatUnits(BigInt(matchingLog.data), decimals));
               const evmOrderAmt = Number(order.amount);
               const evmPctDiff = evmOrderAmt > 0 ? Math.abs(txAmount - evmOrderAmt) / evmOrderAmt : 1;
-              if (txAmount < evmOrderAmt * 0.95 || evmPctDiff > 0.02) {
+              if (txAmount < evmOrderAmt * 0.999 || evmPctDiff > 0.001) {
                 verifyError = `Amount mismatch: TX sends $${txAmount.toFixed(6)} but order requires $${evmOrderAmt.toFixed(6)}`;
               } else {
                 verified = true;
