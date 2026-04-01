@@ -425,10 +425,11 @@ export class BlockchainService {
               const from = info.authority || info.multisigAuthority || info.signers?.[0] || '';
               if (!from) continue;
 
-              // Resolve destination to wallet owner
+              // Resolve destination — check if it's the wallet OR one of its ATAs
               const dest = info.destination;
               const destOwner = owners[dest] || dest;
-              if (destOwner !== address && dest !== address) continue;
+              const isOurWallet = destOwner === address || dest === address || tokenAccounts.includes(dest);
+              if (!isOurWallet) continue;
 
               // Match against pending orders
               for (const order of orders) {
