@@ -513,28 +513,22 @@
                   font-size: 11px; cursor: pointer; margin-top: 6px; text-decoration: underline;
                 ">← Change wallet address</button>
               </div>
-              <!-- Step 3: Listening + Manual TX fallback -->
-              <div id="sp-send-step3" style="display: none; text-align: center; padding: 20px;">
-                <div style="font-size: 11px; font-weight: 700; color: var(--sp-text); margin-bottom: 8px;">Waiting for Confirmation</div>
-                <div style="margin: 12px 0;">
-                  <span class="sp-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid var(--sp-border); border-top-color: #00E5FF; border-radius: 50%;"></span>
+              <!-- Step 3: Verification -->
+              <div id="sp-send-step3" style="display: none; padding: 20px;">
+                <!-- Progress bar -->
+                <div style="width: 100%; height: 4px; background: var(--sp-card); margin-bottom: 16px; overflow: hidden;">
+                  <div id="sp-progress-bar" style="width: 0%; height: 100%; background: #00E5FF; transition: width 1s linear;"></div>
                 </div>
-                <p style="font-size: 12px; color: var(--sp-text); font-weight: 600;">Listening for your payment...</p>
-                <p id="sp-poll-timer" style="font-size: 10px; color: var(--sp-muted); margin-top: 4px;">Checking... 0:00</p>
 
-                <!-- Speed up button (appears at 10s) -->
-                <button id="sp-speedup-btn" style="
-                  display: none; margin-top: 12px; padding: 8px 16px;
-                  background: var(--sp-card); color: var(--sp-text); border: 2px solid var(--sp-border);
-                  font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
-                ">Speed Up Verification</button>
-                <p id="sp-speedup-status" style="font-size: 9px; color: var(--sp-muted); margin-top: 4px; display: none;"></p>
+                <div style="text-align: center;">
+                  <p id="sp-poll-status" style="font-size: 13px; font-weight: 700; color: var(--sp-text); margin-bottom: 4px;">Scanning the blockchain...</p>
+                  <p id="sp-poll-timer" style="font-size: 10px; color: var(--sp-muted);">This can take up to a minute</p>
+                </div>
 
-                <!-- Manual TX entry (hidden until timeout) -->
+                <!-- Manual TX (hidden until 45s) -->
                 <div id="sp-manual-tx" style="display: none; margin-top: 16px; text-align: left;">
                   <div style="background: var(--sp-card); border: 2px solid var(--sp-border); padding: 12px;">
-                    <p style="font-size: 11px; font-weight: 700; color: var(--sp-text); margin-bottom: 4px;">Taking longer than expected?</p>
-                    <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Paste your transaction hash or block explorer link below to speed up verification.</p>
+                    <p style="font-size: 10px; font-weight: 700; color: var(--sp-text); margin-bottom: 6px;">Have your transaction hash?</p>
                     <div style="display: flex; gap: 6px;">
                       <input id="sp-manual-tx-input" type="text" placeholder="TX hash or explorer link..." style="
                         flex: 1; padding: 8px; font-size: 10px; font-family: monospace; border: 2px solid var(--sp-border);
@@ -543,16 +537,16 @@
                       <button id="sp-manual-tx-btn" style="
                         padding: 8px 14px; background: #000; color: #fff; border: none;
                         font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
-                      ">Submit</button>
+                      ">Verify</button>
                     </div>
                     <p id="sp-manual-tx-status" style="font-size: 9px; color: var(--sp-muted); margin-top: 6px; display: none;"></p>
                   </div>
                 </div>
 
                 <button id="sp-cancel-listen-btn" style="
-                  margin-top: 12px; padding: 6px; background: transparent; color: var(--sp-muted); border: none;
+                  display: block; margin: 12px auto 0; padding: 6px; background: transparent; color: var(--sp-muted); border: none;
                   font-size: 10px; cursor: pointer; text-decoration: underline;
-                ">← Cancel and go back</button>
+                ">← Go back</button>
               </div>
             </div>
           </div>
@@ -835,11 +829,11 @@
           this.container.querySelector('#sp-send-step3').style.display = 'none';
           this.container.querySelector('#sp-send-step2').style.display = 'block';
           this.updateStepIndicator(2);
-          // Reset manual TX section
+          // Reset manual TX section + progress bar
           const manualDiv = this.container.querySelector('#sp-manual-tx');
           if (manualDiv) manualDiv.style.display = 'none';
-          const speedupBtn = this.container.querySelector('#sp-speedup-btn');
-          if (speedupBtn) { speedupBtn.style.display = 'none'; speedupBtn.disabled = false; speedupBtn.textContent = 'Speed Up Verification'; }
+          const bar = this.container.querySelector('#sp-progress-bar');
+          if (bar) bar.style.width = '0%';
         });
       }
 
@@ -1136,62 +1130,39 @@
       if (this._pollingInterval) return; // Don't double-poll
 
       const pollStartTime = Date.now();
-      const SPEEDUP_TIMEOUT = 45000;   // Show speed-up button after 45s
-      const MANUAL_TX_TIMEOUT = 60000; // Show manual entry after 60s
-      let speedupShown = false;
+      const MANUAL_TX_TIMEOUT = 45000; // Show manual entry after 45s
       let manualShown = false;
 
-      // Speed-up button handler
-      const speedupBtn = this.container.querySelector('#sp-speedup-btn');
-      if (speedupBtn) {
-        speedupBtn.addEventListener('click', async () => {
-          const statusEl = this.container.querySelector('#sp-speedup-status');
-          speedupBtn.disabled = true;
-          speedupBtn.textContent = 'Scanning...';
-          if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Querying blockchain directly...'; }
+      const statusMessages = [
+        { at: 0, text: 'Scanning the blockchain...' },
+        { at: 8, text: 'Checking the public ledger...' },
+        { at: 16, text: 'Verifying transaction...' },
+        { at: 25, text: 'Waiting for network confirmation...' },
+        { at: 35, text: 'Almost there...' },
+        { at: 45, text: 'Still looking — you can paste your TX below' },
+      ];
 
-          try {
-            // Trigger a direct chain lookup via the manual TX endpoint with empty hash
-            // This makes the backend check the chain for recent txs to this address
-            const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}`);
-            const data = await res.json();
-            if (data.status === 'CONFIRMED') {
-              clearInterval(this._pollingInterval);
-              clearInterval(this._timerInterval);
-              this.showSuccess(data);
-              return;
-            }
-            if (statusEl) statusEl.textContent = 'Not found yet — scanner will keep checking. You can also enter TX below.';
-            speedupBtn.textContent = 'Checked';
-          } catch (e) {
-            if (statusEl) statusEl.textContent = 'Check failed — scanner will keep trying.';
-            speedupBtn.textContent = 'Retry';
-            speedupBtn.disabled = false;
-          }
-        });
-      }
-
-      // Timer display
+      // Timer display + progress bar
       this._timerInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - pollStartTime) / 1000);
-        const mins = Math.floor(elapsed / 60);
-        const secs = elapsed % 60;
-        const timerEl = this.container.querySelector('#sp-poll-timer');
-        if (timerEl) {
-          // Show progressive status messages
-          const statusMsg = elapsed < 10 ? 'Detecting transaction...'
-            : elapsed < 20 ? 'Verifying on blockchain...'
-            : elapsed < 35 ? 'Waiting for confirmation...'
-            : elapsed < 50 ? 'This can take up to a minute...'
-            : 'Still checking — you can enter TX below';
-          timerEl.textContent = `${statusMsg} ${mins}:${secs.toString().padStart(2, '0')}`;
+        const progress = Math.min(elapsed / 60 * 100, 95); // Cap at 95%
+
+        // Update progress bar
+        const bar = this.container.querySelector('#sp-progress-bar');
+        if (bar) bar.style.width = progress + '%';
+
+        // Update status message
+        const statusEl = this.container.querySelector('#sp-poll-status');
+        if (statusEl) {
+          const msg = [...statusMessages].reverse().find(m => elapsed >= m.at);
+          if (msg) statusEl.textContent = msg.text;
         }
 
-        // Show speed-up button after 10s
-        if (!speedupShown && Date.now() - pollStartTime > SPEEDUP_TIMEOUT) {
-          speedupShown = true;
-          const btn = this.container.querySelector('#sp-speedup-btn');
-          if (btn) btn.style.display = 'inline-block';
+        // Update timer
+        const timerEl = this.container.querySelector('#sp-poll-timer');
+        if (timerEl) {
+          if (elapsed < 10) timerEl.textContent = 'This can take up to a minute';
+          else timerEl.textContent = `${elapsed}s`;
         }
 
         // Show manual TX entry after timeout
