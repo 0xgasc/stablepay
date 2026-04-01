@@ -332,11 +332,11 @@
                 ">
                   ${this.merchantChains.map((mc, i) => `
                     <div class="sp-chain-option" data-chain="${mc.chain}" style="
-                      padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+                      padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--sp-text);
                       ${i === 0 ? 'background: var(--sp-bg);' : ''}
                     " onmouseover="this.style.background='var(--sp-bg)'" onmouseout="this.style.background=''">
                       <img src="${this.getChainIcon(mc.chain)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
-                      <span style="font-size: 13px; font-weight: 600;">${mc.config.chainName}</span>
+                      <span style="font-size: 13px; font-weight: 600; color: var(--sp-text);">${mc.config.chainName}</span>
                     </div>
                   `).join('')}
                 </div>
@@ -366,10 +366,10 @@
                     .filter(t => this.selectedChain.config.tokens[t])
                     .map(token => `
                       <div class="sp-token-option" data-token="${token}" style="
-                        padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+                        padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--sp-text);
                       " onmouseover="this.style.background='var(--sp-bg)'" onmouseout="this.style.background=''">
                         <img src="${this.getTokenIcon(token)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
-                        <span style="font-size: 13px; font-weight: 600;">${token}</span>
+                        <span style="font-size: 13px; font-weight: 600; color: var(--sp-text);">${token}</span>
                       </div>
                     `).join('') : ''}
                 </div>
