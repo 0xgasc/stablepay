@@ -1142,12 +1142,12 @@
       let manualShown = false;
 
       const statusMessages = [
-        { at: 0, text: 'Scanning the blockchain...' },
+        { at: 0, text: 'Stablo is scanning the blockchain...' },
         { at: 8, text: 'Checking the public ledger...' },
-        { at: 16, text: 'Verifying transaction...' },
+        { at: 16, text: 'Verifying your transaction...' },
         { at: 25, text: 'Waiting for network confirmation...' },
         { at: 35, text: 'Almost there...' },
-        { at: 45, text: 'Still looking — you can paste your TX below' },
+        { at: 45, text: 'Still looking — paste your TX below to help Stablo find it' },
       ];
 
       // Timer display + progress bar

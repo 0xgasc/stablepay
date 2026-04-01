@@ -473,7 +473,7 @@
         <div id="chatHeader" class="flex items-center justify-between px-4 py-3 border-b-4 border-black cursor-pointer shrink-0" style="background: #00E5FF;">
             <div class="flex items-center gap-1.5">
                 <div class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
-                <span class="font-bold text-black text-xs tracking-wide opacity-70">agent ready</span>
+                <span class="font-bold text-black text-xs tracking-wide opacity-70">Stablo ready</span>
             </div>
             <div class="flex items-center gap-2">
                 <button id="chatClearBtn" class="text-xs font-bold text-black opacity-60 hover:opacity-100" style="text-transform: uppercase;">CLEAR</button>
@@ -483,7 +483,7 @@
         </div>
         <!-- Tip overlay -->
         <div id="tipOverlay" class="hidden absolute inset-0 z-10 bg-slate-900/95 flex flex-col items-center justify-center p-6 overflow-y-auto">
-            <h3 class="text-lg font-bold text-white mb-1" style="text-transform: uppercase;">Tip the Agent</h3>
+            <h3 class="text-lg font-bold text-white mb-1" style="text-transform: uppercase;">Tip Stablo</h3>
             <p class="text-slate-400 text-xs mb-4 text-center">Send a stablecoin tip from your wallet</p>
 
             <!-- Step 1: Pick network -->
@@ -1967,14 +1967,14 @@ onMounted(() => {
                 <div class="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wider">Refund Method</div>
                 <div class="grid grid-cols-2 gap-2">
                     <button id="refundMethodManaged" class="px-4 py-3 border-2 border-purple-500 bg-purple-900/30 text-purple-300 text-sm font-medium rounded transition-colors">
-                        🤖 Managed Wallet
+                        ⚡ Stablo Wallet
                     </button>
                     <button id="refundMethodPersonal" class="px-4 py-3 border border-slate-700 bg-slate-900 text-slate-400 text-sm font-medium rounded transition-colors hover:border-slate-500">
                         🔗 Connect Wallet
                     </button>
                 </div>
                 <div id="refundManagedInfo" class="text-xs text-purple-400 mt-2">
-                    Refund sent automatically from your managed wallet. Gas sponsored.
+                    Stablo sends the refund from your managed wallet. Gas sponsored automatically.
                 </div>
                 <div id="refundPersonalInfo" class="text-xs text-blue-400 mt-2 hidden">
                     Connect your personal wallet to send the refund manually.
@@ -1984,7 +1984,7 @@ onMounted(() => {
             <div class="flex gap-3 mt-6">
                 <button id="executeManagedRefundBtn"
                         class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 font-medium transition-colors rounded">
-                    🤖 Refund via Managed Wallet
+                    ⚡ Refund via Stablo
                 </button>
                 <button id="executeRefundBtn" disabled
                         class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 font-medium transition-colors rounded disabled:bg-slate-700 disabled:cursor-not-allowed hidden">
@@ -4963,7 +4963,7 @@ onMounted(() => {
 
             const btn = document.getElementById('executeManagedRefundBtn');
             btn.disabled = true;
-            btn.textContent = '🤖 Processing...';
+            btn.textContent = '⚡ Stablo processing...';
 
             try {
                 const response = await fetch('/api/refunds/managed', {
@@ -4985,7 +4985,7 @@ onMounted(() => {
                 alert('Refund failed: ' + error.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = '🤖 Refund via Managed Wallet';
+                btn.textContent = '⚡ Refund via Stablo';
             }
         });
 
