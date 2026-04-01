@@ -473,10 +473,11 @@
                 <!-- QR View (default) -->
                 <div id="sp-send-view-qr" style="text-align: center; margin-bottom: 12px;">
                   <!-- Solana Pay toggle (only visible on Solana) -->
-                  <div id="sp-solanapay-toggle" style="display: none; margin-bottom: 8px;">
-                    <label style="display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
-                      <input type="checkbox" id="sp-solanapay-check" style="width: 14px; height: 14px;">
-                      <span style="font-size: 9px; color: var(--sp-muted); font-weight: 600; text-transform: uppercase;">Solana Pay QR (for Phantom, Solflare)</span>
+                  <div id="sp-solanapay-toggle" style="display: none; margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; background: #9945FF15; border: 1px solid #9945FF40; padding: 6px 12px; border-radius: 6px;">
+                      <input type="checkbox" id="sp-solanapay-check" style="width: 14px; height: 14px; accent-color: #9945FF;">
+                      <span style="font-size: 10px; color: #9945FF; font-weight: 700;">Solana Pay QR</span>
+                      <span style="font-size: 8px; color: var(--sp-muted);">Phantom / Solflare</span>
                     </label>
                   </div>
                   <div style="background: white; padding: 10px; display: inline-block; border: 3px solid #000; margin-bottom: 8px;">
@@ -528,9 +529,9 @@
                 <!-- Manual TX (hidden until 45s) -->
                 <div id="sp-manual-tx" style="display: none; margin-top: 16px; text-align: left;">
                   <div style="background: var(--sp-card); border: 2px solid var(--sp-border); padding: 12px;">
-                    <p style="font-size: 10px; font-weight: 700; color: var(--sp-text); margin-bottom: 6px;">Have your transaction hash?</p>
+                    <p style="font-size: 10px; font-weight: 700; color: var(--sp-text); margin-bottom: 6px;">Paste your transaction ID</p>
                     <div style="display: flex; gap: 6px;">
-                      <input id="sp-manual-tx-input" type="text" placeholder="TX hash or explorer link..." style="
+                      <input id="sp-manual-tx-input" type="text" placeholder="" style="
                         flex: 1; padding: 8px; font-size: 10px; font-family: monospace; border: 2px solid var(--sp-border);
                         background: var(--sp-bg); color: var(--sp-text); outline: none;
                       ">
@@ -539,7 +540,8 @@
                         font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
                       ">Verify</button>
                     </div>
-                    <p id="sp-manual-tx-status" style="font-size: 9px; color: var(--sp-muted); margin-top: 6px; display: none;"></p>
+                    <p id="sp-manual-tx-hint" style="font-size: 8px; color: var(--sp-muted); margin-top: 4px;"></p>
+                    <p id="sp-manual-tx-status" style="font-size: 9px; color: var(--sp-muted); margin-top: 4px; display: none;"></p>
                   </div>
                 </div>
 
@@ -1176,8 +1178,25 @@
           manualShown = true;
           const manualDiv = this.container.querySelector('#sp-manual-tx');
           if (manualDiv) manualDiv.style.display = 'block';
-          const timerText = this.container.querySelector('#sp-poll-timer');
-          if (timerText) timerText.textContent = 'Still listening... You can also submit your TX below.';
+
+          // Set smart placeholder + hint per chain
+          const txInput = this.container.querySelector('#sp-manual-tx-input');
+          const txHint = this.container.querySelector('#sp-manual-tx-hint');
+          const chain = this.selectedChain?.chain;
+          const chainType = this.selectedChain?.config?.type;
+          if (txInput) {
+            if (chainType === 'solana') {
+              txInput.placeholder = 'Solscan link or transaction signature...';
+            } else if (chain === 'TRON_MAINNET') {
+              txInput.placeholder = 'Tronscan link or TX hash...';
+            } else {
+              txInput.placeholder = 'Explorer link or 0x TX hash...';
+            }
+          }
+          if (txHint) {
+            const explorerNames = { BASE_MAINNET: 'basescan.org', ETHEREUM_MAINNET: 'etherscan.io', POLYGON_MAINNET: 'polygonscan.com', ARBITRUM_MAINNET: 'arbiscan.io', BNB_MAINNET: 'bscscan.com', SOLANA_MAINNET: 'solscan.io', TRON_MAINNET: 'tronscan.org' };
+            txHint.textContent = `Paste from ${explorerNames[chain] || 'your block explorer'}`;
+          }
 
           // Attach manual TX submit handler
           const submitBtn = this.container.querySelector('#sp-manual-tx-btn');
@@ -1188,12 +1207,30 @@
               const value = input?.value?.trim();
               if (!value) return;
 
+              // Basic format validation
+              const isLink = value.startsWith('http');
+              if (!isLink) {
+                // TX hash validation per chain
+                const ct = this.selectedChain?.config?.type;
+                if (ct === 'evm' && (!value.startsWith('0x') || value.length !== 66)) {
+                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'EVM transaction hashes start with 0x and are 66 characters'; statusEl.style.color = '#ef4444'; }
+                  return;
+                }
+                if (ct === 'solana' && (value.startsWith('0x') || value.length < 40)) {
+                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Solana signatures are base58 encoded, ~88 characters'; statusEl.style.color = '#ef4444'; }
+                  return;
+                }
+                if (value.length < 20) {
+                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'That doesn\'t look like a transaction hash'; statusEl.style.color = '#ef4444'; }
+                  return;
+                }
+              }
+
               submitBtn.disabled = true;
               submitBtn.textContent = '...';
               if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Verifying on-chain...'; statusEl.style.color = 'var(--sp-muted)'; }
 
               try {
-                const isLink = value.startsWith('http');
 
                 // Validate explorer URL matches selected chain
                 if (isLink) {

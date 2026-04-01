@@ -375,13 +375,15 @@ export class BlockchainService {
           const signatures = allSigs.filter(s => { if (seen.has(s.signature)) return false; seen.add(s.signature); return true; });
           console.log(`[scanner] Solana: ${signatures.length} sigs (${tokenAccounts.length} ATAs) for ${address.slice(0, 8)}...`);
 
+          let skipped = 0, checked = 0;
           for (const sigInfo of signatures) {
             if (sigInfo.err) continue;
             const txHash = sigInfo.signature;
 
             // Skip if already processed
             const existingTx = await db.transaction.findUnique({ where: { txHash } });
-            if (existingTx) continue;
+            if (existingTx) { skipped++; continue; }
+            checked++;
 
             // Get parsed transaction via RPC
             const txRes = await fetch(solRpc, {
@@ -458,6 +460,9 @@ export class BlockchainService {
                 break;
               }
             }
+          }
+          if (checked > 0 || skipped < signatures.length) {
+            console.log(`[scanner] Solana ${address.slice(0, 8)}: ${checked} new, ${skipped} known`);
           }
         } catch (err: any) {
           console.error(`[scanner] Solana error for ${address.slice(0, 8)}:`, err.message);
