@@ -1721,6 +1721,11 @@ onMounted(() => {
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Button Text <span class="text-slate-500">(optional)</span></label>
                                         <input type="text" id="wcButtonText" placeholder="Pay Now" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800 text-sm">
                                     </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Font Family <span class="text-slate-500">(optional)</span></label>
+                                        <input type="text" id="wcFontFamily" placeholder="Inter, Poppins, Roboto..." onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800 text-sm">
+                                        <div class="text-[10px] text-slate-500 mt-1">Google Font name. Must be loaded on your site.</div>
+                                    </div>
                                     <div class="flex items-center gap-3" id="wcHideFooterRow">
                                         <input type="checkbox" id="wcHideFooter" onchange="updateWidgetPreview()" class="w-4 h-4">
                                         <label for="wcHideFooter" class="text-sm text-slate-300">Hide "Powered by StablePay" footer</label>
@@ -3603,7 +3608,7 @@ onMounted(() => {
                             </button>
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
-                            <div class="text-xs font-semibold text-white">$${parseFloat(amount).toFixed(2)}</div>
+                            <div class="text-xs font-semibold text-white">$${parseFloat(amount).toFixed(2)} <span class="text-[10px] text-slate-400 font-normal">${order.token || 'USDC'}</span></div>
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
                             <div class="text-xs text-slate-400">${order.chain.replace(/_/g, ' ')}</div>
@@ -5502,6 +5507,7 @@ onMounted(() => {
                     if (wc.headerTextColor) document.getElementById('wcHeaderTextColor').value = wc.headerTextColor;
                     if (wc.logoUrl) document.getElementById('wcLogoUrl').value = wc.logoUrl;
                     if (wc.buttonText) document.getElementById('wcButtonText').value = wc.buttonText;
+                    if (wc.fontFamily) document.getElementById('wcFontFamily').value = wc.fontFamily;
                     if (wc.hideFooter) document.getElementById('wcHideFooter').checked = true;
                     updateWidgetPreview();
                 }
@@ -5523,6 +5529,7 @@ onMounted(() => {
                 headerTextColor: document.getElementById('wcHeaderTextColor')?.value || 'dark',
                 logoUrl: document.getElementById('wcLogoUrl')?.value || '',
                 buttonText: document.getElementById('wcButtonText')?.value || '',
+                fontFamily: document.getElementById('wcFontFamily')?.value || '',
                 hideFooter: document.getElementById('wcHideFooter')?.checked || false,
             };
 

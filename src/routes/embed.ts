@@ -430,7 +430,7 @@ router.put('/widget-config', requireMerchantAuth, async (req, res) => {
     const config = req.body;
 
     // Validate allowed keys
-    const allowed = ['borderStyle', 'theme', 'headerColor', 'headerTextColor', 'logoUrl', 'buttonText', 'hideFooter'];
+    const allowed = ['borderStyle', 'theme', 'headerColor', 'headerTextColor', 'logoUrl', 'buttonText', 'fontFamily', 'hideFooter'];
     const clean: Record<string, any> = {};
     for (const key of allowed) {
       if (config[key] !== undefined) clean[key] = config[key];

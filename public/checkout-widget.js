@@ -236,6 +236,7 @@
           if (wc.logoUrl && !c.dataset.logo) this.options.logoUrl = wc.logoUrl;
           if (wc.buttonText && !c.dataset.buttonText) this.options.buttonText = wc.buttonText;
           if (wc.hideFooter && !c.dataset.hideFooter) this.options.hideFooter = true;
+          if (wc.fontFamily && !c.dataset.font) this.options.fontFamily = wc.fontFamily;
         }
       } catch (error) {
         console.error('StablePay: Error loading merchant config', error);
