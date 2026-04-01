@@ -3573,6 +3573,16 @@ onMounted(() => {
             }
         }
 
+        function _hasPro() {
+            if (!currentMerchant) return false;
+            const plan = currentMerchant.plan || 'FREE';
+            if (plan === 'PRO' || plan === 'ENTERPRISE' || plan === 'GROWTH') return true;
+            const volume = Number(currentMerchant.monthlyVolumeUsed || currentMerchant.mainnetVolumeUsed || 0);
+            if (volume >= 5000) return true;
+            if (currentMerchant.proExpiresAt && new Date(currentMerchant.proExpiresAt) > new Date()) return true;
+            return false;
+        }
+
         function renderOrdersTable(orders) {
             const tbody = document.getElementById('ordersTableBody');
             
@@ -3644,14 +3654,10 @@ onMounted(() => {
                             ${createdAt}
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
-                            ${(order.status === 'CONFIRMED') ? `
-                                <div class="flex gap-1">
-                                    <button onclick="openRefundModal('${order.id}', '${amount}', '${order.chain}')"
-                                            class="text-orange-400 hover:text-orange-300 text-xs">
-                                        Refund
-                                    </button>
-                                </div>
-                            ` : '<span class="text-slate-600 text-xs">-</span>'}
+                            ${(order.status === 'CONFIRMED' && _hasPro()) ? `
+                                <button onclick="openRefundModal('${order.id}', '${amount}', '${order.chain}')"
+                                        class="text-orange-400 hover:text-orange-300 text-xs">Refund</button>
+                            ` : order.status === 'CONFIRMED' ? '<span class="text-slate-600 text-[9px]" title="Upgrade to PRO for refunds">PRO</span>' : '<span class="text-slate-600 text-xs">-</span>'}
                         </td>
                     </tr>
                 `;
