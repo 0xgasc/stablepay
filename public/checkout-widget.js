@@ -1136,8 +1136,8 @@
       if (this._pollingInterval) return; // Don't double-poll
 
       const pollStartTime = Date.now();
-      const SPEEDUP_TIMEOUT = 10000;   // Show speed-up button after 10s
-      const MANUAL_TX_TIMEOUT = 30000; // Show manual entry after 30s
+      const SPEEDUP_TIMEOUT = 45000;   // Show speed-up button after 45s
+      const MANUAL_TX_TIMEOUT = 60000; // Show manual entry after 60s
       let speedupShown = false;
       let manualShown = false;
 
@@ -1177,7 +1177,15 @@
         const mins = Math.floor(elapsed / 60);
         const secs = elapsed % 60;
         const timerEl = this.container.querySelector('#sp-poll-timer');
-        if (timerEl) timerEl.textContent = `Checking... ${mins}:${secs.toString().padStart(2, '0')}`;
+        if (timerEl) {
+          // Show progressive status messages
+          const statusMsg = elapsed < 10 ? 'Detecting transaction...'
+            : elapsed < 20 ? 'Verifying on blockchain...'
+            : elapsed < 35 ? 'Waiting for confirmation...'
+            : elapsed < 50 ? 'This can take up to a minute...'
+            : 'Still checking — you can enter TX below';
+          timerEl.textContent = `${statusMsg} ${mins}:${secs.toString().padStart(2, '0')}`;
+        }
 
         // Show speed-up button after 10s
         if (!speedupShown && Date.now() - pollStartTime > SPEEDUP_TIMEOUT) {
@@ -1209,6 +1217,26 @@
 
               try {
                 const isLink = value.startsWith('http');
+
+                // Validate explorer URL matches selected chain
+                if (isLink) {
+                  const chainType = this.selectedChain?.config?.type;
+                  const chain = this.selectedChain?.chain;
+                  const validExplorers = {
+                    BASE_MAINNET: 'basescan.org', ETHEREUM_MAINNET: 'etherscan.io',
+                    POLYGON_MAINNET: 'polygonscan.com', ARBITRUM_MAINNET: 'arbiscan.io',
+                    BNB_MAINNET: 'bscscan.com', SOLANA_MAINNET: 'solscan.io',
+                    TRON_MAINNET: 'tronscan.org',
+                  };
+                  const expected = validExplorers[chain];
+                  if (expected && !value.includes(expected)) {
+                    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = `Wrong explorer — use ${expected} for ${this.selectedChain?.config?.chainName}`; statusEl.style.color = '#ef4444'; }
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit';
+                    return;
+                  }
+                }
+
                 const body = isLink ? { explorerLink: value } : { txHash: value };
                 const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}/tx`, {
                   method: 'POST',

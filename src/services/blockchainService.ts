@@ -331,23 +331,49 @@ export class BlockchainService {
         addressMap.set(order.paymentAddress, existing);
       }
 
+      const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
+
       for (const [address, orders] of addressMap) {
         try {
-          // Use Helius enhanced API to get token transfers — simple HTTP, no web3.js
-          const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
-          const res = await fetch(solRpc, {
+          // Step 1: Find all token accounts (ATAs) owned by this wallet
+          const ataRes = await fetch(solRpc, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               jsonrpc: '2.0', id: 1,
-              method: 'getSignaturesForAddress',
-              params: [address, { limit: 20 }]
+              method: 'getTokenAccountsByOwner',
+              params: [address, { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' }, { encoding: 'jsonParsed' }]
             }),
             signal: AbortSignal.timeout(8000),
           });
-          const sigData: any = await res.json();
-          const signatures = sigData.result || [];
-          console.log(`[scanner] Solana: ${signatures.length} sigs for ${address.slice(0, 8)}...`);
+          const ataData: any = await ataRes.json();
+          const tokenAccounts = (ataData.result?.value || []).map((a: any) => a.pubkey).filter(Boolean);
+          // Also include the wallet address itself
+          const addressesToScan = [address, ...tokenAccounts];
+
+          // Step 2: Get signatures from all addresses (wallet + ATAs)
+          const allSigs: any[] = [];
+          for (const addr of addressesToScan) {
+            try {
+              const sigRes = await fetch(solRpc, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  jsonrpc: '2.0', id: 2,
+                  method: 'getSignaturesForAddress',
+                  params: [addr, { limit: 10 }]
+                }),
+                signal: AbortSignal.timeout(8000),
+              });
+              const sigData: any = await sigRes.json();
+              allSigs.push(...(sigData.result || []));
+            } catch { /* skip failed ATA */ }
+          }
+
+          // Deduplicate
+          const seen = new Set<string>();
+          const signatures = allSigs.filter(s => { if (seen.has(s.signature)) return false; seen.add(s.signature); return true; });
+          console.log(`[scanner] Solana: ${signatures.length} sigs (${tokenAccounts.length} ATAs) for ${address.slice(0, 8)}...`);
 
           for (const sigInfo of signatures) {
             if (sigInfo.err) continue;
