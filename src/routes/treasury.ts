@@ -105,7 +105,16 @@ router.post('/withdraw', requireMerchantAuth, async (req, res) => {
         const solRpc = (process.env.SOLANA_MAINNET_RPC_URL || 'https://api.mainnet-beta.solana.com').trim();
         const connection = new Connection(solRpc, 'confirmed');
         const privateKey = decryptKey(managedWallet.encryptedKey).trim();
-        const keypair = Keypair.fromSecretKey(bs58.default.decode(privateKey));
+        // Handle both hex and base58 encoded keys
+        let secretKey: Uint8Array;
+        if (/^[0-9a-fA-F]+$/.test(privateKey)) {
+          secretKey = new Uint8Array(Buffer.from(privateKey, 'hex'));
+        } else if (privateKey.startsWith('[')) {
+          secretKey = new Uint8Array(JSON.parse(privateKey));
+        } else {
+          secretKey = bs58.default.decode(privateKey);
+        }
+        const keypair = Keypair.fromSecretKey(secretKey);
         const mint = new PublicKey(mintAddr);
         const recipient = new PublicKey(toAddress);
         const TOKEN_PROGRAM = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');

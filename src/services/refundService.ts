@@ -421,9 +421,17 @@ export class RefundService {
 
       // Decrypt managed wallet key
       const privateKey = decryptManagedKey(managedWallet.encryptedKey).trim();
-      // Solana keys are base58 encoded
+      // Handle both hex and base58 encoded keys
       const bs58 = await import('bs58');
-      const keypair = Keypair.fromSecretKey(bs58.default.decode(privateKey));
+      let secretKey: Uint8Array;
+      if (/^[0-9a-fA-F]+$/.test(privateKey)) {
+        secretKey = new Uint8Array(Buffer.from(privateKey, 'hex'));
+      } else if (privateKey.startsWith('[')) {
+        secretKey = new Uint8Array(JSON.parse(privateKey));
+      } else {
+        secretKey = bs58.default.decode(privateKey);
+      }
+      const keypair = Keypair.fromSecretKey(secretKey);
 
       const mint = new PublicKey(mintAddr);
       const recipient = new PublicKey(refundToAddress);
