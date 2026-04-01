@@ -2543,14 +2543,15 @@ onMounted(() => {
 
         async function loadFeeBalance() {
             try {
-                const merchantId = sessionStorage.getItem('merchantId');
+                const merchantId = currentMerchant?.id || sessionStorage.getItem('merchantId');
                 const merchantToken = sessionStorage.getItem('merchantToken');
 
                 if (!merchantId || !merchantToken) {
-                    console.error('No merchant authentication for fee balance');
+                    console.error('No merchant authentication for fee balance', { merchantId: !!merchantId, token: !!merchantToken });
                     return;
                 }
 
+                console.log('Loading fee balance for:', merchantId);
                 const response = await fetch(`/api/fees/balance?merchantId=${merchantId}`, {
                     headers: { 'Authorization': `Bearer ${merchantToken}` }
                 });
@@ -2560,10 +2561,13 @@ onMounted(() => {
                 }
 
                 currentFeeData = await response.json();
-                console.log('Fee data:', currentFeeData);
+                console.log('Fee data loaded:', { totalOwed: currentFeeData.totalOwed, currentFees: currentFeeData.currentFees, volume: currentFeeData.currentPeriod?.volume });
 
                 // Update UI
-                const fmtFee = (v) => '$' + (v > 0 && v < 0.01 ? v.toFixed(4) : v.toFixed(2));
+                const fmtFee = (v) => {
+                    const n = Number(v) || 0;
+                    return '$' + (n > 0 && n < 0.01 ? n.toFixed(4) : n.toFixed(2));
+                };
                 document.getElementById('previousFeeBalance').textContent = fmtFee(currentFeeData.previousBalance || 0);
                 document.getElementById('currentPeriodFees').textContent = fmtFee(currentFeeData.currentFees || 0);
                 document.getElementById('totalFeesOwed').textContent = fmtFee(currentFeeData.totalOwed || 0);
