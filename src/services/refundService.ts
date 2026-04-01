@@ -288,6 +288,10 @@ export class RefundService {
     }
     if (!order.merchantId) return { success: false, error: 'No merchant on this order' };
 
+    if (order.chain === 'SOLANA_MAINNET' || order.chain === 'TRON_MAINNET') {
+      return { success: false, error: `Automated refunds on ${order.chain.replace('_MAINNET', '')} coming soon. For now, send the refund manually from your wallet to the customer address.` };
+    }
+
     const chainConf = CHAIN_RPC[order.chain];
     if (!chainConf) return { success: false, error: `Refund not supported on ${order.chain}` };
 

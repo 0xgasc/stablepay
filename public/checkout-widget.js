@@ -567,10 +567,10 @@
 
     getChainIcon(chain) {
       const icons = {
-        BASE_MAINNET: 'https://avatars.githubusercontent.com/u/108554348?s=280&v=4',
+        BASE_MAINNET: 'https://avatars.githubusercontent.com/u/108554348?s=80&v=4',
         ETHEREUM_MAINNET: 'https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg',
-        POLYGON_MAINNET: 'https://cryptologos.cc/logos/polygon-matic-logo.svg',
-        ARBITRUM_MAINNET: 'https://cryptologos.cc/logos/arbitrum-arb-logo.svg',
+        POLYGON_MAINNET: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQFI4axCrJbxy8fjqJhZEu_DXCHYAqXjSICXg&s',
+        ARBITRUM_MAINNET: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6mQ1pwxVT3lqCTZWhuUZzKTOqT0ZmYh2oeg&s',
         BNB_MAINNET: 'https://www.svgrepo.com/show/366901/bnb.svg',
         SOLANA_MAINNET: 'https://www.svgrepo.com/show/470684/solana.svg',
         TRON_MAINNET: 'https://www.svgrepo.com/show/428648/tron-crypto-cryptocurrency.svg',
@@ -1260,10 +1260,48 @@
       this.selectedChain = this.merchantChains.find(mc => mc.chain === chainKey);
       this.selectedToken = this.selectedChain?.supportedTokens[0] || 'USDC';
 
-      // Update token dropdown options
+      // Update token dropdown options (hidden select + custom dropdown)
       const tokenSelect = this.container.querySelector('#sp-token-select');
       if (tokenSelect) {
         tokenSelect.innerHTML = this.renderTokenOptions();
+      }
+      // Update custom token button + dropdown
+      const tokenBtn = this.container.querySelector('#sp-token-select-btn');
+      const tokenDropdown = this.container.querySelector('#sp-token-dropdown');
+      if (tokenBtn) {
+        tokenBtn.innerHTML = `
+          <img src="${this.getTokenIcon(this.selectedToken)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
+          <span>${this.selectedToken}</span>
+          <span style="margin-left: auto; font-size: 10px; opacity: 0.5;">▼</span>
+        `;
+      }
+      if (tokenDropdown && this.selectedChain) {
+        tokenDropdown.innerHTML = this.selectedChain.supportedTokens
+          .filter(t => this.selectedChain.config.tokens[t])
+          .map(token => `
+            <div class="sp-token-option" data-token="${token}" style="
+              padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--sp-text);
+            " onmouseover="this.style.background='var(--sp-bg)'" onmouseout="this.style.background=''">
+              <img src="${this.getTokenIcon(token)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
+              <span style="font-size: 13px; font-weight: 600; color: var(--sp-text);">${token}</span>
+            </div>
+          `).join('');
+        // Re-attach click handlers
+        tokenDropdown.querySelectorAll('.sp-token-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            const token = opt.dataset.token;
+            if (tokenBtn) {
+              tokenBtn.innerHTML = `
+                <img src="${this.getTokenIcon(token)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
+                <span>${token}</span>
+                <span style="margin-left: auto; font-size: 10px; opacity: 0.5;">▼</span>
+              `;
+            }
+            if (tokenSelect) tokenSelect.value = token;
+            tokenDropdown.style.display = 'none';
+            this.selectToken(token);
+          });
+        });
       }
 
       // Auto-disconnect if switching between EVM and Solana
