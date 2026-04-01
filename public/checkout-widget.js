@@ -1058,7 +1058,11 @@
         return;
       }
 
-      const amount = this.options.amount || 0;
+      let amount = parseFloat(this.options.amount || 0);
+      // Convert USD to EUR for EURC payments
+      if (this.selectedToken === 'EURC' && this.eurcRate) {
+        amount = parseFloat((amount / this.eurcRate).toFixed(2));
+      }
 
       // Store payment details for order creation later (when user clicks "I've sent it")
       this._pendingPayment = {

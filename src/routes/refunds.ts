@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db } from '../config/database';
 import { PRICING_TIERS } from '../config/pricing';
 import { rateLimit } from '../middleware/rateLimit';
-import { requireMerchantAuth } from '../middleware/auth';
+import { requireMerchantAuth, requirePro } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { webhookService } from '../services/webhookService';
 
@@ -109,7 +109,7 @@ router.get('/stats', requireMerchantAuth, async (req, res) => {
 });
 
 // Process refund via managed wallet (no browser wallet needed)
-router.post('/managed', requireMerchantAuth, async (req, res) => {
+router.post('/managed', requireMerchantAuth, requirePro('Refunds'), async (req, res) => {
   try {
     const merchant = (req as any).merchant;
     const { orderId, amount, reason, customerWallet } = req.body;
@@ -278,7 +278,7 @@ router.post('/', rateLimit({
       if (!tier || !tier.features.refunds) {
         return res.status(403).json({
           error: 'Refunds not available',
-          message: `Refunds are not available on ${tier?.name || 'FREE'} plan. Upgrade to STARTER or higher to process refunds.`,
+          message: `Refunds require PRO plan. Upgrade for $19/mo or reach $5k monthly volume.`,
           upgradeRequired: true,
           upgradeUrl: '/pricing.html',
           currentPlan: merchantPlan,
@@ -356,7 +356,7 @@ router.post('/', rateLimit({
 // ============================================
 
 // Approve refund (merchant action)
-router.post('/:refundId/approve', requireMerchantAuth, async (req, res) => {
+router.post('/:refundId/approve', requireMerchantAuth, requirePro('Refunds'), async (req, res) => {
   try {
     const { refundId } = req.params;
     const merchant = (req as any).merchant;
