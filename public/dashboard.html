@@ -924,8 +924,16 @@
                                     <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200 w-28" onclick="sortOrders('customer')">
                                         Customer
                                     </th>
-                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200 w-20" onclick="sortOrders('created')">
-                                        Date
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200 w-28" onclick="sortOrders('created')">
+                                        <span>Date/Time</span>
+                                        <select id="tzSelector" onclick="event.stopPropagation()" onchange="window._selectedTZ=this.value;loadOrders()" class="ml-1 bg-transparent text-slate-500 text-[9px] border-none cursor-pointer">
+                                            <option value="local">Local</option>
+                                            <option value="EST">EST</option>
+                                            <option value="PST">PST</option>
+                                            <option value="GMT">GMT</option>
+                                            <option value="CET">CET</option>
+                                            <option value="IST">IST</option>
+                                        </select>
                                     </th>
                                     <th class="px-3 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider w-20">Actions</th>
                                 </tr>
@@ -2131,7 +2139,7 @@ onMounted(() => {
             {
                 name: 'Base',
                 color: '#0052FF',
-                icon: '🔵',
+                logo: 'https://avatars.githubusercontent.com/u/108554348?s=280&v=4',
                 networks: [
                     { id: 'BASE_MAINNET', label: 'Base', type: 'mainnet', addrFormat: '0x...' }
                 ]
@@ -2139,7 +2147,7 @@ onMounted(() => {
             {
                 name: 'Ethereum',
                 color: '#627EEA',
-                icon: '⟠',
+                logo: 'https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg',
                 networks: [
                     { id: 'ETHEREUM_MAINNET', label: 'Ethereum', type: 'mainnet', addrFormat: '0x...' }
                 ]
@@ -2147,7 +2155,7 @@ onMounted(() => {
             {
                 name: 'Polygon',
                 color: '#8247E5',
-                icon: '🟣',
+                logo: 'https://cryptologos.cc/logos/polygon-matic-logo.svg',
                 networks: [
                     { id: 'POLYGON_MAINNET', label: 'Polygon', type: 'mainnet', addrFormat: '0x...' }
                 ]
@@ -2155,7 +2163,7 @@ onMounted(() => {
             {
                 name: 'Arbitrum',
                 color: '#28A0F0',
-                icon: '🔷',
+                logo: 'https://cryptologos.cc/logos/arbitrum-arb-logo.svg',
                 networks: [
                     { id: 'ARBITRUM_MAINNET', label: 'Arbitrum', type: 'mainnet', addrFormat: '0x...' }
                 ]
@@ -2163,7 +2171,7 @@ onMounted(() => {
             {
                 name: 'BNB Chain',
                 color: '#F0B90B',
-                icon: '🟡',
+                logo: 'https://www.svgrepo.com/show/366901/bnb.svg',
                 networks: [
                     { id: 'BNB_MAINNET', label: 'BNB Smart Chain', type: 'mainnet', addrFormat: '0x...' }
                 ]
@@ -2171,7 +2179,7 @@ onMounted(() => {
             {
                 name: 'Solana',
                 color: '#9945FF',
-                icon: '◎',
+                logo: 'https://www.svgrepo.com/show/470684/solana.svg',
                 networks: [
                     { id: 'SOLANA_MAINNET', label: 'Solana', type: 'mainnet', addrFormat: 'base58' }
                 ]
@@ -2179,7 +2187,7 @@ onMounted(() => {
             {
                 name: 'TRON',
                 color: '#FF0013',
-                icon: '🔺',
+                logo: 'https://www.svgrepo.com/show/428648/tron-crypto-cryptocurrency.svg',
                 networks: [
                     { id: 'TRON_MAINNET', label: 'TRON', type: 'mainnet', addrFormat: 'T...' }
                 ]
@@ -3571,7 +3579,10 @@ onMounted(() => {
             tbody.innerHTML = orders.map(order => {
                 const statusClass = `status-${order.status.toLowerCase()}`;
                 const shortId = order.externalId || (order.id.slice(0, 10) + '...');
-                const createdAt = new Date(order.createdAt).toLocaleDateString();
+                const tzMap = { EST: 'America/New_York', PST: 'America/Los_Angeles', GMT: 'GMT', CET: 'Europe/Berlin', IST: 'Asia/Kolkata' };
+                const tz = window._selectedTZ && tzMap[window._selectedTZ] ? tzMap[window._selectedTZ] : undefined;
+                const d = new Date(order.createdAt);
+                const createdAt = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: tz }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: tz });
                 const amount = typeof order.amount === 'object' ? order.amount.toString() : order.amount;
 
                 const txHash = order.transactions && order.transactions.length > 0
@@ -3786,8 +3797,8 @@ onMounted(() => {
                 return `
                     <div class="bg-slate-950 border p-4 ${isEnabled ? 'border-green-700' : 'border-slate-800'} hover:border-slate-600 transition">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg" style="background: ${group.color}15; border: 2px solid ${isEnabled ? '#22c55e' : group.color + '40'}">
-                                ${group.icon}
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden" style="background: ${group.color}15; border: 2px solid ${isEnabled ? '#22c55e' : group.color + '40'}">
+                                <img src="${group.logo}" style="width: 24px; height: 24px;" onerror="this.parentElement.textContent='⬡'">
                             </div>
                             <div class="flex-1">
                                 <div class="flex items-center gap-2">

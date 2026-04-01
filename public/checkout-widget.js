@@ -567,7 +567,7 @@
 
     getChainIcon(chain) {
       const icons = {
-        BASE_MAINNET: 'https://raw.githubusercontent.com/base-org/brand-kit/main/logo/symbol/Base_Symbol_Blue.svg',
+        BASE_MAINNET: 'https://avatars.githubusercontent.com/u/108554348?s=280&v=4',
         ETHEREUM_MAINNET: 'https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg',
         POLYGON_MAINNET: 'https://cryptologos.cc/logos/polygon-matic-logo.svg',
         ARBITRUM_MAINNET: 'https://cryptologos.cc/logos/arbitrum-arb-logo.svg',
