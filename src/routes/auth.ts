@@ -399,6 +399,48 @@ router.post('/verify-email', rateLimit({
       event: 'auth.email_verified'
     });
 
+    // Send welcome email
+    try {
+      const { Resend } = await import('resend');
+      const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+      if (resend) {
+        const fromEmail = (process.env.FROM_EMAIL || 'StablePay <onboarding@resend.dev>').trim();
+        const BASE_URL = (process.env.BASE_URL || 'https://wetakestables.shop').trim();
+        await resend.emails.send({
+          from: fromEmail, to: email,
+          subject: 'Welcome to StablePay!',
+          html: `
+            <div style="font-family:system-ui;max-width:500px;margin:0 auto;padding:24px;">
+              <div style="background:#000;color:#fff;padding:20px;text-align:center;margin-bottom:20px;">
+                <h1 style="margin:0;font-size:24px;">Welcome to StablePay</h1>
+              </div>
+              <p style="color:#333;">Hi ${merchant.contactName || 'there'},</p>
+              <p style="color:#333;">Your account is ready. Here's how to start accepting stablecoin payments:</p>
+              <div style="margin:20px 0;">
+                <div style="padding:12px;border-left:4px solid #00E5FF;margin-bottom:12px;background:#f8f9fa;">
+                  <strong>1. Set up wallets</strong><br><span style="color:#666;font-size:13px;">Add your wallet addresses for the chains you want to accept.</span>
+                </div>
+                <div style="padding:12px;border-left:4px solid #00E5FF;margin-bottom:12px;background:#f8f9fa;">
+                  <strong>2. Add the widget</strong><br><span style="color:#666;font-size:13px;">Copy the embed code to your website — 2 lines of HTML.</span>
+                </div>
+                <div style="padding:12px;border-left:4px solid #00E5FF;background:#f8f9fa;">
+                  <strong>3. Accept payments</strong><br><span style="color:#666;font-size:13px;">Customers pay in USDC/USDT/EURC on 7 blockchains.</span>
+                </div>
+              </div>
+              <div style="text-align:center;margin:24px 0;">
+                <a href="${BASE_URL}/dashboard" style="display:inline-block;background:#000;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;">Open Dashboard</a>
+              </div>
+              <p style="color:#999;font-size:12px;">Need help? Chat with Stablo in your dashboard — our AI assistant will guide you through setup.</p>
+              <div style="border-top:1px solid #eee;margin-top:20px;padding-top:12px;text-align:center;">
+                <a href="${BASE_URL}/api-docs.html" style="color:#666;font-size:12px;margin-right:12px;">API Docs</a>
+                <a href="${BASE_URL}/pricing" style="color:#666;font-size:12px;">Pricing</a>
+              </div>
+            </div>
+          `,
+        });
+      }
+    } catch { /* non-critical */ }
+
     res.json({
       success: true,
       token: merchant.loginToken,
