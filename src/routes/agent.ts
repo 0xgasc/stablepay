@@ -148,7 +148,7 @@ router.post('/tip', async (req, res) => {
 // ─── Get agent wallet address for tipping ───────────────────────────────────
 router.get('/tip-wallet', async (req, res) => {
   // Agent's own wallet — receives tips directly
-  const agentAddress = process.env.AGENT_WALLET_ADDRESS;
+  const agentAddress = process.env.AGENT_WALLET_ADDRESS?.trim();
   res.json({
     evm: agentAddress || '0x0000000000000000000000000000000000000000',
     solana: '',

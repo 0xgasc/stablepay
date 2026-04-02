@@ -282,9 +282,11 @@ router.post('/confirm', async (req, res) => {
 router.post('/check-overdue', async (req, res) => {
   try {
     const { adminKey } = req.body;
+    const headerKey = req.headers['x-admin-key'] || req.headers['authorization']?.replace('Bearer ', '');
+    const key = adminKey || headerKey;
+    const expectedKey = process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN;
 
-    // Simple admin key check (in production, use proper auth)
-    if (adminKey !== process.env.ADMIN_KEY) {
+    if (!key || key !== expectedKey) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -361,8 +363,11 @@ router.post('/check-overdue', async (req, res) => {
 router.post('/suspend', async (req, res) => {
   try {
     const { adminKey, merchantId, suspend } = req.body;
+    const headerKey = req.headers['x-admin-key'] || req.headers['authorization']?.replace('Bearer ', '');
+    const key = adminKey || headerKey;
+    const expectedKey = process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN;
 
-    if (adminKey !== process.env.ADMIN_KEY) {
+    if (!key || key !== expectedKey) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 

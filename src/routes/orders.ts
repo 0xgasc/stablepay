@@ -104,8 +104,8 @@ router.get('/', requireMerchantAuth, async (req, res) => {
   }
 });
 
-// Add transaction hash to order
-router.post('/:orderId/transaction', async (req, res) => {
+// Add transaction hash to order (merchant auth required)
+router.post('/:orderId/transaction', requireMerchantAuth, async (req, res) => {
   try {
     const { orderId } = req.params;
     const { txHash, fromAddress } = req.body;
@@ -122,8 +122,8 @@ router.post('/:orderId/transaction', async (req, res) => {
   }
 });
 
-// Confirm order with transaction details
-router.post('/:orderId/confirm', async (req, res) => {
+// Confirm order with transaction details (merchant auth required)
+router.post('/:orderId/confirm', requireMerchantAuth, async (req, res) => {
   try {
     const { orderId } = req.params;
     const { txHash, blockNumber, confirmations } = req.body;
