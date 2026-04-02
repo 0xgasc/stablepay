@@ -1678,6 +1678,20 @@ onMounted(() => {
                             </div>
                         </div>
 
+                        <!-- Webhook Testing -->
+                        <div class="mb-8">
+                            <h3 class="text-lg font-semibold text-white mb-4">Webhook Testing</h3>
+                            <div class="bg-slate-950 border p-6">
+                                <p class="text-sm text-slate-400 mb-4">Send a test webhook event to verify your integration is working.</p>
+                                <div class="flex gap-3 items-center">
+                                    <button id="testWebhookBtn" onclick="testWebhook()" class="bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 transition-colors">
+                                        Send Test Webhook
+                                    </button>
+                                    <span id="testWebhookResult" class="text-sm hidden"></span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Widget Customizer -->
                         <div>
                             <h3 class="text-lg font-semibold text-white mb-4">Widget Customizer</h3>
@@ -5560,6 +5574,34 @@ onMounted(() => {
         }
 
         // Load settings
+        async function testWebhook() {
+            const btn = document.getElementById('testWebhookBtn');
+            const result = document.getElementById('testWebhookResult');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            result.classList.add('hidden');
+            try {
+                const token = sessionStorage.getItem('merchantToken');
+                const res = await fetch('/api/webhooks/test', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                result.classList.remove('hidden');
+                if (res.ok) {
+                    result.textContent = '✅ Test webhook sent! Check your endpoint.';
+                    result.style.color = '#22c55e';
+                } else {
+                    result.textContent = '❌ ' + (data.error || data.message || 'Failed');
+                    result.style.color = '#ef4444';
+                }
+            } catch (err) {
+                result.classList.remove('hidden');
+                result.textContent = '❌ Connection error';
+                result.style.color = '#ef4444';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send Test Webhook';
+            }
+        }
+
         function loadSettings() {
             // Load widget config from merchant
             loadWidgetConfig();
