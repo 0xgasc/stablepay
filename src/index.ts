@@ -18,6 +18,7 @@ import { agentRouter } from './routes/agent';
 import { complianceRouter } from './routes/compliance';
 import { treasuryRouter } from './routes/treasury';
 import { paymentLinksRouter } from './routes/paymentLinks';
+import { upgradeRouter } from './routes/upgrade';
 import { db } from './config/database';
 import { validateEnv } from './utils/env';
 import { logger } from './utils/logger';
@@ -126,6 +127,7 @@ app.use('/api/agent', agentRouter);
 app.use('/api/compliance', complianceRouter);
 app.use('/api/treasury', treasuryRouter);
 app.use('/api/payment-links', paymentLinksRouter);
+app.use('/api/upgrade', upgradeRouter);
 app.use('/api', authRouter);
 
 // ─── Legacy v1 redirects (old unprotected routes removed) ──────────────────

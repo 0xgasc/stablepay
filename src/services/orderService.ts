@@ -370,6 +370,14 @@ export class OrderService {
         logger.error('Failed to send payment notification email', err as Error, { orderId });
       });
 
+      // Check if this is a PRO upgrade payment
+      if (confirmedOrder.externalId?.startsWith('pro-upgrade-')) {
+        try {
+          const { handleProPaymentConfirmed } = await import('../routes/upgrade');
+          await handleProPaymentConfirmed(orderId);
+        } catch (e) { /* non-critical */ }
+      }
+
       // Auto-create receipt
       try {
         const receipt = await receiptService.createReceipt(orderId);
