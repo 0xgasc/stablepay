@@ -2,81 +2,127 @@
 
 Complete reference for integrating StablePay programmatically.
 
-**Base URL:** `https://stablepay-nine.vercel.app/api/v1`
+**Base URL:** `https://wetakestables.shop`
+
+---
+
+## Quick Start — Integration Handshake
+
+### 1. You send us an order
+
+```bash
+curl -X POST https://wetakestables.shop/api/embed/checkout \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantId": "YOUR_MERCHANT_ID",
+    "amount": 25.00,
+    "token": "USDC",
+    "chain": "SOLANA_MAINNET",
+    "externalId": "your-order-123",
+    "customerEmail": "buyer@example.com",
+    "metadata": { "plan": "premium", "userId": "abc" }
+  }'
+```
+
+### 2. We return our order ID + payment address
+
+```json
+{
+  "success": true,
+  "order": {
+    "id": "cmng1234abc",
+    "externalId": "your-order-123",
+    "amount": 25,
+    "token": "USDC",
+    "chain": "SOLANA_MAINNET",
+    "paymentAddress": "A1ayHxPuLc6khkGmAxN3kNFYu2j7GZkDwRaWdk8xgUKm",
+    "expiresAt": "2026-04-02T12:30:00.000Z"
+  }
+}
+```
+
+### 3. Customer pays → We send you a webhook
+
+```json
+{
+  "event": "order.confirmed",
+  "timestamp": "2026-04-02T12:05:00.000Z",
+  "data": {
+    "orderId": "cmng1234abc",
+    "externalId": "your-order-123",
+    "amount": 25,
+    "token": "USDC",
+    "chain": "SOLANA_MAINNET",
+    "status": "CONFIRMED",
+    "txHash": "3XEgazdp9n1zd...",
+    "explorerLink": "https://solscan.io/tx/3XEgazdp...",
+    "customerEmail": "buyer@example.com",
+    "customerWallet": "EnFJ1c5x2XMS...",
+    "paymentAddress": "A1ayHxPuLc6k...",
+    "feePercent": 0.01,
+    "feeAmount": 0.25,
+    "netAmount": 24.75,
+    "metadata": { "plan": "premium", "userId": "abc" },
+    "confirmedAt": "2026-04-02T12:05:00.000Z"
+  }
+}
+```
+
+### 4. Match by `externalId` in your backend
+
+The webhook includes your `externalId` so you can match it to your order. Update your DB, fulfill the order.
 
 ---
 
 ## Table of Contents
 
 - [Authentication](#authentication)
-- [Orders](#orders)
-- [Transactions](#transactions)
-- [Merchants](#merchants)
-- [Wallets](#wallets)
-- [Webhooks](#webhooks-coming-soon)
-- [Error Codes](#error-codes)
+- [Create Order](#create-order)
+- [Poll Order Status](#poll-order-status)
+- [Submit TX Manually](#submit-tx-manually)
+- [Payment Links](#payment-links)
+- [Webhooks](#webhooks)
+- [Supported Chains](#supported-chains)
+- [Fee Structure](#fee-structure)
 
 ---
 
 ## Authentication
 
-Most endpoints are public (no auth required). Merchant-specific endpoints require an API token.
+Most endpoints are public. Merchant-specific endpoints require a Bearer token.
 
-### Get API Token
-
-1. Log into your [dashboard](https://stablepay-nine.vercel.app/dashboard.html)
-2. Go to **Developer** tab
-3. Copy your **Login Token**
-
-### Using the Token
-
-```javascript
-fetch('https://stablepay-nine.vercel.app/api/v1/admin?resource=orders', {
-  headers: {
-    'Authorization': `Bearer YOUR_LOGIN_TOKEN`
-  }
-});
 ```
+Authorization: Bearer YOUR_LOGIN_TOKEN
+```
+
+Get your token from the **Developer** tab in your [dashboard](https://wetakestables.shop/dashboard#developer).
 
 ---
 
-## Orders
+## Create Order
 
-### Create Order
-
-Create a new payment order.
-
-**Endpoint:** `POST /orders`
-
-**Request:**
-```json
-{
-  "merchantId": "cmhkjckgi0000qut5wxmtsw1f",
-  "amount": "10.00",
-  "chain": "BASE_MAINNET",
-  "customerEmail": "customer@example.com",
-  "customerName": "Premium Plan",
-  "paymentAddress": "0x9e9Ebf31018EAeddB50E52085f4CCB4367235f2D"
-}
-```
-
-**Parameters:**
+**`POST /api/embed/checkout`** — No auth required (merchantId in body)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchantId` | string | ✅ Yes | Your merchant ID from dashboard |
-| `amount` | string | ✅ Yes | Payment amount (e.g., "10.00") |
-| `chain` | string | ✅ Yes | Blockchain network (see [Chains](#supported-chains)) |
-| `paymentAddress` | string | ✅ Yes | Your wallet address for this chain |
-| `customerEmail` | string | ❌ No | Customer's email |
-| `customerName` | string | ❌ No | Order description/product name |
+| `merchantId` | string | ✅ | Your merchant ID |
+| `amount` | number | ✅ | Payment amount in USD |
+| `chain` | string | ✅ | Blockchain (see [Supported Chains](#supported-chains)) |
+| `token` | string | ❌ | `USDC`, `USDT`, or `EURC` (default: USDC) |
+| `externalId` | string | ❌ | **Your order ID** — returned in webhooks for matching |
+| `customerEmail` | string | ❌ | Customer email — used for receipts |
+| `customerName` | string | ❌ | Product name / description |
+| `metadata` | object | ❌ | Any JSON — returned in webhooks unchanged |
+| `paymentMethod` | string | ❌ | `WALLET_CONNECT` or `MANUAL_SEND` |
+| `source` | string | ❌ | `EMBED_WIDGET`, `CHECKOUT_LINK`, `API`, `INVOICE` |
 
 **Response:**
 ```json
 {
   "success": true,
   "order": {
-    "id": "cmhxxx123abc",
+    "id": "cmng1234abc",
+    "externalId": "your-order-123",
     "merchantId": "cmhkjckgi0000qut5wxmtsw1f",
     "amount": "10.00",
     "chain": "BASE_MAINNET",

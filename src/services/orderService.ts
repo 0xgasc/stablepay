@@ -341,6 +341,7 @@ export class OrderService {
       // Send webhook for order confirmation
       webhookService.sendWebhook(confirmedOrder.merchantId, 'order.confirmed', {
         orderId: confirmedOrder.id,
+        externalId: confirmedOrder.externalId || null,
         amount: orderAmount,
         token: confirmedOrder.token,
         chain: confirmedOrder.chain,
@@ -350,9 +351,11 @@ export class OrderService {
         customerEmail: confirmedOrder.customerEmail || null,
         customerWallet: confirmedOrder.customerWallet || null,
         paymentAddress: confirmedOrder.paymentAddress,
+        paymentMethod: confirmedOrder.paymentMethod || null,
         feePercent,
         feeAmount,
         netAmount: orderAmount - feeAmount,
+        metadata: confirmedOrder.metadata || null,
         confirmedAt: new Date().toISOString(),
       }).catch(err => {
         logger.error('Failed to send order.confirmed webhook', err as Error, { orderId });

@@ -189,12 +189,15 @@ router.post('/checkout', rateLimit({
     // Send webhook
     webhookService.sendWebhook(data.merchantId, 'order.created', {
       orderId: order.id,
+      externalId: data.externalId || null,
       amount: data.amount,
+      token: data.token,
       chain: data.chain,
       paymentAddress: wallet.address,
-      source: 'embed_widget',
+      customerEmail: data.customerEmail || null,
+      source: data.source || 'EMBED_WIDGET',
       productName: data.productName,
-      metadata: data.metadata
+      metadata: data.metadata,
     }).catch(err => {
       logger.error('Failed to send order.created webhook', err as Error, { orderId: order.id });
     });
@@ -203,11 +206,12 @@ router.post('/checkout', rateLimit({
       success: true,
       order: {
         id: order.id,
+        externalId: order.externalId || null,
         amount: Number(order.amount),
         token: order.token,
         chain: order.chain,
         paymentAddress: order.paymentAddress,
-        expiresAt: order.expiresAt.toISOString()
+        expiresAt: order.expiresAt.toISOString(),
       }
     });
   } catch (error) {
