@@ -34,6 +34,10 @@ export class BlockchainService {
   private contracts: Record<string, ethers.Contract[]> = {}; // Multiple contracts per chain
   private orderService = new OrderService();
 
+  // Solana optimization: cache ATAs per wallet (refresh every 60s)
+  private solanaATACache: Map<string, { atas: string[]; fetchedAt: number }> = new Map();
+  private solanaLastSig: Map<string, string> = new Map(); // Track last processed sig per wallet
+
   constructor() {
     this.initializeProviders();
   }
@@ -352,23 +356,29 @@ export class BlockchainService {
 
       for (const [address, orders] of addressMap) {
         try {
-          // Step 1: Find all token accounts (ATAs) owned by this wallet
-          const ataRes = await fetch(solRpc, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              jsonrpc: '2.0', id: 1,
-              method: 'getTokenAccountsByOwner',
-              params: [address, { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' }, { encoding: 'jsonParsed' }]
-            }),
-            signal: AbortSignal.timeout(8000),
-          });
-          const ataData: any = await ataRes.json();
-          const tokenAccounts = (ataData.result?.value || []).map((a: any) => a.pubkey).filter(Boolean);
-          // Also include the wallet address itself
-          const addressesToScan = [address, ...tokenAccounts];
+          // Step 1: Get ATAs (cached for 60s to save RPC calls)
+          const cached = this.solanaATACache.get(address);
+          let tokenAccounts: string[];
+          if (cached && Date.now() - cached.fetchedAt < 60000) {
+            tokenAccounts = cached.atas;
+          } else {
+            const ataRes = await fetch(solRpc, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0', id: 1,
+                method: 'getTokenAccountsByOwner',
+                params: [address, { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' }, { encoding: 'jsonParsed' }]
+              }),
+              signal: AbortSignal.timeout(8000),
+            });
+            const ataData: any = await ataRes.json();
+            tokenAccounts = (ataData.result?.value || []).map((a: any) => a.pubkey).filter(Boolean);
+            this.solanaATACache.set(address, { atas: tokenAccounts, fetchedAt: Date.now() });
+          }
 
-          // Step 2: Get signatures from all addresses (wallet + ATAs)
+          // Step 2: Get signatures — only query ATAs (where transfers land), skip wallet if ATAs exist
+          const addressesToScan = tokenAccounts.length > 0 ? tokenAccounts : [address];
           const allSigs: any[] = [];
           for (const addr of addressesToScan) {
             try {
