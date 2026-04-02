@@ -6,9 +6,22 @@ import { logger } from '../utils/logger';
 import { rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
+const crypto = require('crypto');
 
-// Get the admin key from environment (support ADMIN_KEY, ADMIN_PASSWORD, or ADMIN_API_TOKEN)
-const getAdminKey = () => process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN;
+// 2FA code store (in-memory, 10-min TTL)
+const pending2FA: Map<string, { code: string; expiresAt: number; email: string }> = new Map();
+
+// Get admin key — check DB first (for in-app password changes), fall back to env
+const getAdminKey = async (): Promise<string> => {
+  try {
+    const config = await db.systemConfig.findUnique({ where: { key: 'admin_password' } });
+    if (config?.value) return config.value;
+  } catch { /* DB not ready */ }
+  return process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN || '';
+};
+
+// Sync version for middleware (checks env only — DB password checked in login flow)
+const getAdminKeySync = () => process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN || '';
 
 // Helper to serialize BigInt values to strings for JSON
 const serializeBigInt = (obj: any): any => {
@@ -17,13 +30,14 @@ const serializeBigInt = (obj: any): any => {
   ));
 };
 
-// Middleware to check admin key - accepts x-admin-key header, Authorization Bearer, or body.adminKey
-const requireAdminKey = (req: any, res: any, next: any) => {
+// Middleware to check admin key
+const requireAdminKey = async (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   const providedKey = req.headers['x-admin-key'] || bearerToken || req.body?.adminKey;
 
-  if (providedKey !== getAdminKey()) {
+  const expectedKey = await getAdminKey();
+  if (!providedKey || providedKey !== expectedKey) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
@@ -125,22 +139,60 @@ router.post('/', async (req, res) => {
   try {
     const { resource } = req.query;
 
-    // Admin login - validates against ADMIN_KEY/ADMIN_PASSWORD env var (no auth required for login)
+    // Admin login — Step 1: validate password, send 2FA code
     if (resource === 'login') {
       const { email, password } = req.body;
-      const expectedKey = getAdminKey();
+      const expectedKey = await getAdminKey();
 
-      // Simple validation: check if password matches admin key
       if (password === expectedKey) {
-        logger.info('Admin login successful', { email, event: 'admin.login_success' });
-        return res.json({
-          success: true,
-          token: expectedKey // Return the key as the token for x-admin-key header
-        });
+        // Generate 6-digit 2FA code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const sessionId = crypto.randomBytes(16).toString('hex');
+        pending2FA.set(sessionId, { code, expiresAt: Date.now() + 10 * 60 * 1000, email });
+
+        // Send code via email
+        const adminEmail = process.env.ADMIN_EMAIL || email;
+        try {
+          const { Resend } = await import('resend');
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          const fromEmail = (process.env.FROM_EMAIL || 'StablePay <onboarding@resend.dev>').trim();
+          await resend.emails.send({
+            from: fromEmail, to: adminEmail,
+            subject: `StablePay Admin: ${code}`,
+            html: `<div style="font-family:system-ui;max-width:400px;margin:0 auto;padding:24px;text-align:center;"><h2 style="margin-bottom:8px;">Admin Login Code</h2><div style="font-size:36px;font-weight:900;letter-spacing:8px;background:#f1f5f9;padding:16px;border:2px solid #000;margin:16px 0;">${code}</div><p style="color:#666;font-size:13px;">Expires in 10 minutes. Don't share this code.</p></div>`,
+          });
+        } catch (emailErr) {
+          console.error('2FA email send error:', emailErr);
+          // Still return sessionId — for dev/testing, log the code
+          console.log(`[2FA] Code for ${adminEmail}: ${code}`);
+        }
+
+        logger.info('Admin 2FA code sent', { email: adminEmail, event: 'admin.2fa_sent' });
+        return res.json({ success: true, requires2FA: true, sessionId, message: 'Verification code sent to your email' });
       } else {
         logger.warn('Admin login failed', { email, event: 'admin.login_failed' });
         return res.status(401).json({ error: 'Invalid credentials' });
       }
+    }
+
+    // Admin login — Step 2: verify 2FA code
+    if (resource === 'verify-2fa') {
+      const { sessionId, code } = req.body;
+      const pending = pending2FA.get(sessionId);
+
+      if (!pending) return res.status(400).json({ error: 'Invalid or expired session' });
+      if (Date.now() > pending.expiresAt) {
+        pending2FA.delete(sessionId);
+        return res.status(400).json({ error: 'Code expired. Please login again.' });
+      }
+      if (pending.code !== code) {
+        return res.status(401).json({ error: 'Invalid code' });
+      }
+
+      pending2FA.delete(sessionId);
+      const token = await getAdminKey();
+      logger.info('Admin 2FA verified', { email: pending.email, event: 'admin.2fa_verified' });
+      return res.json({ success: true, token });
     }
 
     // For non-login resources, verify admin key
@@ -1134,6 +1186,30 @@ router.post('/managed-wallets/:walletId/sweep', requireAdminKey, async (req, res
   } catch (error: any) {
     console.error('Admin sweep error:', error);
     res.status(500).json({ error: 'Sweep failed: ' + error.message });
+  }
+});
+
+// Change admin password in-app
+router.post('/change-password', requireAdminKey, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both currentPassword and newPassword required' });
+    if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+
+    const current = await getAdminKey();
+    if (currentPassword !== current) return res.status(401).json({ error: 'Current password is incorrect' });
+
+    await db.systemConfig.upsert({
+      where: { key: 'admin_password' },
+      update: { value: newPassword },
+      create: { key: 'admin_password', value: newPassword },
+    });
+
+    logger.info('Admin password changed', { event: 'admin.password_changed' });
+    res.json({ success: true, message: 'Password changed. Use new password on next login.' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
   }
 });
 

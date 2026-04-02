@@ -400,6 +400,16 @@ model TreasuryMove {
   @@schema("public")
 }
 
+// System-level key-value config (admin password, fee tiers, feature flags)
+model SystemConfig {
+  key         String    @id
+  value       String
+  updatedAt   DateTime  @updatedAt
+
+  @@map("system_config")
+  @@schema("public")
+}
+
 model WebhookLog {
   id              String      @id @default(cuid())
   merchantId      String
