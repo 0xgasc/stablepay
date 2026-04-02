@@ -332,36 +332,40 @@
     <!-- Navigation -->
     <nav class="bg-white brutal-border mb-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <div class="flex items-center">
-                    <span class="text-3xl font-black text-black uppercase">
-                        StablePay
-                    </span>
-                </div>
-                <div class="flex items-center space-x-6">
-                    <a href="/pricing" class="text-black hover:underline decoration-4 decoration-black font-medium transition-all" data-i18n="nav.pricing">
-                        Pricing
-                    </a>
-                    <a href="/api-docs.html" class="text-black hover:underline decoration-4 decoration-black font-medium transition-all">
-                        Docs
-                    </a>
-                    <a href="/trust.html" class="text-black hover:underline decoration-4 decoration-black font-medium transition-all" data-i18n="nav.security">
-                        Security
-                    </a>
-                    <select id="langSelector" onchange="changeLanguage(this.value)" class="bg-white border-4 border-black px-3 py-1 font-bold text-sm cursor-pointer hover:bg-gray-100">
+            <div class="flex justify-between items-center h-16">
+                <a href="/" class="text-2xl font-black text-black uppercase">StablePay</a>
+
+                <!-- Desktop nav -->
+                <div class="hidden md:flex items-center space-x-5">
+                    <a href="/pricing" class="text-black hover:underline font-bold text-sm uppercase">Pricing</a>
+                    <a href="/api-docs.html" class="text-black hover:underline font-bold text-sm uppercase">Docs</a>
+                    <a href="/trust.html" class="text-black hover:underline font-bold text-sm uppercase">Security</a>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="bg-white border-2 border-black px-2 py-1 font-bold text-xs cursor-pointer">
                         <option value="en">EN</option>
                         <option value="es">ES</option>
                         <option value="fr">FR</option>
                         <option value="pt">PT</option>
                     </select>
-                    <button id="nightModeToggle" class="px-3 py-1 border-4 border-black bg-white hover:bg-gray-100 font-bold text-sm">
+                    <button id="nightModeToggle" class="px-2 py-1 border-2 border-black bg-white font-bold text-xs">
                         <span class="night-icon" data-i18n="nav.night">NIGHT</span>
                         <span class="day-icon hidden" data-i18n="nav.day">DAY</span>
                     </button>
-                    <a href="/login.html" class="bg-black text-white px-6 py-2 font-bold border-4 border-black brutal-shadow-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all uppercase text-sm">
-                        <span data-i18n="nav.login">Login</span>
-                    </a>
+                    <a href="/login" class="bg-black text-white px-5 py-2 font-bold border-2 border-black text-sm uppercase">Login</a>
                 </div>
+
+                <!-- Mobile burger -->
+                <button id="mobileNavToggle" class="md:hidden p-2 border-2 border-black" onclick="document.getElementById('mobileNav').classList.toggle('hidden')">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+            </div>
+
+            <!-- Mobile nav dropdown -->
+            <div id="mobileNav" class="hidden md:hidden border-t-2 border-black py-4 space-y-3">
+                <a href="/pricing" class="block text-black font-bold text-sm uppercase py-1">Pricing</a>
+                <a href="/api-docs.html" class="block text-black font-bold text-sm uppercase py-1">Docs</a>
+                <a href="/trust.html" class="block text-black font-bold text-sm uppercase py-1">Security</a>
+                <a href="/login" class="block bg-black text-white px-4 py-2 font-bold text-sm uppercase text-center mt-2">Login</a>
+                <a href="/signup" class="block bg-cyan-400 text-black px-4 py-2 font-bold text-sm uppercase text-center">Sign Up</a>
             </div>
         </div>
     </nav>
@@ -369,12 +373,12 @@
     <!-- Hero Section -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div class="text-center mb-16">
-            <h1 class="text-6xl sm:text-7xl font-black text-black mb-8 uppercase" style="line-height: 1.1;">
+            <h1 class="text-4xl sm:text-6xl md:text-7xl font-black text-black mb-6 uppercase" style="line-height: 1.1;">
                 <span data-i18n="hero.title1">Accept Stablecoin Payments</span>
-                <span class="block accent-cyan px-6 py-4 brutal-border inline-block mt-4 slide-animation" data-i18n="hero.title2">USDC &middot; USDT &middot; EURC</span>
+                <span class="block accent-cyan px-4 sm:px-6 py-3 sm:py-4 brutal-border inline-block mt-4 slide-animation text-3xl sm:text-5xl md:text-6xl" data-i18n="hero.title2">USDC &middot; USDT &middot; EURC</span>
             </h1>
-            <p class="text-xl text-gray-700 font-medium mb-12 max-w-3xl mx-auto" data-i18n="hero.subtitle">
-                Payment gateway for stablecoins. 3 ways to pay. 5 blockchains. Direct to your wallet.
+            <p class="text-lg sm:text-xl text-gray-700 font-medium mb-10 max-w-3xl mx-auto px-4" data-i18n="hero.subtitle">
+                Payment gateway for stablecoins. 7 blockchains. Direct to your wallet.
             </p>
             <div class="flex flex-col sm:flex-row gap-6 justify-center">
                 <a href="/signup.html" class="btn-brutal">
