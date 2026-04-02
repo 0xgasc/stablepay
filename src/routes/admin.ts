@@ -410,7 +410,7 @@ router.put('/', requireAdminKey, async (req, res) => {
     const { resource } = req.query;
 
     if (resource === 'merchants') {
-      const { merchantId, isActive, plan, networkMode, paymentMode } = req.body;
+      const { merchantId, isActive, plan, networkMode, paymentMode, customFeePercent } = req.body;
 
       if (!merchantId) {
         return res.status(400).json({ error: 'merchantId is required' });
@@ -422,6 +422,7 @@ router.put('/', requireAdminKey, async (req, res) => {
         ...(plan && { plan }),
         ...(networkMode && { networkMode }),
         ...(paymentMode && { paymentMode }),
+        ...(customFeePercent !== undefined && { customFeePercent: customFeePercent }),
       };
 
       // Generate token when activating a merchant
@@ -1307,6 +1308,81 @@ router.get('/agent-wallets', requireAdminKey, async (req, res) => {
   } catch (error: any) {
     console.error('Agent wallet status error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// FEE RATE MATRIX
+// ═══════════════════════════════════════════════════════════════════
+
+// GET fee tiers (current config)
+router.get('/fee-tiers', requireAdminKey, async (_req, res) => {
+  try {
+    const config = await db.systemConfig.findUnique({ where: { key: 'fee_tiers' } });
+    const { DEFAULT_VOLUME_TIERS, VOLUME_TIERS } = await import('../config/pricing');
+    res.json({
+      current: VOLUME_TIERS,
+      defaults: DEFAULT_VOLUME_TIERS,
+      source: config ? 'database' : 'default',
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load fee tiers' });
+  }
+});
+
+// PUT fee tiers (update all 4 brackets)
+router.put('/fee-tiers', requireAdminKey, async (req, res) => {
+  try {
+    const { tiers } = req.body;
+    if (!Array.isArray(tiers) || tiers.length !== 4) {
+      return res.status(400).json({ error: 'Must provide exactly 4 tiers' });
+    }
+    // Validate each tier has feePercent as number between 0 and 1
+    for (const t of tiers) {
+      if (typeof t.feePercent !== 'number' || t.feePercent < 0 || t.feePercent > 1) {
+        return res.status(400).json({ error: `Invalid feePercent: ${t.feePercent}. Must be 0-1 (e.g. 0.025 = 2.5%)` });
+      }
+    }
+
+    await db.systemConfig.upsert({
+      where: { key: 'fee_tiers' },
+      update: { value: JSON.stringify(tiers) },
+      create: { key: 'fee_tiers', value: JSON.stringify(tiers) },
+    });
+
+    // Reload in-memory tiers
+    const { loadFeeTiersFromDB } = await import('../config/pricing');
+    await loadFeeTiersFromDB();
+
+    logger.info('Fee tiers updated', { tiers, event: 'admin.fee_tiers_updated' });
+    res.json({ success: true, tiers });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update fee tiers' });
+  }
+});
+
+// PUT custom fee rate for a specific merchant
+router.put('/merchant-fee/:merchantId', requireAdminKey, async (req, res) => {
+  try {
+    const { merchantId } = req.params;
+    const { customFeePercent } = req.body; // null to remove, or decimal like 0.015
+
+    if (customFeePercent !== null && customFeePercent !== undefined) {
+      if (typeof customFeePercent !== 'number' || customFeePercent < 0 || customFeePercent > 1) {
+        return res.status(400).json({ error: 'customFeePercent must be 0-1 (e.g. 0.015 = 1.5%) or null to remove' });
+      }
+    }
+
+    const updated = await db.merchant.update({
+      where: { id: merchantId },
+      data: { customFeePercent: customFeePercent ?? null },
+      select: { id: true, companyName: true, customFeePercent: true },
+    });
+
+    logger.info('Merchant custom fee updated', { merchantId, customFeePercent, event: 'admin.merchant_fee_updated' });
+    res.json({ success: true, merchant: updated });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update merchant fee' });
   }
 });
 

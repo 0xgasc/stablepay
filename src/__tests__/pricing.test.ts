@@ -15,45 +15,45 @@ import {
 
 describe('Volume Tiers', () => {
   it('returns Tier 1 for $0 volume', () => {
-    expect(getVolumeTier(0).feePercent).toBe(0.01);
+    expect(getVolumeTier(0).feePercent).toBe(0.025);
   });
 
   it('returns Tier 1 for $9,999 volume', () => {
-    expect(getVolumeTier(9999).feePercent).toBe(0.01);
+    expect(getVolumeTier(9999).feePercent).toBe(0.025);
   });
 
   it('returns Tier 2 at exactly $10,000', () => {
-    expect(getVolumeTier(10000).feePercent).toBe(0.008);
+    expect(getVolumeTier(10000).feePercent).toBe(0.02);
   });
 
   it('returns Tier 3 at $50,000', () => {
-    expect(getVolumeTier(50000).feePercent).toBe(0.005);
+    expect(getVolumeTier(50000).feePercent).toBe(0.015);
   });
 
   it('returns Tier 4 at $250,000', () => {
-    expect(getVolumeTier(250000).feePercent).toBe(0.003);
+    expect(getVolumeTier(250000).feePercent).toBe(0.01);
   });
 
   it('returns Tier 4 for very high volume', () => {
-    expect(getVolumeTier(10000000).feePercent).toBe(0.003);
+    expect(getVolumeTier(10000000).feePercent).toBe(0.01);
   });
 });
 
 describe('Fee Calculation', () => {
-  it('calculates 1% fee for $100 at $0 volume', () => {
-    expect(calculateFee(100, 0)).toBe(1.0);
+  it('calculates 2.5% fee for $100 at $0 volume', () => {
+    expect(calculateFee(100, 0)).toBeCloseTo(2.5);
   });
 
-  it('calculates 0.8% fee at $10k volume', () => {
-    expect(calculateFee(100, 10000)).toBeCloseTo(0.8);
+  it('calculates 2.0% fee at $10k volume', () => {
+    expect(calculateFee(100, 10000)).toBeCloseTo(2.0);
   });
 
-  it('calculates 0.5% fee at $50k volume', () => {
-    expect(calculateFee(100, 50000)).toBeCloseTo(0.5);
+  it('calculates 1.5% fee at $50k volume', () => {
+    expect(calculateFee(100, 50000)).toBeCloseTo(1.5);
   });
 
-  it('calculates 0.3% fee at $250k volume', () => {
-    expect(calculateFee(100, 250000)).toBeCloseTo(0.3);
+  it('calculates 1.0% fee at $250k volume', () => {
+    expect(calculateFee(100, 250000)).toBeCloseTo(1.0);
   });
 
   it('uses custom enterprise rate when provided', () => {
@@ -62,7 +62,7 @@ describe('Fee Calculation', () => {
   });
 
   it('ignores custom rate when null', () => {
-    expect(getTransactionFeePercent(0, null)).toBe(0.01);
+    expect(getTransactionFeePercent(0, null)).toBe(0.025);
   });
 
   it('handles zero amount', () => {

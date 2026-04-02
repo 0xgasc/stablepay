@@ -14,13 +14,38 @@
  */
 
 // ─── Volume-based fee tiers (apply to ALL plans) ─────────────────────────────
+// Default public rates — can be overridden by admin via SystemConfig 'fee_tiers' key
 
-export const VOLUME_TIERS = [
-  { name: 'Tier 1', minVolume: 0, maxVolume: 10000, feePercent: 0.01 },        // 1.0%
-  { name: 'Tier 2', minVolume: 10000, maxVolume: 50000, feePercent: 0.008 },    // 0.8%
-  { name: 'Tier 3', minVolume: 50000, maxVolume: 250000, feePercent: 0.005 },   // 0.5%
-  { name: 'Tier 4', minVolume: 250000, maxVolume: Infinity, feePercent: 0.003 }, // 0.3%
-] as const;
+export const DEFAULT_VOLUME_TIERS = [
+  { name: 'Tier 1', minVolume: 0, maxVolume: 10000, feePercent: 0.025 },        // 2.5%
+  { name: 'Tier 2', minVolume: 10000, maxVolume: 50000, feePercent: 0.02 },     // 2.0%
+  { name: 'Tier 3', minVolume: 50000, maxVolume: 250000, feePercent: 0.015 },   // 1.5%
+  { name: 'Tier 4', minVolume: 250000, maxVolume: Infinity, feePercent: 0.01 }, // 1.0%
+];
+
+// Mutable reference — updated from DB at runtime
+export let VOLUME_TIERS = [...DEFAULT_VOLUME_TIERS];
+
+/**
+ * Load fee tiers from DB (SystemConfig). Called on startup and when admin updates tiers.
+ */
+export async function loadFeeTiersFromDB(): Promise<void> {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const db = new PrismaClient();
+    const config = await db.systemConfig.findUnique({ where: { key: 'fee_tiers' } });
+    if (config?.value) {
+      const parsed = JSON.parse(config.value);
+      if (Array.isArray(parsed) && parsed.length === 4) {
+        VOLUME_TIERS = parsed.map((t: any, i: number) => ({
+          ...DEFAULT_VOLUME_TIERS[i],
+          feePercent: t.feePercent ?? DEFAULT_VOLUME_TIERS[i].feePercent,
+        }));
+      }
+    }
+    await db.$disconnect();
+  } catch { /* use defaults */ }
+}
 
 // ─── Plan feature configuration ──────────────────────────────────────────────
 
