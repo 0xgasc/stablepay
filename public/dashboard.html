@@ -2488,23 +2488,26 @@ onMounted(() => {
                 // Update quick action links with merchant ID
                 updateQuickActionLinks();
 
+                // Ensure merchantId is in sessionStorage for fee balance and other calls
+                if (currentMerchant.id) {
+                    sessionStorage.setItem('merchantId', currentMerchant.id);
+                }
+
                 // Populate merchantWallets immediately so Quick Actions work
                 if (currentMerchant.wallets) {
                     merchantWallets = currentMerchant.wallets;
                     console.log('Loaded', merchantWallets.length, 'wallets from merchant profile');
                 }
 
+                // Always load fee balance (needed for badge + fees tab)
+                loadFeeBalance();
+
                 // Load current tab content after merchant data is ready
                 if (currentTab === 'orders') {
                     loadOrders();
                 } else if (currentTab === 'wallets') {
                     loadWallets();
-                } else if (currentTab === 'fees') {
-                    loadFeeBalance();
                 }
-
-                // Always check for fees to show alert badge
-                checkFeeBalance();
             } catch (error) {
                 console.error('Error loading merchant data:', error);
                 // Show error to user
@@ -2572,6 +2575,13 @@ onMounted(() => {
                 document.getElementById('previousFeeBalance').textContent = fmtFee(currentFeeData.previousBalance || 0);
                 document.getElementById('currentPeriodFees').textContent = fmtFee(currentFeeData.currentFees || 0);
                 document.getElementById('totalFeesOwed').textContent = fmtFee(currentFeeData.totalOwed || 0);
+
+                // Update fee alert badge
+                const feeBadge = document.getElementById('feesAlertBadge');
+                if (feeBadge) {
+                    if (currentFeeData.totalOwed > 0) feeBadge.classList.remove('hidden');
+                    else feeBadge.classList.add('hidden');
+                }
 
                 // Current period info
                 if (currentFeeData.currentPeriod) {
