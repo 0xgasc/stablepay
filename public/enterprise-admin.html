@@ -719,36 +719,43 @@
                     <div class="mb-8 bg-black border border-slate-800 p-6">
                         <h3 class="text-lg font-semibold text-white mb-2">Fee Rate Matrix</h3>
                         <p class="text-sm text-slate-400 mb-4">Edit progressive fee brackets. Rates apply per bracket (like income tax).</p>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="feeMatrixGrid">
-                            <div class="text-center">
-                                <label class="block text-xs text-slate-500 mb-1">$0 - $10k</label>
-                                <div class="flex items-center gap-1 justify-center">
-                                    <input type="number" id="tier1Rate" step="0.1" min="0" max="10" value="2.5" class="w-20 px-2 py-2 bg-slate-900 border border-slate-700 text-white text-center text-lg font-bold rounded">
-                                    <span class="text-slate-400 font-bold">%</span>
+
+                        <!-- Public rates -->
+                        <div class="mb-4">
+                            <p class="text-xs text-slate-500 font-bold uppercase mb-2">Public Rates</p>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div class="text-center">
+                                    <label class="block text-[10px] text-slate-500 mb-1">$0 - $10k</label>
+                                    <div class="flex items-center gap-1 justify-center">
+                                        <input type="number" id="tier1Rate" step="0.1" min="0" max="10" value="2.5" class="w-16 px-2 py-1.5 bg-slate-900 border border-slate-700 text-white text-center text-sm font-bold rounded">
+                                        <span class="text-slate-500 text-sm">%</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="text-center">
-                                <label class="block text-xs text-slate-500 mb-1">$10k - $50k</label>
-                                <div class="flex items-center gap-1 justify-center">
-                                    <input type="number" id="tier2Rate" step="0.1" min="0" max="10" value="2.0" class="w-20 px-2 py-2 bg-slate-900 border border-slate-700 text-white text-center text-lg font-bold rounded">
-                                    <span class="text-slate-400 font-bold">%</span>
+                                <div class="text-center">
+                                    <label class="block text-[10px] text-slate-500 mb-1">$10k - $50k</label>
+                                    <div class="flex items-center gap-1 justify-center">
+                                        <input type="number" id="tier2Rate" step="0.1" min="0" max="10" value="2.0" class="w-16 px-2 py-1.5 bg-slate-900 border border-slate-700 text-white text-center text-sm font-bold rounded">
+                                        <span class="text-slate-500 text-sm">%</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="text-center">
-                                <label class="block text-xs text-slate-500 mb-1">$50k - $250k</label>
-                                <div class="flex items-center gap-1 justify-center">
-                                    <input type="number" id="tier3Rate" step="0.1" min="0" max="10" value="1.5" class="w-20 px-2 py-2 bg-slate-900 border border-slate-700 text-white text-center text-lg font-bold rounded">
-                                    <span class="text-slate-400 font-bold">%</span>
+                                <div class="text-center">
+                                    <label class="block text-[10px] text-slate-500 mb-1">$50k - $250k</label>
+                                    <div class="flex items-center gap-1 justify-center">
+                                        <input type="number" id="tier3Rate" step="0.1" min="0" max="10" value="1.5" class="w-16 px-2 py-1.5 bg-slate-900 border border-slate-700 text-white text-center text-sm font-bold rounded">
+                                        <span class="text-slate-500 text-sm">%</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="text-center">
-                                <label class="block text-xs text-slate-500 mb-1">$250k+</label>
-                                <div class="flex items-center gap-1 justify-center">
-                                    <input type="number" id="tier4Rate" step="0.1" min="0" max="10" value="1.0" class="w-20 px-2 py-2 bg-slate-900 border border-slate-700 text-white text-center text-lg font-bold rounded">
-                                    <span class="text-slate-400 font-bold">%</span>
+                                <div class="text-center">
+                                    <label class="block text-[10px] text-slate-500 mb-1">$250k+</label>
+                                    <div class="flex items-center gap-1 justify-center">
+                                        <input type="number" id="tier4Rate" step="0.1" min="0" max="10" value="1.0" class="w-16 px-2 py-1.5 bg-slate-900 border border-slate-700 text-white text-center text-sm font-bold rounded">
+                                        <span class="text-slate-500 text-sm">%</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        <p class="text-[10px] text-slate-600 mb-3">Per-merchant custom rates override all brackets. Set in Edit Merchant → "Custom Fee Rate %".</p>
                         <div class="flex gap-3 mt-4">
                             <button onclick="saveFeeTiers()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium">Save Rates</button>
                             <span id="feeMatrixStatus" class="text-sm hidden self-center"></span>
@@ -1264,14 +1271,13 @@
                     <label class="block text-sm font-medium text-slate-300 mb-1">Chain *</label>
                     <select id="walletChain" required class="w-full px-3 py-2 bg-black border border-slate-800 text-white">
                         <option value="">Select a chain...</option>
-                        <option value="BASE_SEPOLIA">Base Sepolia (Testnet)</option>
-                        <option value="BASE_MAINNET">Base Mainnet</option>
-                        <option value="ETHEREUM_SEPOLIA">Ethereum Sepolia (Testnet)</option>
-                        <option value="ETHEREUM_MAINNET">Ethereum Mainnet</option>
-                        <option value="POLYGON_MAINNET">Polygon Mainnet</option>
-                        <option value="POLYGON_MUMBAI">Polygon Mumbai (Testnet)</option>
-                        <option value="ARBITRUM_MAINNET">Arbitrum Mainnet</option>
-                        <option value="ARBITRUM_SEPOLIA">Arbitrum Sepolia (Testnet)</option>
+                        <option value="SOLANA_MAINNET">Solana</option>
+                        <option value="ETHEREUM_MAINNET">Ethereum</option>
+                        <option value="BASE_MAINNET">Base</option>
+                        <option value="POLYGON_MAINNET">Polygon</option>
+                        <option value="ARBITRUM_MAINNET">Arbitrum</option>
+                        <option value="BNB_MAINNET">BNB Chain</option>
+                        <option value="TRON_MAINNET">TRON</option>
                     </select>
                     <p class="text-xs text-slate-500 mt-1">Only one wallet per chain is allowed</p>
                 </div>
