@@ -170,7 +170,7 @@ router.put('/merchant-profile', requireMerchantAuth, async (req, res) => {
 });
 
 // ─── Update merchant wallets ────────────────────────────────────────────────
-router.post('/merchant-wallets', async (req, res) => {
+router.post('/merchant-wallets', requireMerchantAuth, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -230,7 +230,11 @@ router.get('/v1/test-db', async (req, res) => {
 });
 
 // ─── Test signup (no rate limit) ────────────────────────────────────────────
-router.post('/v1/signup-test', async (req, res) => {
+// DISABLED — test endpoint should not be in production
+router.post('/v1/signup-test', (_req, res) => {
+  return res.status(410).json({ error: 'This endpoint has been removed' });
+});
+router.post('/v1/signup-test-DISABLED', async (req: any, res: any) => {
   try {
     const { email, companyName, contactName } = req.body;
 

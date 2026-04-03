@@ -21,7 +21,7 @@ const getAdminKey = async (): Promise<string> => {
 };
 
 // Sync version for middleware (checks env only — DB password checked in login flow)
-const getAdminKeySync = () => process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN || '';
+const getAdminKeySync = () => (process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN || '').trim();
 
 // Helper to serialize BigInt values to strings for JSON
 const serializeBigInt = (obj: any): any => {

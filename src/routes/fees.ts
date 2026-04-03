@@ -243,7 +243,7 @@ router.post('/pay', async (req, res) => {
 });
 
 // Confirm a fee payment (called after tx confirmed on-chain)
-router.post('/confirm', async (req, res) => {
+router.post('/confirm', requireMerchantAuth, async (req, res) => {
   try {
     const { paymentId, txHash } = req.body;
 

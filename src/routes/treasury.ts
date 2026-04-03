@@ -16,7 +16,7 @@ const CHAIN_RPC: Record<string, { rpc: string; tokens: Record<string, string> }>
   BNB_MAINNET: { rpc: process.env.BNB_MAINNET_RPC_URL || 'https://bsc-dataseed.binance.org', tokens: { USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', USDT: '0x55d398326f99059fF775485246999027B3197955' } },
 };
 const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'];
-const ENCRYPTION_KEY = process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
+const ENCRYPTION_KEY = (process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY || '').trim();
 const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY?.trim();
 
 function decryptKey(encrypted: string): string {
