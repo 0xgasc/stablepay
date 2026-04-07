@@ -155,7 +155,7 @@ router.post('/', async (req, res) => {
         try {
           const { Resend } = await import('resend');
           const resend = new Resend(process.env.RESEND_API_KEY);
-          const fromEmail = (process.env.FROM_EMAIL || 'StablePay <onboarding@resend.dev>').trim();
+          const fromEmail = (process.env.FROM_EMAIL || 'StablePay <hello@wetakestables.shop>').trim();
           await resend.emails.send({
             from: fromEmail, to: adminEmail,
             subject: `StablePay Admin: ${code}`,
@@ -455,7 +455,7 @@ router.put('/', requireAdminKey, async (req, res) => {
             const { Resend } = await import('resend');
             const resend = new Resend(process.env.RESEND_API_KEY);
             const BASE_URL = process.env.BASE_URL || 'https://wetakestables.shop';
-            const FROM_EMAIL = process.env.FROM_EMAIL || 'StablePay <onboarding@resend.dev>';
+            const FROM_EMAIL = process.env.FROM_EMAIL || 'StablePay <hello@wetakestables.shop>';
 
             await resend.emails.send({
               from: FROM_EMAIL,

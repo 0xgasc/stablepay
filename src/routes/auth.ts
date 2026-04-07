@@ -408,7 +408,7 @@ router.post('/verify-email', rateLimit({
       const { Resend } = await import('resend');
       const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
       if (resend) {
-        const fromEmail = (process.env.FROM_EMAIL || 'StablePay <onboarding@resend.dev>').trim();
+        const fromEmail = (process.env.FROM_EMAIL || 'StablePay <hello@wetakestables.shop>').trim();
         const BASE_URL = (process.env.BASE_URL || 'https://wetakestables.shop').trim();
         await resend.emails.send({
           from: fromEmail, to: email,
