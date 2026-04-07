@@ -140,7 +140,7 @@ router.get('/merchant-profile', requireMerchantAuth, async (req, res) => {
 router.put('/merchant-profile', requireMerchantAuth, async (req, res) => {
   try {
     const authMerchant = (req as AuthenticatedRequest).merchant;
-    const { companyName, contactName, email, networkMode, paymentMode, setupCompleted } = req.body;
+    const { companyName, contactName, email, networkMode, paymentMode, setupCompleted, emailOnPayment, emailOnRefund, emailOnExpiry } = req.body;
 
     // If completing setup, validate merchant has at least one wallet
     if (setupCompleted === true) {
@@ -159,6 +159,9 @@ router.put('/merchant-profile', requireMerchantAuth, async (req, res) => {
         ...(networkMode && { networkMode }),
         ...(paymentMode && { paymentMode }),
         ...(typeof setupCompleted === 'boolean' && { setupCompleted }),
+        ...(typeof emailOnPayment === 'boolean' && { emailOnPayment }),
+        ...(typeof emailOnRefund === 'boolean' && { emailOnRefund }),
+        ...(typeof emailOnExpiry === 'boolean' && { emailOnExpiry }),
       },
     });
 

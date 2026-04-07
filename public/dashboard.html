@@ -1692,6 +1692,48 @@ onMounted(() => {
                             </div>
                         </div>
 
+                        <!-- Email Notifications -->
+                        <div class="mb-8">
+                            <h3 class="text-lg font-semibold text-white mb-4">Email Notifications</h3>
+                            <div class="bg-slate-950 border p-6 space-y-4">
+                                <p class="text-sm text-slate-400 mb-2">Choose which emails you receive. Sent to your account email.</p>
+                                <div class="flex items-center justify-between p-3 bg-slate-900 rounded">
+                                    <div>
+                                        <p class="text-sm font-medium text-white">Payment received</p>
+                                        <p class="text-xs text-slate-500">Get notified when a customer pays</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="emailOnPayment" class="sr-only peer" checked>
+                                        <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-green-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-slate-900 rounded">
+                                    <div>
+                                        <p class="text-sm font-medium text-white">Refund processed</p>
+                                        <p class="text-xs text-slate-500">Get notified when a refund is completed</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="emailOnRefund" class="sr-only peer" checked>
+                                        <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-green-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between p-3 bg-slate-900 rounded">
+                                    <div>
+                                        <p class="text-sm font-medium text-white">Order expired</p>
+                                        <p class="text-xs text-slate-500">Get notified when an order expires unpaid</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="emailOnExpiry" class="sr-only peer">
+                                        <div class="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-green-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                                    </label>
+                                </div>
+                                <button id="saveEmailPrefsBtn" onclick="saveEmailPrefs()" class="bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 transition-colors">
+                                    Save Preferences
+                                </button>
+                                <span id="emailPrefsStatus" class="text-sm hidden ml-2"></span>
+                            </div>
+                        </div>
+
                         <!-- Widget Customizer -->
                         <div>
                             <h3 class="text-lg font-semibold text-white mb-4">Widget Customizer</h3>
@@ -5590,6 +5632,54 @@ onMounted(() => {
         }
 
         // Load settings
+        function loadEmailPrefs() {
+            if (!currentMerchant) return;
+            document.getElementById('emailOnPayment').checked = currentMerchant.emailOnPayment !== false;
+            document.getElementById('emailOnRefund').checked = currentMerchant.emailOnRefund !== false;
+            document.getElementById('emailOnExpiry').checked = currentMerchant.emailOnExpiry === true;
+        }
+
+        async function saveEmailPrefs() {
+            const btn = document.getElementById('saveEmailPrefsBtn');
+            const status = document.getElementById('emailPrefsStatus');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            try {
+                const token = sessionStorage.getItem('merchantToken');
+                const res = await fetch('/api/merchant-profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({
+                        emailOnPayment: document.getElementById('emailOnPayment').checked,
+                        emailOnRefund: document.getElementById('emailOnRefund').checked,
+                        emailOnExpiry: document.getElementById('emailOnExpiry').checked,
+                    }),
+                });
+                if (res.ok) {
+                    status.textContent = '✅ Saved';
+                    status.style.color = '#22c55e';
+                    // Update local cache
+                    if (currentMerchant) {
+                        currentMerchant.emailOnPayment = document.getElementById('emailOnPayment').checked;
+                        currentMerchant.emailOnRefund = document.getElementById('emailOnRefund').checked;
+                        currentMerchant.emailOnExpiry = document.getElementById('emailOnExpiry').checked;
+                    }
+                } else {
+                    status.textContent = '❌ Failed';
+                    status.style.color = '#ef4444';
+                }
+                status.classList.remove('hidden');
+                setTimeout(() => status.classList.add('hidden'), 2000);
+            } catch {
+                status.textContent = '❌ Error';
+                status.style.color = '#ef4444';
+                status.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Preferences';
+            }
+        }
+
         async function testWebhook() {
             const btn = document.getElementById('testWebhookBtn');
             const result = document.getElementById('testWebhookResult');
@@ -5619,9 +5709,9 @@ onMounted(() => {
         }
 
         function loadSettings() {
-            // Load widget config from merchant
             loadWidgetConfig();
             updateWidgetPreview();
+            loadEmailPrefs();
         }
 
         async function loadWidgetConfig() {
