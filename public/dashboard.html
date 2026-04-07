@@ -3854,22 +3854,22 @@ onMounted(() => {
                 return;
             }
 
-            console.log('loadWallets: Loading wallets for merchant', currentMerchant.id);
-
             try {
-                // Use wallets from currentMerchant (already loaded from merchant-profile API)
-                if (currentMerchant.wallets) {
-                    merchantWallets = currentMerchant.wallets;
-                    console.log('loadWallets: Using cached wallets', merchantWallets.length, 'wallets');
+                // Always fetch fresh from API (wallets may have been added by agent)
+                const token = sessionStorage.getItem('merchantToken');
+                const res = await fetch('/api/merchant-profile', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (res.ok) {
+                    const fresh = await res.json();
+                    merchantWallets = fresh.wallets || [];
+                    currentMerchant.wallets = merchantWallets;
+                    console.log('loadWallets: Fetched', merchantWallets.length, 'wallets');
                 } else {
-                    merchantWallets = [];
-                    console.log('loadWallets: No wallets found for merchant');
+                    merchantWallets = currentMerchant.wallets || [];
                 }
-
                 renderChainToggles();
             } catch (error) {
                 console.error('Error loading wallets:', error);
-                merchantWallets = [];
+                merchantWallets = currentMerchant.wallets || [];
                 renderChainToggles();
             }
         }
