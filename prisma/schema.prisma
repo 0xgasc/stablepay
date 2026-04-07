@@ -184,6 +184,7 @@ model MerchantWallet {
   chain           Chain
   address         String
   supportedTokens String[]  @default(["USDC"])
+  label           String?                        // Optional label: "Main wallet", "Treasury", etc.
   isActive        Boolean   @default(true)
   priority        Int       @default(0)          // Lower = shown first in checkout. 0 = default
   createdAt       DateTime  @default(now())
