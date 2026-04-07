@@ -511,6 +511,12 @@
                   </div>
                 </div>
 
+                <!-- Countdown timer -->
+                <div id="sp-countdown" style="text-align: center; margin-bottom: 10px;">
+                  <span style="font-size: 10px; color: var(--sp-muted); text-transform: uppercase; font-weight: 600;">Complete payment within</span>
+                  <div id="sp-countdown-time" style="font-size: 22px; font-weight: 800; color: var(--sp-text); font-family: monospace; margin-top: 2px;">5:00</div>
+                </div>
+
                 <button id="sp-send-sent-btn" style="
                   width: 100%; padding: 12px; background: #00E5FF; color: #000; border: 3px solid var(--sp-border);
                   font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; box-shadow: 4px 4px 0px #000;
@@ -787,6 +793,8 @@
         sentBtn.addEventListener('click', async () => {
           sentBtn.disabled = true;
           sentBtn.textContent = 'REGISTERING...';
+          // Stop countdown — they're confirming
+          if (this._countdownInterval) clearInterval(this._countdownInterval);
 
           // Create order NOW (not before) — only register when user says they sent payment
           if (!this.currentOrderId && this._pendingPayment) {
@@ -854,6 +862,8 @@
       const backBtn = this.container.querySelector('#sp-send-back-btn');
       if (backBtn) {
         backBtn.addEventListener('click', () => {
+          // Stop countdown
+          if (this._countdownInterval) clearInterval(this._countdownInterval);
           const step1 = this.container.querySelector('#sp-send-step1');
           const step2 = this.container.querySelector('#sp-send-step2');
           if (step2) step2.style.display = 'none';
@@ -1140,7 +1150,40 @@
       // Lock chain + token selectors during payment
       this.lockSelectors();
 
+      // Start 5-minute countdown timer
+      this.startCountdown();
+
       // Polling starts when user clicks "I've sent it" — handled in initManualPaymentFlows
+    }
+
+    startCountdown() {
+      if (this._countdownInterval) clearInterval(this._countdownInterval);
+      let seconds = 300; // 5 minutes
+      const timerEl = this.container.querySelector('#sp-countdown-time');
+      const wrapperEl = this.container.querySelector('#sp-countdown');
+      if (!timerEl) return;
+
+      this._countdownInterval = setInterval(() => {
+        seconds--;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+        // Color changes for urgency
+        if (seconds <= 60) {
+          timerEl.style.color = '#ef4444'; // Red last minute
+        } else if (seconds <= 120) {
+          timerEl.style.color = '#f59e0b'; // Yellow last 2 min
+        }
+
+        if (seconds <= 0) {
+          clearInterval(this._countdownInterval);
+          timerEl.textContent = '0:00';
+          if (wrapperEl) {
+            wrapperEl.innerHTML = '<p style="font-size: 11px; color: #ef4444; font-weight: 700;">Time expired — please start a new payment</p>';
+          }
+        }
+      }, 1000);
     }
 
     startPaymentPolling() {
