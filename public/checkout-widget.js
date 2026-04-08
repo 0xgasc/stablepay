@@ -184,8 +184,9 @@
         document.head.appendChild(link);
       }
       style.textContent = `
-        .sp-widget { font-family: 'Space Grotesk', system-ui, sans-serif; }
-        .sp-widget * { box-sizing: border-box; }
+        .sp-widget { font-family: 'Space Grotesk', system-ui, sans-serif; position: relative; z-index: 10; }
+        .sp-widget * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        .sp-widget button, .sp-widget select, .sp-widget input { touch-action: manipulation; }
         .sp-widget.dark { --sp-bg: #0f172a; --sp-card: #1e293b; --sp-border: #334155; --sp-text: #fff; --sp-muted: #94a3b8; }
         .sp-widget.light { --sp-bg: #fff; --sp-card: #f1f5f9; --sp-border: #000; --sp-text: #000; --sp-muted: #64748b; }
         .sp-pay-btn { transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -306,7 +307,8 @@
           max-width: 420px;
           overflow: visible;
           position: relative;
-          z-index: 10;
+          z-index: 999;
+          pointer-events: auto;
         ">
           <!-- Header -->
           <div style="background: ${this.options.headerColor}; padding: 16px 20px; ${this.options.borderStyle === 'brutal' ? 'border-bottom: 4px solid #000;' : 'border-bottom: 1px solid var(--sp-border);'}">
@@ -440,7 +442,7 @@
               <div id="sp-send-step1" style="padding: 12px;">
                 <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
                   <span style="font-size: 11px; font-weight: 700; color: var(--sp-text);">Your Wallet Address</span>
-                  <button id="sp-wallet-help-btn" style="width: 16px; height: 16px; border-radius: 50%; background: var(--sp-card); border: 1px solid var(--sp-border); color: var(--sp-muted); font-size: 9px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;">?</button>
+                  <button id="sp-wallet-help-btn" style="width: 14px; height: 14px; border-radius: 50%; background: var(--sp-card); border: 1px solid var(--sp-border); color: var(--sp-muted); font-size: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0;">?</button>
                 </div>
                 <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Paste the wallet address you'll send from.</p>
                 <!-- Help dropdown -->
