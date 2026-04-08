@@ -1608,13 +1608,13 @@
             }
 
             tbody.innerHTML = data.map(o => {
-                const feePercent = Number(o.feePercent) || 0.5;
+                const feePercent = Number(o.feePercent) || 0.025;
                 const feeAmount = Number(o.feeAmount) || 0;
                 const showFee = o.status === 'CONFIRMED';
 
                 return `
                 <tr class="hover:bg-slate-950">
-                    <td class="px-3 py-3 font-mono text-xs text-white whitespace-nowrap">${o.id.substring(0, 8)}...</td>
+                    <td class="px-3 py-3 whitespace-nowrap"><button onclick="navigator.clipboard.writeText('${o.id}');this.textContent='Copied!';setTimeout(()=>this.textContent='${o.id.substring(0, 8)}...',1500)" class="font-mono text-xs text-cyan-400 hover:text-cyan-300 cursor-pointer" title="${o.id}">${o.id.substring(0, 8)}...</button></td>
                     <td class="px-3 py-3 text-xs text-white whitespace-nowrap">${o.merchant?.companyName || 'Demo'}</td>
                     <td class="px-3 py-3 text-xs font-medium text-white whitespace-nowrap">$${Number(o.amount).toFixed(2)}</td>
                     <td class="px-3 py-3 text-xs text-slate-400 whitespace-nowrap">${(feePercent * 100).toFixed(1)}%</td>
@@ -2175,7 +2175,7 @@
                         <tbody>
                             ${merchantOrders.slice(0, 10).map(o => `
                                 <tr class="border-b">
-                                    <td class="px-3 py-2 font-mono">${o.id.substring(0, 8)}...</td>
+                                    <td class="px-3 py-2"><button onclick="navigator.clipboard.writeText('${o.id}');this.textContent='Copied!';setTimeout(()=>this.textContent='${o.id.substring(0, 8)}...',1500)" class="font-mono text-xs text-cyan-400 hover:text-cyan-300 cursor-pointer" title="${o.id}">${o.id.substring(0, 8)}...</button></td>
                                     <td class="px-3 py-2 font-medium">${o.amount} USDC</td>
                                     <td class="px-3 py-2">${o.chain}</td>
                                     <td class="px-3 py-2">
