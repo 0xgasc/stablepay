@@ -442,7 +442,7 @@
               <div id="sp-send-step1" style="padding: 12px;">
                 <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
                   <span style="font-size: 11px; font-weight: 700; color: var(--sp-text);">Your Wallet Address</span>
-                  <button id="sp-wallet-help-btn" style="width: 14px; height: 14px; border-radius: 50%; background: var(--sp-card); border: 1px solid var(--sp-border); color: var(--sp-muted); font-size: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0;">?</button>
+                  <button id="sp-wallet-help-btn" style="width: 12px; height: 12px; min-width: 12px; border-radius: 50%; background: var(--sp-card); border: 1px solid var(--sp-border); color: var(--sp-muted); font-size: 7px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; line-height: 1;">?</button>
                 </div>
                 <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Paste the wallet address you'll send from.</p>
                 <!-- Help dropdown -->
@@ -463,8 +463,8 @@
                 </div>
                 <div style="display: flex; gap: 6px;">
                   <input id="sp-sender-wallet" type="text" placeholder="${this.selectedChain?.config?.type === 'solana' ? 'e.g. 7xKXtg2C...' : this.selectedChain?.config?.type === 'tron' ? 'e.g. TJRabPrw...' : 'e.g. 0xd573Be...'}" style="
-                    flex: 1; padding: 10px; font-size: 11px; font-family: monospace; border: 2px solid var(--sp-border);
-                    background: var(--sp-bg); color: var(--sp-text); outline: none;
+                    flex: 1; padding: 8px; font-size: 16px; font-family: monospace; border: 2px solid var(--sp-border);
+                    background: var(--sp-bg); color: var(--sp-text); outline: none; min-width: 0;
                   ">
                   <button id="sp-sender-wallet-btn" style="
                     padding: 8px 16px; background: #00E5FF; color: #000; border: none;
@@ -880,8 +880,8 @@
               <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Enter the address you'll send from — so we can match your payment.</p>
               <div style="display: flex; gap: 6px;">
                 <input id="sp-sender-wallet" type="text" value="${this.connectedWallet || ''}" placeholder="${placeholder}" style="
-                  flex: 1; padding: 10px; font-size: 11px; font-family: monospace; border: 2px solid var(--sp-border);
-                  background: var(--sp-card); color: var(--sp-text); outline: none;
+                  flex: 1; padding: 8px; font-size: 16px; font-family: monospace; border: 2px solid var(--sp-border);
+                  background: var(--sp-card); color: var(--sp-text); outline: none; min-width: 0;
                 ">
                 <button id="sp-sender-wallet-btn" style="
                   padding: 8px 16px; background: #000; color: #fff; border: none;
