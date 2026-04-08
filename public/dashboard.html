@@ -1317,6 +1317,15 @@ onMounted(() => {
                                 </div>
                             </div>
                         </div>
+                        <!-- Active Wallets Reference -->
+                        <div class="bg-slate-950 border border-slate-800 p-6">
+                            <h3 class="text-lg font-bold text-white mb-3">Your Payment Wallets</h3>
+                            <p class="text-sm text-slate-400 mb-4">These are the wallet addresses customers send payments to.</p>
+                            <div id="devWalletsList" class="space-y-2">
+                                <p class="text-sm text-slate-500">Loading...</p>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -2303,6 +2312,8 @@ onMounted(() => {
                 loadTreasury();
             } else if (tabName === 'wallets') {
                 loadWallets();
+            } else if (tabName === 'developer') {
+                loadDevWallets();
             } else if (tabName === 'settings') {
                 loadSettings();
             } else if (tabName === 'fees') {
@@ -5678,6 +5689,28 @@ onMounted(() => {
                 btn.disabled = false;
                 btn.textContent = 'Save Preferences';
             }
+        }
+
+        function loadDevWallets() {
+            const el = document.getElementById('devWalletsList');
+            if (!el || !merchantWallets?.length) {
+                if (el) el.innerHTML = '<p class="text-sm text-slate-500">No wallets configured. Go to the Wallets tab to add them.</p>';
+                return;
+            }
+            const chainNames = { BASE_MAINNET: 'Base', ETHEREUM_MAINNET: 'Ethereum', POLYGON_MAINNET: 'Polygon', ARBITRUM_MAINNET: 'Arbitrum', BNB_MAINNET: 'BNB Chain', SOLANA_MAINNET: 'Solana', TRON_MAINNET: 'TRON' };
+            el.innerHTML = merchantWallets.map(w => `
+                <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded p-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-white">${chainNames[w.chain] || w.chain}</span>
+                            <span class="text-[10px] text-slate-500">${(w.supportedTokens || ['USDC']).join(', ')}</span>
+                            ${w.label ? `<span class="text-[10px] px-1.5 py-0.5 bg-blue-900/30 text-blue-400 rounded">${w.label}</span>` : ''}
+                        </div>
+                        <div class="text-xs text-slate-400 font-mono truncate mt-0.5">${w.address}</div>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('${w.address}');this.textContent='✓';setTimeout(()=>this.textContent='Copy',1000)" class="text-[10px] px-2 py-1 bg-slate-800 text-slate-400 hover:text-white rounded shrink-0 ml-2">Copy</button>
+                </div>
+            `).join('');
         }
 
         async function testWebhook() {

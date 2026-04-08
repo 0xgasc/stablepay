@@ -304,7 +304,9 @@
           ${this.options.fontFamily ? `font-family: ${this.options.fontFamily}, sans-serif;` : ''}
           padding: 0;
           max-width: 420px;
-          overflow: hidden;
+          overflow: visible;
+          position: relative;
+          z-index: 10;
         ">
           <!-- Header -->
           <div style="background: ${this.options.headerColor}; padding: 16px 20px; ${this.options.borderStyle === 'brutal' ? 'border-bottom: 4px solid #000;' : 'border-bottom: 1px solid var(--sp-border);'}">
