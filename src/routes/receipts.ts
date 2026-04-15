@@ -77,12 +77,29 @@ router.get('/', requireMerchantAuth, rateLimit({
 });
 
 // Public: find receipt by orderId (for customer receipt page)
+// If order is CONFIRMED but receipt doesn't exist yet, create it on the fly
 router.get('/for-order/:orderId', async (req, res) => {
   try {
-    const receipt = await db.receipt.findFirst({
+    let receipt = await db.receipt.findFirst({
       where: { orderId: req.params.orderId },
       select: { id: true },
     });
+
+    // Fallback: if no receipt but order is confirmed, create it now
+    if (!receipt) {
+      const order = await db.order.findUnique({
+        where: { id: req.params.orderId },
+        select: { status: true },
+      });
+      if (order?.status === 'CONFIRMED') {
+        try {
+          const { receiptService } = await import('../services/receiptService');
+          const created = await receiptService.createReceipt(req.params.orderId);
+          receipt = { id: created.id };
+        } catch { /* receipt creation failed, return 404 */ }
+      }
+    }
+
     if (!receipt) return res.status(404).json({ error: 'Receipt not found for this order' });
     res.json({ receiptId: receipt.id });
   } catch (error) {
