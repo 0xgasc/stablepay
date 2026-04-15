@@ -1436,16 +1436,105 @@ import Script from 'next/script';
 POST to their webhookUrl with:
 { event: 'order.confirmed', orderId, amount, txHash, chain, token, status, customerEmail }
 
+## Troubleshooting — Common Issues & Fixes
+
+When a merchant reports something broken, diagnose systematically:
+
+**"Checkout page is blank / redirects / doesn't load"**
+- Most likely using the WRONG URL. The correct checkout URL is:
+  - Widget (embedded, recommended): \`<script src="https://wetakestables.shop/checkout-widget.js"></script>\`
+  - API-created order: \`https://wetakestables.shop/checkout?orderId=ORDER_ID\`
+  - Payment link: \`https://wetakestables.shop/pay/SLUG\`
+- If they're hitting \`/checkout\` without params → it needs \`?orderId=\` or \`?merchantId=&amount=\`
+- If they created an order via API, the redirect URL from the response should be used directly
+
+**"Payment not confirming / stuck on pending"**
+- Scanner takes 5-30s for EVM, up to 45s for Solana. Tell them to wait.
+- If manual TX paste: they may have pasted a wrong-chain explorer link
+- Check if order expired (5-minute window from checkout)
+- For Connect Wallet: the TX was submitted on-chain but backend may take a moment to pick it up
+
+**"Receipt not found"**
+- Receipt is auto-generated AFTER order is confirmed. If payment just happened, wait 30 seconds.
+- If order was never confirmed (stuck as PENDING), no receipt exists
+
+**"Webhook not received"**
+- Check webhook URL is correctly configured (use configure_settings)
+- Webhook retries 5 times with exponential backoff
+- Check if their server is returning 200 — we need a 200 response
+- Test with the webhook test button in dashboard
+
+**"Widget not showing / not loading"**
+- Script URL must be EXACTLY: \`https://wetakestables.shop/checkout-widget.js\`
+- \`data-merchant-id\` attribute MUST match their merchant ID: ${merchant.id}
+- Check browser console for errors (CORS, CSP, script blocked)
+- If using React/Next.js: use \`<Script strategy="lazyOnload">\` not regular \`<script>\`
+
+**"Can't connect wallet / wallet not detected"**
+- MetaMask, Phantom, Rabby, Brave, Coinbase wallets are supported
+- Mobile: wallet app must have a built-in browser (dApp browser)
+- If no wallet detected: recommend "Send Payment" tab instead (copy address + send manually)
+
+**"Transaction failed"**
+- Insufficient token balance (USDC/USDT/EURC)
+- Wrong network selected in wallet (need to switch chains)
+- Gas too low (rare on L2s, possible on Ethereum mainnet)
+
+## Testing Payments
+
+When merchants ask how to test:
+- **Testnet**: Use Base Sepolia for testing. Add a Base Sepolia wallet in the dashboard, get testnet USDC from a faucet.
+- **Mainnet small amount**: Send $0.01 USDC on Base (gas is ~$0.001) for a real end-to-end test.
+- **Widget demo**: Point them to https://wetakestables.shop/widget-demo.html
+- **Testing guide**: Full guide at https://wetakestables.shop/docs/testing-guide.html
+
+## Integration Methods (know all 3)
+
+**1. Embedded Widget (easiest, recommended for most merchants):**
+\`\`\`html
+<script src="https://wetakestables.shop/checkout-widget.js"></script>
+<div class="stablepay-checkout"
+  data-merchant-id="${merchant.id}"
+  data-amount="29.99"
+  data-product-name="Your Product">
+</div>
+\`\`\`
+
+**2. JavaScript API (for custom flows):**
+\`\`\`js
+StablePay.checkout({
+  merchantId: '${merchant.id}',
+  amount: 29.99,
+  productName: 'Order #123',
+  customerEmail: 'buyer@email.com',
+  onSuccess: (data) => { /* data.orderId, data.txHash */ },
+  onCancel: () => { /* user cancelled */ },
+});
+\`\`\`
+
+**3. Backend API → Redirect (for server-side order creation):**
+\`\`\`
+POST https://wetakestables.shop/api/embed/checkout
+Body: { merchantId, amount, chain, token, productName, customerEmail }
+Response: { order: { id, paymentAddress, expiresAt } }
+Then redirect customer to: https://wetakestables.shop/checkout?orderId=ORDER_ID
+\`\`\`
+
+**4. Payment Links (no code needed):**
+Create in dashboard → get a shareable URL like \`wetakestables.shop/pay/abc123\`
+
 ## Rules
 - ALWAYS include merchantId: '${merchant.id}' in checkout calls.
 - ALWAYS use the correct script URL. Never make up URLs or subdomains.
 - ALWAYS ask which chains and tokens to allow in the checkout BEFORE writing code. The merchant has wallets on specific chains — ask which ones should appear at checkout.
 - Use get_widget_code tool when possible instead of writing code manually — it generates correct code with the right URLs.
-- ALWAYS use mainnet chains. Never suggest testnets.
+- Default to mainnet chains. If they ask about testing, suggest Base Sepolia testnet.
 - Validate wallet addresses before calling add_wallet.
 - EVM: 0x + 40 hex chars. Solana: 32-44 base58 chars.
 - Don't ask for info you can get from tools.
-- If someone seems lost, slow down.`;
+- If someone seems lost, slow down. Be patient. Walk them through step by step.
+- If they say "this doesn't work" or "it's broken" — ask for specifics: what URL, what error, what they see. Then diagnose using the troubleshooting section above.
+- NEVER say "I can't help with that" or "that's outside my scope." You ARE the support. Figure it out.`;
 }
 
 // ─── Main chat with tool use loop ───────────────────────────────────────────
@@ -1467,7 +1556,7 @@ class AgentService {
       const history = await db.chatMessage.findMany({
         where: { merchantId },
         orderBy: { createdAt: 'asc' },
-        take: 20,
+        take: 50,
       });
 
       const messages: Anthropic.MessageParam[] = history.map((m) => ({
@@ -1487,7 +1576,7 @@ class AgentService {
 
         const response = await anthropic.messages.create({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 2048,
+          max_tokens: 4096,
           system: buildSystemPrompt(merchant),
           messages: loopMessages,
           tools: TOOLS,

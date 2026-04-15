@@ -76,6 +76,36 @@ app.get('/api/widget.js', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'checkout-widget.js'));
 });
 
+// Checkout page — supports ?orderId= (resolve order → redirect with proper params)
+app.get('/checkout', async (req, res) => {
+  try {
+    const orderId = req.query.orderId as string;
+    if (orderId) {
+      const order = await db.order.findUnique({
+        where: { id: orderId },
+        select: { id: true, merchantId: true, amount: true, chain: true, token: true, status: true, paymentAddress: true, expiresAt: true, customerEmail: true },
+      });
+      if (!order) return res.status(404).send('Order not found');
+      if (order.status !== 'PENDING') return res.status(400).send(`Order is ${order.status.toLowerCase()} — cannot checkout`);
+      if (order.expiresAt < new Date()) return res.status(400).send('Order has expired');
+
+      const params = new URLSearchParams({
+        merchantId: order.merchantId!,
+        amount: Number(order.amount).toString(),
+        orderId: order.id,
+      });
+      if (order.token) params.set('token', order.token);
+      if (order.chain) params.set('chain', order.chain);
+      if (order.customerEmail) params.set('customerEmail', order.customerEmail);
+      return res.redirect(`/crypto-pay.html?${params.toString()}`);
+    }
+    // No orderId — serve checkout page directly (merchant embeds with params)
+    res.sendFile(path.join(process.cwd(), 'public', 'crypto-pay.html'));
+  } catch (err) {
+    res.status(500).send('Error loading checkout');
+  }
+});
+
 // Customer receipt page
 app.get('/receipt/:receiptId', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'receipt.html'));

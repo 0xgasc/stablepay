@@ -53,7 +53,7 @@ router.post('/chat', rateLimit({
       where: { merchantId_key: { merchantId: merchant.id, key: dailyKey } },
     });
     const dailyCount = dailyRecord ? parseInt(dailyRecord.value) : 0;
-    const dailyLimit = merchant.plan === 'FREE' ? 50 : 200;
+    const dailyLimit = merchant.plan === 'FREE' ? 100 : 500;
 
     if (dailyCount >= dailyLimit) {
       return res.json({
