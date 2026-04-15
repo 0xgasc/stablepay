@@ -151,8 +151,8 @@
                         <h4 class="font-bold text-lg mb-2">Add the StablePay script to your site</h4>
                         <p class="text-slate-500 mb-3">Paste this line before the closing <code class="mono text-sm bg-slate-100 px-1">&lt;/body&gt;</code> tag on any page where you want payments:</p>
                         <div class="relative">
-                            <pre class="p-4 text-sm rounded-none"><code>&lt;script src="https://wetakestables.shop/js/stablepay-widget.js"&gt;&lt;/script&gt;</code></pre>
-                            <button class="copy-btn" onclick="copyCode(this, '&lt;script src=&quot;https://wetakestables.shop/js/stablepay-widget.js&quot;&gt;&lt;/script&gt;')">COPY</button>
+                            <pre class="p-4 text-sm rounded-none"><code>&lt;script src="https://wetakestables.shop/checkout-widget.js"&gt;&lt;/script&gt;</code></pre>
+                            <button class="copy-btn" onclick="copyCode(this, '&lt;script src=&quot;https://wetakestables.shop/checkout-widget.js&quot;&gt;&lt;/script&gt;')">COPY</button>
                         </div>
                         <p class="text-slate-400 text-sm mt-2">For Lovable: Go to your page editor and add a Custom HTML/Script block</p>
                     </div>
@@ -248,18 +248,54 @@
                 </div>
             </div>
 
-            <!-- Method B: Redirect -->
+            <!-- Method B: Payment Link -->
             <div class="mb-12">
                 <div class="flex items-center space-x-4 mb-6">
                     <span class="bg-slate-500 text-white text-xs font-bold px-3 py-1 border-2 border-black">ALTERNATIVE</span>
-                    <h3 class="text-2xl font-extrabold">Method B: Payment Link</h3>
+                    <h3 class="text-2xl font-extrabold">Method B: Direct Link (No Code)</h3>
                 </div>
-                <p class="text-slate-500 mb-4">Don't want to embed code? Send customers directly to a payment page:</p>
+                <p class="text-slate-500 mb-4">Send customers directly to a payment page — great for emails, social media, or simple links:</p>
                 <div class="relative">
-                    <pre class="p-4 text-sm rounded-none"><code>https://wetakestables.shop/crypto-pay.html?merchantId=cmhkjckgi0000qut5wxmtsw1f&amount=29.99&chain=BASE_MAINNET</code></pre>
-                    <button class="copy-btn" onclick="copyCode(this, 'https://wetakestables.shop/crypto-pay.html?merchantId=cmhkjckgi0000qut5wxmtsw1f&amount=29.99&chain=BASE_MAINNET')">COPY</button>
+                    <pre class="p-4 text-sm rounded-none"><code>https://wetakestables.shop/checkout?merchantId=YOUR_MERCHANT_ID&amount=29.99</code></pre>
                 </div>
-                <p class="text-slate-400 text-sm mt-2">Use this in emails, social media, or as a simple link on your site</p>
+                <p class="text-slate-400 text-sm mt-2">Or create a Payment Link in your dashboard — even simpler, no URL building needed.</p>
+            </div>
+
+            <!-- Method C: Backend API -->
+            <div class="mb-12">
+                <div class="flex items-center space-x-4 mb-6">
+                    <span class="bg-slate-700 text-white text-xs font-bold px-3 py-1 border-2 border-black">ADVANCED</span>
+                    <h3 class="text-2xl font-extrabold">Method C: Backend API → Redirect</h3>
+                </div>
+                <p class="text-slate-500 mb-4">Create orders server-side first, then redirect customers to pay. Best for custom backends that need to track orders before payment.</p>
+                <div class="relative">
+                    <pre class="p-4 text-sm rounded-none"><code>// Step 1: Your server creates the order
+POST https://wetakestables.shop/api/embed/checkout
+Content-Type: application/json
+
+{
+  "merchantId": "YOUR_MERCHANT_ID",
+  "amount": 29.99,
+  "chain": "BASE_MAINNET",
+  "token": "USDC",
+  "customerEmail": "buyer@email.com",
+  "productName": "Order #1234"
+}
+
+// Response:
+{
+  "success": true,
+  "order": {
+    "id": "cmo03ur36...",
+    "paymentAddress": "0x...",
+    "expiresAt": "2026-04-15T..."
+  }
+}
+
+// Step 2: Redirect customer to checkout
+→ https://wetakestables.shop/checkout?orderId=cmo03ur36...</code></pre>
+                </div>
+                <p class="text-slate-400 text-sm mt-2">The checkout page resolves the order and loads the payment UI automatically. Order expires in 30 minutes.</p>
             </div>
         </div>
 
@@ -493,7 +529,7 @@
                         <div>
                             <h4 class="font-bold text-lg mb-2">Add a Script component</h4>
                             <p class="text-slate-500 mb-2">In your Lovable page, add a Custom Code / Script component and paste:</p>
-                            <pre class="p-3 text-sm"><code>&lt;script src="https://wetakestables.shop/js/stablepay-widget.js"&gt;&lt;/script&gt;</code></pre>
+                            <pre class="p-3 text-sm"><code>&lt;script src="https://wetakestables.shop/checkout-widget.js"&gt;&lt;/script&gt;</code></pre>
                         </div>
                     </div>
                 </div>

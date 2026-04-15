@@ -158,6 +158,20 @@
                 <div class="mt-4 p-3 bg-slate-800 border border-cyan-800 text-sm text-cyan-300">
                     <strong>Flow:</strong> Your checkout calls this → customer sends stablecoins to paymentAddress → we detect the transfer on-chain → webhook fires to your server → order confirmed.
                 </div>
+
+                <div class="mt-4 p-3 bg-slate-800 border border-slate-700 text-sm text-slate-300">
+                    <strong class="text-white">After creating the order, redirect the customer to:</strong><br>
+                    <code class="text-cyan-400">https://wetakestables.shop/checkout?orderId=ORDER_ID</code><br><br>
+                    This resolves the order and loads the full checkout UI (chain selector, wallet connect, QR code, manual send).
+                </div>
+            </div>
+
+            <div class="endpoint bg-slate-900 border border-slate-800 p-5 mt-6">
+                <h3 class="text-white font-bold mb-3"><span class="method-get">GET</span> /checkout?orderId=<span class="text-cyan-400">ORDER_ID</span></h3>
+                <p class="text-slate-400 text-sm mb-4">Checkout page for an existing order. Resolves the order, validates it's still pending and not expired, then redirects to the payment UI with the correct merchant/amount/chain.</p>
+                <p class="text-slate-500 mt-2 mb-2 font-bold">Errors:</p>
+<pre>404 — Order not found
+400 — Order is confirmed/expired/cancelled — cannot checkout</pre>
             </div>
         </section>
 
