@@ -12,18 +12,11 @@
         .header { background: #000; color: #fff; padding: 24px; border: 4px solid #000; margin-bottom: 24px; }
         .header h1 { font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
         .header p { font-size: 13px; color: #94a3b8; margin-top: 4px; }
-        .search-box { background: #fff; border: 4px solid #000; box-shadow: 8px 8px 0px #000; padding: 24px; margin-bottom: 24px; }
-        .search-box label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; display: block; margin-bottom: 6px; }
-        .search-box input { width: 100%; padding: 12px 14px; border: 3px solid #000; font-family: 'Space Grotesk', system-ui; font-size: 14px; font-weight: 500; outline: none; margin-bottom: 16px; }
-        .search-box input:focus { border-color: #00E5FF; }
-        .search-box input::placeholder { color: #cbd5e1; }
-        .or-divider { text-align: center; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 16px; letter-spacing: 2px; }
-        .btn { width: 100%; padding: 14px; background: #000; color: #fff; border: 4px solid #000; font-family: 'Space Grotesk', system-ui; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
-        .btn:hover { background: #1e293b; }
-        .btn:disabled { background: #64748b; cursor: not-allowed; }
-        .results { margin-top: 0; }
+        .wallet-bar { background: #fff; border: 4px solid #000; box-shadow: 6px 6px 0px #000; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+        .wallet-bar .label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; }
+        .wallet-bar .addr { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; font-weight: 600; color: #0f172a; word-break: break-all; }
         .results-header { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 1px; margin-bottom: 12px; }
-        .order-card { background: #fff; border: 4px solid #000; box-shadow: 6px 6px 0px #000; padding: 20px; margin-bottom: 16px; transition: all 0.15s; cursor: pointer; }
+        .order-card { background: #fff; border: 4px solid #000; box-shadow: 6px 6px 0px #000; padding: 20px; margin-bottom: 16px; transition: all 0.15s; }
         .order-card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0px #000; }
         .order-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
         .order-amount { font-size: 24px; font-weight: 800; color: #000; }
@@ -32,9 +25,8 @@
         .status-confirmed { background: #f0fdf4; color: #16a34a; border-color: #16a34a; }
         .status-refunded { background: #fefce8; color: #ca8a04; border-color: #ca8a04; }
         .order-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .order-detail { font-size: 12px; }
         .order-detail .label { color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
-        .order-detail .value { color: #0f172a; font-weight: 600; margin-top: 2px; }
+        .order-detail .value { color: #0f172a; font-weight: 600; font-size: 13px; margin-top: 2px; }
         .order-detail .value a { color: #2563eb; text-decoration: none; }
         .order-detail .value a:hover { text-decoration: underline; }
         .order-actions { display: flex; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 2px solid #f1f5f9; }
@@ -44,30 +36,23 @@
         .order-actions a.primary:hover { background: #1e293b; }
         .empty { text-align: center; padding: 48px 24px; background: #fff; border: 4px solid #000; box-shadow: 6px 6px 0px #000; }
         .empty p { color: #64748b; font-size: 14px; margin-top: 8px; }
+        .no-access { text-align: center; padding: 48px 24px; background: #fff; border: 4px solid #000; box-shadow: 8px 8px 0px #000; }
+        .no-access p { color: #64748b; font-size: 14px; margin-top: 8px; }
         .loading { text-align: center; padding: 32px; color: #64748b; font-size: 14px; }
-        .error { text-align: center; padding: 24px; background: #fef2f2; border: 3px solid #ef4444; color: #dc2626; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
         .footer { text-align: center; padding: 24px; font-size: 11px; color: #94a3b8; }
         .footer a { color: #64748b; text-decoration: none; font-weight: 600; }
-        .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>Payment History</h1>
-            <p>Look up your StablePay transactions</p>
+            <p>Your StablePay transactions</p>
         </div>
 
-        <div class="search-box">
-            <label>Wallet Address</label>
-            <input type="text" id="walletInput" placeholder="0x... or Solana address" autocomplete="off" spellcheck="false">
-            <div class="or-divider">or</div>
-            <label>Email</label>
-            <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
-            <button class="btn" id="searchBtn" onclick="search()">Look Up Payments</button>
+        <div id="content">
+            <div class="loading">Loading...</div>
         </div>
-
-        <div id="results"></div>
 
         <div class="footer">
             Powered by <a href="/">StablePay</a>
@@ -89,57 +74,48 @@
         const CHAINS = {
             BASE_MAINNET: 'Base', ETHEREUM_MAINNET: 'Ethereum', POLYGON_MAINNET: 'Polygon',
             ARBITRUM_MAINNET: 'Arbitrum', BNB_MAINNET: 'BNB Chain', SOLANA_MAINNET: 'Solana',
-            TRON_MAINNET: 'TRON', BASE_SEPOLIA: 'Base Sepolia', ETHEREUM_SEPOLIA: 'Ethereum Sepolia',
+            TRON_MAINNET: 'TRON', BASE_SEPOLIA: 'Base Sepolia', ETHEREUM_SEPOLIA: 'Eth Sepolia',
         };
 
-        // Pre-fill from URL params
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('wallet')) { document.getElementById('walletInput').value = params.get('wallet'); search(); }
-        if (params.get('email')) { document.getElementById('emailInput').value = params.get('email'); search(); }
+        const wallet = new URLSearchParams(window.location.search).get('wallet');
 
-        // Enter key triggers search
-        document.getElementById('walletInput').addEventListener('keypress', e => { if (e.key === 'Enter') search(); });
-        document.getElementById('emailInput').addEventListener('keypress', e => { if (e.key === 'Enter') search(); });
+        if (!wallet) {
+            document.getElementById('content').innerHTML = `
+                <div class="no-access">
+                    <p style="font-size:32px; margin-bottom:4px;">Wallet required</p>
+                    <p>This page is accessible after making a payment. Complete a checkout and use the "Payment History" link from the confirmation screen.</p>
+                </div>`;
+        } else {
+            load();
+        }
 
-        async function search() {
-            const wallet = document.getElementById('walletInput').value.trim();
-            const email = document.getElementById('emailInput').value.trim();
-            const resultsDiv = document.getElementById('results');
-            const btn = document.getElementById('searchBtn');
-
-            if (!wallet && !email) return;
-
-            btn.disabled = true;
-            btn.textContent = 'Searching...';
-            resultsDiv.innerHTML = '<div class="loading">Looking up your payments...</div>';
-
+        async function load() {
+            const content = document.getElementById('content');
             try {
-                const qs = new URLSearchParams();
-                if (wallet) qs.set('wallet', wallet);
-                if (email) qs.set('email', email);
-
-                const res = await fetch('/api/v1/orders/history/lookup?' + qs.toString());
+                const res = await fetch('/api/v1/orders/history/lookup?wallet=' + encodeURIComponent(wallet));
                 if (!res.ok) throw new Error('Lookup failed');
-
                 const data = await res.json();
 
                 if (!data.orders || data.orders.length === 0) {
-                    resultsDiv.innerHTML = `
+                    content.innerHTML = `
+                        <div class="wallet-bar">
+                            <div><div class="label">Wallet</div><div class="addr">${wallet.slice(0, 6)}...${wallet.slice(-4)}</div></div>
+                        </div>
                         <div class="empty">
                             <p style="font-size:32px;">Nothing here yet</p>
-                            <p>No confirmed payments found for this ${wallet ? 'wallet' : 'email'}.</p>
+                            <p>No confirmed payments found for this wallet.</p>
                         </div>`;
                     return;
                 }
 
-                resultsDiv.innerHTML = `<div class="results-header">${data.total} payment${data.total !== 1 ? 's' : ''} found</div>` +
-                    data.orders.map(o => renderOrder(o)).join('');
-
+                content.innerHTML =
+                    `<div class="wallet-bar">
+                        <div><div class="label">Wallet</div><div class="addr">${wallet.slice(0, 6)}...${wallet.slice(-4)}</div></div>
+                    </div>
+                    <div class="results-header">${data.total} payment${data.total !== 1 ? 's' : ''}</div>` +
+                    data.orders.map(renderOrder).join('');
             } catch (err) {
-                resultsDiv.innerHTML = '<div class="error">Something went wrong. Try again.</div>';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Look Up Payments';
+                content.innerHTML = '<div class="empty"><p>Something went wrong. Try again later.</p></div>';
             }
         }
 
@@ -170,7 +146,7 @@
                         </div>
                         <div class="order-detail">
                             <div class="label">Transaction</div>
-                            <div class="value mono">${o.txHash ? `<a href="${explorerUrl}" target="_blank">${o.txHash.slice(0, 8)}...${o.txHash.slice(-4)}</a>` : 'Pending'}</div>
+                            <div class="value">${o.txHash ? `<a href="${explorerUrl}" target="_blank" style="font-family:monospace;font-size:12px">${o.txHash.slice(0, 8)}...${o.txHash.slice(-4)}</a>` : 'Pending'}</div>
                         </div>
                     </div>
                     <div class="order-actions">

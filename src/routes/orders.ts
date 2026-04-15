@@ -68,7 +68,8 @@ router.post('/', rateLimit({
   }
 });
 
-// Public: customer order history lookup by wallet address or email
+// Public: customer order history lookup by wallet address only
+// Wallet addresses are public on-chain, so this doesn't leak private info
 router.get('/history/lookup', rateLimit({
   getMerchantId: async () => null,
   limitAnonymous: true,
@@ -76,33 +77,19 @@ router.get('/history/lookup', rateLimit({
 }), async (req, res) => {
   try {
     const wallet = (req.query.wallet as string || '').trim();
-    const email = (req.query.email as string || '').trim().toLowerCase();
 
-    if (!wallet && !email) {
-      return res.status(400).json({ error: 'Provide wallet address or email' });
-    }
-
-    const where: any = {
-      status: { in: ['CONFIRMED', 'REFUNDED'] },
-    };
-
-    if (wallet && email) {
-      where.OR = [
-        { customerWallet: { equals: wallet, mode: 'insensitive' } },
-        { transactions: { some: { fromAddress: { equals: wallet, mode: 'insensitive' } } } },
-        { customerEmail: { equals: email, mode: 'insensitive' } },
-      ];
-    } else if (wallet) {
-      where.OR = [
-        { customerWallet: { equals: wallet, mode: 'insensitive' } },
-        { transactions: { some: { fromAddress: { equals: wallet, mode: 'insensitive' } } } },
-      ];
-    } else {
-      where.customerEmail = { equals: email, mode: 'insensitive' };
+    if (!wallet || wallet.length < 10) {
+      return res.status(400).json({ error: 'Valid wallet address required' });
     }
 
     const orders = await db.order.findMany({
-      where,
+      where: {
+        status: { in: ['CONFIRMED', 'REFUNDED'] },
+        OR: [
+          { customerWallet: { equals: wallet, mode: 'insensitive' } },
+          { transactions: { some: { fromAddress: { equals: wallet, mode: 'insensitive' } } } },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
       take: 50,
       select: {
@@ -112,7 +99,6 @@ router.get('/history/lookup', rateLimit({
         chain: true,
         status: true,
         createdAt: true,
-        customerEmail: true,
         merchant: { select: { companyName: true } },
         transactions: {
           where: { status: 'CONFIRMED' },

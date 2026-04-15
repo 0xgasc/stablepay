@@ -2238,6 +2238,13 @@
               ">View Transaction</a>
             ` : ''}
             <span id="sp-receipt-btn-slot"></span>
+            ${this.connectedWallet ? `
+              <a href="${STABLEPAY_URL}/history?wallet=${encodeURIComponent(this.connectedWallet)}" target="_blank" style="
+                padding: 10px 20px; background: var(--sp-card); color: var(--sp-muted);
+                border: 2px solid var(--sp-border); text-decoration: none;
+                font-size: 11px; font-weight: 700; text-transform: uppercase;
+              ">Payment History</a>
+            ` : ''}
           </div>
         </div>
       `;

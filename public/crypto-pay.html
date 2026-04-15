@@ -528,6 +528,7 @@
             </a>
 
             <span id="receiptBtnSlot"></span>
+            <span id="historyBtnSlot"></span>
 
             <div class="flex gap-4">
                 <button onclick="buyAgain()"
@@ -2041,8 +2042,18 @@
             document.getElementById('successChain').textContent = CHAIN_CONFIG[chainKey]?.chainName || chainKey;
             document.getElementById('successTxLink').href = explorerUrl;
 
-            // Clear receipt slot
+            // Clear receipt and history slots
             document.getElementById('receiptBtnSlot').innerHTML = '';
+            document.getElementById('historyBtnSlot').innerHTML = '';
+
+            // Show payment history link if wallet is connected
+            if (connectedAddress) {
+                document.getElementById('historyBtnSlot').innerHTML = `<a href="/history?wallet=${encodeURIComponent(connectedAddress)}" target="_blank"
+                    class="block w-full px-6 py-3 font-bold tracking-wide text-gray-500 mb-4 text-center"
+                    style="text-transform: uppercase; text-decoration: none; font-size: 12px; border: 3px solid #e2e8f0;">
+                    Payment History
+                </a>`;
+            }
 
             // Show success screen
             document.getElementById('paymentSuccessScreen').classList.remove('hidden');
