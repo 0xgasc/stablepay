@@ -58,7 +58,7 @@
             ARBITRUM_MAINNET: 'Arbitrum', BNB_MAINNET: 'BNB Chain', SOLANA_MAINNET: 'Solana', TRON_MAINNET: 'TRON',
         };
 
-        async function loadReceipt() {
+        async function loadReceipt(retryCount = 0) {
             try {
                 // Try as receiptId first, then as orderId
                 let res = await fetch(`${BASE_URL}/api/receipts/${pathId}`);
@@ -70,7 +70,15 @@
                         res = await fetch(`${BASE_URL}/api/receipts/${receiptId}`);
                     }
                 }
-                if (!res.ok) throw new Error('Receipt not found');
+                if (!res.ok) {
+                    // Receipt may not be created yet (timing gap after order confirmation)
+                    if (retryCount < 2) {
+                        document.getElementById('loading').innerHTML = '<p>Generating receipt...</p>';
+                        await new Promise(r => setTimeout(r, 3000));
+                        return loadReceipt(retryCount + 1);
+                    }
+                    throw new Error('Receipt not found');
+                }
                 const data = await res.json();
                 const r = data.receipt;
                 const order = r.order || {};
@@ -113,7 +121,9 @@
                     <div class="error">
                         <p style="font-size:48px;margin-bottom:12px;">🔍</p>
                         <p style="font-weight:700;font-size:16px;">Receipt not found</p>
-                        <p style="font-size:12px;color:#94a3b8;margin-top:8px;">This receipt may have expired or the link is incorrect.</p>
+                        <p style="font-size:12px;color:#94a3b8;margin-top:8px;">This receipt hasn't been generated yet or the link is incorrect.</p>
+                        <p style="font-size:12px;color:#94a3b8;margin-top:4px;">If your payment was just confirmed, it may take a moment.</p>
+                        <button onclick="loadReceipt(0)" style="margin-top:16px;padding:10px 24px;background:#000;color:#fff;border:3px solid #000;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;">Try Again</button>
                     </div>
                 `;
             }

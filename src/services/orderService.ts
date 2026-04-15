@@ -193,6 +193,15 @@ export class OrderService {
       throw new Error('Order not found after update');
     }
 
+    // Auto-create receipt (same as confirmOrder flow)
+    try {
+      const { receiptService } = await import('./receiptService');
+      await receiptService.createReceipt(orderId);
+    } catch (err) {
+      // Receipt creation is non-blocking — scanner/confirmOrder may handle it
+      console.error('Receipt auto-creation failed in updateOrderWithTransaction:', err);
+    }
+
     // Convert BigInt values to numbers for JSON serialization
     return {
       ...updatedOrder,

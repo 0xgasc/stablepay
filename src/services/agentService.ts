@@ -36,12 +36,14 @@ function decryptKey(encrypted: string): string {
 const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY?.trim();
 const AGENT_WALLET_ADDRESS = process.env.AGENT_WALLET_ADDRESS?.trim();
 
-const CHAIN_RPC: Record<string, { rpc: string; usdc: string }> = {
+const CHAIN_RPC: Record<string, { rpc: string; usdc: string; tokens?: Record<string, string> }> = {
   BASE_SEPOLIA: { rpc: 'https://sepolia.base.org', usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' },
-  BASE_MAINNET: { rpc: 'https://mainnet.base.org', usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' },
+  BASE_MAINNET: { rpc: 'https://mainnet.base.org', usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', tokens: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42' } },
   ETHEREUM_SEPOLIA: { rpc: 'https://eth-sepolia.g.alchemy.com/v2/demo', usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' },
-  ETHEREUM_MAINNET: { rpc: 'https://eth.llamarpc.com', usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' },
-  POLYGON_MAINNET: { rpc: 'https://polygon-rpc.com', usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359' },
+  ETHEREUM_MAINNET: { rpc: 'https://eth.llamarpc.com', usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', tokens: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7', EURC: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c' } },
+  POLYGON_MAINNET: { rpc: 'https://polygon-rpc.com', usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', tokens: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' } },
+  ARBITRUM_MAINNET: { rpc: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arbitrum-one-rpc.publicnode.com', usdc: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', tokens: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' } },
+  BNB_MAINNET: { rpc: process.env.BNB_MAINNET_RPC_URL || 'https://bsc-dataseed.binance.org', usdc: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', tokens: { USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', USDT: '0x55d398326f99059fF775485246999027B3197955' } },
 };
 
 const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'];
@@ -332,6 +334,30 @@ const TOOLS: Anthropic.Tool[] = [
         refundToAddress: { type: 'string', description: 'Customer wallet address to refund to. If not provided, uses the customerWallet from the order.' },
       },
       required: ['orderId'],
+    },
+  },
+  {
+    name: 'assess_refund_readiness',
+    description: 'Check if a merchant can send a refund from their OWN wallet (non-managed). Checks their wallet gas balance (ETH/SOL), token balance, and tells you if they need gas sponsorship. Use this BEFORE telling a merchant to refund manually.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        orderId: { type: 'string', description: 'The order ID to assess refund readiness for' },
+      },
+      required: ['orderId'],
+    },
+  },
+  {
+    name: 'sponsor_gas',
+    description: 'Send a one-time gas sponsorship (ETH/SOL) to a merchant wallet so they can execute a refund or withdrawal. Only use after assess_refund_readiness confirms they need gas. Max 0.001 ETH or 0.01 SOL per sponsorship.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        toAddress: { type: 'string', description: 'Merchant wallet address to send gas to' },
+        chain: { type: 'string', enum: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'SOLANA_MAINNET'], description: 'Chain to send gas on' },
+        reason: { type: 'string', description: 'Reason for sponsorship (e.g. "refund for order xyz")' },
+      },
+      required: ['toAddress', 'chain', 'reason'],
     },
   },
 ];
@@ -927,6 +953,292 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       return JSON.stringify({ error: result.error });
     }
 
+    case 'assess_refund_readiness': {
+      const order = await db.order.findUnique({
+        where: { id: input.orderId },
+        include: {
+          merchant: { include: { wallets: { where: { isActive: true } } } },
+          transactions: { where: { status: 'CONFIRMED' }, take: 1 },
+        },
+      });
+
+      if (!order) return JSON.stringify({ error: 'Order not found' });
+      if (order.merchantId !== merchantId) return JSON.stringify({ error: 'This order does not belong to you' });
+      if (order.status !== 'CONFIRMED') return JSON.stringify({ error: `Order status is ${order.status}, cannot refund` });
+
+      const chain = order.chain;
+      const amount = Number(order.amount);
+      const token = order.token;
+      const customerWallet = order.customerWallet || order.transactions[0]?.fromAddress || null;
+
+      // Check if merchant has a managed wallet (if so, just use process_refund)
+      const managedWallet = await db.managedWallet.findUnique({
+        where: { merchantId_chain: { merchantId: order.merchantId!, chain } },
+      });
+      if (managedWallet) {
+        return JSON.stringify({
+          hasManagedWallet: true,
+          message: 'This merchant has a managed wallet on this chain. Use process_refund instead — gas is auto-sponsored.',
+          orderId: input.orderId,
+          customerWallet,
+        });
+      }
+
+      // Find merchant's own wallet for this chain
+      const merchantWallet = order.merchant?.wallets?.find(w => w.chain === chain);
+      if (!merchantWallet) {
+        return JSON.stringify({
+          canRefund: false,
+          error: `No wallet configured for ${chain}. Merchant needs to add a wallet for this chain first.`,
+        });
+      }
+
+      const walletAddress = merchantWallet.address;
+
+      // Check balances based on chain type
+      if (chain === 'SOLANA_MAINNET') {
+        try {
+          const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
+          // Check SOL balance for gas
+          const solBalRes = await fetch(solRpc, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [walletAddress] }),
+          });
+          const solBalData: any = await solBalRes.json();
+          const solBalance = (solBalData.result?.value || 0) / 1e9; // lamports → SOL
+          const hasGas = solBalance >= 0.005; // ~0.005 SOL needed for SPL transfer
+
+          // Check SPL token balance
+          const MINTS: Record<string, string> = {
+            USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+            USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+            EURC: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr',
+          };
+          const mint = MINTS[token];
+          let tokenBalance = 0;
+          if (mint) {
+            const ataRes = await fetch(solRpc, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner', params: [walletAddress, { mint }, { encoding: 'jsonParsed' }] }),
+            });
+            const ataData: any = await ataRes.json();
+            const accounts = ataData.result?.value || [];
+            for (const acc of accounts) {
+              tokenBalance += acc.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0;
+            }
+          }
+
+          const hasTokens = tokenBalance >= amount;
+
+          return JSON.stringify({
+            canRefund: hasGas && hasTokens,
+            chain, walletAddress, customerWallet,
+            gasBalance: `${solBalance.toFixed(4)} SOL`,
+            hasGas,
+            gasNeeded: hasGas ? null : '~0.005 SOL for SPL transfer fees',
+            tokenBalance: `${tokenBalance.toFixed(2)} ${token}`,
+            hasTokens,
+            refundAmount: `${amount} ${token}`,
+            needsGasSponsorship: !hasGas,
+            action: !hasGas
+              ? 'Merchant needs SOL for gas. Use sponsor_gas to send ~0.01 SOL to their wallet.'
+              : !hasTokens
+                ? `Merchant only has ${tokenBalance.toFixed(2)} ${token} but needs ${amount}. They need to fund their wallet first.`
+                : 'Merchant is ready to refund. Guide them to send the refund from their wallet and submit the TX hash via the dashboard.',
+          });
+        } catch (err: any) {
+          return JSON.stringify({ error: `Failed to check Solana balances: ${err.message}` });
+        }
+      }
+
+      // EVM chains
+      const chainConf = CHAIN_RPC[chain];
+      if (!chainConf) return JSON.stringify({ error: `Unsupported chain: ${chain}` });
+
+      try {
+        const provider = new ethers.JsonRpcProvider(chainConf.rpc);
+
+        // Check native gas balance
+        const gasBalanceWei = await provider.getBalance(walletAddress);
+        const gasBalance = parseFloat(ethers.formatEther(gasBalanceWei));
+        const native = chain.includes('POLYGON') ? 'MATIC' : chain.includes('BNB') ? 'BNB' : 'ETH';
+        const minGas = chain.includes('POLYGON') || chain.includes('BNB') ? 0.001 : 0.0005;
+        const hasGas = gasBalance >= minGas;
+
+        // Check token balance
+        const tokenAddress = chainConf.tokens?.[token] || chainConf.usdc;
+        const decimals = chain === 'BNB_MAINNET' ? 18 : 6;
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+        const tokenBalanceRaw = await tokenContract.balanceOf(walletAddress);
+        const tokenBalance = parseFloat(ethers.formatUnits(tokenBalanceRaw, decimals));
+        const hasTokens = tokenBalance >= amount;
+
+        return JSON.stringify({
+          canRefund: hasGas && hasTokens,
+          chain, walletAddress, customerWallet,
+          gasBalance: `${gasBalance.toFixed(6)} ${native}`,
+          hasGas,
+          gasNeeded: hasGas ? null : `~${(minGas * 2).toFixed(4)} ${native} for ERC20 transfer`,
+          tokenBalance: `${tokenBalance.toFixed(2)} ${token}`,
+          hasTokens,
+          refundAmount: `${amount} ${token}`,
+          needsGasSponsorship: !hasGas,
+          action: !hasGas
+            ? `Merchant needs ${native} for gas. Use sponsor_gas to send ~0.001 ${native} to their wallet.`
+            : !hasTokens
+              ? `Merchant only has ${tokenBalance.toFixed(2)} ${token} but needs ${amount}. They need to fund their wallet first.`
+              : 'Merchant is ready to refund. Guide them to send the refund from their wallet and submit the TX hash via the dashboard.',
+        });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Failed to check balances: ${err.message}` });
+      }
+    }
+
+    case 'sponsor_gas': {
+      const { toAddress, chain, reason } = input;
+
+      // Validate address format
+      if (chain === 'SOLANA_MAINNET') {
+        if (!toAddress || toAddress.length < 32 || toAddress.length > 44) {
+          return JSON.stringify({ error: 'Invalid Solana address' });
+        }
+      } else {
+        if (!/^0x[a-fA-F0-9]{40}$/.test(toAddress)) {
+          return JSON.stringify({ error: 'Invalid EVM address' });
+        }
+      }
+
+      // Check for duplicate sponsorship in last 24h
+      const recentSponsorship = await db.treasuryMove.findFirst({
+        where: {
+          toAddress,
+          type: 'GAS_SPONSOR',
+          chain,
+          createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        },
+      });
+      if (recentSponsorship) {
+        return JSON.stringify({
+          error: `Gas was already sponsored to this address on ${chain} in the last 24h (TX: ${recentSponsorship.txHash}). One sponsorship per day per address.`,
+        });
+      }
+
+      if (chain === 'SOLANA_MAINNET') {
+        // Solana gas sponsorship
+        const solKey = process.env.AGENT_SOLANA_KEY?.trim();
+        if (!solKey) return JSON.stringify({ error: 'Agent Solana wallet not configured' });
+
+        try {
+          const { Connection, Keypair, Transaction, SystemProgram, PublicKey, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
+          const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
+          const connection = new Connection(solRpc, 'confirmed');
+
+          // Decode agent key
+          let agentKeypair: InstanceType<typeof Keypair>;
+          if (solKey.startsWith('[')) {
+            agentKeypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(solKey)));
+          } else if (solKey.length === 128 || solKey.length === 64) {
+            agentKeypair = Keypair.fromSecretKey(new Uint8Array(Buffer.from(solKey, 'hex')));
+          } else {
+            const bs58 = await import('bs58');
+            agentKeypair = Keypair.fromSecretKey(bs58.default.decode(solKey));
+          }
+
+          const sponsorAmount = 0.01 * LAMPORTS_PER_SOL; // 0.01 SOL
+          const tx = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: agentKeypair.publicKey,
+              toPubkey: new PublicKey(toAddress),
+              lamports: sponsorAmount,
+            })
+          );
+
+          const { blockhash } = await connection.getLatestBlockhash();
+          tx.recentBlockhash = blockhash;
+          tx.feePayer = agentKeypair.publicKey;
+          const sig = await connection.sendTransaction(tx, [agentKeypair]);
+
+          // Record treasury move
+          await db.treasuryMove.create({
+            data: {
+              merchantId,
+              type: 'GAS_SPONSOR',
+              chain,
+              token: 'SOL',
+              amount: 0.01,
+              fromAddress: agentKeypair.publicKey.toBase58(),
+              toAddress,
+              txHash: sig,
+              status: 'COMPLETED',
+              metadata: { reason },
+            },
+          });
+
+          return JSON.stringify({
+            success: true,
+            txHash: sig,
+            amount: '0.01 SOL',
+            toAddress,
+            chain,
+            message: `Sent 0.01 SOL to ${toAddress.slice(0, 8)}...${toAddress.slice(-4)} for gas. They can now send the refund from their wallet.`,
+          });
+        } catch (err: any) {
+          return JSON.stringify({ error: `Solana gas sponsorship failed: ${err.message}` });
+        }
+      }
+
+      // EVM gas sponsorship
+      if (!AGENT_WALLET_KEY) return JSON.stringify({ error: 'Agent EVM wallet not configured' });
+
+      const chainConf = CHAIN_RPC[chain];
+      if (!chainConf) return JSON.stringify({ error: `Unsupported chain: ${chain}` });
+
+      try {
+        const provider = new ethers.JsonRpcProvider(chainConf.rpc);
+        const agentWallet = new ethers.Wallet(AGENT_WALLET_KEY, provider);
+        const native = chain.includes('POLYGON') ? 'MATIC' : chain.includes('BNB') ? 'BNB' : 'ETH';
+        const sponsorAmount = ethers.parseEther('0.001'); // 0.001 ETH/MATIC
+
+        // Check agent balance first
+        const agentBalance = await provider.getBalance(agentWallet.address);
+        if (agentBalance < sponsorAmount) {
+          return JSON.stringify({
+            error: `Agent wallet low on ${native} on ${chain}. Balance: ${ethers.formatEther(agentBalance)} ${native}. Fund ${agentWallet.address} to enable gas sponsorship.`,
+          });
+        }
+
+        const tx = await agentWallet.sendTransaction({ to: toAddress, value: sponsorAmount });
+        await tx.wait();
+
+        // Record treasury move
+        await db.treasuryMove.create({
+          data: {
+            merchantId,
+            type: 'GAS_SPONSOR',
+            chain,
+            token: native,
+            amount: 0.001,
+            fromAddress: agentWallet.address,
+            toAddress,
+            txHash: tx.hash,
+            status: 'COMPLETED',
+            metadata: { reason },
+          },
+        });
+
+        return JSON.stringify({
+          success: true,
+          txHash: tx.hash,
+          amount: `0.001 ${native}`,
+          toAddress,
+          chain,
+          message: `Sent 0.001 ${native} to ${toAddress.slice(0, 8)}...${toAddress.slice(-4)} for gas. They can now send the refund from their wallet.`,
+        });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Gas sponsorship failed: ${err.message}` });
+      }
+    }
+
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
@@ -1076,9 +1388,21 @@ If they ask "what is...":
 - Save important context: business type, country, tech stack, crypto experience level, preferred chains, notes
 - Recall at conversation start to personalize
 
+## Refunds — Smart Handling
+When a merchant asks about refunding:
+1. **Managed wallet?** → Use process_refund directly. Gas is auto-sponsored. Done.
+2. **Own wallet?** → Use assess_refund_readiness FIRST to check their gas + token balances.
+   - If they have gas + tokens → Guide them to send from their wallet and paste the TX hash in the dashboard.
+   - If they're short on gas (ETH/SOL) → Offer to sponsor gas with sponsor_gas. Say something like: "Your wallet needs a bit of ETH for gas fees. I can send you some — one-time thing, on us."
+   - If they're short on tokens → Tell them they need to fund their wallet. You can't help with that.
+   - Gas sponsorship is limited to 1x per address per 24h. 0.001 ETH or 0.01 SOL.
+3. **TRON?** → Not automated yet. Tell them to send manually.
+4. Never skip assess_refund_readiness for own-wallet merchants. It gives you the full picture.
+
 ## Your Wallet
 - Address: ${process.env.AGENT_WALLET_ADDRESS || 'not configured'}
 - You can check your balance and send USDC (max $50/tx)
+- You can sponsor gas for merchants who need help with refunds (0.001 ETH / 0.01 SOL)
 - Tips go to your wallet. Be grateful when tipped but never ask.
 
 ## CRITICAL: Exact Script & API Reference (DO NOT HALLUCINATE)

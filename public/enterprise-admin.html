@@ -12,6 +12,8 @@
         * {
             font-family: 'Space Grotesk', sans-serif;
         }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
         /* Base: Dark theme (matches dashboard) */
         body {
@@ -323,7 +325,7 @@
                             Enterprise Admin
                         </span>
                     </div>
-                    <div class="flex items-center space-x-3">
+                    <div class="flex items-center flex-wrap gap-2">
                         <!-- Language Selector -->
                         <select id="languageSelector" class="bg-slate-800 border border-slate-700 text-white px-2 py-1 text-xs cursor-pointer hover:bg-slate-700">
                             <option value="en">EN</option>
@@ -350,32 +352,32 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Tabs -->
             <div class="mb-6 border-b border-slate-800">
-                <nav class="-mb-px flex space-x-8">
-                    <button class="tab-btn border-b-2 border-blue-500 text-blue-400 py-4 px-1 text-sm font-medium" data-tab="merchants">
+                <nav class="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto scrollbar-hide" style="-webkit-overflow-scrolling: touch;">
+                    <button class="tab-btn border-b-2 border-blue-500 text-blue-400 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="merchants">
                         Merchants
                     </button>
-                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="orders">
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="orders">
                         All Orders
                     </button>
-                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="refunds">
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="refunds">
                         Refunds
                     </button>
-                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="receipts">
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="receipts">
                         Receipts
                     </button>
-                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="analytics">
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="analytics">
                         Platform Analytics
                     </button>
-                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="settings">
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="settings">
                         System Settings
                     </button>
-                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="wallets">
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="wallets">
                         Fee Wallets
                     </button>
-                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="billing">
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="billing">
                         Billing & Fees
                     </button>
-                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium" data-tab="agentWallets">
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="agentWallets">
                         Stablo Wallets
                     </button>
                 </nav>

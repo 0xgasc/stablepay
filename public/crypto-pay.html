@@ -1627,20 +1627,28 @@
                     // Use converted amount for EURC, original price for other tokens
                     const paymentAmount = selectedToken === 'EURC' ? displayAmount : currentProduct.price;
 
+                    // Read metadata from URL params if passed by SDK
+                    const _urlParams = new URLSearchParams(window.location.search);
+                    let _metadata = undefined;
+                    try { if (_urlParams.get('metadata')) _metadata = JSON.parse(_urlParams.get('metadata')); } catch(e) {}
+                    const _externalId = _urlParams.get('externalId') || undefined;
+
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             amount: paymentAmount,
-                            originalAmount: currentProduct.price, // Original USD amount for reference
+                            originalAmount: currentProduct.price,
                             chain: selectedChain.value,
-                            token: selectedToken, // Which stablecoin to pay with
+                            token: selectedToken,
                             productId: currentProduct.id,
                             productName: currentProduct.name,
                             customerEmail: customerEmail,
                             customerName: customerName || null,
                             merchantId: currentProduct.merchantId || 'DEMO',
-                            paymentAddress: selectedChainData?.address || null // Merchant's wallet for this chain
+                            paymentAddress: selectedChainData?.address || null,
+                            metadata: _metadata,
+                            externalId: _externalId
                         })
                     });
                     
@@ -1662,35 +1670,9 @@
                     }
                 } catch (apiError) {
                     console.error('[ERROR] API Error details:', apiError);
-                    console.log('[WARNING] Using localStorage fallback');
-                    // Fallback to localStorage
-                    const mockOrderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                    const fallbackAmount = selectedToken === 'EURC' ? displayAmount : currentProduct.price;
-                    orderData = {
-                        id: mockOrderId,
-                        orderId: mockOrderId,
-                        amount: fallbackAmount,
-                        originalAmount: currentProduct.price,
-                        chain: selectedChain.value,
-                        token: selectedToken,
-                        paymentAddress: selectedChainData?.address,
-                        usdcAddress: tokenConfig.address, // Token contract address
-                        productId: currentProduct.id,
-                        productName: currentProduct.name,
-                        createdAt: new Date().toISOString(),
-                        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-                        status: 'PENDING',
-                        txHash: null,
-                        fromAddress: null
-                    };
-                    
-                    // Store in localStorage for demo
-                    localStorage.setItem('currentOrder', JSON.stringify(orderData));
-                    
-                    // Add to demoOrders array
-                    const demoOrders = JSON.parse(localStorage.getItem('demoOrders') || '[]');
-                    demoOrders.push(orderData);
-                    localStorage.setItem('demoOrders', JSON.stringify(demoOrders));
+                    showError('Payment setup failed — please try again or contact support.');
+                    hideTxStatus();
+                    return; // Do NOT proceed to payment with no real order
                 }
 
                 console.log('Order created:', orderData);

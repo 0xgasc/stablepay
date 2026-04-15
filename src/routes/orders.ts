@@ -82,18 +82,24 @@ router.get('/', requireMerchantAuth, async (req, res) => {
   try {
     const merchantId = (req as AuthenticatedRequest).merchant.id;
     const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 500);
     const includeTransactions = req.query.includeTransactions === 'true';
+    const status = req.query.status as string | undefined;
 
     // Only return orders belonging to this merchant
+    const where: any = { merchantId };
+    if (status && ['PENDING', 'CONFIRMED', 'REFUNDED', 'EXPIRED', 'CANCELLED'].includes(status)) {
+      where.status = status;
+    }
+
     const orders = await db.order.findMany({
-      where: { merchantId },
+      where,
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
       include: includeTransactions ? { transactions: true } : undefined,
     });
-    const total = await db.order.count({ where: { merchantId } });
+    const total = await db.order.count({ where });
 
     // Serialize BigInt values (blockNumber) to strings for JSON
     const safeOrders = JSON.parse(JSON.stringify(orders, (_, v) => typeof v === 'bigint' ? v.toString() : v));

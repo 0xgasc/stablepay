@@ -461,14 +461,17 @@
                     <strong style="color: var(--sp-text);">Which address?</strong> Use the address for <strong>${this.selectedChain?.config?.chainName || 'the selected network'}</strong>. ${this.selectedChain?.config?.type === 'solana' ? 'Solana addresses are ~44 characters, no 0x prefix.' : this.selectedChain?.config?.type === 'tron' ? 'TRON addresses start with T.' : 'EVM addresses start with 0x and are 42 characters.'}
                   </div>
                 </div>
-                <div style="display: flex; gap: 6px;">
-                  <input id="sp-sender-wallet" type="text" placeholder="${this.selectedChain?.config?.type === 'solana' ? 'e.g. 7xKXtg2C...' : this.selectedChain?.config?.type === 'tron' ? 'e.g. TJRabPrw...' : 'e.g. 0xd573Be...'}" style="
-                    flex: 1; padding: 8px; font-size: 16px; font-family: monospace; border: 2px solid var(--sp-border);
+                <div style="display: flex; gap: 4px; align-items: stretch;">
+                  <input id="sp-sender-wallet" type="text" placeholder="${this.selectedChain?.config?.type === 'solana' ? 'Your Solana address' : this.selectedChain?.config?.type === 'tron' ? 'Your TRON address' : 'Your 0x address'}" style="
+                    flex: 1; padding: 6px 8px; font-size: 16px; font-family: inherit; border: 1px solid var(--sp-border);
                     background: var(--sp-bg); color: var(--sp-text); outline: none; min-width: 0;
+                    -webkit-transform: scale(0.75); transform: scale(0.75); transform-origin: left center;
+                    width: 133%; height: 36px; border-radius: 3px; text-overflow: ellipsis;
                   ">
                   <button id="sp-sender-wallet-btn" style="
-                    padding: 8px 16px; background: #00E5FF; color: #000; border: none;
-                    font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+                    padding: 6px 12px; background: #00E5FF; color: #000; border: none;
+                    font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+                    border-radius: 3px; flex-shrink: 0;
                   ">Next</button>
                 </div>
               </div>
@@ -538,26 +541,30 @@
                 </div>
 
                 <div style="text-align: center;">
-                  <p id="sp-poll-status" style="font-size: 13px; font-weight: 700; color: var(--sp-text); margin-bottom: 4px;">Scanning the blockchain...</p>
-                  <p id="sp-poll-timer" style="font-size: 10px; color: var(--sp-muted);">This can take up to a minute</p>
+                  <p id="sp-poll-status" style="font-size: 12px; font-weight: 700; color: var(--sp-text); margin-bottom: 4px;">Scanning the blockchain...</p>
+                  <p id="sp-poll-timer" style="font-size: 9px; color: var(--sp-muted);">This can take up to a minute</p>
                 </div>
 
                 <!-- Manual TX (hidden until 45s) -->
                 <div id="sp-manual-tx" style="display: none; margin-top: 16px; text-align: left;">
-                  <div style="background: var(--sp-card); border: 2px solid var(--sp-border); padding: 12px;">
-                    <p style="font-size: 10px; font-weight: 700; color: var(--sp-text); margin-bottom: 6px;">Paste your transaction ID</p>
-                    <div style="display: flex; gap: 6px;">
+                  <div style="background: var(--sp-card); border: 1px solid var(--sp-border); padding: 10px; border-radius: 4px;">
+                    <p style="font-size: 11px; font-weight: 600; color: var(--sp-text); margin-bottom: 6px;">Paste your transaction ID</p>
+                    <div style="display: flex; gap: 4px; align-items: stretch;">
                       <input id="sp-manual-tx-input" type="text" placeholder="" style="
-                        flex: 1; padding: 8px; font-size: 10px; font-family: monospace; border: 2px solid var(--sp-border);
+                        flex: 1; padding: 6px 8px; font-size: 16px; font-family: inherit; border: 1px solid var(--sp-border);
                         background: var(--sp-bg); color: var(--sp-text); outline: none;
+                        text-overflow: ellipsis; overflow: hidden; border-radius: 3px;
+                        -webkit-transform: scale(0.75); transform: scale(0.75); transform-origin: left center;
+                        width: 133%; height: 36px;
                       ">
                       <button id="sp-manual-tx-btn" style="
-                        padding: 8px 14px; background: #000; color: #fff; border: none;
+                        padding: 6px 10px; background: #000; color: #fff; border: none;
                         font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+                        border-radius: 3px; flex-shrink: 0;
                       ">Verify</button>
                     </div>
-                    <p id="sp-manual-tx-hint" style="font-size: 8px; color: var(--sp-muted); margin-top: 4px;"></p>
-                    <p id="sp-manual-tx-status" style="font-size: 9px; color: var(--sp-muted); margin-top: 4px; display: none;"></p>
+                    <p id="sp-manual-tx-hint" style="font-size: 9px; color: var(--sp-muted); margin-top: 3px;"></p>
+                    <p id="sp-manual-tx-status" style="font-size: 9px; color: var(--sp-muted); margin-top: 3px; display: none;"></p>
                   </div>
                 </div>
 
@@ -878,14 +885,17 @@
             step1.innerHTML = `
               <div style="font-size: 11px; font-weight: 700; color: var(--sp-text); margin-bottom: 2px;">Your Wallet Address</div>
               <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Enter the address you'll send from — so we can match your payment.</p>
-              <div style="display: flex; gap: 6px;">
+              <div style="display: flex; gap: 4px; align-items: stretch;">
                 <input id="sp-sender-wallet" type="text" value="${this.connectedWallet || ''}" placeholder="${placeholder}" style="
-                  flex: 1; padding: 8px; font-size: 16px; font-family: monospace; border: 2px solid var(--sp-border);
+                  flex: 1; padding: 6px 8px; font-size: 16px; font-family: inherit; border: 1px solid var(--sp-border);
                   background: var(--sp-card); color: var(--sp-text); outline: none; min-width: 0;
+                  -webkit-transform: scale(0.75); transform: scale(0.75); transform-origin: left center;
+                  width: 133%; height: 36px; border-radius: 3px; text-overflow: ellipsis;
                 ">
                 <button id="sp-sender-wallet-btn" style="
-                  padding: 8px 16px; background: #000; color: #fff; border: none;
-                  font-size: 11px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+                  padding: 6px 12px; background: #000; color: #fff; border: none;
+                  font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+                  border-radius: 3px; flex-shrink: 0;
                 ">Next</button>
               </div>
             `;
@@ -1252,11 +1262,11 @@
           const chainType = this.selectedChain?.config?.type;
           if (txInput) {
             if (chainType === 'solana') {
-              txInput.placeholder = 'Solscan link or transaction signature...';
+              txInput.placeholder = 'TX signature or link...';
             } else if (chain === 'TRON_MAINNET') {
-              txInput.placeholder = 'Tronscan link or TX hash...';
+              txInput.placeholder = 'TX hash or link...';
             } else {
-              txInput.placeholder = 'Explorer link or 0x TX hash...';
+              txInput.placeholder = 'TX hash or link...';
             }
           }
           if (txHint) {
@@ -1329,7 +1339,12 @@
                   // Auto-verified — show success immediately
                   clearInterval(this._pollingInterval);
                   clearInterval(this._timerInterval);
-                  this.showSuccess({ txHash: value, status: 'CONFIRMED' });
+                  // Use backend-returned data which has proper txHash + explorerLink
+                  this.showSuccess({
+                    txHash: data.txHash || (isLink ? null : value),
+                    explorerLink: data.explorerLink || (isLink ? value : null),
+                    status: 'CONFIRMED'
+                  });
                 } else if (data.success) {
                   // Queued for review
                   if (statusEl) { statusEl.textContent = 'Submitted for review. You\'ll be notified once confirmed.'; statusEl.style.color = '#22c55e'; }
@@ -2022,14 +2037,25 @@
       const receipt = await tx.wait();
 
       if (receipt.status === 1) {
-        // Register txHash with our API for immediate confirmation
+        // Register txHash via embed API for immediate verification + confirmation
         if (this.currentOrderId) {
-          fetch(`${STABLEPAY_URL}/api/orders/${this.currentOrderId}/transaction`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ txHash: tx.hash, fromAddress: await signer.getAddress() })
-          }).catch(() => {}); // Scanner will also pick it up as backup
+          try {
+            const verifyRes = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}/tx`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ txHash: tx.hash })
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyData.status === 'CONFIRMED') {
+              this.showSuccess({ txHash: tx.hash, explorerLink: verifyData.explorerLink, status: 'CONFIRMED' });
+              if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: tx.hash, amount, token: this.selectedToken });
+              return;
+            }
+          } catch (e) {
+            console.error('TX verification failed, scanner will catch it:', e);
+          }
         }
+        // Fallback: show success with just the hash (scanner will confirm async)
         this.showSuccess(tx.hash);
         if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: tx.hash, amount, token: this.selectedToken });
       } else {
@@ -2095,6 +2121,25 @@
         this.showProcessing(sig);
 
         await connection.confirmTransaction(sig, 'confirmed');
+
+        // Register txHash via embed API for immediate verification + confirmation
+        if (this.currentOrderId) {
+          try {
+            const verifyRes = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}/tx`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ txHash: sig })
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyData.status === 'CONFIRMED') {
+              this.showSuccess({ txHash: sig, explorerLink: verifyData.explorerLink, status: 'CONFIRMED' });
+              if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: sig, amount, token: this.selectedToken });
+              return;
+            }
+          } catch (e) {
+            console.error('TX verification failed, scanner will catch it:', e);
+          }
+        }
         this.showSuccess(sig);
         if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: sig, amount, token: this.selectedToken });
       } catch (err) {
@@ -2154,8 +2199,14 @@
 
     showSuccess(txHashOrData) {
       // Handle both string txHash and object {txHash, explorerLink, ...} from polling
-      const hash = typeof txHashOrData === 'string' ? txHashOrData : (txHashOrData?.txHash || null);
-      const explorerLink = typeof txHashOrData === 'object' ? txHashOrData?.explorerLink : null;
+      let hash = typeof txHashOrData === 'string' ? txHashOrData : (txHashOrData?.txHash || null);
+      let explorerLink = typeof txHashOrData === 'object' ? txHashOrData?.explorerLink : null;
+
+      // Guard: if hash looks like a URL, treat it as explorerLink instead
+      if (hash && hash.startsWith('http')) {
+        explorerLink = explorerLink || hash;
+        hash = null;
+      }
 
       // Build explorer URL
       const explorerUrls = {
@@ -2170,7 +2221,7 @@
       const chainKey = this.selectedChain?.chain || '';
       const txUrl = explorerLink || (hash && explorerUrls[chainKey] ? explorerUrls[chainKey] + hash : null);
 
-      // Receipt URL — uses orderId (receipt page resolves to receiptId)
+      // Receipt URL — verified async after render
       const receiptUrl = this.currentOrderId ? `${STABLEPAY_URL}/receipt/${this.currentOrderId}` : null;
 
       this.container.querySelector('.sp-widget').innerHTML = `
@@ -2190,16 +2241,34 @@
                 font-size: 11px; font-weight: 700; text-transform: uppercase;
               ">View Transaction</a>
             ` : ''}
-            ${receiptUrl ? `
-              <a href="${receiptUrl}" target="_blank" style="
-                padding: 10px 20px; background: #000; color: #fff;
-                border: 2px solid var(--sp-border); text-decoration: none;
-                font-size: 11px; font-weight: 700; text-transform: uppercase;
-              ">View Receipt</a>
-            ` : ''}
+            <span id="sp-receipt-btn-slot"></span>
           </div>
         </div>
       `;
+
+      // Async: check if receipt exists before showing button (may take a few seconds to generate)
+      if (receiptUrl && this.currentOrderId) {
+        const self = this;
+        const checkReceipt = async (attempts) => {
+          try {
+            const res = await fetch(`${STABLEPAY_URL}/api/receipts/for-order/${self.currentOrderId}`);
+            if (res.ok) {
+              const slot = self.container.querySelector('#sp-receipt-btn-slot');
+              if (slot) slot.innerHTML = `<a href="${receiptUrl}" target="_blank" style="
+                padding: 10px 20px; background: #000; color: #fff;
+                border: 2px solid var(--sp-border); text-decoration: none;
+                font-size: 11px; font-weight: 700; text-transform: uppercase;
+              ">View Receipt</a>`;
+            } else if (attempts < 3) {
+              setTimeout(() => checkReceipt(attempts + 1), 3000);
+            }
+          } catch (e) {
+            if (attempts < 3) setTimeout(() => checkReceipt(attempts + 1), 3000);
+          }
+        };
+        // Wait 2s for receipt to generate, then start checking
+        setTimeout(() => checkReceipt(0), 2000);
+      }
     }
 
     showError(message) {

@@ -3338,7 +3338,7 @@ onMounted(() => {
                 }
 
                 // Fetch orders for this merchant (authed)
-                const response = await fetch('/api/orders?includeTransactions=true', {
+                const response = await fetch('/api/orders?includeTransactions=true&limit=500', {
                     headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('merchantToken') }
                 });
 

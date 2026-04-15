@@ -227,6 +227,10 @@
       }
 
       const data = await response.json();
+      const checkoutParams = new URLSearchParams({ orderId: data.order.id });
+      if (metadata) checkoutParams.set('metadata', JSON.stringify(metadata));
+      if (options.externalId) checkoutParams.set('externalId', options.externalId);
+
       return {
         orderId: data.order.id,
         amount: data.order.amount,
@@ -234,7 +238,7 @@
         paymentAddress: data.order.paymentAddress,
         status: data.order.status,
         expiresAt: data.order.expiresAt,
-        checkoutUrl: `${API_BASE}/public/crypto-pay.html?orderId=${data.order.id}`
+        checkoutUrl: `${API_BASE}/public/crypto-pay.html?${checkoutParams.toString()}`
       };
     }
 
@@ -326,13 +330,50 @@
     }
 
     /**
-     * Open checkout in a popup window
+     * Detect if running on a mobile device
+     * @returns {boolean}
+     */
+    _isMobile() {
+      return window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    /**
+     * Open checkout — uses redirect on mobile (popups blocked), popup on desktop
      * @param {Object} options - Payment options (same as createPayment)
+     * @param {Object} [options.returnUrl] - URL to redirect back after payment (mobile only)
+     * @param {Object} [options.mode] - Force 'popup' or 'redirect' mode
      * @returns {Promise<Object>} Payment result
      */
     async openCheckout(options) {
       const order = await this.createPayment(options);
+      const useRedirect = options.mode === 'redirect' || (options.mode !== 'popup' && this._isMobile());
 
+      // Build checkout URL with return URL for redirect mode
+      let checkoutUrl = order.checkoutUrl;
+      if (options.returnUrl) {
+        const sep = checkoutUrl.includes('?') ? '&' : '?';
+        checkoutUrl += `${sep}returnUrl=${encodeURIComponent(options.returnUrl)}`;
+      }
+
+      if (useRedirect) {
+        // Mobile: redirect the current page (no popup needed)
+        // Store order info so the calling page can check status on return
+        try {
+          sessionStorage.setItem('stablepay_pending_order', JSON.stringify({
+            orderId: order.orderId,
+            amount: order.amount,
+            chain: order.chain,
+            createdAt: new Date().toISOString()
+          }));
+        } catch (e) { /* sessionStorage may not be available */ }
+
+        window.location.href = checkoutUrl;
+
+        // Return a promise that never resolves (page is navigating away)
+        return new Promise(() => {});
+      }
+
+      // Desktop: use popup
       return new Promise((resolve, reject) => {
         const width = 450;
         const height = 700;
@@ -340,14 +381,17 @@
         const top = (window.screen.height - height) / 2;
 
         const popup = window.open(
-          order.checkoutUrl,
+          checkoutUrl,
           'StablePay Checkout',
           `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
         );
 
         if (!popup) {
-          reject(new Error('Popup blocked. Please allow popups for this site.'));
-          return;
+          // Popup still blocked on desktop — fall back to redirect
+          if (this.onPaymentError) this.onPaymentError({ error: 'popup_blocked', orderId: order.orderId });
+
+          window.location.href = checkoutUrl;
+          return new Promise(() => {});
         }
 
         // Poll for order status
@@ -379,6 +423,22 @@
           }
         }, 1000);
       });
+    }
+
+    /**
+     * Check for a pending order from a previous redirect-mode checkout
+     * Call this on your return page to resume polling
+     * @returns {Object|null} Pending order info or null
+     */
+    getPendingOrder() {
+      try {
+        const data = sessionStorage.getItem('stablepay_pending_order');
+        if (data) {
+          sessionStorage.removeItem('stablepay_pending_order');
+          return JSON.parse(data);
+        }
+      } catch (e) { /* ignore */ }
+      return null;
     }
 
     /**
