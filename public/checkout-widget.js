@@ -442,7 +442,7 @@
               <div id="sp-send-step1" style="padding: 12px;">
                 <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
                   <span style="font-size: 11px; font-weight: 700; color: var(--sp-text);">Your Wallet Address</span>
-                  <button id="sp-wallet-help-btn" style="width: 12px; height: 12px; min-width: 12px; border-radius: 50%; background: var(--sp-card); border: 1px solid var(--sp-border); color: var(--sp-muted); font-size: 7px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; line-height: 1;">?</button>
+                  <span id="sp-wallet-help-btn" role="button" style="width: 14px; height: 14px; min-width: 14px; max-width: 14px; min-height: 14px; max-height: 14px; border-radius: 50%; background: var(--sp-card); border: 1px solid var(--sp-border); color: var(--sp-muted); font-size: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; line-height: 1; box-sizing: border-box; -webkit-appearance: none; touch-action: manipulation;">?</span>
                 </div>
                 <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Paste the wallet address you'll send from.</p>
                 <!-- Help dropdown -->
@@ -461,15 +461,14 @@
                     <strong style="color: var(--sp-text);">Which address?</strong> Use the address for <strong>${this.selectedChain?.config?.chainName || 'the selected network'}</strong>. ${this.selectedChain?.config?.type === 'solana' ? 'Solana addresses are ~44 characters, no 0x prefix.' : this.selectedChain?.config?.type === 'tron' ? 'TRON addresses start with T.' : 'EVM addresses start with 0x and are 42 characters.'}
                   </div>
                 </div>
-                <div style="display: flex; gap: 4px; align-items: stretch;">
+                <div style="display: flex; gap: 6px;">
                   <input id="sp-sender-wallet" type="text" placeholder="${this.selectedChain?.config?.type === 'solana' ? 'Your Solana address' : this.selectedChain?.config?.type === 'tron' ? 'Your TRON address' : 'Your 0x address'}" style="
-                    flex: 1; padding: 6px 8px; font-size: 16px; font-family: inherit; border: 1px solid var(--sp-border);
+                    flex: 1; padding: 8px; font-size: 14px; font-family: inherit; border: 1px solid var(--sp-border);
                     background: var(--sp-bg); color: var(--sp-text); outline: none; min-width: 0;
-                    -webkit-transform: scale(0.75); transform: scale(0.75); transform-origin: left center;
-                    width: 133%; height: 36px; border-radius: 3px; text-overflow: ellipsis;
+                    text-overflow: ellipsis; border-radius: 3px;
                   ">
                   <button id="sp-sender-wallet-btn" style="
-                    padding: 6px 12px; background: #00E5FF; color: #000; border: none;
+                    padding: 8px 16px; background: #00E5FF; color: #000; border: none;
                     font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
                     border-radius: 3px; flex-shrink: 0;
                   ">Next</button>
@@ -549,16 +548,14 @@
                 <div id="sp-manual-tx" style="display: none; margin-top: 16px; text-align: left;">
                   <div style="background: var(--sp-card); border: 1px solid var(--sp-border); padding: 10px; border-radius: 4px;">
                     <p style="font-size: 11px; font-weight: 600; color: var(--sp-text); margin-bottom: 6px;">Paste your transaction ID</p>
-                    <div style="display: flex; gap: 4px; align-items: stretch;">
+                    <div style="display: flex; gap: 6px;">
                       <input id="sp-manual-tx-input" type="text" placeholder="" style="
-                        flex: 1; padding: 6px 8px; font-size: 16px; font-family: inherit; border: 1px solid var(--sp-border);
+                        flex: 1; padding: 8px; font-size: 14px; font-family: inherit; border: 1px solid var(--sp-border);
                         background: var(--sp-bg); color: var(--sp-text); outline: none;
                         text-overflow: ellipsis; overflow: hidden; border-radius: 3px;
-                        -webkit-transform: scale(0.75); transform: scale(0.75); transform-origin: left center;
-                        width: 133%; height: 36px;
                       ">
                       <button id="sp-manual-tx-btn" style="
-                        padding: 6px 10px; background: #000; color: #fff; border: none;
+                        padding: 8px 12px; background: #000; color: #fff; border: none;
                         font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
                         border-radius: 3px; flex-shrink: 0;
                       ">Verify</button>
@@ -885,15 +882,14 @@
             step1.innerHTML = `
               <div style="font-size: 11px; font-weight: 700; color: var(--sp-text); margin-bottom: 2px;">Your Wallet Address</div>
               <p style="font-size: 9px; color: var(--sp-muted); margin-bottom: 8px;">Enter the address you'll send from — so we can match your payment.</p>
-              <div style="display: flex; gap: 4px; align-items: stretch;">
+              <div style="display: flex; gap: 6px;">
                 <input id="sp-sender-wallet" type="text" value="${this.connectedWallet || ''}" placeholder="${placeholder}" style="
-                  flex: 1; padding: 6px 8px; font-size: 16px; font-family: inherit; border: 1px solid var(--sp-border);
+                  flex: 1; padding: 8px; font-size: 14px; font-family: inherit; border: 1px solid var(--sp-border);
                   background: var(--sp-card); color: var(--sp-text); outline: none; min-width: 0;
-                  -webkit-transform: scale(0.75); transform: scale(0.75); transform-origin: left center;
-                  width: 133%; height: 36px; border-radius: 3px; text-overflow: ellipsis;
+                  text-overflow: ellipsis; border-radius: 3px;
                 ">
                 <button id="sp-sender-wallet-btn" style="
-                  padding: 6px 12px; background: #000; color: #fff; border: none;
+                  padding: 8px 16px; background: #000; color: #fff; border: none;
                   font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
                   border-radius: 3px; flex-shrink: 0;
                 ">Next</button>
