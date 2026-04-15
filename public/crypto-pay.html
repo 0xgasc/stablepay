@@ -527,6 +527,8 @@
                 VIEW TRANSACTION ON EXPLORER →
             </a>
 
+            <span id="receiptBtnSlot"></span>
+
             <div class="flex gap-4">
                 <button onclick="buyAgain()"
                         class="flex-1 px-6 py-4 font-bold tracking-wide btn-brutal text-black"
@@ -1613,69 +1615,91 @@
                 const selectedChainData = merchantChains.find(mc => mc.chain === selectedChain.value);
                 const tokenConfig = chainConfig.tokens[selectedToken];
 
-                // Try API first for database persistence
-                console.log('Attempting to create order via API...');
-                console.log('Product:', currentProduct);
-                console.log('Chain:', selectedChain.value);
-                console.log('Token:', selectedToken);
-                console.log('Payment Address:', selectedChainData?.address);
-                
-                try {
-                    const apiUrl = '/api/v1/orders';
-                    console.log('Calling API:', apiUrl);
+                const _urlParams = new URLSearchParams(window.location.search);
+                const existingOrderId = _urlParams.get('orderId');
 
-                    // Use converted amount for EURC, original price for other tokens
-                    const paymentAmount = selectedToken === 'EURC' ? displayAmount : currentProduct.price;
-
-                    // Read metadata from URL params if passed by SDK
-                    const _urlParams = new URLSearchParams(window.location.search);
-                    let _metadata = undefined;
-                    try { if (_urlParams.get('metadata')) _metadata = JSON.parse(_urlParams.get('metadata')); } catch(e) {}
-                    const _externalId = _urlParams.get('externalId') || undefined;
-
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            amount: paymentAmount,
-                            originalAmount: currentProduct.price,
-                            chain: selectedChain.value,
-                            token: selectedToken,
-                            productId: currentProduct.id,
-                            productName: currentProduct.name,
-                            customerEmail: customerEmail,
-                            customerName: customerName || null,
-                            merchantId: currentProduct.merchantId || 'DEMO',
-                            paymentAddress: selectedChainData?.address || null,
-                            metadata: _metadata,
-                            externalId: _externalId
-                        })
-                    });
-                    
-                    console.log('API Response status:', response.status);
-                    console.log('API Response headers:', response.headers);
-                    
-                    if (response.ok) {
-                        const apiResponse = await response.json();
-                        // Extract the order from the API response wrapper
-                        orderData = apiResponse.order || apiResponse;
-                        // Add chain config addresses for the selected token
-                        orderData.usdcAddress = tokenConfig.address; // Token contract address
-                        orderData.paymentAddress = orderData.paymentAddress || selectedChainData?.address;
-                        console.log('[SUCCESS] Order created via API:', orderData);
-                    } else {
-                        const errorText = await response.text();
-                        console.error('[ERROR] API Error Response:', errorText);
-                        throw new Error('API returned error: ' + response.status);
+                if (existingOrderId) {
+                    // Order already exists (created via API before redirect) — fetch its details and reuse it
+                    console.log('Fetching existing order:', existingOrderId);
+                    try {
+                        const orderRes = await fetch('/api/embed/order/' + existingOrderId);
+                        if (orderRes.ok) {
+                            const existingOrder = await orderRes.json();
+                            orderData = {
+                                id: existingOrder.id,
+                                paymentAddress: existingOrder.paymentAddress || selectedChainData?.address,
+                                usdcAddress: tokenConfig.address,
+                            };
+                            console.log('[SUCCESS] Using pre-created order:', orderData);
+                        } else {
+                            throw new Error('Order fetch failed: ' + orderRes.status);
+                        }
+                    } catch (fetchErr) {
+                        console.error('[ERROR] Failed to fetch existing order:', fetchErr);
+                        showError('Order not found or expired. Please try again.');
+                        hideTxStatus();
+                        return;
                     }
-                } catch (apiError) {
-                    console.error('[ERROR] API Error details:', apiError);
-                    showError('Payment setup failed — please try again or contact support.');
-                    hideTxStatus();
-                    return; // Do NOT proceed to payment with no real order
+                } else {
+                    // No existing order — create one via embed checkout API
+                    console.log('Attempting to create order via API...');
+                    console.log('Product:', currentProduct);
+                    console.log('Chain:', selectedChain.value);
+                    console.log('Token:', selectedToken);
+                    console.log('Payment Address:', selectedChainData?.address);
+
+                    try {
+                        const apiUrl = '/api/embed/checkout';
+                        console.log('Calling API:', apiUrl);
+
+                        // Use converted amount for EURC, original price for other tokens
+                        const paymentAmount = selectedToken === 'EURC' ? displayAmount : currentProduct.price;
+
+                        // Read metadata from URL params if passed by SDK
+                        let _metadata = undefined;
+                        try { if (_urlParams.get('metadata')) _metadata = JSON.parse(_urlParams.get('metadata')); } catch(e) {}
+                        const _externalId = _urlParams.get('externalId') || undefined;
+
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                merchantId: currentProduct.merchantId || 'DEMO',
+                                amount: paymentAmount,
+                                chain: selectedChain.value,
+                                token: selectedToken,
+                                customerEmail: customerEmail,
+                                customerName: customerName || null,
+                                productName: currentProduct.name,
+                                paymentAddress: selectedChainData?.address || null,
+                                metadata: _metadata,
+                                externalId: _externalId
+                            })
+                        });
+
+                        console.log('API Response status:', response.status);
+
+                        if (response.ok) {
+                            const apiResponse = await response.json();
+                            orderData = apiResponse.order || apiResponse;
+                            orderData.usdcAddress = tokenConfig.address;
+                            orderData.paymentAddress = orderData.paymentAddress || selectedChainData?.address;
+                            console.log('[SUCCESS] Order created via API:', orderData);
+                        } else {
+                            const errorText = await response.text();
+                            console.error('[ERROR] API Error Response:', errorText);
+                            throw new Error('API returned error: ' + response.status);
+                        }
+                    } catch (apiError) {
+                        console.error('[ERROR] API Error details:', apiError);
+                        showError('Payment setup failed — please try again or contact support.');
+                        hideTxStatus();
+                        return;
+                    }
                 }
 
                 console.log('Order created:', orderData);
+                window.currentOrderId = orderData.id;
 
                 // Now process payment - route based on chain type
                 const chainType = chainConfig.type || 'evm';
@@ -1859,7 +1883,7 @@
             }
 
             // Show the success screen
-            showPaymentSuccess(currentProduct, chainKey, explorerUrl);
+            showPaymentSuccess(currentProduct, chainKey, explorerUrl, order.id);
         }
 
         // Process Solana SPL token payment
@@ -1993,7 +2017,7 @@
                 }
 
                 // Show success screen
-                showPaymentSuccess(currentProduct, chainKey, explorerUrl);
+                showPaymentSuccess(currentProduct, chainKey, explorerUrl, order.id);
 
             } catch (error) {
                 console.error('Solana payment error:', error);
@@ -2002,7 +2026,7 @@
         }
 
         // Show full-page payment success screen
-        function showPaymentSuccess(product, chainKey, explorerUrl) {
+        function showPaymentSuccess(product, chainKey, explorerUrl, orderId) {
             // Hide all other sections
             document.getElementById('productSummary').classList.add('hidden');
             document.getElementById('walletSection').classList.add('hidden');
@@ -2017,11 +2041,36 @@
             document.getElementById('successChain').textContent = CHAIN_CONFIG[chainKey]?.chainName || chainKey;
             document.getElementById('successTxLink').href = explorerUrl;
 
+            // Clear receipt slot
+            document.getElementById('receiptBtnSlot').innerHTML = '';
+
             // Show success screen
             document.getElementById('paymentSuccessScreen').classList.remove('hidden');
 
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // Async: check if receipt exists before showing button
+            if (orderId) {
+                const checkReceipt = async (attempts) => {
+                    try {
+                        const res = await fetch(`/api/receipts/for-order/${orderId}`);
+                        if (res.ok) {
+                            const slot = document.getElementById('receiptBtnSlot');
+                            if (slot) slot.innerHTML = `<a href="/receipt/${orderId}" target="_blank"
+                                class="block w-full px-6 py-4 font-bold tracking-wide btn-brutal text-white mb-4"
+                                style="text-transform: uppercase; background: #000; text-decoration: none;">
+                                VIEW RECEIPT
+                            </a>`;
+                        } else if (attempts < 3) {
+                            setTimeout(() => checkReceipt(attempts + 1), 3000);
+                        }
+                    } catch (e) {
+                        if (attempts < 3) setTimeout(() => checkReceipt(attempts + 1), 3000);
+                    }
+                };
+                setTimeout(() => checkReceipt(0), 2000);
+            }
         }
 
         // Buy again - reload the same product

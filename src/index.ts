@@ -83,7 +83,7 @@ app.get('/checkout', async (req, res) => {
     if (orderId) {
       const order = await db.order.findUnique({
         where: { id: orderId },
-        select: { id: true, merchantId: true, amount: true, chain: true, token: true, status: true, paymentAddress: true, expiresAt: true, customerEmail: true },
+        select: { id: true, merchantId: true, amount: true, chain: true, token: true, status: true, paymentAddress: true, expiresAt: true, customerEmail: true, externalId: true, metadata: true },
       });
       if (!order) return res.status(404).send('Order not found');
       if (order.status !== 'PENDING') return res.status(400).send(`Order is ${order.status.toLowerCase()} — cannot checkout`);
@@ -93,10 +93,13 @@ app.get('/checkout', async (req, res) => {
         merchantId: order.merchantId!,
         amount: Number(order.amount).toString(),
         orderId: order.id,
+        paymentAddress: order.paymentAddress,
       });
       if (order.token) params.set('token', order.token);
       if (order.chain) params.set('chain', order.chain);
       if (order.customerEmail) params.set('customerEmail', order.customerEmail);
+      if (order.externalId) params.set('externalId', order.externalId);
+      if (order.metadata) params.set('metadata', JSON.stringify(order.metadata));
       return res.redirect(`/crypto-pay.html?${params.toString()}`);
     }
     // No orderId — serve checkout page directly (merchant embeds with params)

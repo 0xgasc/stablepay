@@ -167,8 +167,8 @@ router.post('/checkout', rateLimit({
       try {
         const chainConfig = await db.chainConfig.findUnique({ where: { chain: data.chain as any } });
         if (chainConfig && chainConfig.lastScannedBlock) {
-          // Go back 50 blocks to catch recent payments
-          const rewindTo = BigInt(chainConfig.lastScannedBlock.toString()) - BigInt(50);
+          // Go back 150 blocks (~5 min on Base) to catch recent payments
+          const rewindTo = BigInt(chainConfig.lastScannedBlock.toString()) - BigInt(150);
           await db.chainConfig.update({
             where: { chain: data.chain as any },
             data: { lastScannedBlock: rewindTo > 0n ? rewindTo : 0n },

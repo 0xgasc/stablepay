@@ -69,7 +69,7 @@
                 Merchant Integration Guide
             </h1>
             <p class="text-xl text-slate-300 max-w-2xl">
-                Accept USDC payments on your website in under 5 minutes. No backend required.
+                Accept stablecoin payments (USDC, USDT, EURC) on your website in under 5 minutes. No backend required.
             </p>
         </div>
     </div>
@@ -385,32 +385,33 @@ Content-Type: application/json
             <h2 class="text-3xl font-extrabold mb-2">Supported Chains</h2>
             <p class="text-slate-500 mb-6">Pass these values as the <code class="mono text-sm bg-slate-100 px-1">chain</code> parameter</p>
 
-            <div class="grid md:grid-cols-2 gap-4">
+            <h3 class="text-xl font-extrabold mb-4 mt-2">Mainnets</h3>
+            <div class="grid md:grid-cols-2 gap-4 mb-8">
                 <div class="brutal-card bg-white p-5">
                     <div class="flex items-center space-x-3 mb-2">
                         <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">B</div>
                         <div>
-                            <h4 class="font-bold">Base (Mainnet)</h4>
+                            <h4 class="font-bold">Base</h4>
                             <code class="mono text-xs text-slate-500">BASE_MAINNET</code>
                         </div>
                     </div>
-                    <p class="text-sm text-slate-500">Low fees, fast confirmations. Recommended for production.</p>
+                    <p class="text-sm text-slate-500">Low fees, fast confirmations. Recommended for most merchants.</p>
                 </div>
                 <div class="brutal-card bg-white p-5">
                     <div class="flex items-center space-x-3 mb-2">
-                        <div class="w-8 h-8 bg-blue-300 rounded-full flex items-center justify-center text-white font-bold text-xs">B</div>
+                        <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-green-400 rounded-full flex items-center justify-center text-white font-bold text-xs">S</div>
                         <div>
-                            <h4 class="font-bold">Base (Sepolia Testnet)</h4>
-                            <code class="mono text-xs text-slate-500">BASE_SEPOLIA</code>
+                            <h4 class="font-bold">Solana</h4>
+                            <code class="mono text-xs text-slate-500">SOLANA_MAINNET</code>
                         </div>
                     </div>
-                    <p class="text-sm text-slate-500">Free testnet for development. Use testnet USDC.</p>
+                    <p class="text-sm text-slate-500">Ultra fast, near zero fees. Great for high volume.</p>
                 </div>
                 <div class="brutal-card bg-white p-5">
                     <div class="flex items-center space-x-3 mb-2">
                         <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white font-bold text-xs">E</div>
                         <div>
-                            <h4 class="font-bold">Ethereum (Mainnet)</h4>
+                            <h4 class="font-bold">Ethereum</h4>
                             <code class="mono text-xs text-slate-500">ETHEREUM_MAINNET</code>
                         </div>
                     </div>
@@ -420,11 +421,95 @@ Content-Type: application/json
                     <div class="flex items-center space-x-3 mb-2">
                         <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xs">P</div>
                         <div>
-                            <h4 class="font-bold">Polygon (Mainnet)</h4>
+                            <h4 class="font-bold">Polygon</h4>
                             <code class="mono text-xs text-slate-500">POLYGON_MAINNET</code>
                         </div>
                     </div>
                     <p class="text-sm text-slate-500">Very low fees. Popular for payments.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center text-white font-bold text-xs">A</div>
+                        <div>
+                            <h4 class="font-bold">Arbitrum</h4>
+                            <code class="mono text-xs text-slate-500">ARBITRUM_MAINNET</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Ethereum L2. Low fees, full EVM compatibility.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold text-xs">B</div>
+                        <div>
+                            <h4 class="font-bold">BNB Chain</h4>
+                            <code class="mono text-xs text-slate-500">BNB_MAINNET</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Low fees, large user base.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white font-bold text-xs">T</div>
+                        <div>
+                            <h4 class="font-bold">TRON</h4>
+                            <code class="mono text-xs text-slate-500">TRON_MAINNET</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Widely used for USDT transfers globally.</p>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-extrabold mb-4">Testnets (Free, for development)</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-blue-300 rounded-full flex items-center justify-center text-white font-bold text-xs">B</div>
+                        <div>
+                            <h4 class="font-bold">Base Sepolia</h4>
+                            <code class="mono text-xs text-slate-500">BASE_SEPOLIA</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Base testnet. Get free USDC at <a href="https://faucet.circle.com" target="_blank" class="underline">faucet.circle.com</a></p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-slate-400 rounded-full flex items-center justify-center text-white font-bold text-xs">E</div>
+                        <div>
+                            <h4 class="font-bold">Ethereum Sepolia</h4>
+                            <code class="mono text-xs text-slate-500">ETHEREUM_SEPOLIA</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Ethereum testnet for development.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-purple-300 rounded-full flex items-center justify-center text-white font-bold text-xs">P</div>
+                        <div>
+                            <h4 class="font-bold">Polygon Mumbai</h4>
+                            <code class="mono text-xs text-slate-500">POLYGON_MUMBAI</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Polygon testnet for development.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center text-white font-bold text-xs">A</div>
+                        <div>
+                            <h4 class="font-bold">Arbitrum Sepolia</h4>
+                            <code class="mono text-xs text-slate-500">ARBITRUM_SEPOLIA</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Arbitrum testnet for development.</p>
+                </div>
+                <div class="brutal-card bg-white p-5">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-purple-300 to-green-300 rounded-full flex items-center justify-center text-white font-bold text-xs">S</div>
+                        <div>
+                            <h4 class="font-bold">Solana Devnet</h4>
+                            <code class="mono text-xs text-slate-500">SOLANA_DEVNET</code>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-500">Solana testnet for development.</p>
                 </div>
             </div>
         </div>
@@ -579,7 +664,7 @@ Content-Type: application/json
                 </div>
                 <div class="brutal-card bg-white p-5">
                     <h4 class="font-bold mb-1">What wallets do customers need?</h4>
-                    <p class="text-sm text-slate-500">Any EVM wallet: MetaMask, Coinbase Wallet, Rainbow, Trust Wallet, or any WalletConnect-compatible wallet.</p>
+                    <p class="text-sm text-slate-500">Any EVM wallet (MetaMask, Coinbase Wallet, Rainbow, Trust Wallet, WalletConnect) for EVM chains. Phantom, Solflare, or any Solana wallet for Solana.</p>
                 </div>
                 <div class="brutal-card bg-white p-5">
                     <h4 class="font-bold mb-1">When do I receive the funds?</h4>
@@ -618,7 +703,7 @@ Content-Type: application/json
     <!-- Footer -->
     <div class="bg-black text-white mt-16 py-8">
         <div class="max-w-4xl mx-auto px-6 text-center">
-            <p class="text-slate-400 text-sm">StablePay - Multi-Chain USDC Payment Platform</p>
+            <p class="text-slate-400 text-sm">StablePay - Multi-Chain Stablecoin Payment Platform (Base, Solana, Ethereum, Polygon, Arbitrum, BNB, TRON)</p>
         </div>
     </div>
 

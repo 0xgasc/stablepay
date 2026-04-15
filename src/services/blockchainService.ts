@@ -66,29 +66,23 @@ export class BlockchainService {
         return 0;
       }
 
-      // Get pending orders for this chain — these are the addresses we're watching
+      // Get pending orders for this chain
       const pendingOrders = await db.order.findMany({
         where: {
           chain,
           status: 'PENDING',
           expiresAt: { gt: new Date() },
         },
-        select: { id: true, paymentAddress: true, amount: true, customerWallet: true },
-        orderBy: { createdAt: 'desc' }, // Most recent first — avoids matching stale orders
+        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
       });
 
       if (pendingOrders.length === 0) return 0;
 
-      // Build set of addresses we're watching
-      const watchAddresses = new Set(
-        pendingOrders.map(o => o.paymentAddress.toLowerCase())
-      );
-
       const currentBlock = await provider.getBlockNumber();
 
-      // Get or create chain scan state
+      // Ensure chain config exists (for confirmation tracking)
       let chainConfig = await db.chainConfig.findUnique({ where: { chain } });
-
       if (!chainConfig) {
         chainConfig = await db.chainConfig.create({
           data: {
@@ -98,117 +92,115 @@ export class BlockchainService {
             paymentAddress: config.paymentAddress || '',
             requiredConfirms: config.requiredConfirms,
             blockTimeSeconds: config.blockTimeSeconds,
-            lastScannedBlock: BigInt(currentBlock - 100), // Start 100 blocks back
+            lastScannedBlock: BigInt(currentBlock),
           },
         });
       }
 
-      const fromBlock = Number(chainConfig.lastScannedBlock);
-      const toBlock = Math.min(fromBlock + 50, currentBlock); // Scan 50 blocks max per cycle (keeps scan fast)
+      // Targeted scan: query Transfer events TO each unique payment address directly
+      // Since ERC20 Transfer(from, to, value) has `to` as indexed, RPC filters server-side
+      // No sequential block crawling — just ask "did this wallet receive tokens recently?"
+      const uniqueAddresses = [...new Set(pendingOrders.map(o => o.paymentAddress.toLowerCase()).filter(a => a.length > 0))];
 
-      if (fromBlock >= toBlock) return 0;
-
-      // Query Transfer events from ALL stablecoin contracts (USDC + USDT + EURC)
-      const allEvents: ethers.EventLog[] = [];
-      for (const contract of contracts) {
-        try {
-          const filter = contract.filters.Transfer();
-          const events = await contract.queryFilter(filter, fromBlock, toBlock);
-          allEvents.push(...(events as ethers.EventLog[]));
-        } catch { /* skip failed contract query */ }
-      }
-      const events = allEvents;
+      // Look back ~10 min on Base (300 blocks), ~2 min on Ethereum (10 blocks)
+      const lookbackBlocks = Math.ceil(600 / (config.blockTimeSeconds || 2));
+      const fromBlock = Math.max(0, currentBlock - lookbackBlocks);
 
       let matched = 0;
 
-      for (const event of events) {
-        const log = event as ethers.EventLog;
-        if (!log.args) continue;
-
-        const toAddress = log.args.to?.toLowerCase();
-
-        // Only process transfers TO our watched addresses
-        if (!toAddress || !watchAddresses.has(toAddress)) continue;
-
-        const txHash = log.transactionHash;
-        // BNB stablecoins use 18 decimals, all others use 6
-        const decimals = chain === 'BNB_MAINNET' ? 18 : 6;
-        const amount = ethers.formatUnits(log.args.value, decimals);
-        const fromAddress = log.args.from;
-
-        // Skip if we already processed this tx
-        const existingTx = await db.transaction.findUnique({ where: { txHash } });
-        if (existingTx) continue;
-
-        // Find matching pending order (FROM + TO + amount for precision)
-        let matchedOrder = null;
-        for (const order of pendingOrders) {
-          if (order.paymentAddress.toLowerCase() !== toAddress) continue;
-          const orderAmount = Number(order.amount);
-          const txAmount = Number(amount);
-          // Must be within 2% AND at least 95% of order amount
-          if (txAmount < orderAmount * 0.999 || (orderAmount > 0 && Math.abs(txAmount - orderAmount) / orderAmount > 0.001)) continue;
-
-          // If order has customerWallet AND it's a valid EVM address, require FROM match
-          if (order.customerWallet && order.customerWallet.startsWith('0x')) {
-            if (fromAddress.toLowerCase() !== order.customerWallet.toLowerCase()) continue;
-          }
-
-          matchedOrder = order;
-          break;
+      for (const targetAddress of uniqueAddresses) {
+        // Query ALL stablecoin contracts for transfers TO this specific address
+        const allEvents: ethers.EventLog[] = [];
+        for (const contract of contracts) {
+          try {
+            // Targeted filter: Transfer(anyone → targetAddress)
+            const filter = contract.filters.Transfer(null, targetAddress);
+            const events = await contract.queryFilter(filter, fromBlock, currentBlock);
+            allEvents.push(...(events as ethers.EventLog[]));
+          } catch { /* skip failed contract query */ }
         }
 
-        if (!matchedOrder) continue;
+        for (const event of allEvents) {
+          const log = event as ethers.EventLog;
+          if (!log.args) continue;
 
-        // Get block info
-        const receipt = await provider.getTransactionReceipt(txHash);
-        const block = await provider.getBlock(log.blockNumber);
+          const txHash = log.transactionHash;
+          const decimals = chain === 'BNB_MAINNET' ? 18 : 6;
+          const amount = ethers.formatUnits(log.args.value, decimals);
+          const fromAddress = log.args.from;
+          const toAddress = log.args.to?.toLowerCase();
 
-        if (!receipt || !block) continue;
+          // Skip if already processed
+          const existingTx = await db.transaction.findUnique({ where: { txHash } });
+          if (existingTx) continue;
 
-        const confirmations = currentBlock - log.blockNumber;
+          // Find matching pending order for this address + amount
+          let matchedOrder = null;
+          for (const order of pendingOrders) {
+            if (order.paymentAddress.toLowerCase() !== toAddress) continue;
+            const orderAmount = Number(order.amount);
+            const txAmount = Number(amount);
+            if (txAmount < orderAmount * 0.999 || (orderAmount > 0 && Math.abs(txAmount - orderAmount) / orderAmount > 0.001)) continue;
 
-        // Create transaction record
-        await db.transaction.create({
-          data: {
-            orderId: matchedOrder.id,
-            txHash,
-            chain,
-            amount: new Decimal(amount),
-            fromAddress,
-            toAddress: log.args.to, // Original case
-            blockNumber: BigInt(log.blockNumber),
-            blockTimestamp: new Date(block.timestamp * 1000),
-            status: receipt.status === 1 ? 'CONFIRMED' : 'FAILED',
-            confirmations,
-          },
-        });
-
-        // Compliance screening before confirmation
-        if (receipt.status === 1 && confirmations >= config.requiredConfirms) {
-          try {
-            const { complianceService } = await import('./complianceService');
-            const screening = await complianceService.screenTransaction(matchedOrder.id, fromAddress);
-
-            if (screening.riskLevel === 'BLOCKED') {
-              console.log(`[scanner] ❌ BLOCKED order ${matchedOrder.id} — ${screening.flags.join(', ')}`);
-              // Don't confirm — leave as PENDING with risk flags
-              continue;
+            // If order has customerWallet, require FROM match
+            if (order.customerWallet && order.customerWallet.startsWith('0x')) {
+              if (fromAddress.toLowerCase() !== order.customerWallet.toLowerCase()) continue;
             }
 
-            if (screening.riskLevel === 'HIGH') {
-              console.log(`[scanner] ⚠️ FLAGGED order ${matchedOrder.id} — risk ${screening.riskScore}, ${screening.flags.join(', ')}`);
-            }
+            matchedOrder = order;
+            break;
+          }
 
-            await this.orderService.confirmOrder(matchedOrder.id, {
+          if (!matchedOrder) continue;
+
+          // Get block info
+          const receipt = await provider.getTransactionReceipt(txHash);
+          const block = await provider.getBlock(log.blockNumber);
+          if (!receipt || !block) continue;
+
+          const confirmations = currentBlock - log.blockNumber;
+
+          // Create transaction record
+          await db.transaction.create({
+            data: {
+              orderId: matchedOrder.id,
               txHash,
-              blockNumber: log.blockNumber,
+              chain,
+              amount: new Decimal(amount),
+              fromAddress,
+              toAddress: log.args.to,
+              blockNumber: BigInt(log.blockNumber),
+              blockTimestamp: new Date(block.timestamp * 1000),
+              status: receipt.status === 1 ? 'CONFIRMED' : 'FAILED',
               confirmations,
-            });
-            console.log(`[scanner] ✅ Confirmed order ${matchedOrder.id} — $${amount} USDC on ${chain} (risk: ${screening.riskScore})`);
-            matched++;
-          } catch (err) {
-            console.error(`[scanner] Failed to confirm order ${matchedOrder.id}:`, err);
+            },
+          });
+
+          // Compliance screening before confirmation
+          if (receipt.status === 1 && confirmations >= config.requiredConfirms) {
+            try {
+              const { complianceService } = await import('./complianceService');
+              const screening = await complianceService.screenTransaction(matchedOrder.id, fromAddress);
+
+              if (screening.riskLevel === 'BLOCKED') {
+                console.log(`[scanner] BLOCKED order ${matchedOrder.id} — ${screening.flags.join(', ')}`);
+                continue;
+              }
+
+              if (screening.riskLevel === 'HIGH') {
+                console.log(`[scanner] FLAGGED order ${matchedOrder.id} — risk ${screening.riskScore}, ${screening.flags.join(', ')}`);
+              }
+
+              await this.orderService.confirmOrder(matchedOrder.id, {
+                txHash,
+                blockNumber: log.blockNumber,
+                confirmations,
+              });
+              console.log(`[scanner] Confirmed order ${matchedOrder.id} — $${amount} on ${chain} (risk: ${screening.riskScore})`);
+              matched++;
+            } catch (err) {
+              console.error(`[scanner] Failed to confirm order ${matchedOrder.id}:`, err);
+            }
           }
         }
       }
@@ -216,11 +208,11 @@ export class BlockchainService {
       // Update scan position
       await db.chainConfig.update({
         where: { chain },
-        data: { lastScannedBlock: BigInt(toBlock) },
+        data: { lastScannedBlock: BigInt(currentBlock) },
       });
 
-      if (events.length > 0 || matched > 0) {
-        console.log(`[scanner] ${chain}: blocks ${fromBlock}→${toBlock}, ${events.length} transfers, ${matched} confirmed`);
+      if (matched > 0) {
+        console.log(`[scanner] ${chain}: ${matched} confirmed (targeted scan of ${uniqueAddresses.length} addresses)`);
       }
 
       return matched;

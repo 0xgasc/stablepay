@@ -11,10 +11,20 @@ const orderService = new OrderService();
 
 const createOrderSchema = z.object({
   amount: z.number().positive(),
-  chain: z.enum(['BASE_SEPOLIA', 'ETHEREUM_SEPOLIA']),
+  chain: z.enum([
+    'BASE_MAINNET', 'BASE_SEPOLIA',
+    'ETHEREUM_MAINNET', 'ETHEREUM_SEPOLIA',
+    'POLYGON_MAINNET', 'POLYGON_MUMBAI',
+    'ARBITRUM_MAINNET', 'ARBITRUM_SEPOLIA',
+    'SOLANA_MAINNET', 'SOLANA_DEVNET',
+    'BNB_MAINNET', 'TRON_MAINNET',
+  ]),
+  merchantId: z.string().optional(),
   customerEmail: z.string().email().optional(),
   customerName: z.string().min(1).optional(),
   expiryMinutes: z.number().positive().optional(),
+  externalId: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
 });
 
 router.post('/', rateLimit({

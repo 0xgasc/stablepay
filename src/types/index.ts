@@ -21,6 +21,8 @@ export interface CreateOrderRequest {
   customerEmail?: string;
   customerName?: string;
   expiryMinutes?: number;
+  externalId?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface CreateOrderResponse {

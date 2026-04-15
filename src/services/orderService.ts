@@ -18,15 +18,32 @@ export class OrderService {
     const expiryMinutes = data.expiryMinutes || 30;
     const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
+    // Use merchant wallet if available, fall back to chain config
+    let paymentAddress = chainConfig.paymentAddress;
+    if (data.merchantId) {
+      const wallet = await db.merchantWallet.findFirst({
+        where: { merchantId: data.merchantId, chain: data.chain, isActive: true },
+      });
+      if (wallet) {
+        paymentAddress = wallet.address;
+      }
+    }
+
+    if (!paymentAddress) {
+      throw new Error(`No payment address configured for ${data.chain}. Add a wallet for this chain in the dashboard.`);
+    }
+
     const order = await db.order.create({
       data: {
         amount: new Decimal(data.amount),
         chain: data.chain,
         customerEmail: data.customerEmail,
         customerName: data.customerName,
-        paymentAddress: chainConfig.paymentAddress,
+        paymentAddress,
         expiresAt,
         merchantId: data.merchantId,
+        externalId: data.externalId || null,
+        metadata: data.metadata || undefined,
         source: 'API',
       },
     });
@@ -37,7 +54,7 @@ export class OrderService {
         orderId: order.id,
         amount: data.amount,
         chain: data.chain,
-        paymentAddress: chainConfig.paymentAddress,
+        paymentAddress,
         expiresAt: expiresAt.toISOString(),
       }).catch(err => {
         logger.error('Failed to send order.created webhook', err as Error, { orderId: order.id });
@@ -48,7 +65,7 @@ export class OrderService {
       orderId: order.id,
       amount: data.amount,
       chain: data.chain,
-      paymentAddress: chainConfig.paymentAddress,
+      paymentAddress,
       usdcAddress: chainConfig.usdcAddress,
       expiresAt: expiresAt.toISOString(),
       status: order.status,
