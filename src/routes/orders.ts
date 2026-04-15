@@ -68,6 +68,79 @@ router.post('/', rateLimit({
   }
 });
 
+// Public: customer order history lookup by wallet address or email
+router.get('/history/lookup', rateLimit({
+  getMerchantId: async () => null,
+  limitAnonymous: true,
+  anonymousLimit: 20
+}), async (req, res) => {
+  try {
+    const wallet = (req.query.wallet as string || '').trim();
+    const email = (req.query.email as string || '').trim().toLowerCase();
+
+    if (!wallet && !email) {
+      return res.status(400).json({ error: 'Provide wallet address or email' });
+    }
+
+    const where: any = {
+      status: { in: ['CONFIRMED', 'REFUNDED'] },
+    };
+
+    if (wallet && email) {
+      where.OR = [
+        { customerWallet: { equals: wallet, mode: 'insensitive' } },
+        { transactions: { some: { fromAddress: { equals: wallet, mode: 'insensitive' } } } },
+        { customerEmail: { equals: email, mode: 'insensitive' } },
+      ];
+    } else if (wallet) {
+      where.OR = [
+        { customerWallet: { equals: wallet, mode: 'insensitive' } },
+        { transactions: { some: { fromAddress: { equals: wallet, mode: 'insensitive' } } } },
+      ];
+    } else {
+      where.customerEmail = { equals: email, mode: 'insensitive' };
+    }
+
+    const orders = await db.order.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        amount: true,
+        token: true,
+        chain: true,
+        status: true,
+        createdAt: true,
+        customerEmail: true,
+        merchant: { select: { companyName: true } },
+        transactions: {
+          where: { status: 'CONFIRMED' },
+          take: 1,
+          select: { txHash: true, fromAddress: true, blockTimestamp: true },
+        },
+      },
+    });
+
+    const result = orders.map(o => ({
+      id: o.id,
+      amount: Number(o.amount),
+      token: o.token,
+      chain: o.chain,
+      status: o.status,
+      merchant: o.merchant?.companyName || null,
+      date: o.createdAt.toISOString(),
+      txHash: o.transactions[0]?.txHash || null,
+      paidAt: o.transactions[0]?.blockTimestamp?.toISOString() || null,
+    }));
+
+    res.json({ orders: result, total: result.length });
+  } catch (error) {
+    console.error('Customer history lookup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/:orderId', rateLimit({
   getMerchantId: async (req) => req.query.merchantId as string || null,
   limitAnonymous: true,

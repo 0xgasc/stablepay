@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment History — StablePay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Space Grotesk', system-ui, sans-serif; background: #f8fafc; min-height: 100vh; padding: 24px; }
+        .container { max-width: 640px; margin: 0 auto; }
+        .header { background: #000; color: #fff; padding: 24px; border: 4px solid #000; margin-bottom: 24px; }
+        .header h1 { font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .header p { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+        .search-box { background: #fff; border: 4px solid #000; box-shadow: 8px 8px 0px #000; padding: 24px; margin-bottom: 24px; }
+        .search-box label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; display: block; margin-bottom: 6px; }
+        .search-box input { width: 100%; padding: 12px 14px; border: 3px solid #000; font-family: 'Space Grotesk', system-ui; font-size: 14px; font-weight: 500; outline: none; margin-bottom: 16px; }
+        .search-box input:focus { border-color: #00E5FF; }
+        .search-box input::placeholder { color: #cbd5e1; }
+        .or-divider { text-align: center; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 16px; letter-spacing: 2px; }
+        .btn { width: 100%; padding: 14px; background: #000; color: #fff; border: 4px solid #000; font-family: 'Space Grotesk', system-ui; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
+        .btn:hover { background: #1e293b; }
+        .btn:disabled { background: #64748b; cursor: not-allowed; }
+        .results { margin-top: 0; }
+        .results-header { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 1px; margin-bottom: 12px; }
+        .order-card { background: #fff; border: 4px solid #000; box-shadow: 6px 6px 0px #000; padding: 20px; margin-bottom: 16px; transition: all 0.15s; cursor: pointer; }
+        .order-card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0px #000; }
+        .order-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .order-amount { font-size: 24px; font-weight: 800; color: #000; }
+        .order-amount .token { font-size: 13px; font-weight: 600; color: #64748b; }
+        .status { padding: 4px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; border: 2px solid; }
+        .status-confirmed { background: #f0fdf4; color: #16a34a; border-color: #16a34a; }
+        .status-refunded { background: #fefce8; color: #ca8a04; border-color: #ca8a04; }
+        .order-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .order-detail { font-size: 12px; }
+        .order-detail .label { color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+        .order-detail .value { color: #0f172a; font-weight: 600; margin-top: 2px; }
+        .order-detail .value a { color: #2563eb; text-decoration: none; }
+        .order-detail .value a:hover { text-decoration: underline; }
+        .order-actions { display: flex; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 2px solid #f1f5f9; }
+        .order-actions a { padding: 8px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; border: 2px solid #000; text-decoration: none; color: #000; }
+        .order-actions a:hover { background: #000; color: #fff; }
+        .order-actions a.primary { background: #000; color: #fff; }
+        .order-actions a.primary:hover { background: #1e293b; }
+        .empty { text-align: center; padding: 48px 24px; background: #fff; border: 4px solid #000; box-shadow: 6px 6px 0px #000; }
+        .empty p { color: #64748b; font-size: 14px; margin-top: 8px; }
+        .loading { text-align: center; padding: 32px; color: #64748b; font-size: 14px; }
+        .error { text-align: center; padding: 24px; background: #fef2f2; border: 3px solid #ef4444; color: #dc2626; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+        .footer { text-align: center; padding: 24px; font-size: 11px; color: #94a3b8; }
+        .footer a { color: #64748b; text-decoration: none; font-weight: 600; }
+        .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Payment History</h1>
+            <p>Look up your StablePay transactions</p>
+        </div>
+
+        <div class="search-box">
+            <label>Wallet Address</label>
+            <input type="text" id="walletInput" placeholder="0x... or Solana address" autocomplete="off" spellcheck="false">
+            <div class="or-divider">or</div>
+            <label>Email</label>
+            <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
+            <button class="btn" id="searchBtn" onclick="search()">Look Up Payments</button>
+        </div>
+
+        <div id="results"></div>
+
+        <div class="footer">
+            Powered by <a href="/">StablePay</a>
+        </div>
+    </div>
+
+    <script>
+        const EXPLORERS = {
+            BASE_MAINNET: 'https://basescan.org/tx/',
+            ETHEREUM_MAINNET: 'https://etherscan.io/tx/',
+            POLYGON_MAINNET: 'https://polygonscan.com/tx/',
+            ARBITRUM_MAINNET: 'https://arbiscan.io/tx/',
+            BNB_MAINNET: 'https://bscscan.com/tx/',
+            SOLANA_MAINNET: 'https://solscan.io/tx/',
+            TRON_MAINNET: 'https://tronscan.org/#/transaction/',
+            BASE_SEPOLIA: 'https://sepolia.basescan.org/tx/',
+            ETHEREUM_SEPOLIA: 'https://sepolia.etherscan.io/tx/',
+        };
+        const CHAINS = {
+            BASE_MAINNET: 'Base', ETHEREUM_MAINNET: 'Ethereum', POLYGON_MAINNET: 'Polygon',
+            ARBITRUM_MAINNET: 'Arbitrum', BNB_MAINNET: 'BNB Chain', SOLANA_MAINNET: 'Solana',
+            TRON_MAINNET: 'TRON', BASE_SEPOLIA: 'Base Sepolia', ETHEREUM_SEPOLIA: 'Ethereum Sepolia',
+        };
+
+        // Pre-fill from URL params
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('wallet')) { document.getElementById('walletInput').value = params.get('wallet'); search(); }
+        if (params.get('email')) { document.getElementById('emailInput').value = params.get('email'); search(); }
+
+        // Enter key triggers search
+        document.getElementById('walletInput').addEventListener('keypress', e => { if (e.key === 'Enter') search(); });
+        document.getElementById('emailInput').addEventListener('keypress', e => { if (e.key === 'Enter') search(); });
+
+        async function search() {
+            const wallet = document.getElementById('walletInput').value.trim();
+            const email = document.getElementById('emailInput').value.trim();
+            const resultsDiv = document.getElementById('results');
+            const btn = document.getElementById('searchBtn');
+
+            if (!wallet && !email) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Searching...';
+            resultsDiv.innerHTML = '<div class="loading">Looking up your payments...</div>';
+
+            try {
+                const qs = new URLSearchParams();
+                if (wallet) qs.set('wallet', wallet);
+                if (email) qs.set('email', email);
+
+                const res = await fetch('/api/v1/orders/history/lookup?' + qs.toString());
+                if (!res.ok) throw new Error('Lookup failed');
+
+                const data = await res.json();
+
+                if (!data.orders || data.orders.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="empty">
+                            <p style="font-size:32px;">Nothing here yet</p>
+                            <p>No confirmed payments found for this ${wallet ? 'wallet' : 'email'}.</p>
+                        </div>`;
+                    return;
+                }
+
+                resultsDiv.innerHTML = `<div class="results-header">${data.total} payment${data.total !== 1 ? 's' : ''} found</div>` +
+                    data.orders.map(o => renderOrder(o)).join('');
+
+            } catch (err) {
+                resultsDiv.innerHTML = '<div class="error">Something went wrong. Try again.</div>';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Look Up Payments';
+            }
+        }
+
+        function renderOrder(o) {
+            const chain = CHAINS[o.chain] || o.chain;
+            const explorerUrl = o.txHash && EXPLORERS[o.chain] ? EXPLORERS[o.chain] + o.txHash : null;
+            const date = new Date(o.paidAt || o.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const statusClass = o.status === 'CONFIRMED' ? 'status-confirmed' : 'status-refunded';
+
+            return `
+                <div class="order-card">
+                    <div class="order-top">
+                        <div class="order-amount">$${o.amount.toFixed(2)} <span class="token">${o.token}</span></div>
+                        <span class="status ${statusClass}">${o.status}</span>
+                    </div>
+                    <div class="order-details">
+                        <div class="order-detail">
+                            <div class="label">Merchant</div>
+                            <div class="value">${o.merchant || 'Unknown'}</div>
+                        </div>
+                        <div class="order-detail">
+                            <div class="label">Network</div>
+                            <div class="value">${chain}</div>
+                        </div>
+                        <div class="order-detail">
+                            <div class="label">Date</div>
+                            <div class="value">${date}</div>
+                        </div>
+                        <div class="order-detail">
+                            <div class="label">Transaction</div>
+                            <div class="value mono">${o.txHash ? `<a href="${explorerUrl}" target="_blank">${o.txHash.slice(0, 8)}...${o.txHash.slice(-4)}</a>` : 'Pending'}</div>
+                        </div>
+                    </div>
+                    <div class="order-actions">
+                        ${explorerUrl ? `<a href="${explorerUrl}" target="_blank">Explorer</a>` : ''}
+                        <a href="/receipt/${o.id}" target="_blank" class="primary">Receipt</a>
+                    </div>
+                </div>`;
+        }
+    </script>
+</body>
+</html>
