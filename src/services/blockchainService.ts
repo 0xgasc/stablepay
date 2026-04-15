@@ -281,16 +281,16 @@ export class BlockchainService {
       timeoutPromise(this.scanTronPayments(), 15000, 'TRON scan').catch(e => console.error('[scanner] TRON error:', e.message)),
     ]);
 
-    // EVM chains — only scan chains that have pending orders (skip idle chains)
-    for (const chain of SCAN_CHAINS) {
+    // EVM chains — scan in parallel, skip chains with no pending orders
+    const evmScans = SCAN_CHAINS.map(async (chain) => {
       const hasPending = await db.order.count({ where: { chain, status: 'PENDING', expiresAt: { gt: new Date() } } });
       if (hasPending > 0) {
-        await this.scanForPayments(chain);
+        await timeoutPromise(this.scanForPayments(chain), 15000, `${chain} scan`).catch(e => console.error(`[scanner] ${chain} error:`, e.message));
         await this.updatePendingConfirmations(chain);
       }
-    }
+    });
 
-    await nonEvmScans;
+    await Promise.all([...evmScans, nonEvmScans]);
     await this.expireStaleOrders();
   }
 
@@ -380,7 +380,7 @@ export class BlockchainService {
                 body: JSON.stringify({
                   jsonrpc: '2.0', id: 2,
                   method: 'getSignaturesForAddress',
-                  params: [addr, { limit: 10 }]
+                  params: [addr, { limit: 25 }]
                 }),
                 signal: AbortSignal.timeout(8000),
               });
