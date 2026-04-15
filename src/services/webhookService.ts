@@ -167,7 +167,16 @@ class WebhookService {
         db.merchant.update({ where: { id: merchantId }, data: { webhookLastFailure: new Date() } }).catch(() => {});
       }
 
-      await this.scheduleRetry(logId, null, errorMessage);
+      try {
+        await this.scheduleRetry(logId, null, errorMessage);
+      } catch (retryErr) {
+        // If scheduleRetry itself fails, at least mark the log so processRetries can pick it up
+        logger.error('Failed to schedule webhook retry', retryErr as Error, { logId });
+        await db.webhookLog.update({
+          where: { id: logId },
+          data: { response: errorMessage.substring(0, 1000), nextRetryAt: new Date(Date.now() + 60000) },
+        }).catch(() => {});
+      }
       return false;
     }
   }
@@ -232,8 +241,12 @@ class WebhookService {
   async processRetries(): Promise<number> {
     const pendingRetries = await db.webhookLog.findMany({
       where: {
-        nextRetryAt: { lte: new Date() },
         deliveredAt: null,
+        OR: [
+          { nextRetryAt: { lte: new Date() } },
+          // Pick up stuck webhooks: no retry scheduled, not delivered, under max attempts
+          { nextRetryAt: null, attempts: { lt: MAX_RETRIES } },
+        ],
       },
       include: {
         merchant: {
