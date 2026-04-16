@@ -1169,7 +1169,17 @@
                     document.getElementById('productPrice').textContent = `$${currentProduct.price.toFixed(2)} ${orderData.token || 'USDC'}`;
 
                     console.log('Order loaded:', orderData);
-                    await loadMerchantChains();
+
+                    // Stash returnUrl from API for goBack() to use
+                    if (orderData.returnUrl) window._orderReturnUrl = orderData.returnUrl;
+
+                    // Order mode: chain is locked. Hide the chain selector section entirely.
+                    // Lock the selected chain/token and skip merchant chain loading.
+                    selectedChainKey = orderData.chain;
+                    selectedToken = orderData.token || 'USDC';
+                    merchantChains = [{ chain: orderData.chain, address: orderData.paymentAddress, supportedTokens: [orderData.token || 'USDC'] }];
+                    const paymentSection = document.getElementById('paymentSection');
+                    if (paymentSection) paymentSection.classList.add('hidden');
                     return;
                 } catch (err) {
                     console.error('Failed to load order:', err);
@@ -1469,7 +1479,29 @@
 
         // Go back to store
         function goBack() {
-            window.location.href = '/public/store.html';
+            // Priority: URL returnUrl > order returnUrl from API > referrer > history > fallback
+            const params = new URLSearchParams(window.location.search);
+            const returnUrl = params.get('returnUrl') || params.get('cancelUrl');
+            if (returnUrl) {
+                window.location.href = returnUrl;
+                return;
+            }
+            if (window._orderReturnUrl) {
+                window.location.href = window._orderReturnUrl;
+                return;
+            }
+            // Use referrer if it's from a different origin (i.e. they came from the merchant)
+            if (document.referrer && !document.referrer.includes(window.location.host)) {
+                window.location.href = document.referrer;
+                return;
+            }
+            // Try history back
+            if (window.history.length > 1) {
+                window.history.back();
+                return;
+            }
+            // Last resort
+            window.location.href = '/';
         }
 
         // Connect Wallet - shows modal for wallet selection

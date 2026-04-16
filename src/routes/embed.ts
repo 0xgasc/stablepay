@@ -32,7 +32,8 @@ const checkoutSchema = z.object({
   source: z.enum(['EMBED_WIDGET', 'CHECKOUT_LINK', 'DASHBOARD', 'API', 'INVOICE']).optional(),
   productName: z.string().optional(),
   externalId: z.string().optional(),   // Merchant's own order/reference ID
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.any()).optional(),
+  returnUrl: z.string().url().optional(),  // Where to send customer after success/cancel
 });
 
 /**
@@ -155,7 +156,9 @@ router.post('/checkout', rateLimit({
         paymentMethod: data.paymentMethod || null,
         source: data.source || 'EMBED_WIDGET',
         externalId: data.externalId || null,
-        metadata: data.metadata || undefined,
+        metadata: data.returnUrl
+          ? { ...(data.metadata || {}), _returnUrl: data.returnUrl }
+          : (data.metadata || undefined),
         status: 'PENDING',
         expiresAt: new Date(Date.now() + 30 * 60 * 1000)
       }
@@ -259,6 +262,7 @@ router.get('/order/:orderId', async (req, res) => {
       ETHEREUM_SEPOLIA: 'https://sepolia.etherscan.io/tx/',
     };
 
+    const md = (order.metadata as any) || {};
     res.json({
       id: order.id,
       status: order.status,
@@ -269,6 +273,7 @@ router.get('/order/:orderId', async (req, res) => {
       merchantId: order.merchantId,
       productName: order.customerName, // productName is stored in customerName when set via embed
       customerEmail: order.customerEmail,
+      returnUrl: md._returnUrl || null,
       txHash,
       explorerLink: txHash && explorerUrls[order.chain] ? explorerUrls[order.chain] + txHash : null,
       confirmedAt: order.transactions[0]?.blockTimestamp?.toISOString() || null,
