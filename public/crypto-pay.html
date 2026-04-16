@@ -2415,33 +2415,17 @@
             console.log('Order ID:', order.id);
             console.log('TX Hash:', tx.hash);
 
+            // Submit the TX hash to our public endpoint — server verifies on-chain and confirms the order.
+            // Don't block the success screen on this; the scanner will also catch it as a backup.
             try {
-                const confirmUrl = `/api/orders/${order.id}/confirm`;
-                console.log('Calling confirm API:', confirmUrl);
-
-                const confirmResponse = await fetch(confirmUrl, {
+                const submitRes = await fetch(`/api/embed/order/${order.id}/tx`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        orderId: order.id,
-                        txHash: tx.hash,
-                        fromAddress: connectedAddress,
-                        blockNumber: receipt.blockNumber.toString(),
-                        confirmations: receipt.confirmations
-                    })
+                    body: JSON.stringify({ txHash: tx.hash }),
                 });
-
-                console.log('Confirm API Response status:', confirmResponse.status);
-
-                if (confirmResponse.ok) {
-                    const confirmData = await confirmResponse.json();
-                    console.log('[SUCCESS] Order confirmed in database:', confirmData);
-                } else {
-                    const errorText = await confirmResponse.text();
-                    console.error('[ERROR] Confirm API Error:', errorText);
-                }
+                console.log('TX submission status:', submitRes.status);
             } catch (err) {
-                console.error('[ERROR] Failed to confirm order in database:', err);
+                console.error('TX submission failed (scanner will retry):', err);
             }
 
             // Show the success screen
@@ -2556,26 +2540,16 @@
 
                 console.log('Solana transaction confirmed');
 
-                // Update order in database
+                // Submit TX hash to public endpoint — server verifies on-chain
                 try {
-                    const confirmUrl = `/api/orders/${order.id}/confirm`;
-                    const confirmResponse = await fetch(confirmUrl, {
+                    const submitRes = await fetch(`/api/embed/order/${order.id}/tx`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            orderId: order.id,
-                            txHash: txHash,
-                            fromAddress: connectedAddress,
-                            blockNumber: '0', // Solana uses slots, not block numbers
-                            confirmations: 1
-                        })
+                        body: JSON.stringify({ txHash }),
                     });
-
-                    if (confirmResponse.ok) {
-                        console.log('[SUCCESS] Solana order confirmed in database');
-                    }
+                    console.log('Solana TX submission status:', submitRes.status);
                 } catch (err) {
-                    console.error('[ERROR] Failed to confirm Solana order:', err);
+                    console.error('Solana TX submission failed (scanner will retry):', err);
                 }
 
                 // Show success screen
