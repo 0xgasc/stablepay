@@ -1245,9 +1245,14 @@
             const tokenConfig = chainConfig?.tokens?.[selectedToken];
             if (!chainConfig || !tokenConfig) return;
 
+            // Required amount: EURC uses converted EUR amount, others use USD price
+            // Fall back to URL param if currentProduct is incomplete (chain-agnostic flow)
+            const _params = new URLSearchParams(window.location.search);
+            const baseAmt = parseFloat(currentProduct?.price || _params.get('amount') || 0);
             const requiredAmt = (selectedToken === 'EURC' && displayAmount)
                 ? parseFloat(displayAmount)
-                : parseFloat(currentProduct?.price || 0);
+                : baseAmt;
+            if (!requiredAmt || requiredAmt <= 0) return; // can't check, let it through
 
             payBtn.textContent = 'Checking balance...';
             payBtn.disabled = true;
@@ -1784,8 +1789,9 @@
             // Reset manual wallet input — old address is no longer valid for the new chain
             cpResetWalletInput(chainKey);
 
-            // Update pay button state (enabled only if wallet also connected)
+            // Update pay button state + re-check balance for new chain
             updatePayButtonState();
+            if (connectedAddress) cpCheckBalance();
 
             console.log('Selected chain:', chainKey);
         }
@@ -2244,9 +2250,32 @@
 
             } catch (error) {
                 console.error('Payment error:', error);
-                showError('Payment failed: ' + error.message);
+                showError(cpFriendlyError(error));
                 hideTxStatus();
             }
+        }
+
+        // Convert raw wallet/chain errors into customer-friendly messages
+        function cpFriendlyError(err) {
+            const msg = (err?.message || err?.reason || String(err) || '').toLowerCase();
+            if (msg.includes('transfer amount exceeds balance') || msg.includes('insufficient funds') || msg.includes('insufficient balance')) {
+                return `Not enough ${selectedToken || 'tokens'} in your wallet on ${CHAIN_CONFIG[selectedChainKey]?.chainName || 'this network'}. Add funds or pick a different network.`;
+            }
+            if (msg.includes('user rejected') || msg.includes('user denied') || err?.code === 4001 || err?.code === 'ACTION_REJECTED') {
+                return 'You cancelled the transaction in your wallet.';
+            }
+            if (msg.includes('insufficient funds for gas') || msg.includes('insufficient funds for intrinsic')) {
+                return `Not enough ETH for gas on ${CHAIN_CONFIG[selectedChainKey]?.chainName || 'this network'}. Top up gas or switch networks.`;
+            }
+            if (msg.includes('nonce') || msg.includes('replacement transaction underpriced')) {
+                return 'Wallet has a pending transaction. Wait for it to clear or speed it up in your wallet.';
+            }
+            if (msg.includes('chain') && msg.includes('mismatch')) {
+                return 'Wallet is on the wrong network. Switch to ' + (CHAIN_CONFIG[selectedChainKey]?.chainName || 'the right network') + ' and try again.';
+            }
+            // Fall back to short message — strip the giant error dump
+            const short = (err?.shortMessage || err?.reason || err?.message || 'Unknown error').toString().split('\n')[0].slice(0, 140);
+            return 'Payment failed: ' + short;
         }
 
         async function processEVMPayment(order, chainKey) {
