@@ -266,6 +266,9 @@ router.get('/order/:orderId', async (req, res) => {
       token: order.token,
       chain: order.chain,
       paymentAddress: order.paymentAddress,
+      merchantId: order.merchantId,
+      productName: order.customerName, // productName is stored in customerName when set via embed
+      customerEmail: order.customerEmail,
       txHash,
       explorerLink: txHash && explorerUrls[order.chain] ? explorerUrls[order.chain] + txHash : null,
       confirmedAt: order.transactions[0]?.blockTimestamp?.toISOString() || null,

@@ -1125,6 +1125,46 @@
         // Parse URL parameters to get product info
         async function loadProductInfo() {
             const urlParams = new URLSearchParams(window.location.search);
+
+            // If orderId is present, fetch order details from API and use those
+            const orderIdParam = urlParams.get('orderId') || urlParams.get('orderid');
+            if (orderIdParam) {
+                try {
+                    const orderRes = await fetch('/api/embed/order/' + orderIdParam);
+                    if (!orderRes.ok) throw new Error('Order not found');
+                    const orderData = await orderRes.json();
+
+                    currentProduct = {
+                        id: orderIdParam,
+                        name: orderData.productName || 'Order ' + orderIdParam.slice(-8),
+                        price: Number(orderData.amount),
+                        merchantId: orderData.merchantId || null,
+                        enabledChains: orderData.chain ? [orderData.chain] : null,
+                    };
+
+                    // Pre-fill customer email if present
+                    if (orderData.customerEmail) {
+                        const emailInput = document.getElementById('customerEmail');
+                        if (emailInput) emailInput.value = orderData.customerEmail;
+                    }
+
+                    // Store payment address for use later
+                    window.merchantPaymentAddress = orderData.paymentAddress;
+                    window.currentOrderId = orderIdParam;
+
+                    document.getElementById('productName').textContent = currentProduct.name;
+                    document.getElementById('productPrice').textContent = `$${currentProduct.price.toFixed(2)} ${orderData.token || 'USDC'}`;
+
+                    console.log('Order loaded:', orderData);
+                    await loadMerchantChains();
+                    return;
+                } catch (err) {
+                    console.error('Failed to load order:', err);
+                    showError('Order not found or expired. Please start a new payment.');
+                    return;
+                }
+            }
+
             currentProduct = {
                 id: urlParams.get('productId'),
                 name: urlParams.get('productName'),
