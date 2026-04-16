@@ -367,7 +367,7 @@ router.get('/order/:orderId', async (req, res) => {
 router.post('/order/:orderId/chain', async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { chain, token } = req.body;
+    const { chain, token, amount: amountOverride } = req.body;
     if (!chain) return res.status(400).json({ error: 'chain required' });
 
     const order = await db.order.findUnique({
@@ -401,20 +401,30 @@ router.post('/order/:orderId/chain', async (req, res) => {
       });
     }
 
-    // Patch order: set chain + token + paymentAddress, clear the chainAgnostic flag
+    // Determine final amount: if EURC and amountOverride provided, use the converted amount.
+    // Stash the original USD amount in metadata so we don't lose it for accounting.
+    let finalAmount: any = order.amount;
     const newMetadata: any = { ...md };
     delete newMetadata._chainAgnostic;
+
+    if (requestedToken === 'EURC' && amountOverride && Number(amountOverride) > 0) {
+      const orig = Number(order.amount);
+      newMetadata._originalUsdAmount = orig;
+      finalAmount = amountOverride.toString();
+    }
+
     await db.order.update({
       where: { id: orderId },
       data: {
         chain: chain as any,
         token: requestedToken,
+        amount: finalAmount,
         paymentAddress: wallet.address,
         metadata: Object.keys(newMetadata).length > 0 ? newMetadata : undefined,
       },
     });
 
-    res.json({ success: true, chain, token: requestedToken, paymentAddress: wallet.address });
+    res.json({ success: true, chain, token: requestedToken, amount: Number(finalAmount), paymentAddress: wallet.address });
   } catch (error) {
     console.error('Set order chain error:', error);
     res.status(500).json({ error: 'Internal server error' });

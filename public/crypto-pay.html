@@ -385,6 +385,16 @@
             </div>
         </div>
 
+        <!-- Chain & Token Selector (always visible at top) -->
+        <div id="chainSelectorTop" class="bg-white border-4 border-black p-4 shadow-brutal mb-6">
+            <p class="text-xs font-bold text-gray-600 mb-3" style="text-transform: uppercase; letter-spacing: 1px;">Select payment network</p>
+            <div id="chainOptionsTop">
+                <div class="text-center py-2 text-gray-500 text-sm">
+                    <span class="animate-pulse">Loading chains...</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Payment Method Tabs -->
         <div class="bg-white border-4 border-black shadow-brutal mb-6 overflow-hidden">
             <div class="flex border-b-4 border-black">
@@ -1488,8 +1498,14 @@
         }
 
         // Render chain options based on merchant's configured wallets
+        // Renders into the TOP container (above payment tabs) so customer picks chain first
         function renderChainOptions() {
-            const container = document.getElementById('chainOptions');
+            // Hide the legacy paymentSection chain area — we use the top selector instead
+            const legacyPaymentSection = document.getElementById('paymentSection');
+            if (legacyPaymentSection) legacyPaymentSection.classList.add('hidden');
+
+            const container = document.getElementById('chainOptionsTop') || document.getElementById('chainOptions');
+            if (!container) return;
 
             if (merchantChains.length === 0) {
                 container.innerHTML = `
@@ -1672,10 +1688,38 @@
             // Repopulate token dropdown for this chain
             cpRenderTokensForChain(chainKey);
 
+            // Reset manual wallet input — old address is no longer valid for the new chain
+            cpResetWalletInput(chainKey);
+
             // Update pay button state (enabled only if wallet also connected)
             updatePayButtonState();
 
             console.log('Selected chain:', chainKey);
+        }
+
+        // Reset manual flow's wallet input when chain changes
+        function cpResetWalletInput(chainKey) {
+            cpSenderWallet = null;
+            const input = document.getElementById('cpSenderWallet');
+            if (input) {
+                input.value = '';
+                const config = CHAIN_CONFIG[chainKey];
+                const placeholder = config?.type === 'solana' ? 'Solana address (base58)'
+                    : config?.type === 'tron' ? 'TRON address (T...)'
+                    : '0x... (EVM address)';
+                input.placeholder = placeholder;
+            }
+            const errEl = document.getElementById('cpStep1Error');
+            if (errEl) errEl.classList.add('hidden');
+            // If they were past step 1, kick them back to step 1 with the new chain context
+            const step2 = document.getElementById('cpManualStep2');
+            const step3 = document.getElementById('cpManualStep3');
+            if ((step2 && !step2.classList.contains('hidden')) || (step3 && !step3.classList.contains('hidden'))) {
+                if (window._cpPolling) { clearInterval(window._cpPolling); window._cpPolling = null; }
+                if (window._cpProgressTimer) { clearInterval(window._cpProgressTimer); window._cpProgressTimer = null; }
+                if (window._cpCountdownTimer) { clearInterval(window._cpCountdownTimer); window._cpCountdownTimer = null; }
+                cpSetStep(1);
+            }
         }
 
         // Select a token
@@ -1707,6 +1751,18 @@
             } else if (currentProduct) {
                 displayAmount = currentProduct.price;
                 document.getElementById('productPrice').textContent = `$${currentProduct.price} ${tokenSymbol}`;
+            }
+
+            // If customer is on step 2 of manual flow, update the amount display live
+            const step2 = document.getElementById('cpManualStep2');
+            if (step2 && !step2.classList.contains('hidden')) {
+                const payAmount = (tokenSymbol === 'EURC' && displayAmount) ? displayAmount : currentProduct?.price;
+                const amtEl = document.getElementById('cpCopyAmount');
+                const qrAmtEl = document.getElementById('cpQRAmount');
+                if (amtEl) amtEl.textContent = payAmount + ' ' + tokenSymbol;
+                if (qrAmtEl) qrAmtEl.textContent = payAmount + ' ' + tokenSymbol;
+                const chainName = document.getElementById('cpChainName');
+                if (chainName) chainName.textContent = (CHAIN_DISPLAY_NAMES[chainKey] || chainKey) + ' (' + tokenSymbol + ')';
             }
 
             console.log('Selected token:', tokenSymbol, 'on', chainKey);
@@ -2678,7 +2734,10 @@
 
         async function cpManualStep1Next() {
             const addr = document.getElementById('cpSenderWallet').value.trim();
-            const chainKey = window._orderChain || (document.querySelector('input[name="chain"]:checked')?.value) || currentProduct?.enabledChains?.[0] || null;
+            const chainKey = (document.querySelector('input[name="chain"]:checked')?.value)
+                || window._orderChain
+                || currentProduct?.enabledChains?.[0]
+                || null;
             const errEl = document.getElementById('cpStep1Error');
 
             const err = cpValidateAddress(addr, chainKey);
@@ -2690,21 +2749,71 @@
             errEl.classList.add('hidden');
             cpSenderWallet = addr;
 
-            // Pre-fill step 2 contents (address + amount + QR + chain banner)
+            // Show "Loading..." while we lock the chain on backend
+            const nextBtn = document.querySelector('#cpManualStep1 button');
+            const origText = nextBtn?.textContent;
+            if (nextBtn) { nextBtn.disabled = true; nextBtn.textContent = '...'; }
+
+            // If the order is chain-agnostic, lock chain + token + paymentAddress on the backend NOW
+            // so step 2 shows the right address (Send To) and the scanner watches the right wallet.
+            const token = selectedToken || 'USDC';
+            if (window.currentOrderId && window._chainPending) {
+                try {
+                    // For EURC, ensure displayAmount is computed and pass it as the on-chain amount
+                    let convertedAmount;
+                    if (token === 'EURC' && currentProduct) {
+                        const rate = await getEURRate();
+                        convertedAmount = (parseFloat(currentProduct.price) * rate).toFixed(2);
+                        displayAmount = convertedAmount;
+                    }
+                    const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chain: chainKey,
+                            token,
+                            amount: convertedAmount,
+                        }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        window._orderChain = chainKey;
+                        window.merchantPaymentAddress = data.paymentAddress;
+                        window._chainPending = false;
+                    } else {
+                        if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText || 'Next'; }
+                        errEl.textContent = data.error || 'Could not set chain';
+                        errEl.classList.remove('hidden');
+                        return;
+                    }
+                } catch (e) {
+                    if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText || 'Next'; }
+                    errEl.textContent = 'Network error. Try again.';
+                    errEl.classList.remove('hidden');
+                    return;
+                }
+            }
+
+            // Compute display amount: EURC uses converted (€) amount, others use USD price as-is
             const params = new URLSearchParams(window.location.search);
-            const amount = params.get('amount') || (currentProduct?.price?.toString() || '0');
-            const token = selectedToken || params.get('token') || 'USDC';
+            const usdAmount = params.get('amount') || (currentProduct?.price?.toString() || '0');
+            let payAmount = usdAmount;
+            if (token === 'EURC' && displayAmount) payAmount = displayAmount;
+
             const merchantAddr = window.merchantPaymentAddress || params.get('paymentAddress') || '';
 
             document.getElementById('cpChainName').textContent = (CHAIN_DISPLAY_NAMES[chainKey] || chainKey) + ' (' + token + ')';
             document.getElementById('cpCopyAddress').textContent = merchantAddr || '—';
-            document.getElementById('cpCopyAmount').textContent = amount + ' ' + token;
-            document.getElementById('cpQRAmount').textContent = amount + ' ' + token;
+            document.getElementById('cpCopyAmount').textContent = payAmount + ' ' + token;
+            document.getElementById('cpQRAmount').textContent = payAmount + ' ' + token;
+
+            // Build QR with payment URI when supported (EVM ERC-681 / solana:)
             const qrImg = document.getElementById('cpQRImage');
             if (qrImg && merchantAddr) {
                 qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(merchantAddr);
             }
 
+            if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText || 'Next'; }
             cpSetStep(2);
             cpStartCountdown();
         }
@@ -2757,8 +2866,10 @@
             if (!window.currentOrderId && currentProduct?.merchantId) {
                 const params = new URLSearchParams(window.location.search);
                 const chainKey = window._orderChain || (document.querySelector('input[name="chain"]:checked')?.value) || currentProduct.enabledChains?.[0] || null;
-                const amount = params.get('amount') || currentProduct.price.toString();
                 const token = selectedToken || params.get('token') || 'USDC';
+                // For EURC: use the EUR-converted amount so the order matches what customer sends
+                const baseAmount = params.get('amount') || currentProduct.price.toString();
+                const amount = (token === 'EURC' && displayAmount) ? displayAmount : baseAmount;
                 try {
                     const res = await fetch('/api/embed/checkout', {
                         method: 'POST',
