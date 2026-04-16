@@ -461,6 +461,12 @@
                         </div>
                     </div>
 
+                    <!-- Countdown timer (5 min to complete payment) -->
+                    <div class="text-center mb-4">
+                        <p class="text-xs text-gray-500 font-bold" style="text-transform: uppercase; letter-spacing: 1px;">Complete payment within</p>
+                        <p id="cpCountdown" class="text-3xl font-bold text-black font-mono">5:00</p>
+                    </div>
+
                     <!-- I've sent button -->
                     <button id="cpSentBtn" onclick="cpManualStep2Done()"
                             class="w-full px-6 py-3 font-bold text-black border-4 border-black btn-brutal mc-accent-bg"
@@ -2563,18 +2569,49 @@
             }
 
             cpSetStep(2);
+            cpStartCountdown();
+        }
+
+        // 5-minute countdown on step 2
+        function cpStartCountdown() {
+            if (window._cpCountdownTimer) clearInterval(window._cpCountdownTimer);
+            const COUNTDOWN_SECONDS = 5 * 60;
+            const startedAt = Date.now();
+            const tick = () => {
+                const remaining = COUNTDOWN_SECONDS - Math.floor((Date.now() - startedAt) / 1000);
+                const el = document.getElementById('cpCountdown');
+                if (!el) { clearInterval(window._cpCountdownTimer); return; }
+                if (remaining <= 0) {
+                    el.textContent = '0:00';
+                    el.style.color = '#dc2626';
+                    clearInterval(window._cpCountdownTimer);
+                    window._cpCountdownTimer = null;
+                    return;
+                }
+                const mins = Math.floor(remaining / 60);
+                const secs = remaining % 60;
+                el.textContent = mins + ':' + String(secs).padStart(2, '0');
+                if (remaining < 60) el.style.color = '#dc2626';
+                else if (remaining < 120) el.style.color = '#ea580c';
+            };
+            tick();
+            window._cpCountdownTimer = setInterval(tick, 1000);
         }
 
         function cpManualBack() {
             // Stop polling if in step 3
             if (window._cpPolling) { clearInterval(window._cpPolling); window._cpPolling = null; }
             if (window._cpProgressTimer) { clearInterval(window._cpProgressTimer); window._cpProgressTimer = null; }
+            if (window._cpCountdownTimer) { clearInterval(window._cpCountdownTimer); window._cpCountdownTimer = null; }
             cpSenderWallet = null;
             // Don't clear currentOrderId — order persists, we just reset UI
             cpSetStep(1);
         }
 
         async function cpManualStep2Done() {
+            // Stop the countdown — they're confirming
+            if (window._cpCountdownTimer) { clearInterval(window._cpCountdownTimer); window._cpCountdownTimer = null; }
+
             const sentBtn = document.getElementById('cpSentBtn');
             sentBtn.disabled = true;
             sentBtn.textContent = 'REGISTERING...';
