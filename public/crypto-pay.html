@@ -2560,13 +2560,18 @@
 
         // Show full-page payment success screen
         function showPaymentSuccess(product, chainKey, explorerUrl, orderId) {
-            // Hide all other sections
-            document.getElementById('productSummary').classList.add('hidden');
-            document.getElementById('walletSection').classList.add('hidden');
-            document.getElementById('customerSection').classList.add('hidden');
-            document.getElementById('paymentSection').classList.add('hidden');
-            document.getElementById('errorMessage').classList.add('hidden');
-            document.getElementById('successMessage').classList.add('hidden');
+            // Hide all other sections (use optional chaining — some IDs were removed in layout cleanup)
+            const hide = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
+            hide('productSummary');
+            hide('walletSection');
+            hide('customerSection');
+            hide('paymentSection');
+            hide('errorMessage');
+            hide('successMessage');
+            hide('chainSelectorTop');
+            // Also hide the payment method tabs container
+            const tabsContainer = document.querySelector('#methodTabWallet')?.closest('.shadow-brutal');
+            if (tabsContainer) tabsContainer.classList.add('hidden');
 
             // Populate success screen details
             document.getElementById('successProductName').textContent = product.name;
@@ -2618,31 +2623,43 @@
 
         // Buy again - reload the same product
         function buyAgain() {
+            // Safe DOM helpers
+            const show = (id) => { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); };
+            const hide = (id) => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
+
             // Reset UI
-            document.getElementById('paymentSuccessScreen').classList.add('hidden');
-            document.getElementById('productSummary').classList.remove('hidden');
-            document.getElementById('walletSection').classList.remove('hidden');
-            document.getElementById('paymentSection').classList.remove('hidden');
+            hide('paymentSuccessScreen');
+            show('productSummary');
+            show('walletSection');
+            show('chainSelectorTop');
+            const tabsContainer = document.querySelector('#methodTabWallet')?.closest('.shadow-brutal');
+            if (tabsContainer) tabsContainer.classList.remove('hidden');
 
             // Reset wallet connection UI
-            document.getElementById('connectWalletBtn').classList.remove('hidden');
-            document.getElementById('walletInfo').classList.add('hidden');
-            document.getElementById('customerSection').classList.add('hidden');
+            show('connectWalletBtn');
+            hide('walletInfo');
+            hide('customerSection');
 
-            // Clear form
-            document.getElementById('customerEmail').value = '';
-            document.getElementById('customerName').value = '';
+            // Clear form (legacy hidden inputs)
+            const emailInput = document.getElementById('customerEmail');
+            if (emailInput) emailInput.value = '';
+            const nameInput = document.getElementById('customerName');
+            if (nameInput) nameInput.value = '';
 
             // Uncheck chain selection and reset token
             document.querySelectorAll('input[name="chain"]').forEach(r => r.checked = false);
-            document.getElementById('payBtn').disabled = true;
-            document.getElementById('payBtn').textContent = window._mcCustomButtonText || 'PAY WITH USDC';
+            const payBtn = document.getElementById('payBtn');
+            if (payBtn) {
+                payBtn.disabled = true;
+                payBtn.textContent = window._mcCustomButtonText || 'PAY WITH USDC';
+            }
             selectedToken = 'USDC';
             selectedChainKey = null;
 
             // Hide tx status
             hideTxStatus();
-            document.getElementById('txLink').classList.add('hidden');
+            const txLink = document.getElementById('txLink');
+            if (txLink) txLink.classList.add('hidden');
 
             // Disconnect wallet so user can reconnect
             provider = null;
