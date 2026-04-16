@@ -1212,6 +1212,11 @@
             document.getElementById('connectWalletBtn').classList.add('hidden');
             document.getElementById('walletInfo').classList.remove('hidden');
 
+            // Always ensure Pay button is visible when wallet is connected
+            // (it may have been hidden by chain-agnostic order load)
+            const payBtn = document.getElementById('payBtn');
+            if (payBtn) payBtn.style.display = '';
+
             // Format address display
             const shortAddress = address.slice(0, 6) + '...' + address.slice(-4);
             document.getElementById('walletAddress').textContent = shortAddress;
@@ -1222,8 +1227,67 @@
             // Lock chain & token selectors — must disconnect to change
             cpLockChainSelectors(true);
 
-            // Enable pay button if chain is also selected
+            // Enable pay button + check balance
             updatePayButtonState();
+            cpCheckBalance();
+        }
+
+        // Check connected wallet's balance for selected chain+token, update Pay button label
+        async function cpCheckBalance() {
+            const payBtn = document.getElementById('payBtn');
+            if (!payBtn || !connectedAddress || !selectedChainKey || !selectedToken) return;
+
+            const chainConfig = CHAIN_CONFIG[selectedChainKey];
+            const tokenConfig = chainConfig?.tokens?.[selectedToken];
+            if (!chainConfig || !tokenConfig) return;
+
+            const requiredAmt = (selectedToken === 'EURC' && displayAmount)
+                ? parseFloat(displayAmount)
+                : parseFloat(currentProduct?.price || 0);
+
+            payBtn.textContent = 'Checking balance...';
+            payBtn.disabled = true;
+
+            try {
+                let balance = 0;
+                if (chainConfig.type === 'evm') {
+                    const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrls[0]);
+                    const erc20 = new ethers.Contract(tokenConfig.address, ['function balanceOf(address) view returns (uint256)'], provider);
+                    const raw = await erc20.balanceOf(connectedAddress);
+                    balance = parseFloat(ethers.formatUnits(raw, tokenConfig.decimals || 6));
+                } else if (chainConfig.type === 'solana' && solanaConnection) {
+                    const rpc = chainConfig.rpcUrls[0];
+                    const res = await fetch(rpc, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner',
+                            params: [connectedAddress, { mint: tokenConfig.address }, { encoding: 'jsonParsed' }],
+                        }),
+                    });
+                    const data = await res.json();
+                    const accounts = data.result?.value || [];
+                    balance = accounts.reduce((sum, a) => sum + parseFloat(a.account?.data?.parsed?.info?.tokenAmount?.uiAmountString || '0'), 0);
+                }
+
+                window._cpBalance = balance;
+                const sufficient = balance >= requiredAmt;
+                if (!sufficient) {
+                    payBtn.textContent = `Insufficient ${selectedToken} (${balance.toFixed(2)} available)`;
+                    payBtn.style.background = '#ef4444';
+                    payBtn.style.color = '#fff';
+                    payBtn.disabled = true;
+                } else {
+                    payBtn.textContent = window._mcCustomButtonText || `Pay ${requiredAmt} ${selectedToken} (${balance.toFixed(2)} available)`;
+                    payBtn.style.background = '';
+                    payBtn.style.color = '';
+                    payBtn.disabled = false;
+                }
+            } catch (err) {
+                console.warn('Balance check failed:', err);
+                // Don't block payment if balance check fails — let them try
+                payBtn.textContent = window._mcCustomButtonText || `PAY WITH ${selectedToken}`;
+                payBtn.disabled = false;
+            }
         }
 
         // Disable/enable chain & token dropdowns

@@ -120,7 +120,29 @@ router.get('/', requireAdminKey, rateLimit({
           },
           orderBy: { createdAt: 'desc' },
         });
-        return res.json(merchants);
+
+        // Aggregate confirmed order volume per merchant in one query
+        const volumes = await db.order.groupBy({
+          by: ['merchantId'],
+          where: { status: 'CONFIRMED', merchantId: { not: null } },
+          _sum: { amount: true },
+          _count: { _all: true },
+        });
+        const volumeMap = new Map<string, { totalVolume: number; orderCount: number }>();
+        for (const v of volumes) {
+          if (!v.merchantId) continue;
+          volumeMap.set(v.merchantId, {
+            totalVolume: Number(v._sum.amount || 0),
+            orderCount: v._count._all,
+          });
+        }
+
+        const enrichedMerchants = merchants.map(m => ({
+          ...m,
+          totalVolume: volumeMap.get(m.id)?.totalVolume || 0,
+          orderCount: volumeMap.get(m.id)?.orderCount || 0,
+        }));
+        return res.json(enrichedMerchants);
 
       default:
         return res.status(400).json({ error: `Unknown resource: ${resource}` });
