@@ -2296,8 +2296,11 @@
                             clearInterval(window._cpPolling);
                             document.getElementById('cpQRWaiting').textContent = 'Payment confirmed!';
                             document.getElementById('cpCopyWaiting').textContent = 'Payment confirmed!';
-                            // Trigger success flow if available
-                            if (typeof showPaymentSuccess === 'function') showPaymentSuccess(data);
+                            // Build args for showPaymentSuccess
+                            const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };
+                            selectedToken = selectedToken || data.token || 'USDC';
+                            const explorerUrl = data.explorerLink || '#';
+                            if (typeof showPaymentSuccess === 'function') showPaymentSuccess(product, data.chain, explorerUrl, data.id);
                         }
                     } catch (e) {}
                 }, 5000);
