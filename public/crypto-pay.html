@@ -1435,13 +1435,16 @@
                         // Mark order as chain-pending so populateManualPayment patches it
                         window._chainPending = true;
                     } else {
-                        // Chain is locked. Hide the chain selector section entirely.
+                        // Chain is locked. Hide BOTH the top selector AND legacy paymentSection.
+                        // Chain is shown in Order Summary instead.
                         selectedChainKey = orderData.chain;
                         selectedToken = orderData.token || 'USDC';
                         window._orderChain = orderData.chain;
                         merchantChains = [{ chain: orderData.chain, address: orderData.paymentAddress, supportedTokens: [orderData.token || 'USDC'] }];
                         const paymentSection = document.getElementById('paymentSection');
                         if (paymentSection) paymentSection.classList.add('hidden');
+                        const topSelector = document.getElementById('chainSelectorTop');
+                        if (topSelector) topSelector.classList.add('hidden');
 
                         // Show chain in Order Summary
                         const chainRow = document.getElementById('summaryChainRow');
