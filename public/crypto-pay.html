@@ -416,12 +416,24 @@
 
                 <!-- STEP 1: Enter wallet address -->
                 <div id="cpManualStep1">
-                    <p class="text-sm font-bold text-black mb-1" style="text-transform: uppercase;">Your Wallet Address</p>
+                    <div class="flex items-center gap-2 mb-1">
+                        <p class="text-sm font-bold text-black" style="text-transform: uppercase;">Your Wallet Address</p>
+                        <button type="button" onclick="cpToggleWalletHelp()" class="w-5 h-5 rounded-full border-2 border-gray-400 text-gray-500 text-xs font-bold leading-none" title="How to find your wallet address">?</button>
+                    </div>
                     <p class="text-xs text-gray-600 mb-3">Paste the wallet address you'll send from. We use it to match your payment.</p>
+
+                    <div id="cpWalletHelp" class="hidden bg-gray-50 border-2 border-black p-3 mb-3 text-xs text-gray-700 space-y-2">
+                        <div><strong class="text-black">On your phone:</strong> open your wallet app (Phantom, MetaMask, Trust Wallet…) → tap <strong>Receive</strong> → copy the address.</div>
+                        <div><strong class="text-black">On desktop:</strong> open your browser wallet extension → click your address to copy.</div>
+                        <div><strong class="text-black">iPhone + Mac:</strong> copy on phone, paste here with Cmd+V (Universal Clipboard).</div>
+                        <div class="pt-2 border-t border-gray-300"><strong class="text-black">Which address?</strong> Use the one for the network you picked above. <span id="cpWalletHelpFormat">EVM addresses start with 0x and are 42 chars.</span></div>
+                    </div>
+
                     <div class="flex gap-2">
                         <input id="cpSenderWallet" type="text" placeholder="0x... or chain-specific address"
                                class="flex-1 px-3 py-2 border-2 border-black text-sm font-mono outline-none"
-                               autocomplete="off" spellcheck="false" />
+                               autocomplete="off" spellcheck="false"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();cpManualStep1Next();}" />
                         <button onclick="cpManualStep1Next()"
                                 class="px-4 py-2 font-bold text-sm text-black border-2 border-black mc-accent-bg"
                                 style="text-transform: uppercase;">Next</button>
@@ -446,6 +458,14 @@
 
                     <!-- QR view (default) -->
                     <div id="cpViewQR" class="text-center mb-4">
+                        <!-- Solana Pay toggle (only shown for Solana chain) -->
+                        <div id="cpSolanaPayToggle" class="hidden mb-3">
+                            <label class="inline-flex items-center gap-2 cursor-pointer px-3 py-2 border-2 rounded" style="background: rgba(153, 69, 255, 0.08); border-color: rgba(153, 69, 255, 0.4);">
+                                <input type="checkbox" id="cpSolanaPayCheck" class="w-4 h-4" style="accent-color: #9945FF;">
+                                <span class="text-xs font-bold" style="color: #9945FF;">Solana Pay QR</span>
+                                <span class="text-[10px] text-gray-500">Phantom / Solflare</span>
+                            </label>
+                        </div>
                         <div style="background: white; display: inline-block; padding: 12px; border: 4px solid #000;">
                             <img id="cpQRImage" width="200" height="200" alt="Payment QR" style="display: block;" />
                         </div>
@@ -2547,17 +2567,32 @@
 
         // UI Helper functions
         function showError(message) {
-            hideMessages();
-            const errorDiv = document.getElementById('errorMessage');
-            errorDiv.querySelector('p').textContent = message;
-            errorDiv.classList.remove('hidden');
+            // Toast: fixed position, auto-dismiss after 5s
+            cpShowToast(message, 'error');
         }
 
         function showSuccess(message) {
-            hideMessages();
-            const successDiv = document.getElementById('successMessage');
-            successDiv.querySelector('p').textContent = message;
-            successDiv.classList.remove('hidden');
+            cpShowToast(message, 'success');
+        }
+
+        // Brutal toast notification (matches widget)
+        function cpShowToast(message, type) {
+            const existing = document.getElementById('cpToast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'cpToast';
+            const isError = type === 'error';
+            const accent = isError ? '#ef4444' : '#22c55e';
+            toast.style.cssText = `
+                position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+                background: #000; color: #fff; padding: 14px 24px;
+                border: 3px solid ${accent}; box-shadow: 6px 6px 0px ${accent};
+                font-size: 13px; font-weight: 700; z-index: 999999;
+                max-width: 90vw; text-align: center; font-family: 'Space Grotesk', sans-serif;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
         }
 
         function hideMessages() {
@@ -2807,15 +2842,40 @@
             document.getElementById('cpCopyAmount').textContent = payAmount + ' ' + token;
             document.getElementById('cpQRAmount').textContent = payAmount + ' ' + token;
 
-            // Build QR with payment URI when supported (EVM ERC-681 / solana:)
-            const qrImg = document.getElementById('cpQRImage');
-            if (qrImg && merchantAddr) {
-                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(merchantAddr);
+            // Stash for QR regeneration on Solana Pay toggle
+            window._cpQRContext = { merchantAddr, chainKey, payAmount, token };
+
+            // Show Solana Pay toggle when chain is Solana
+            const config = CHAIN_CONFIG[chainKey];
+            const solPayToggle = document.getElementById('cpSolanaPayToggle');
+            const solPayCheck = document.getElementById('cpSolanaPayCheck');
+            if (solPayToggle) solPayToggle.classList.toggle('hidden', config?.type !== 'solana');
+            if (solPayCheck) {
+                solPayCheck.checked = false;
+                solPayCheck.onchange = () => cpRenderQR(solPayCheck.checked);
             }
+
+            cpRenderQR(false);
 
             if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText || 'Next'; }
             cpSetStep(2);
             cpStartCountdown();
+        }
+
+        // Regenerate QR with optional Solana Pay URI format
+        function cpRenderQR(useSolanaPay) {
+            const ctx = window._cpQRContext;
+            const qrImg = document.getElementById('cpQRImage');
+            if (!ctx || !qrImg || !ctx.merchantAddr) return;
+
+            let qrData = ctx.merchantAddr;
+            if (useSolanaPay && ctx.chainKey === 'SOLANA_MAINNET') {
+                const tokenAddr = CHAIN_CONFIG['SOLANA_MAINNET']?.tokens?.[ctx.token]?.address;
+                if (tokenAddr) {
+                    qrData = `solana:${ctx.merchantAddr}?amount=${ctx.payAmount}&spl-token=${tokenAddr}`;
+                }
+            }
+            qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(qrData);
         }
 
         // 5-minute countdown on step 2
@@ -2837,8 +2897,10 @@
                 const mins = Math.floor(remaining / 60);
                 const secs = remaining % 60;
                 el.textContent = mins + ':' + String(secs).padStart(2, '0');
+                // Color urgency: green > 2min, orange < 2min, red < 1min
                 if (remaining < 60) el.style.color = '#dc2626';
                 else if (remaining < 120) el.style.color = '#ea580c';
+                else el.style.color = '';
             };
             tick();
             window._cpCountdownTimer = setInterval(tick, 1000);
@@ -2917,22 +2979,98 @@
             cpStartListening();
         }
 
+        // Dynamic status messages during scan (matches widget pattern)
+        const CP_STATUS_TIMELINE = [
+            { at: 0, text: 'Scanning the blockchain...' },
+            { at: 8000, text: 'Checking the public ledger...' },
+            { at: 16000, text: 'Verifying your transaction...' },
+            { at: 25000, text: 'Waiting for network confirmation...' },
+            { at: 35000, text: 'Almost there...' },
+            { at: 45000, text: "Still looking — paste your TX below to help us find it" },
+        ];
+
+        // Chain-specific manual TX validation
+        function cpValidateTxHash(input, chainKey) {
+            const trimmed = input.trim();
+            if (!trimmed) return { ok: false, error: 'Paste your transaction hash or explorer link' };
+
+            // If they pasted an explorer URL, extract the hash AND validate it's the right chain
+            const urlMatch = trimmed.match(/(?:\/tx\/|\/transaction\/)([a-zA-Z0-9]+)/);
+            let hash = urlMatch ? urlMatch[1] : trimmed;
+
+            // Validate explorer host matches chain (if URL was pasted)
+            if (urlMatch) {
+                const expectedHost = ({
+                    BASE_MAINNET: 'basescan.org',
+                    BASE_SEPOLIA: 'sepolia.basescan.org',
+                    ETHEREUM_MAINNET: 'etherscan.io',
+                    ETHEREUM_SEPOLIA: 'sepolia.etherscan.io',
+                    POLYGON_MAINNET: 'polygonscan.com',
+                    ARBITRUM_MAINNET: 'arbiscan.io',
+                    BNB_MAINNET: 'bscscan.com',
+                    SOLANA_MAINNET: 'solscan.io',
+                    TRON_MAINNET: 'tronscan.org',
+                })[chainKey];
+                if (expectedHost && !trimmed.includes(expectedHost)) {
+                    return { ok: false, error: `That link looks like a different chain. Expected ${expectedHost}` };
+                }
+            }
+
+            // Validate hash format by chain type
+            const config = CHAIN_CONFIG[chainKey];
+            if (config?.type === 'solana') {
+                if (!/^[1-9A-HJ-NP-Za-km-z]{60,90}$/.test(hash)) {
+                    return { ok: false, error: 'Solana transaction signatures are ~88 base58 characters' };
+                }
+            } else if (config?.type === 'tron') {
+                if (!/^[a-fA-F0-9]{64}$/.test(hash)) {
+                    return { ok: false, error: 'TRON transaction hash should be 64 hex chars' };
+                }
+            } else {
+                if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) {
+                    return { ok: false, error: 'EVM transaction hash should be 0x followed by 64 hex chars' };
+                }
+            }
+            return { ok: true, hash };
+        }
+
         function cpStartListening() {
             const startedAt = Date.now();
-            const TIMEOUT_MS = 90000; // 90s before showing manual TX option
+            const TIMEOUT_MS = 90000;
             const bar = document.getElementById('cpProgressBar');
+            const statusEl = document.getElementById('cpPollStatus');
+            const timerEl = document.getElementById('cpPollTimer');
+            let lastStatusIndex = 0;
 
-            // Progress bar animation (fills over 90s)
+            // Pre-fill manual TX hint with chain-specific text
+            const chainKey = window._orderChain || (document.querySelector('input[name="chain"]:checked')?.value);
+            const config = chainKey ? CHAIN_CONFIG[chainKey] : null;
+            const txInput = document.getElementById('cpManualTxInput');
+            if (txInput) {
+                txInput.placeholder = config?.type === 'solana' ? 'TX signature or solscan.io link'
+                    : config?.type === 'tron' ? 'TX hash or tronscan.org link'
+                    : '0x... or explorer link';
+            }
+
+            // Progress bar + dynamic status updates
             window._cpProgressTimer = setInterval(() => {
                 const elapsed = Date.now() - startedAt;
                 const pct = Math.min(95, (elapsed / TIMEOUT_MS) * 100);
                 if (bar) bar.style.width = pct + '%';
+
+                // Update status text based on timeline
+                while (lastStatusIndex + 1 < CP_STATUS_TIMELINE.length && elapsed >= CP_STATUS_TIMELINE[lastStatusIndex + 1].at) {
+                    lastStatusIndex++;
+                }
+                if (statusEl) statusEl.textContent = CP_STATUS_TIMELINE[lastStatusIndex].text;
+
                 if (elapsed > 45000) {
                     document.getElementById('cpManualTxBox').classList.remove('hidden');
+                    if (timerEl) timerEl.textContent = 'Pasting your TX below speeds this up';
                 }
                 if (elapsed > TIMEOUT_MS) {
-                    document.getElementById('cpPollStatus').textContent = 'Still scanning...';
-                    document.getElementById('cpPollTimer').textContent = 'Paste your transaction ID below to verify manually';
+                    if (statusEl) statusEl.textContent = 'Still scanning...';
+                    if (timerEl) timerEl.textContent = 'Paste your transaction ID below to verify manually';
                 }
             }, 1000);
 
@@ -2945,45 +3083,69 @@
                         clearInterval(window._cpPolling); window._cpPolling = null;
                         clearInterval(window._cpProgressTimer); window._cpProgressTimer = null;
                         if (bar) bar.style.width = '100%';
-                        document.getElementById('cpPollStatus').textContent = 'Payment confirmed!';
+                        if (statusEl) statusEl.textContent = 'Payment confirmed!';
                         const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };
                         selectedToken = selectedToken || data.token || 'USDC';
                         if (typeof showPaymentSuccess === 'function') showPaymentSuccess(product, data.chain, data.explorerLink || '#', data.id);
                     } else if (data.status === 'EXPIRED' || data.status === 'CANCELLED') {
                         clearInterval(window._cpPolling); window._cpPolling = null;
                         clearInterval(window._cpProgressTimer); window._cpProgressTimer = null;
-                        document.getElementById('cpPollStatus').textContent = 'Order ' + data.status.toLowerCase();
-                        document.getElementById('cpPollTimer').textContent = 'Please start a new payment';
+                        if (statusEl) statusEl.textContent = 'Order ' + data.status.toLowerCase();
+                        if (timerEl) timerEl.textContent = 'Please start a new payment';
                     }
                 } catch (e) {}
             }, 4000);
         }
 
         async function cpVerifyManualTx() {
-            const txHash = document.getElementById('cpManualTxInput').value.trim();
+            const raw = document.getElementById('cpManualTxInput').value;
             const status = document.getElementById('cpManualTxStatus');
-            if (!txHash || txHash.length < 10) {
-                status.textContent = 'Please enter a valid transaction hash';
+            const chainKey = window._orderChain || (document.querySelector('input[name="chain"]:checked')?.value);
+
+            const v = cpValidateTxHash(raw, chainKey);
+            if (!v.ok) {
+                status.textContent = v.error;
+                status.style.color = '#dc2626';
                 status.classList.remove('hidden');
                 return;
             }
+
             status.textContent = 'Verifying on-chain...';
+            status.style.color = '#64748b';
             status.classList.remove('hidden');
             try {
                 const res = await fetch('/api/embed/order/' + window.currentOrderId + '/tx', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ txHash }),
+                    body: JSON.stringify({ txHash: v.hash }),
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
                     status.textContent = 'Verified! Confirming...';
-                    // Polling will catch the CONFIRMED status next cycle
+                    status.style.color = '#16a34a';
                 } else {
-                    status.textContent = data.error || 'Could not verify this transaction';
+                    status.textContent = data.error || data.message || 'Could not verify this transaction';
+                    status.style.color = '#dc2626';
                 }
             } catch (err) {
                 status.textContent = 'Network error — try again';
+                status.style.color = '#dc2626';
+            }
+        }
+
+        // Toggle wallet help dropdown + update format hint per chain
+        function cpToggleWalletHelp() {
+            const help = document.getElementById('cpWalletHelp');
+            if (!help) return;
+            help.classList.toggle('hidden');
+            // Update format hint based on current chain
+            const chainKey = window._orderChain || (document.querySelector('input[name="chain"]:checked')?.value);
+            const config = chainKey ? CHAIN_CONFIG[chainKey] : null;
+            const formatEl = document.getElementById('cpWalletHelpFormat');
+            if (formatEl) {
+                formatEl.textContent = config?.type === 'solana' ? 'Solana addresses are ~44 base58 chars (no 0x).'
+                    : config?.type === 'tron' ? 'TRON addresses start with T.'
+                    : 'EVM addresses start with 0x and are 42 chars.';
             }
         }
 
