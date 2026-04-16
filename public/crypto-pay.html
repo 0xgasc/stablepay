@@ -1227,10 +1227,11 @@
 
             try {
                 console.log('Fetching merchant wallets for:', currentProduct.merchantId);
-                const response = await fetch(`/api/merchant-profile?id=${currentProduct.merchantId}`);
+                // Use public embed endpoint (no auth required) instead of /api/merchant-profile
+                const response = await fetch(`/api/embed/chains?merchantId=${currentProduct.merchantId}`);
 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch merchant profile');
+                    throw new Error('Failed to fetch merchant chains');
                 }
 
                 merchantData = await response.json();
@@ -1276,11 +1277,11 @@
                 renderChainOptions();
             } catch (error) {
                 console.error('Error loading merchant chains:', error);
-                // Fallback to testnet chains
-                merchantChains = Object.keys(CHAIN_CONFIG)
-                    .filter(key => CHAIN_CONFIG[key].network === 'testnet')
-                    .map(key => ({ chain: key, address: null }));
-                renderChainOptions();
+                chainOptionsContainer.innerHTML = `
+                    <div class="text-center py-4 text-red-600 font-bold">
+                        Could not load payment options. Please refresh.
+                    </div>
+                `;
             }
         }
 
@@ -1372,6 +1373,15 @@
 
         // Select a chain
         function selectChain(chainKey) {
+            // If chain changed, invalidate any previously created order/address
+            // (each chain has its own merchant wallet so we need a new order)
+            if (selectedChainKey && selectedChainKey !== chainKey) {
+                window.currentOrderId = null;
+                window.merchantPaymentAddress = null;
+                if (window._cpPolling) { clearInterval(window._cpPolling); window._cpPolling = null; }
+                document.getElementById('cpQRWaiting')?.classList.add('hidden');
+                document.getElementById('cpCopyWaiting')?.classList.add('hidden');
+            }
             selectedChainKey = chainKey;
 
             // Update radio button
