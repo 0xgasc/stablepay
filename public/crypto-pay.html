@@ -2596,6 +2596,7 @@
                             token,
                             productName: currentProduct.name,
                             customerWallet: cpSenderWallet,
+                            linkId: params.get('linkId') || undefined,
                             paymentMethod: 'MANUAL_SEND',
                             source: 'CHECKOUT_LINK',
                         }),

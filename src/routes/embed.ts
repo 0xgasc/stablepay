@@ -34,6 +34,7 @@ const checkoutSchema = z.object({
   externalId: z.string().optional(),   // Merchant's own order/reference ID
   metadata: z.record(z.any()).optional(),
   returnUrl: z.string().url().optional(),  // Where to send customer after success/cancel
+  linkId: z.string().optional(),  // PaymentLink id, used to enforce link's chain restrictions
 });
 
 /**
@@ -127,6 +128,39 @@ router.post('/checkout', rateLimit({
         error: 'No wallet configured',
         message: `Merchant has no wallet for ${data.chain}`
       });
+    }
+
+    // Enforce token: must be in the wallet's supportedTokens (defaults to USDC if empty)
+    const supportedTokens = (wallet.supportedTokens && wallet.supportedTokens.length > 0)
+      ? wallet.supportedTokens
+      : ['USDC'];
+    if (!supportedTokens.includes(data.token)) {
+      return res.status(400).json({
+        error: 'Token not supported',
+        message: `Merchant does not accept ${data.token} on ${data.chain}. Supported: ${supportedTokens.join(', ')}`
+      });
+    }
+
+    // Enforce payment link chain restriction (if linkId provided)
+    if (data.linkId) {
+      const link = await db.paymentLink.findUnique({
+        where: { id: data.linkId },
+        select: { chains: true, isActive: true, token: true },
+      });
+      if (link && link.isActive) {
+        if (link.chains.length > 0 && !link.chains.includes(data.chain)) {
+          return res.status(400).json({
+            error: 'Chain not allowed',
+            message: `This payment link only accepts: ${link.chains.join(', ')}`
+          });
+        }
+        if (link.token !== data.token) {
+          return res.status(400).json({
+            error: 'Token mismatch',
+            message: `This payment link only accepts ${link.token}`
+          });
+        }
+      }
     }
 
     // Create order
