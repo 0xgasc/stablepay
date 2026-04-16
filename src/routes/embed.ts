@@ -297,6 +297,28 @@ router.get('/order/:orderId', async (req, res) => {
 });
 
 /**
+ * Set customer wallet on existing order (for manual flow when order was pre-created via API)
+ * Helps the scanner match by FROM address. Only allowed for PENDING orders.
+ */
+router.post('/order/:orderId/wallet', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { customerWallet } = req.body;
+    if (!customerWallet || customerWallet.length < 10) {
+      return res.status(400).json({ error: 'Valid customerWallet required' });
+    }
+    const order = await db.order.findUnique({ where: { id: orderId }, select: { status: true } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status !== 'PENDING') return res.status(400).json({ error: `Order status is ${order.status}` });
+    await db.order.update({ where: { id: orderId }, data: { customerWallet } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Set customer wallet error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * Manual TX submission — customer enters txHash when scanner doesn't catch it
  * Auto-verifies on-chain, falls back to manual review
  */

@@ -392,44 +392,108 @@
                 <button id="methodTabManual" onclick="switchPayMethod('manual')" class="flex-1 px-4 py-3 font-bold text-sm text-gray-500 tracking-wide border-l-4 border-black" style="text-transform: uppercase;">Send Manually</button>
             </div>
 
-            <!-- Tab: Manual Send (combined QR + Copy Address) -->
+            <!-- Tab: Manual Send (3-step flow matching widget) -->
             <div id="payMethodManual" class="hidden p-6">
-                <!-- Chain banner: tells customer WHICH chain to send on -->
-                <div id="cpChainBanner" class="border-4 border-black p-3 mb-4" style="background: #FFF9C4;">
-                    <p class="text-xs font-bold text-gray-700 mb-1" style="text-transform: uppercase; letter-spacing: 1px;">Send on this network only</p>
-                    <p class="text-xl font-bold text-black" id="cpChainName">—</p>
-                    <p class="text-xs text-gray-700 mt-1">Sending on the wrong network will result in lost funds.</p>
+
+                <!-- Step indicator -->
+                <div class="flex items-center justify-center gap-2 mb-4">
+                    <div id="cpStep1Dot" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 border-black mc-accent-bg">1</div>
+                    <div class="w-6 h-1 bg-black"></div>
+                    <div id="cpStep2Dot" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 border-black bg-white text-gray-400">2</div>
+                    <div class="w-6 h-1 bg-black"></div>
+                    <div id="cpStep3Dot" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 border-black bg-white text-gray-400">3</div>
                 </div>
 
-                <!-- QR code (image-based, no JS lib dependency) -->
-                <div class="text-center mb-4">
-                    <div style="background: white; display: inline-block; padding: 12px; border: 4px solid #000;">
-                        <img id="cpQRImage" width="200" height="200" alt="Payment QR" style="display: block;" />
+                <!-- STEP 1: Enter wallet address -->
+                <div id="cpManualStep1">
+                    <p class="text-sm font-bold text-black mb-1" style="text-transform: uppercase;">Your Wallet Address</p>
+                    <p class="text-xs text-gray-600 mb-3">Paste the wallet address you'll send from. We use it to match your payment.</p>
+                    <div class="flex gap-2">
+                        <input id="cpSenderWallet" type="text" placeholder="0x... or chain-specific address"
+                               class="flex-1 px-3 py-2 border-2 border-black text-sm font-mono outline-none"
+                               autocomplete="off" spellcheck="false" />
+                        <button onclick="cpManualStep1Next()"
+                                class="px-4 py-2 font-bold text-sm text-black border-2 border-black mc-accent-bg"
+                                style="text-transform: uppercase;">Next</button>
                     </div>
-                    <p class="text-xs text-gray-500 mt-2">Scan with your wallet app</p>
+                    <p id="cpStep1Error" class="text-xs text-red-600 mt-2 hidden"></p>
                 </div>
 
-                <!-- Address with copy -->
-                <div class="bg-gray-50 border-4 border-black p-3 mb-3">
-                    <p class="text-xs font-bold text-gray-500 mb-2" style="text-transform: uppercase;">Or send to this address</p>
-                    <div class="flex items-center gap-2">
-                        <code id="cpCopyAddress" class="text-xs text-black font-bold font-mono break-all flex-1">—</code>
-                        <button onclick="copyPayAddress()" class="px-3 py-1 font-bold text-xs text-black border-2 border-black mc-accent-bg">COPY</button>
+                <!-- STEP 2: QR + address + amount + "I sent it" -->
+                <div id="cpManualStep2" class="hidden">
+                    <!-- Chain warning -->
+                    <div class="border-4 border-black p-3 mb-4" style="background: #FFF9C4;">
+                        <p class="text-xs font-bold text-gray-700 mb-1" style="text-transform: uppercase; letter-spacing: 1px;">Send on this network only</p>
+                        <p class="text-xl font-bold text-black" id="cpChainName">—</p>
+                        <p class="text-xs text-gray-700 mt-1">Sending on the wrong network will result in lost funds.</p>
                     </div>
-                </div>
 
-                <!-- Amount with copy -->
-                <div class="bg-gray-50 border-4 border-black p-3 mb-4">
-                    <p class="text-xs font-bold text-gray-500 mb-2" style="text-transform: uppercase;">Exact amount</p>
-                    <div class="flex items-center gap-2">
-                        <span id="cpCopyAmount" class="text-2xl font-bold text-black flex-1">—</span>
-                        <button onclick="copyPayAmount()" class="px-3 py-1 font-bold text-xs text-black border-2 border-black mc-accent-bg">COPY</button>
+                    <!-- Toggle QR/Address -->
+                    <div class="flex border-2 border-black mb-3">
+                        <button id="cpToggleQR" onclick="cpToggleView('qr')" class="flex-1 py-2 text-xs font-bold mc-accent-bg" style="text-transform: uppercase;">QR Code</button>
+                        <button id="cpToggleAddr" onclick="cpToggleView('addr')" class="flex-1 py-2 text-xs font-bold bg-white text-gray-500 border-l-2 border-black" style="text-transform: uppercase;">Copy Address</button>
                     </div>
+
+                    <!-- QR view (default) -->
+                    <div id="cpViewQR" class="text-center mb-4">
+                        <div style="background: white; display: inline-block; padding: 12px; border: 4px solid #000;">
+                            <img id="cpQRImage" width="200" height="200" alt="Payment QR" style="display: block;" />
+                        </div>
+                        <p class="text-sm font-bold text-black mt-3">Send exactly <span id="cpQRAmount" style="color: var(--mc-accent);">—</span></p>
+                        <p class="text-xs text-gray-500 mt-1">Scan with your wallet app</p>
+                    </div>
+
+                    <!-- Address view -->
+                    <div id="cpViewAddr" class="hidden mb-4">
+                        <div class="bg-gray-50 border-2 border-black p-3 mb-2">
+                            <p class="text-xs font-bold text-gray-500 mb-1" style="text-transform: uppercase;">Send to</p>
+                            <div class="flex items-center gap-2">
+                                <code id="cpCopyAddress" class="text-xs text-black font-bold font-mono break-all flex-1">—</code>
+                                <button onclick="copyPayAddress()" class="px-3 py-1 font-bold text-xs text-black border-2 border-black mc-accent-bg">COPY</button>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 border-2 border-black p-3">
+                            <p class="text-xs font-bold text-gray-500 mb-1" style="text-transform: uppercase;">Exact amount</p>
+                            <div class="flex items-center gap-2">
+                                <span id="cpCopyAmount" class="text-xl font-bold text-black flex-1">—</span>
+                                <button onclick="copyPayAmount()" class="px-3 py-1 font-bold text-xs text-black border-2 border-black mc-accent-bg">COPY</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- I've sent button -->
+                    <button id="cpSentBtn" onclick="cpManualStep2Done()"
+                            class="w-full px-6 py-3 font-bold text-black border-4 border-black btn-brutal mc-accent-bg"
+                            style="text-transform: uppercase;">
+                        I've Sent the Payment
+                    </button>
+                    <button onclick="cpManualBack()" class="w-full text-xs text-gray-500 underline mt-2">
+                        ← Change wallet address
+                    </button>
                 </div>
 
-                <!-- Status -->
-                <div id="cpManualStatus" class="text-center text-sm font-bold py-3 border-4 border-black" style="color: #4FC3F7; background: #E3F2FD;">
-                    Waiting for payment...
+                <!-- STEP 3: Listening / verifying -->
+                <div id="cpManualStep3" class="hidden">
+                    <!-- Progress bar -->
+                    <div class="w-full h-1 bg-gray-200 mb-4 overflow-hidden">
+                        <div id="cpProgressBar" class="h-full transition-all duration-1000" style="width: 0%; background: var(--mc-accent);"></div>
+                    </div>
+
+                    <div class="text-center mb-4">
+                        <p id="cpPollStatus" class="text-base font-bold text-black mb-1">Scanning the blockchain...</p>
+                        <p id="cpPollTimer" class="text-xs text-gray-500">This can take up to a minute</p>
+                    </div>
+
+                    <!-- Manual TX paste (shown after 45s) -->
+                    <div id="cpManualTxBox" class="hidden bg-gray-50 border-2 border-black p-3 mt-4">
+                        <p class="text-xs font-bold text-black mb-2">Still waiting? Paste your transaction ID:</p>
+                        <div class="flex gap-2">
+                            <input id="cpManualTxInput" type="text" placeholder="0x... transaction hash"
+                                   class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
+                            <button onclick="cpVerifyManualTx()" class="px-3 py-2 font-bold text-xs text-white" style="background: #000;">VERIFY</button>
+                        </div>
+                        <p id="cpManualTxStatus" class="text-xs text-gray-500 mt-2 hidden"></p>
+                    </div>
                 </div>
             </div>
 
@@ -2402,26 +2466,126 @@
             }
         }
 
-        async function populateManualPayment() {
-            const params = new URLSearchParams(window.location.search);
-            let addr = window.merchantPaymentAddress || params.get('paymentAddress') || '';
-            const amount = params.get('amount') || (currentProduct?.price?.toString() || '0');
-            let token = selectedToken || params.get('token') || 'USDC';
-            let chainKey = window._orderChain || (document.querySelector('input[name="chain"]:checked')?.value) || currentProduct?.enabledChains?.[0] || null;
+        // ============= MANUAL PAYMENT 3-STEP FLOW (matches widget) =============
+        // Step 1: customer enters their wallet address
+        // Step 2: show QR/address/amount + chain warning + "I've Sent" button
+        //         (creates order with customerWallet AFTER they click "I've Sent")
+        // Step 3: poll for confirmation, show progress, after 45s offer manual TX paste
 
-            const setChainBanner = (key) => {
-                if (key) document.getElementById('cpChainName').textContent = (CHAIN_DISPLAY_NAMES[key] || key) + ' (' + token + ')';
-            };
+        let cpSenderWallet = null;
 
-            // If no order exists yet (payment link), create one
-            if (!window.currentOrderId && currentProduct?.merchantId) {
-                if (!chainKey) {
-                    document.getElementById('cpCopyAddress').textContent = 'Select a chain first';
-                    document.getElementById('cpChainName').textContent = '—';
-                    return;
+        function cpSetStep(n) {
+            document.getElementById('cpManualStep1').classList.toggle('hidden', n !== 1);
+            document.getElementById('cpManualStep2').classList.toggle('hidden', n !== 2);
+            document.getElementById('cpManualStep3').classList.toggle('hidden', n !== 3);
+            // Step indicator
+            ['cpStep1Dot', 'cpStep2Dot', 'cpStep3Dot'].forEach((id, i) => {
+                const dot = document.getElementById(id);
+                if (i + 1 <= n) {
+                    dot.classList.add('mc-accent-bg');
+                    dot.classList.remove('bg-white', 'text-gray-400');
+                } else {
+                    dot.classList.remove('mc-accent-bg');
+                    dot.classList.add('bg-white', 'text-gray-400');
                 }
+            });
+        }
+
+        function cpToggleView(view) {
+            document.getElementById('cpViewQR').classList.toggle('hidden', view !== 'qr');
+            document.getElementById('cpViewAddr').classList.toggle('hidden', view !== 'addr');
+            const qrTab = document.getElementById('cpToggleQR');
+            const addrTab = document.getElementById('cpToggleAddr');
+            qrTab.classList.toggle('mc-accent-bg', view === 'qr');
+            qrTab.classList.toggle('bg-white', view !== 'qr');
+            qrTab.classList.toggle('text-gray-500', view !== 'qr');
+            addrTab.classList.toggle('mc-accent-bg', view === 'addr');
+            addrTab.classList.toggle('bg-white', view !== 'addr');
+            addrTab.classList.toggle('text-gray-500', view !== 'addr');
+        }
+
+        // Validate wallet address by chain type
+        function cpValidateAddress(addr, chainKey) {
+            if (!addr || addr.length < 10) return 'Wallet address looks too short';
+            const config = CHAIN_CONFIG[chainKey];
+            if (config?.type === 'solana') {
+                if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr)) return 'Solana addresses are base58 (no 0x prefix)';
+            } else if (config?.type === 'tron') {
+                if (!/^T[A-Za-z0-9]{33}$/.test(addr)) return 'TRON addresses start with T';
+            } else {
+                if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) return 'EVM addresses must be 0x followed by 40 hex chars';
+            }
+            return null;
+        }
+
+        async function populateManualPayment() {
+            // Get chain context
+            const chainKey = window._orderChain || (document.querySelector('input[name="chain"]:checked')?.value) || currentProduct?.enabledChains?.[0] || null;
+            const config = chainKey ? CHAIN_CONFIG[chainKey] : null;
+            const placeholder = config?.type === 'solana' ? 'Solana address (base58)'
+                : config?.type === 'tron' ? 'TRON address (T...)'
+                : '0x... (EVM address)';
+            document.getElementById('cpSenderWallet').placeholder = placeholder;
+
+            // Reset to step 1 if no flow in progress
+            if (!cpSenderWallet) {
+                cpSetStep(1);
+            }
+        }
+
+        async function cpManualStep1Next() {
+            const addr = document.getElementById('cpSenderWallet').value.trim();
+            const chainKey = window._orderChain || (document.querySelector('input[name="chain"]:checked')?.value) || currentProduct?.enabledChains?.[0] || null;
+            const errEl = document.getElementById('cpStep1Error');
+
+            const err = cpValidateAddress(addr, chainKey);
+            if (err) {
+                errEl.textContent = err;
+                errEl.classList.remove('hidden');
+                return;
+            }
+            errEl.classList.add('hidden');
+            cpSenderWallet = addr;
+
+            // Pre-fill step 2 contents (address + amount + QR + chain banner)
+            const params = new URLSearchParams(window.location.search);
+            const amount = params.get('amount') || (currentProduct?.price?.toString() || '0');
+            const token = selectedToken || params.get('token') || 'USDC';
+            const merchantAddr = window.merchantPaymentAddress || params.get('paymentAddress') || '';
+
+            document.getElementById('cpChainName').textContent = (CHAIN_DISPLAY_NAMES[chainKey] || chainKey) + ' (' + token + ')';
+            document.getElementById('cpCopyAddress').textContent = merchantAddr || '—';
+            document.getElementById('cpCopyAmount').textContent = amount + ' ' + token;
+            document.getElementById('cpQRAmount').textContent = amount + ' ' + token;
+            const qrImg = document.getElementById('cpQRImage');
+            if (qrImg && merchantAddr) {
+                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(merchantAddr);
+            }
+
+            cpSetStep(2);
+        }
+
+        function cpManualBack() {
+            // Stop polling if in step 3
+            if (window._cpPolling) { clearInterval(window._cpPolling); window._cpPolling = null; }
+            if (window._cpProgressTimer) { clearInterval(window._cpProgressTimer); window._cpProgressTimer = null; }
+            cpSenderWallet = null;
+            // Don't clear currentOrderId — order persists, we just reset UI
+            cpSetStep(1);
+        }
+
+        async function cpManualStep2Done() {
+            const sentBtn = document.getElementById('cpSentBtn');
+            sentBtn.disabled = true;
+            sentBtn.textContent = 'REGISTERING...';
+
+            // Create order NOW with customerWallet (matches widget pattern)
+            if (!window.currentOrderId && currentProduct?.merchantId) {
+                const params = new URLSearchParams(window.location.search);
+                const chainKey = window._orderChain || (document.querySelector('input[name="chain"]:checked')?.value) || currentProduct.enabledChains?.[0] || null;
+                const amount = params.get('amount') || currentProduct.price.toString();
+                const token = selectedToken || params.get('token') || 'USDC';
                 try {
-                    document.getElementById('cpCopyAddress').textContent = 'Creating order...';
                     const res = await fetch('/api/embed/checkout', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2431,6 +2595,7 @@
                             chain: chainKey,
                             token,
                             productName: currentProduct.name,
+                            customerWallet: cpSenderWallet,
                             paymentMethod: 'MANUAL_SEND',
                             source: 'CHECKOUT_LINK',
                         }),
@@ -2439,49 +2604,100 @@
                     if (data.success && data.order) {
                         window.currentOrderId = data.order.id;
                         window.merchantPaymentAddress = data.order.paymentAddress;
-                        window._orderChain = chainKey;
-                        addr = data.order.paymentAddress;
+                    } else {
+                        sentBtn.disabled = false;
+                        sentBtn.textContent = "I've Sent the Payment";
+                        showError(data.error || 'Failed to register payment');
+                        return;
                     }
                 } catch (err) {
-                    console.error('Failed to create order:', err);
-                    document.getElementById('cpCopyAddress').textContent = 'Order creation failed';
+                    sentBtn.disabled = false;
+                    sentBtn.textContent = "I've Sent the Payment";
+                    showError('Failed to register payment — please try again');
                     return;
                 }
+            } else if (window.currentOrderId && cpSenderWallet) {
+                // Order already exists (orderId in URL) — patch the customerWallet so scanner can match by FROM
+                try {
+                    await fetch('/api/embed/order/' + window.currentOrderId + '/wallet', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ customerWallet: cpSenderWallet }),
+                    });
+                } catch {}
             }
 
-            // Populate UI
-            setChainBanner(chainKey);
-            document.getElementById('cpCopyAddress').textContent = addr || '—';
-            document.getElementById('cpCopyAmount').textContent = amount + ' ' + token;
+            cpSetStep(3);
+            cpStartListening();
+        }
 
-            // Image-based QR (no JS lib dependency, always renders)
-            const qrImg = document.getElementById('cpQRImage');
-            if (qrImg && addr) {
-                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(addr);
+        function cpStartListening() {
+            const startedAt = Date.now();
+            const TIMEOUT_MS = 90000; // 90s before showing manual TX option
+            const bar = document.getElementById('cpProgressBar');
+
+            // Progress bar animation (fills over 90s)
+            window._cpProgressTimer = setInterval(() => {
+                const elapsed = Date.now() - startedAt;
+                const pct = Math.min(95, (elapsed / TIMEOUT_MS) * 100);
+                if (bar) bar.style.width = pct + '%';
+                if (elapsed > 45000) {
+                    document.getElementById('cpManualTxBox').classList.remove('hidden');
+                }
+                if (elapsed > TIMEOUT_MS) {
+                    document.getElementById('cpPollStatus').textContent = 'Still scanning...';
+                    document.getElementById('cpPollTimer').textContent = 'Paste your transaction ID below to verify manually';
+                }
+            }, 1000);
+
+            // Polling
+            window._cpPolling = setInterval(async () => {
+                try {
+                    const res = await fetch('/api/embed/order/' + window.currentOrderId);
+                    const data = await res.json();
+                    if (data.status === 'CONFIRMED') {
+                        clearInterval(window._cpPolling); window._cpPolling = null;
+                        clearInterval(window._cpProgressTimer); window._cpProgressTimer = null;
+                        if (bar) bar.style.width = '100%';
+                        document.getElementById('cpPollStatus').textContent = 'Payment confirmed!';
+                        const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };
+                        selectedToken = selectedToken || data.token || 'USDC';
+                        if (typeof showPaymentSuccess === 'function') showPaymentSuccess(product, data.chain, data.explorerLink || '#', data.id);
+                    } else if (data.status === 'EXPIRED' || data.status === 'CANCELLED') {
+                        clearInterval(window._cpPolling); window._cpPolling = null;
+                        clearInterval(window._cpProgressTimer); window._cpProgressTimer = null;
+                        document.getElementById('cpPollStatus').textContent = 'Order ' + data.status.toLowerCase();
+                        document.getElementById('cpPollTimer').textContent = 'Please start a new payment';
+                    }
+                } catch (e) {}
+            }, 4000);
+        }
+
+        async function cpVerifyManualTx() {
+            const txHash = document.getElementById('cpManualTxInput').value.trim();
+            const status = document.getElementById('cpManualTxStatus');
+            if (!txHash || txHash.length < 10) {
+                status.textContent = 'Please enter a valid transaction hash';
+                status.classList.remove('hidden');
+                return;
             }
-
-            // Start polling for confirmation
-            if (!window._cpPolling && window.currentOrderId) {
-                window._cpPolling = setInterval(async () => {
-                    try {
-                        const res = await fetch('/api/embed/order/' + window.currentOrderId);
-                        const data = await res.json();
-                        if (data.status === 'CONFIRMED') {
-                            clearInterval(window._cpPolling);
-                            window._cpPolling = null;
-                            const status = document.getElementById('cpManualStatus');
-                            if (status) {
-                                status.textContent = 'Payment confirmed!';
-                                status.style.color = '#16a34a';
-                                status.style.background = '#f0fdf4';
-                            }
-                            const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };
-                            selectedToken = selectedToken || data.token || 'USDC';
-                            const explorerUrl = data.explorerLink || '#';
-                            if (typeof showPaymentSuccess === 'function') showPaymentSuccess(product, data.chain, explorerUrl, data.id);
-                        }
-                    } catch (e) {}
-                }, 5000);
+            status.textContent = 'Verifying on-chain...';
+            status.classList.remove('hidden');
+            try {
+                const res = await fetch('/api/embed/order/' + window.currentOrderId + '/tx', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ txHash }),
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    status.textContent = 'Verified! Confirming...';
+                    // Polling will catch the CONFIRMED status next cycle
+                } else {
+                    status.textContent = data.error || 'Could not verify this transaction';
+                }
+            } catch (err) {
+                status.textContent = 'Network error — try again';
             }
         }
 
