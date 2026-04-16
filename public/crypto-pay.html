@@ -1003,6 +1003,19 @@
                     <div class="text-center p-4">
                         <p class="text-black font-bold mb-4">No ${chainType === 'solana' ? 'Solana' : chainType === 'evm' ? 'EVM' : ''} wallets detected</p>
                         <p class="text-sm text-gray-600 mb-4">${walletSuggestion}</p>
+                        <div class="border-t-2 border-gray-200 pt-4 mt-4">
+                            <p class="text-sm text-gray-600 mb-3">Or pay manually from any wallet:</p>
+                            <button onclick="closeWalletModal(); switchPayMethod('qr');"
+                                    class="w-full px-4 py-3 font-bold text-black border-4 border-black mb-2"
+                                    style="background: #4FC3F7; text-transform: uppercase; font-size: 13px;">
+                                Show QR Code
+                            </button>
+                            <button onclick="closeWalletModal(); switchPayMethod('copy');"
+                                    class="w-full px-4 py-3 font-bold text-black border-4 border-black"
+                                    style="background: #FFF; text-transform: uppercase; font-size: 13px;">
+                                Copy Address
+                            </button>
+                        </div>
                     </div>
                 `;
             } else {
