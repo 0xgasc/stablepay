@@ -19,6 +19,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --mc-header-bg: #FFFFFF;
+            --mc-header-text: #000000;
+            --mc-accent: #00E5FF;
+            --mc-accent-text: #000000;
+        }
         * {
             font-family: 'Space Grotesk', sans-serif;
         }
@@ -26,6 +32,13 @@
             background: #FFFFFF;
             font-family: 'Space Grotesk', sans-serif;
         }
+        /* Branding-aware classes (override hardcoded inline colors via JS too) */
+        .mc-nav { background: var(--mc-header-bg); }
+        .mc-nav .mc-brand-text { color: var(--mc-header-text); }
+        .mc-accent-bg { background: var(--mc-accent) !important; color: var(--mc-accent-text) !important; }
+        .mc-footer { text-align: center; padding: 16px; font-size: 11px; color: #94a3b8; }
+        .mc-footer a { color: #64748b; text-decoration: none; font-weight: 600; }
+        .mc-logo { max-height: 40px; max-width: 200px; object-fit: contain; }
         body.night-mode {
             background: #1a1a1a;
             color: #fff;
@@ -316,11 +329,12 @@
 </head>
 <body class="min-h-screen">
     <!-- Navigation -->
-    <nav class="bg-white border-b-4 border-black">
+    <nav class="mc-nav border-b-4 border-black">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-20">
-                <a href="/" class="text-3xl font-bold tracking-tight text-black" style="text-transform: uppercase;">
-                    STABLEPAY
+                <a href="/" id="mcBrand" class="flex items-center gap-3 text-3xl font-bold tracking-tight mc-brand-text" style="text-transform: uppercase; text-decoration: none;">
+                    <img id="mcLogo" class="mc-logo hidden" alt="" />
+                    <span id="mcBrandName">STABLEPAY</span>
                 </a>
                 <div class="flex items-center gap-4">
                     <!-- Language Selector -->
@@ -342,7 +356,7 @@
     <div class="container mx-auto px-4 py-8 max-w-2xl">
         <!-- Back Button -->
         <div class="mb-6">
-            <button id="backBtn" class="text-black font-bold flex items-center tracking-wide btn-brutal px-4 py-2" style="text-transform: uppercase; background: #00E5FF;" data-i18n="backBtn">
+            <button id="backBtn" onclick="goBack()" class="font-bold flex items-center tracking-wide btn-brutal px-4 py-2 mc-accent-bg" style="text-transform: uppercase;" data-i18n="backBtn">
                 BACK TO STORE
             </button>
         </div>
@@ -474,8 +488,8 @@
 
             <button
                 id="payBtn"
-                class="w-full px-6 py-4 font-bold tracking-wide btn-brutal text-black disabled:opacity-50 disabled:cursor-not-allowed"
-                style="text-transform: uppercase; background: #00E5FF;"
+                class="w-full px-6 py-4 font-bold tracking-wide btn-brutal mc-accent-bg disabled:opacity-50 disabled:cursor-not-allowed"
+                style="text-transform: uppercase;"
                 disabled
                 data-i18n="payment.payBtn"
             >
@@ -558,6 +572,11 @@
             </div>
             <p class="text-xs text-gray-500 mt-4 text-center">Don't have a wallet? <a href="https://metamask.io/download/" target="_blank" class="underline font-bold">Get MetaMask</a></p>
         </div>
+    </div>
+
+    <!-- Powered by footer (hidden if merchant on GROWTH+ has hideFooter set) -->
+    <div id="mcFooter" class="mc-footer">
+        Secured by <a href="https://wetakestables.shop" target="_blank">StablePay</a>
     </div>
 
     <script>
@@ -1135,6 +1154,60 @@
             payBtn.disabled = !canPay;
         }
 
+        // Apply merchant branding from widgetConfig + merchantName
+        // Reads existing merchant.widgetConfig (same one that styles the embed widget)
+        function applyBranding(widgetConfig, merchantName) {
+            const cfg = widgetConfig || {};
+            const root = document.documentElement;
+
+            // Brand name + logo in nav
+            if (merchantName) {
+                document.getElementById('mcBrandName').textContent = merchantName;
+                document.title = merchantName + ' — Checkout';
+            }
+            if (cfg.logoUrl) {
+                const logo = document.getElementById('mcLogo');
+                logo.src = cfg.logoUrl;
+                logo.alt = merchantName || 'Logo';
+                logo.classList.remove('hidden');
+            }
+
+            // Header background + text color
+            if (cfg.headerColor) {
+                root.style.setProperty('--mc-header-bg', cfg.headerColor);
+                // Use accent color = header color for visual consistency (single brand color)
+                root.style.setProperty('--mc-accent', cfg.headerColor);
+            }
+            if (cfg.headerTextColor) {
+                const textColor = cfg.headerTextColor === 'light' ? '#FFFFFF' : '#000000';
+                root.style.setProperty('--mc-header-text', textColor);
+                root.style.setProperty('--mc-accent-text', textColor);
+            }
+
+            // Custom font family (must be loaded by merchant separately)
+            if (cfg.fontFamily) {
+                document.body.style.fontFamily = cfg.fontFamily + ', system-ui, sans-serif';
+            }
+
+            // Custom button text (overrides "PAY WITH USDC" / "PAY WITH X")
+            if (cfg.buttonText) {
+                window._mcCustomButtonText = cfg.buttonText;
+                const payBtn = document.getElementById('payBtn');
+                if (payBtn) payBtn.textContent = cfg.buttonText;
+            }
+
+            // Theme: default to merchant's preference if customer hasn't manually toggled
+            if (cfg.theme === 'dark' && !localStorage.getItem('nightModeManual')) {
+                document.body.classList.add('night-mode');
+            }
+
+            // Hide footer (already plan-gated server-side)
+            if (cfg.hideFooter === true) {
+                const footer = document.getElementById('mcFooter');
+                if (footer) footer.style.display = 'none';
+            }
+        }
+
         // Parse URL parameters to get product info
         async function loadProductInfo() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -1172,6 +1245,9 @@
 
                     // Stash returnUrl from API for goBack() to use
                     if (orderData.returnUrl) window._orderReturnUrl = orderData.returnUrl;
+
+                    // Apply merchant branding (logo, colors, theme, button text, footer)
+                    applyBranding(orderData.widgetConfig, orderData.merchantName);
 
                     // Order mode: chain is locked. Hide the chain selector section entirely.
                     // Lock the selected chain/token and skip merchant chain loading.
@@ -1246,6 +1322,9 @@
 
                 merchantData = await response.json();
                 console.log('Merchant data:', merchantData);
+
+                // Apply merchant branding (logo, colors, theme, button text, footer)
+                applyBranding(merchantData.widgetConfig, merchantData.merchantName);
 
                 if (merchantData.wallets && merchantData.wallets.length > 0) {
                     // Only show chains the merchant has configured
@@ -1447,10 +1526,10 @@
             const radio = document.querySelector(`input[name="token_${chainKey}"][value="${tokenSymbol}"]`);
             if (radio) radio.checked = true;
 
-            // Update pay button text
+            // Update pay button text (respect merchant's custom buttonText if set)
             const payBtn = document.getElementById('payBtn');
             if (payBtn) {
-                payBtn.textContent = `PAY WITH ${tokenSymbol}`;
+                payBtn.textContent = window._mcCustomButtonText || `PAY WITH ${tokenSymbol}`;
             }
 
             // Handle EUR conversion for EURC
@@ -2199,7 +2278,7 @@
             // Uncheck chain selection and reset token
             document.querySelectorAll('input[name="chain"]').forEach(r => r.checked = false);
             document.getElementById('payBtn').disabled = true;
-            document.getElementById('payBtn').textContent = 'PAY WITH USDC';
+            document.getElementById('payBtn').textContent = window._mcCustomButtonText || 'PAY WITH USDC';
             selectedToken = 'USDC';
             selectedChainKey = null;
 
@@ -2491,6 +2570,8 @@
             document.body.classList.toggle('night-mode');
             const isNightMode = document.body.classList.contains('night-mode');
             localStorage.setItem('nightMode', isNightMode);
+            // Mark as manually toggled so applyBranding() doesn't override on reload
+            localStorage.setItem('nightModeManual', '1');
 
             // Update translation
             const currentLang = localStorage.getItem('language') || 'en';

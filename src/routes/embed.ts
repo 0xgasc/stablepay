@@ -241,12 +241,21 @@ router.get('/order/:orderId', async (req, res) => {
           where: { status: 'CONFIRMED' },
           take: 1,
           orderBy: { createdAt: 'desc' }
+        },
+        merchant: {
+          select: { companyName: true, plan: true, widgetConfig: true }
         }
       }
     });
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Plan-gate hideFooter (only GROWTH+ can hide it)
+    const widgetConfig = (order.merchant?.widgetConfig as any) || {};
+    if (order.merchant && !['GROWTH', 'SCALE', 'ENTERPRISE'].includes(order.merchant.plan)) {
+      delete widgetConfig.hideFooter;
     }
 
     const txHash = order.transactions[0]?.txHash || null;
@@ -271,6 +280,8 @@ router.get('/order/:orderId', async (req, res) => {
       chain: order.chain,
       paymentAddress: order.paymentAddress,
       merchantId: order.merchantId,
+      merchantName: order.merchant?.companyName || null,
+      widgetConfig,
       productName: order.customerName, // productName is stored in customerName when set via embed
       customerEmail: order.customerEmail,
       returnUrl: md._returnUrl || null,
