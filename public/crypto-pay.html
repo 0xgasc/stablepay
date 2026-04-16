@@ -1432,11 +1432,13 @@
                             address: w.address,
                             supportedTokens: w.supportedTokens || ['USDC'],
                         }));
+                        // Stash for client-side address lookup (avoids premature backend PATCH)
+                        window._availableChains = merchantChains;
                         renderChainOptions();
                         // Hide pay button (manual flow drives confirmation)
                         const payBtn = document.getElementById('payBtn');
                         if (payBtn) payBtn.style.display = 'none';
-                        // Mark order as chain-pending so populateManualPayment patches it
+                        // Mark order as chain-pending so cpManualStep2Done patches it on commit
                         window._chainPending = true;
                     } else {
                         // Chain is locked. Hide BOTH the top selector AND legacy paymentSection.
@@ -2132,27 +2134,42 @@
                 const existingOrderId = _urlParams.get('orderId');
 
                 if (existingOrderId) {
-                    // Order already exists (created via API before redirect) — fetch its details and reuse it
+                    // Order already exists — fetch its details. If chain-agnostic, lock chain NOW
+                    // (commit point: customer is about to authorize the wallet tx).
                     console.log('Fetching existing order:', existingOrderId);
                     try {
                         const orderRes = await fetch('/api/embed/order/' + existingOrderId);
-                        if (orderRes.ok) {
-                            const existingOrder = await orderRes.json();
-                            orderData = {
-                                id: existingOrder.id,
-                                amount: existingOrder.amount, // critical for ethers.parseUnits
-                                token: existingOrder.token || selectedToken,
-                                chain: existingOrder.chain,
-                                paymentAddress: existingOrder.paymentAddress || selectedChainData?.address,
-                                usdcAddress: tokenConfig.address,
-                            };
-                            console.log('[SUCCESS] Using pre-created order:', orderData);
-                        } else {
-                            throw new Error('Order fetch failed: ' + orderRes.status);
+                        if (!orderRes.ok) throw new Error('Order fetch failed: ' + orderRes.status);
+                        let existingOrder = await orderRes.json();
+
+                        // Chain-agnostic order — lock chain on backend before paying
+                        if (existingOrder.chainAgnostic) {
+                            const patchAmount = (selectedToken === 'EURC' && displayAmount) ? displayAmount : undefined;
+                            const patchRes = await fetch('/api/embed/order/' + existingOrderId + '/chain', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ chain: selectedChain.value, token: selectedToken, amount: patchAmount }),
+                            });
+                            const patched = await patchRes.json();
+                            if (!patched.success) throw new Error(patched.error || 'Could not set chain on order');
+                            existingOrder.amount = patched.amount;
+                            existingOrder.chain = patched.chain;
+                            existingOrder.token = patched.token;
+                            existingOrder.paymentAddress = patched.paymentAddress;
                         }
+
+                        orderData = {
+                            id: existingOrder.id,
+                            amount: existingOrder.amount,
+                            token: existingOrder.token || selectedToken,
+                            chain: existingOrder.chain,
+                            paymentAddress: existingOrder.paymentAddress || selectedChainData?.address,
+                            usdcAddress: tokenConfig.address,
+                        };
+                        console.log('[SUCCESS] Using pre-created order:', orderData);
                     } catch (fetchErr) {
-                        console.error('[ERROR] Failed to fetch existing order:', fetchErr);
-                        showError('Order not found or expired. Please try again.');
+                        console.error('[ERROR] Failed to fetch/patch existing order:', fetchErr);
+                        showError('Order setup failed: ' + (fetchErr.message || 'try again'));
                         hideTxStatus();
                         return;
                     }
@@ -2795,35 +2812,20 @@
                 return;
             }
 
-            // If order is chain-agnostic AND a chain is now selected, lock it on the order
-            if (window._chainPending && chainRadio?.value && window.currentOrderId) {
+            // For chain-agnostic orders: look up the merchant address client-side from
+            // availableChains so step 2 can show it. DO NOT PATCH the order here —
+            // that would lock the chain on the backend permanently. The PATCH happens
+            // only when customer commits (cpManualStep2Done).
+            if (window._chainPending && chainRadio?.value) {
                 const pickedChain = chainRadio.value;
-                const pickedToken = selectedToken || 'USDC';
-                try {
-                    const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chain: pickedChain, token: pickedToken }),
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        window._orderChain = pickedChain;
-                        window.merchantPaymentAddress = data.paymentAddress;
-                        window._chainPending = false;
-                        // Update Order Summary
-                        const chainRow = document.getElementById('summaryChainRow');
-                        const chainLabel = document.getElementById('summaryChainName');
-                        if (chainRow && chainLabel) {
-                            chainLabel.textContent = (CHAIN_DISPLAY_NAMES[pickedChain] || pickedChain);
-                            chainRow.classList.remove('hidden');
-                        }
-                    } else {
-                        showError(data.error || 'Failed to lock chain');
-                        return;
-                    }
-                } catch (err) {
-                    showError('Failed to set chain — please try again');
-                    return;
+                const mc = (window._availableChains || []).find(c => c.chain === pickedChain);
+                if (mc) window.merchantPaymentAddress = mc.address;
+                // Update Order Summary visual hint (just UI, not committing on backend)
+                const chainRow = document.getElementById('summaryChainRow');
+                const chainLabel = document.getElementById('summaryChainName');
+                if (chainRow && chainLabel) {
+                    chainLabel.textContent = (CHAIN_DISPLAY_NAMES[pickedChain] || pickedChain);
+                    chainRow.classList.remove('hidden');
                 }
             }
 
@@ -2858,48 +2860,18 @@
             errEl.classList.add('hidden');
             cpSenderWallet = addr;
 
-            // Show "Loading..." while we lock the chain on backend
             const nextBtn = document.querySelector('#cpManualStep1 button');
             const origText = nextBtn?.textContent;
-            if (nextBtn) { nextBtn.disabled = true; nextBtn.textContent = '...'; }
 
-            // If the order is chain-agnostic, lock chain + token + paymentAddress on the backend NOW
-            // so step 2 shows the right address (Send To) and the scanner watches the right wallet.
+            // Don't PATCH the order here — preserve chain-agnostic state on backend.
+            // Just look up the merchant address client-side from availableChains.
             const token = selectedToken || 'USDC';
-            if (window.currentOrderId && window._chainPending) {
-                try {
-                    // For EURC, ensure displayAmount is computed and pass it as the on-chain amount
-                    let convertedAmount;
-                    if (token === 'EURC' && currentProduct) {
-                        const rate = await getEURRate();
-                        convertedAmount = (parseFloat(currentProduct.price) * rate).toFixed(2);
-                        displayAmount = convertedAmount;
-                    }
-                    const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            chain: chainKey,
-                            token,
-                            amount: convertedAmount,
-                        }),
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        window._orderChain = chainKey;
-                        window.merchantPaymentAddress = data.paymentAddress;
-                        window._chainPending = false;
-                    } else {
-                        if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText || 'Next'; }
-                        errEl.textContent = data.error || 'Could not set chain';
-                        errEl.classList.remove('hidden');
-                        return;
-                    }
-                } catch (e) {
-                    if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText || 'Next'; }
-                    errEl.textContent = 'Network error. Try again.';
-                    errEl.classList.remove('hidden');
-                    return;
+            if (window._chainPending) {
+                const mc = (window._availableChains || []).find(c => c.chain === chainKey);
+                if (mc) window.merchantPaymentAddress = mc.address;
+                if (token === 'EURC' && currentProduct) {
+                    const rate = await getEURRate();
+                    displayAmount = (parseFloat(currentProduct.price) * rate).toFixed(2);
                 }
             }
 
@@ -3003,6 +2975,38 @@
             const sentBtn = document.getElementById('cpSentBtn');
             sentBtn.disabled = true;
             sentBtn.textContent = 'REGISTERING...';
+
+            // For chain-agnostic orders: NOW lock the chain on the backend
+            // (we held off until commit so refresh would still work)
+            if (window.currentOrderId && window._chainPending) {
+                const pickedChain = (document.querySelector('input[name="chain"]:checked')?.value);
+                const pickedToken = selectedToken || 'USDC';
+                let convertedAmount;
+                if (pickedToken === 'EURC' && displayAmount) convertedAmount = displayAmount;
+                try {
+                    const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chain: pickedChain, token: pickedToken, amount: convertedAmount }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        window._orderChain = pickedChain;
+                        window.merchantPaymentAddress = data.paymentAddress;
+                        window._chainPending = false;
+                    } else {
+                        sentBtn.disabled = false;
+                        sentBtn.textContent = "I've Sent the Payment";
+                        showError(data.error || 'Failed to lock chain');
+                        return;
+                    }
+                } catch (err) {
+                    sentBtn.disabled = false;
+                    sentBtn.textContent = "I've Sent the Payment";
+                    showError('Network error setting chain — try again');
+                    return;
+                }
+            }
 
             // Create order NOW with customerWallet (matches widget pattern)
             if (!window.currentOrderId && currentProduct?.merchantId) {
