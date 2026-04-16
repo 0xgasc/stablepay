@@ -2291,11 +2291,8 @@
             document.getElementById('cpCopyAddress').textContent = addr;
             document.getElementById('cpCopyAmount').textContent = amount + ' ' + token;
 
-            // QR code
-            const canvas = document.getElementById('cpQRCanvas');
-            if (canvas && typeof QRCode !== 'undefined' && addr) {
-                QRCode.toCanvas(canvas, addr, { width: 200, margin: 2 }, () => {});
-            }
+            // QR code — wait for QR library if still loading
+            renderQRWhenReady(addr);
 
             // Start polling
             if (!window._cpPolling && window.currentOrderId) {
@@ -2340,6 +2337,17 @@
             s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
             s.async = true;
             document.head.appendChild(s);
+        }
+
+        // Render QR, retrying until library loads
+        function renderQRWhenReady(addr, attempts = 0) {
+            const canvas = document.getElementById('cpQRCanvas');
+            if (!canvas || !addr) return;
+            if (typeof QRCode === 'undefined') {
+                if (attempts < 50) setTimeout(() => renderQRWhenReady(addr, attempts + 1), 100);
+                return;
+            }
+            QRCode.toCanvas(canvas, addr, { width: 200, margin: 2 }, () => {});
         }
 
         document.addEventListener('DOMContentLoaded', function() {
