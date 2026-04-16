@@ -147,6 +147,7 @@ app.use('/health', healthRouter);
 
 // ─── API Routes ─────────────────────────────────────────────────────────────
 app.use('/api/orders', ordersRouter);
+app.use('/api/v1/orders', ordersRouter); // Legacy alias
 app.use('/api/refunds', refundsRouter);
 app.use('/api/invoices', invoicesRouter);
 app.use('/api/receipts', receiptsRouter);

@@ -92,7 +92,7 @@
         async function load() {
             const content = document.getElementById('content');
             try {
-                const res = await fetch('/api/v1/orders/history/lookup?wallet=' + encodeURIComponent(wallet));
+                const res = await fetch('/api/orders/history/lookup?wallet=' + encodeURIComponent(wallet));
                 if (!res.ok) throw new Error('Lookup failed');
                 const data = await res.json();
 

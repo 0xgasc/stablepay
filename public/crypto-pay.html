@@ -1855,7 +1855,7 @@
             console.log('TX Hash:', tx.hash);
 
             try {
-                const confirmUrl = `/api/v1/orders/${order.id}/confirm`;
+                const confirmUrl = `/api/orders/${order.id}/confirm`;
                 console.log('Calling confirm API:', confirmUrl);
 
                 const confirmResponse = await fetch(confirmUrl, {
@@ -1997,7 +1997,7 @@
 
                 // Update order in database
                 try {
-                    const confirmUrl = `/api/v1/orders/${order.id}/confirm`;
+                    const confirmUrl = `/api/orders/${order.id}/confirm`;
                     const confirmResponse = await fetch(confirmUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
