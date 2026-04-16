@@ -1328,24 +1328,39 @@
                     // Apply merchant branding (logo, colors, theme, button text, footer)
                     applyBranding(orderData.widgetConfig, orderData.merchantName);
 
-                    // Order mode: chain is locked. Hide the chain selector section entirely.
-                    selectedChainKey = orderData.chain;
-                    selectedToken = orderData.token || 'USDC';
-                    window._orderChain = orderData.chain;
-                    merchantChains = [{ chain: orderData.chain, address: orderData.paymentAddress, supportedTokens: [orderData.token || 'USDC'] }];
-                    const paymentSection = document.getElementById('paymentSection');
-                    if (paymentSection) paymentSection.classList.add('hidden');
+                    if (orderData.chainAgnostic && orderData.availableChains?.length) {
+                        // Chain not locked yet — show chain selector with merchant's active chains
+                        merchantChains = orderData.availableChains.map(w => ({
+                            chain: w.chain,
+                            address: w.address,
+                            supportedTokens: w.supportedTokens || ['USDC'],
+                        }));
+                        renderChainOptions();
+                        // Hide pay button (manual flow drives confirmation)
+                        const payBtn = document.getElementById('payBtn');
+                        if (payBtn) payBtn.style.display = 'none';
+                        // Mark order as chain-pending so populateManualPayment patches it
+                        window._chainPending = true;
+                    } else {
+                        // Chain is locked. Hide the chain selector section entirely.
+                        selectedChainKey = orderData.chain;
+                        selectedToken = orderData.token || 'USDC';
+                        window._orderChain = orderData.chain;
+                        merchantChains = [{ chain: orderData.chain, address: orderData.paymentAddress, supportedTokens: [orderData.token || 'USDC'] }];
+                        const paymentSection = document.getElementById('paymentSection');
+                        if (paymentSection) paymentSection.classList.add('hidden');
 
-                    // Show chain in Order Summary
-                    const chainRow = document.getElementById('summaryChainRow');
-                    const chainLabel = document.getElementById('summaryChainName');
-                    if (chainRow && chainLabel) {
-                        chainLabel.textContent = (CHAIN_DISPLAY_NAMES[orderData.chain] || orderData.chain);
-                        chainRow.classList.remove('hidden');
+                        // Show chain in Order Summary
+                        const chainRow = document.getElementById('summaryChainRow');
+                        const chainLabel = document.getElementById('summaryChainName');
+                        if (chainRow && chainLabel) {
+                            chainLabel.textContent = (CHAIN_DISPLAY_NAMES[orderData.chain] || orderData.chain);
+                            chainRow.classList.remove('hidden');
+                        }
+
+                        // Pre-populate manual tab so chain/address/QR are ready when customer clicks
+                        populateManualPayment();
                     }
-
-                    // Pre-populate manual tab so chain/address/QR are ready when customer clicks
-                    populateManualPayment();
                     return;
                 } catch (err) {
                     console.error('Failed to load order:', err);
@@ -1477,77 +1492,116 @@
                 return;
             }
 
-            container.innerHTML = merchantChains.map((mc, index) => {
-                const config = CHAIN_CONFIG[mc.chain];
-                if (!config) return '';
-
-                const isFirst = index === 0;
-                const chainType = config.type || 'evm';
-                const allTokens = config.tokens || {};
-
-                // Filter tokens by merchant's supported tokens
-                const merchantSupportedTokens = mc.supportedTokens || ['USDC'];
-                const tokenList = Object.entries(allTokens).filter(([symbol]) =>
-                    merchantSupportedTokens.includes(symbol)
-                );
-
-                // If no matching tokens, fall back to USDC
-                if (tokenList.length === 0 && allTokens.USDC) {
-                    tokenList.push(['USDC', allTokens.USDC]);
-                }
-
-                // Build token balance display
-                const tokenBalances = tokenList.map(([symbol, tokenConfig]) =>
-                    `<span id="balance_${mc.chain}_${symbol}" class="text-gray-400">-- ${symbol}</span>`
-                ).join(' | ');
-
-                // Build token radio buttons for selection
-                const tokenOptions = tokenList.map(([symbol, tokenConfig], tokenIndex) =>
-                    `<label class="inline-flex items-center mr-4 cursor-pointer">
-                        <input type="radio" name="token_${mc.chain}" value="${symbol}"
-                               class="w-4 h-4 mr-1" ${tokenIndex === 0 ? 'checked' : ''}
-                               onchange="selectToken('${mc.chain}', '${symbol}')">
-                        <span class="text-sm text-black font-medium">${symbol}</span>
-                    </label>`
-                ).join('');
-
-                return `
-                    <div class="chain-option border-4 border-black p-4 ${isFirst ? 'bg-blue-50 chain-selected' : 'bg-white'} hover:bg-gray-100 cursor-pointer relative"
-                         data-chain="${mc.chain}"
-                         onclick="selectChain('${mc.chain}')">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center space-x-3">
-                                <div class="chain-check w-6 h-6 border-2 border-gray-400 flex items-center justify-center ${isFirst ? 'bg-green-500 border-green-500' : ''}">
-                                    <svg class="w-4 h-4 text-white ${isFirst ? '' : 'hidden'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div class="font-bold text-black">${config.chainName.toUpperCase()}</div>
-                                    <div class="text-xs text-gray-600">${config.description || config.network} ${chainType === 'solana' ? '(Solana)' : '(EVM)'}</div>
-                                </div>
+            // Build chain dropdown with icons (matches widget style)
+            container.innerHTML = `
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-2" style="text-transform: uppercase; letter-spacing: 1px;">Network</label>
+                        <div class="relative">
+                            <button type="button" id="cpChainBtn" onclick="cpToggleChainDropdown()"
+                                    class="w-full px-3 py-3 border-2 border-black bg-white text-left flex items-center gap-2 cursor-pointer">
+                                <img id="cpChainBtnIcon" src="${getChainIcon(merchantChains[0].chain)}" class="w-5 h-5 rounded-full" onerror="this.style.display='none'">
+                                <span id="cpChainBtnName" class="font-bold text-sm text-black">${CHAIN_CONFIG[merchantChains[0].chain]?.chainName || merchantChains[0].chain}</span>
+                                <span class="ml-auto text-gray-400">▼</span>
+                            </button>
+                            <div id="cpChainDropdown" class="hidden absolute top-full left-0 right-0 z-50 bg-white border-2 border-black border-t-0 max-h-64 overflow-y-auto">
+                                ${merchantChains.map(mc => `
+                                    <div onclick="selectChain('${mc.chain}'); cpToggleChainDropdown();"
+                                         class="px-3 py-2 cursor-pointer flex items-center gap-2 hover:bg-gray-100 border-b border-gray-200">
+                                        <img src="${getChainIcon(mc.chain)}" class="w-5 h-5 rounded-full" onerror="this.style.display='none'">
+                                        <span class="text-sm font-bold text-black">${CHAIN_CONFIG[mc.chain]?.chainName || mc.chain}</span>
+                                    </div>
+                                `).join('')}
                             </div>
-                            <div class="text-right">
-                                <div class="text-xs text-gray-500 font-bold">YOUR BALANCE</div>
-                                <div class="text-sm font-mono">${tokenBalances}</div>
-                            </div>
+                            <input type="radio" name="chain" value="${merchantChains[0].chain}" class="hidden" checked>
                         </div>
-                        <div class="mt-3 pt-3 border-t-2 border-gray-200">
-                            <div class="text-xs text-gray-600 font-bold mb-2">PAY WITH:</div>
-                            <div class="flex flex-wrap">${tokenOptions}</div>
-                        </div>
-                        <input type="radio" name="chain" value="${mc.chain}" class="hidden" ${isFirst ? 'checked' : ''}>
                     </div>
-                `;
-            }).join('');
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-2" style="text-transform: uppercase; letter-spacing: 1px;">Stablecoin</label>
+                        <div class="relative">
+                            <button type="button" id="cpTokenBtn" onclick="cpToggleTokenDropdown()"
+                                    class="w-full px-3 py-3 border-2 border-black bg-white text-left flex items-center gap-2 cursor-pointer">
+                                <img id="cpTokenBtnIcon" src="${getTokenIcon('USDC')}" class="w-5 h-5 rounded-full" onerror="this.style.display='none'">
+                                <span id="cpTokenBtnName" class="font-bold text-sm text-black">USDC</span>
+                                <span class="ml-auto text-gray-400">▼</span>
+                            </button>
+                            <div id="cpTokenDropdown" class="hidden absolute top-full left-0 right-0 z-50 bg-white border-2 border-black border-t-0 max-h-64 overflow-y-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
 
-            // Add event listeners to chain radios
-            setupChainListeners();
-
-            // Select first chain by default
+            // Select first chain by default + populate tokens
             if (merchantChains.length > 0) {
                 selectChain(merchantChains[0].chain);
             }
+        }
+
+        // Chain icons (same as widget)
+        function getChainIcon(chain) {
+            const icons = {
+                BASE_MAINNET: 'https://avatars.githubusercontent.com/u/108554348?s=80&v=4',
+                ETHEREUM_MAINNET: 'https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg',
+                POLYGON_MAINNET: 'https://cdn.iconscout.com/icon/premium/png-256-thumb/polygon-matic-icon-svg-download-png-5795452.png?f=webp&w=128',
+                ARBITRUM_MAINNET: 'https://arbitrum.io/_next/image?url=%2Fbrandkit%2F1225_Arbitrum_Logomark_OneColorNavy_ClearSpace.png&w=640&q=75',
+                BNB_MAINNET: 'https://www.svgrepo.com/show/366901/bnb.svg',
+                SOLANA_MAINNET: 'https://www.svgrepo.com/show/470684/solana.svg',
+                TRON_MAINNET: 'https://www.svgrepo.com/show/428648/tron-crypto-cryptocurrency.svg',
+                BASE_SEPOLIA: 'https://avatars.githubusercontent.com/u/108554348?s=80&v=4',
+                ETHEREUM_SEPOLIA: 'https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg',
+            };
+            return icons[chain] || '';
+        }
+        function getTokenIcon(token) {
+            const icons = {
+                USDC: 'https://www.svgrepo.com/show/367255/usdc.svg',
+                USDT: 'https://www.svgrepo.com/show/367256/usdt.svg',
+                EURC: 'https://coin-images.coingecko.com/coins/images/26045/large/EURC.png',
+            };
+            return icons[token] || '';
+        }
+        function cpToggleChainDropdown() {
+            const d = document.getElementById('cpChainDropdown');
+            if (d) d.classList.toggle('hidden');
+            const t = document.getElementById('cpTokenDropdown');
+            if (t) t.classList.add('hidden');
+        }
+        function cpToggleTokenDropdown() {
+            const d = document.getElementById('cpTokenDropdown');
+            if (d) d.classList.toggle('hidden');
+            const c = document.getElementById('cpChainDropdown');
+            if (c) c.classList.add('hidden');
+        }
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#cpChainBtn') && !e.target.closest('#cpChainDropdown')) {
+                document.getElementById('cpChainDropdown')?.classList.add('hidden');
+            }
+            if (!e.target.closest('#cpTokenBtn') && !e.target.closest('#cpTokenDropdown')) {
+                document.getElementById('cpTokenDropdown')?.classList.add('hidden');
+            }
+        });
+
+        function cpRenderTokensForChain(chainKey) {
+            const mc = merchantChains.find(m => m.chain === chainKey);
+            if (!mc) return;
+            const supported = mc.supportedTokens || ['USDC'];
+            const dropdown = document.getElementById('cpTokenDropdown');
+            if (!dropdown) return;
+            dropdown.innerHTML = supported.map(t => `
+                <div onclick="selectToken('${chainKey}', '${t}'); cpToggleTokenDropdown();"
+                     class="px-3 py-2 cursor-pointer flex items-center gap-2 hover:bg-gray-100 border-b border-gray-200">
+                    <img src="${getTokenIcon(t)}" class="w-5 h-5 rounded-full" onerror="this.style.display='none'">
+                    <span class="text-sm font-bold text-black">${t}</span>
+                </div>
+            `).join('');
+            // Default to first supported token
+            const defaultToken = supported[0];
+            const btnIcon = document.getElementById('cpTokenBtnIcon');
+            const btnName = document.getElementById('cpTokenBtnName');
+            if (btnIcon) btnIcon.src = getTokenIcon(defaultToken);
+            if (btnName) btnName.textContent = defaultToken;
+            selectedToken = defaultToken;
         }
 
         // Select a chain
@@ -1599,15 +1653,19 @@
                 if (checkSvg) checkSvg.classList.remove('hidden');
             }
 
+            // Update dropdown button (new widget-style UI)
+            const btnIcon = document.getElementById('cpChainBtnIcon');
+            const btnName = document.getElementById('cpChainBtnName');
+            if (btnIcon) btnIcon.src = getChainIcon(chainKey);
+            if (btnName) btnName.textContent = CHAIN_CONFIG[chainKey]?.chainName || chainKey;
+            // Update hidden radio
+            const hiddenRadio = document.querySelector('input[name="chain"]');
+            if (hiddenRadio) hiddenRadio.value = chainKey;
+            // Repopulate token dropdown for this chain
+            cpRenderTokensForChain(chainKey);
+
             // Update pay button state (enabled only if wallet also connected)
             updatePayButtonState();
-
-            // Select first token of this chain by default
-            const config = CHAIN_CONFIG[chainKey];
-            if (config && config.tokens) {
-                const firstToken = Object.keys(config.tokens)[0];
-                selectToken(chainKey, firstToken);
-            }
 
             console.log('Selected chain:', chainKey);
         }
@@ -1616,7 +1674,13 @@
         async function selectToken(chainKey, tokenSymbol) {
             selectedToken = tokenSymbol;
 
-            // Update radio button
+            // Update token dropdown UI
+            const btnIcon = document.getElementById('cpTokenBtnIcon');
+            const btnName = document.getElementById('cpTokenBtnName');
+            if (btnIcon) btnIcon.src = getTokenIcon(tokenSymbol);
+            if (btnName) btnName.textContent = tokenSymbol;
+
+            // Update radio button (legacy)
             const radio = document.querySelector(`input[name="token_${chainKey}"][value="${tokenSymbol}"]`);
             if (radio) radio.checked = true;
 
@@ -2525,8 +2589,48 @@
         }
 
         async function populateManualPayment() {
+            // If order is chain-agnostic and no chain picked yet, customer must select one
+            const chainRadio = document.querySelector('input[name="chain"]:checked');
+            if (window._chainPending && !chainRadio?.value) {
+                document.getElementById('cpSenderWallet').placeholder = 'Select a chain above first';
+                cpSetStep(1);
+                return;
+            }
+
+            // If order is chain-agnostic AND a chain is now selected, lock it on the order
+            if (window._chainPending && chainRadio?.value && window.currentOrderId) {
+                const pickedChain = chainRadio.value;
+                const pickedToken = selectedToken || 'USDC';
+                try {
+                    const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chain: pickedChain, token: pickedToken }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        window._orderChain = pickedChain;
+                        window.merchantPaymentAddress = data.paymentAddress;
+                        window._chainPending = false;
+                        // Update Order Summary
+                        const chainRow = document.getElementById('summaryChainRow');
+                        const chainLabel = document.getElementById('summaryChainName');
+                        if (chainRow && chainLabel) {
+                            chainLabel.textContent = (CHAIN_DISPLAY_NAMES[pickedChain] || pickedChain);
+                            chainRow.classList.remove('hidden');
+                        }
+                    } else {
+                        showError(data.error || 'Failed to lock chain');
+                        return;
+                    }
+                } catch (err) {
+                    showError('Failed to set chain — please try again');
+                    return;
+                }
+            }
+
             // Get chain context
-            const chainKey = window._orderChain || (document.querySelector('input[name="chain"]:checked')?.value) || currentProduct?.enabledChains?.[0] || null;
+            const chainKey = window._orderChain || chainRadio?.value || currentProduct?.enabledChains?.[0] || null;
             const config = chainKey ? CHAIN_CONFIG[chainKey] : null;
             const placeholder = config?.type === 'solana' ? 'Solana address (base58)'
                 : config?.type === 'tron' ? 'TRON address (T...)'

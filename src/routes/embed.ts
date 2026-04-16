@@ -23,7 +23,7 @@ router.use((req, res, next) => {
 const checkoutSchema = z.object({
   merchantId: z.string().min(1),
   amount: z.number().positive(),
-  chain: z.string().min(1),
+  chain: z.string().min(1).optional(),  // Optional: omit to let customer pick from merchant's active chains
   token: z.enum(['USDC', 'USDT', 'EURC']).default('USDC'),
   customerEmail: z.string().email().optional().or(z.literal('')),
   customerName: z.string().optional(),
@@ -99,14 +99,18 @@ router.post('/checkout', rateLimit({
 }), async (req, res) => {
   try {
     const data = checkoutSchema.parse(req.body);
+    const chainAgnostic = !data.chain;
 
-    // Verify merchant
+    // Verify merchant — if chain-agnostic, fetch ALL active wallets for placeholder
     const merchant = await db.merchant.findUnique({
       where: { id: data.merchantId },
       include: {
         wallets: {
-          where: { chain: data.chain as any, isActive: true },
-          take: 1
+          where: chainAgnostic
+            ? { isActive: true }
+            : { chain: data.chain as any, isActive: true },
+          orderBy: { priority: 'asc' },
+          take: chainAgnostic ? undefined : 1,
         }
       }
     });
@@ -126,23 +130,27 @@ router.post('/checkout', rateLimit({
     if (!wallet) {
       return res.status(400).json({
         error: 'No wallet configured',
-        message: `Merchant has no wallet for ${data.chain}`
+        message: chainAgnostic
+          ? 'Merchant has no active wallets configured'
+          : `Merchant has no wallet for ${data.chain}`
       });
     }
 
-    // Enforce token: must be in the wallet's supportedTokens (defaults to USDC if empty)
-    const supportedTokens = (wallet.supportedTokens && wallet.supportedTokens.length > 0)
-      ? wallet.supportedTokens
-      : ['USDC'];
-    if (!supportedTokens.includes(data.token)) {
-      return res.status(400).json({
-        error: 'Token not supported',
-        message: `Merchant does not accept ${data.token} on ${data.chain}. Supported: ${supportedTokens.join(', ')}`
-      });
+    // Enforce token only when chain is locked (chain-agnostic orders re-validate at chain selection)
+    if (!chainAgnostic) {
+      const supportedTokens = (wallet.supportedTokens && wallet.supportedTokens.length > 0)
+        ? wallet.supportedTokens
+        : ['USDC'];
+      if (!supportedTokens.includes(data.token)) {
+        return res.status(400).json({
+          error: 'Token not supported',
+          message: `Merchant does not accept ${data.token} on ${data.chain}. Supported: ${supportedTokens.join(', ')}`
+        });
+      }
     }
 
-    // Enforce payment link chain restriction (if linkId provided)
-    if (data.linkId) {
+    // Enforce payment link chain restriction (if linkId provided + chain locked)
+    if (data.linkId && data.chain) {
       const link = await db.paymentLink.findUnique({
         where: { id: data.linkId },
         select: { chains: true, isActive: true, token: true },
@@ -165,7 +173,6 @@ router.post('/checkout', rateLimit({
 
     // Create order
     // Cancel any existing pending orders for this merchant + customer wallet combo
-    // Prevents duplicate order matching confusion
     if (data.customerWallet) {
       await db.order.updateMany({
         where: {
@@ -177,12 +184,19 @@ router.post('/checkout', rateLimit({
       });
     }
 
+    // For chain-agnostic orders: store first wallet as placeholder + flag in metadata
+    // The customer picks the chain on /checkout, then PATCHes the order via /order/:id/chain
+    const baseMetadata = data.metadata || {};
+    const finalMetadata: any = { ...baseMetadata };
+    if (data.returnUrl) finalMetadata._returnUrl = data.returnUrl;
+    if (chainAgnostic) finalMetadata._chainAgnostic = true;
+
     const order = await db.order.create({
       data: {
         merchantId: data.merchantId,
         amount: data.amount,
         token: data.token,
-        chain: data.chain as any,
+        chain: (data.chain || wallet.chain) as any,
         customerEmail: data.customerEmail || null,
         customerName: data.customerName || data.productName || null,
         paymentAddress: wallet.address,
@@ -190,9 +204,7 @@ router.post('/checkout', rateLimit({
         paymentMethod: data.paymentMethod || null,
         source: data.source || 'EMBED_WIDGET',
         externalId: data.externalId || null,
-        metadata: data.returnUrl
-          ? { ...(data.metadata || {}), _returnUrl: data.returnUrl }
-          : (data.metadata || undefined),
+        metadata: Object.keys(finalMetadata).length > 0 ? finalMetadata : undefined,
         status: 'PENDING',
         expiresAt: new Date(Date.now() + 30 * 60 * 1000)
       }
@@ -200,7 +212,7 @@ router.post('/checkout', rateLimit({
 
     // Rewind scanner for this chain — payment may have landed before order was created
     // (deferred order creation means tx often arrives before we start watching)
-    if (['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'BNB_MAINNET'].includes(data.chain)) {
+    if (data.chain && ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'BNB_MAINNET'].includes(data.chain)) {
       try {
         const chainConfig = await db.chainConfig.findUnique({ where: { chain: data.chain as any } });
         if (chainConfig && chainConfig.lastScannedBlock) {
@@ -306,12 +318,27 @@ router.get('/order/:orderId', async (req, res) => {
     };
 
     const md = (order.metadata as any) || {};
+    const isChainAgnostic = md._chainAgnostic === true;
+
+    // For chain-agnostic orders, fetch all merchant's active wallets so frontend can show selector
+    let availableChains: any[] = [];
+    if (isChainAgnostic && order.merchantId) {
+      const wallets = await db.merchantWallet.findMany({
+        where: { merchantId: order.merchantId, isActive: true },
+        orderBy: { priority: 'asc' },
+        select: { chain: true, address: true, supportedTokens: true },
+      });
+      availableChains = wallets;
+    }
+
     res.json({
       id: order.id,
       status: order.status,
       amount: Number(order.amount),
       token: order.token,
       chain: order.chain,
+      chainAgnostic: isChainAgnostic,
+      availableChains, // populated only when chainAgnostic is true
       paymentAddress: order.paymentAddress,
       merchantId: order.merchantId,
       merchantName: order.merchant?.companyName || null,
@@ -326,6 +353,68 @@ router.get('/order/:orderId', async (req, res) => {
     });
   } catch (error) {
     console.error('Get embed order error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Set chain + token on a chain-agnostic order (created without `chain`)
+ * Updates the order's chain, token, and paymentAddress to the merchant's wallet for that chain
+ * Only allowed for PENDING orders flagged as chainAgnostic
+ */
+router.post('/order/:orderId/chain', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { chain, token } = req.body;
+    if (!chain) return res.status(400).json({ error: 'chain required' });
+
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      select: { status: true, merchantId: true, metadata: true, amount: true, token: true },
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status !== 'PENDING') return res.status(400).json({ error: `Order status is ${order.status}` });
+    if (!order.merchantId) return res.status(400).json({ error: 'Order has no merchant' });
+
+    const md = (order.metadata as any) || {};
+    if (md._chainAgnostic !== true) {
+      return res.status(400).json({ error: 'Order chain is already locked' });
+    }
+
+    // Find merchant's wallet for the requested chain
+    const wallet = await db.merchantWallet.findFirst({
+      where: { merchantId: order.merchantId, chain, isActive: true },
+    });
+    if (!wallet) {
+      return res.status(400).json({ error: `Merchant has no active wallet for ${chain}` });
+    }
+
+    // Validate token
+    const requestedToken = token || order.token || 'USDC';
+    const supported = wallet.supportedTokens?.length ? wallet.supportedTokens : ['USDC'];
+    if (!supported.includes(requestedToken)) {
+      return res.status(400).json({
+        error: 'Token not supported',
+        message: `Merchant does not accept ${requestedToken} on ${chain}. Supported: ${supported.join(', ')}`
+      });
+    }
+
+    // Patch order: set chain + token + paymentAddress, clear the chainAgnostic flag
+    const newMetadata: any = { ...md };
+    delete newMetadata._chainAgnostic;
+    await db.order.update({
+      where: { id: orderId },
+      data: {
+        chain: chain as any,
+        token: requestedToken,
+        paymentAddress: wallet.address,
+        metadata: Object.keys(newMetadata).length > 0 ? newMetadata : undefined,
+      },
+    });
+
+    res.json({ success: true, chain, token: requestedToken, paymentAddress: wallet.address });
+  } catch (error) {
+    console.error('Set order chain error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
