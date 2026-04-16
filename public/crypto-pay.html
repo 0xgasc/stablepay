@@ -2229,11 +2229,50 @@
             if (method === 'qr' || method === 'copy') populateManualPayment();
         }
 
-        function populateManualPayment() {
+        async function populateManualPayment() {
             const params = new URLSearchParams(window.location.search);
-            const addr = window.merchantPaymentAddress || params.get('paymentAddress') || '';
-            const amount = params.get('amount') || '0';
+            let addr = window.merchantPaymentAddress || params.get('paymentAddress') || '';
+            const amount = params.get('amount') || (currentProduct?.price?.toString() || '0');
             const token = params.get('token') || 'USDC';
+
+            // If no order exists yet (e.g. arrived via payment link), create one now
+            // so the scanner has something to match against
+            if (!window.currentOrderId && currentProduct?.merchantId) {
+                const chainRadio = document.querySelector('input[name="chain"]:checked');
+                const chainKey = chainRadio?.value || currentProduct.enabledChains?.[0] || null;
+                if (!chainKey) {
+                    document.getElementById('cpCopyAddress').textContent = 'Select a chain first';
+                    document.getElementById('cpQRAddress').textContent = 'Select a chain first';
+                    return;
+                }
+                {
+                    try {
+                        document.getElementById('cpCopyAddress').textContent = 'Creating order...';
+                        document.getElementById('cpQRAddress').textContent = 'Creating order...';
+                        const res = await fetch('/api/embed/checkout', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                merchantId: currentProduct.merchantId,
+                                amount: parseFloat(amount),
+                                chain: chainKey,
+                                token,
+                                productName: currentProduct.name,
+                                paymentMethod: 'MANUAL_SEND',
+                                source: 'CHECKOUT_LINK',
+                            }),
+                        });
+                        const data = await res.json();
+                        if (data.success && data.order) {
+                            window.currentOrderId = data.order.id;
+                            window.merchantPaymentAddress = data.order.paymentAddress;
+                            addr = data.order.paymentAddress;
+                        }
+                    } catch (err) {
+                        console.error('Failed to create order for manual payment:', err);
+                    }
+                }
+            }
 
             document.getElementById('cpQRAddress').textContent = addr;
             document.getElementById('cpCopyAddress').textContent = addr;
