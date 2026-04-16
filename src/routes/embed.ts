@@ -53,7 +53,7 @@ router.get('/chains', async (req, res) => {
     const merchant = await db.merchant.findUnique({
       where: { id: merchantId as string },
       select: {
-        id: true, isActive: true, isSuspended: true, companyName: true, plan: true, widgetConfig: true,
+        id: true, isActive: true, isSuspended: true, companyName: true, plan: true, widgetConfig: true, website: true,
         wallets: {
           where: { isActive: true },
           orderBy: { priority: 'asc' },
@@ -78,6 +78,7 @@ router.get('/chains', async (req, res) => {
     res.json({
       merchantId,
       merchantName: merchant.companyName,
+      merchantWebsite: merchant.website || null,
       chains: merchant.wallets.map(w => w.chain),
       wallets: merchant.wallets,
       widgetConfig,
@@ -289,7 +290,7 @@ router.get('/order/:orderId', async (req, res) => {
           orderBy: { createdAt: 'desc' }
         },
         merchant: {
-          select: { companyName: true, plan: true, widgetConfig: true }
+          select: { companyName: true, plan: true, widgetConfig: true, website: true }
         }
       }
     });
@@ -342,6 +343,7 @@ router.get('/order/:orderId', async (req, res) => {
       paymentAddress: order.paymentAddress,
       merchantId: order.merchantId,
       merchantName: order.merchant?.companyName || null,
+      merchantWebsite: order.merchant?.website || null,
       widgetConfig,
       productName: order.customerName, // productName is stored in customerName when set via embed
       customerEmail: order.customerEmail,

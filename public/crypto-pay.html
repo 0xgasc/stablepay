@@ -1322,8 +1322,11 @@
 
                     console.log('Order loaded:', orderData);
 
-                    // Stash returnUrl from API for goBack() to use
+                    // Stash returnUrl + merchant website for goBack() to use
                     if (orderData.returnUrl) window._orderReturnUrl = orderData.returnUrl;
+                    if (orderData.merchantWebsite) window._merchantWebsite = orderData.merchantWebsite;
+                    if (orderData.merchantName) window._merchantName = orderData.merchantName;
+                    updateBackButtonLabel();
 
                     // Apply merchant branding (logo, colors, theme, button text, footer)
                     applyBranding(orderData.widgetConfig, orderData.merchantName);
@@ -1430,6 +1433,11 @@
 
                 // Apply merchant branding (logo, colors, theme, button text, footer)
                 applyBranding(merchantData.widgetConfig, merchantData.merchantName);
+
+                // Stash for goBack()
+                if (merchantData.merchantWebsite) window._merchantWebsite = merchantData.merchantWebsite;
+                if (merchantData.merchantName) window._merchantName = merchantData.merchantName;
+                updateBackButtonLabel();
 
                 if (merchantData.wallets && merchantData.wallets.length > 0) {
                     // Only show chains the merchant has configured
@@ -1716,7 +1724,7 @@
 
         // Go back to store
         function goBack() {
-            // Priority: URL returnUrl > order returnUrl from API > referrer > history > fallback
+            // Priority: URL returnUrl > order returnUrl from API > referrer > merchant website > history > /
             const params = new URLSearchParams(window.location.search);
             const returnUrl = params.get('returnUrl') || params.get('cancelUrl');
             if (returnUrl) {
@@ -1732,6 +1740,13 @@
                 window.location.href = document.referrer;
                 return;
             }
+            // Fall back to merchant's website (from their merchant profile)
+            if (window._merchantWebsite) {
+                let url = window._merchantWebsite;
+                if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+                window.location.href = url;
+                return;
+            }
             // Try history back
             if (window.history.length > 1) {
                 window.history.back();
@@ -1739,6 +1754,24 @@
             }
             // Last resort
             window.location.href = '/';
+        }
+
+        // After merchant data loads, update back button label to reflect destination
+        function updateBackButtonLabel() {
+            const btn = document.getElementById('backBtn');
+            if (!btn) return;
+            const params = new URLSearchParams(window.location.search);
+            const hasExplicitReturn = params.get('returnUrl') || params.get('cancelUrl') || window._orderReturnUrl;
+            if (hasExplicitReturn) {
+                btn.textContent = '← BACK';
+            } else if (window._merchantName) {
+                btn.textContent = '← BACK TO ' + window._merchantName.toUpperCase();
+            } else if (window._merchantWebsite) {
+                btn.textContent = '← BACK TO STORE';
+            } else {
+                // No clear destination — hide button rather than confuse customer
+                btn.style.display = 'none';
+            }
         }
 
         // Connect Wallet - shows modal for wallet selection
