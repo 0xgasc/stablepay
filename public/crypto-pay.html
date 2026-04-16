@@ -1249,15 +1249,22 @@
             const cfg = widgetConfig || {};
             const root = document.documentElement;
 
-            // Brand name + logo in nav
-            if (merchantName) {
-                document.getElementById('mcBrandName').textContent = merchantName;
-                document.title = merchantName + ' — Checkout';
+            // Brand name + logo in nav: displayName overrides legal companyName if set
+            const brand = cfg.displayName || merchantName;
+            if (brand) {
+                document.getElementById('mcBrandName').textContent = brand;
+                document.title = brand + ' — Checkout';
+                // Stash for back button label
+                window._merchantDisplayName = brand;
+            }
+            // Stash custom back button label if merchant set one
+            if (cfg.backButtonText) {
+                window._merchantBackButtonText = cfg.backButtonText;
             }
             if (cfg.logoUrl) {
                 const logo = document.getElementById('mcLogo');
                 logo.src = cfg.logoUrl;
-                logo.alt = merchantName || 'Logo';
+                logo.alt = brand || 'Logo';
                 logo.classList.remove('hidden');
             }
 
@@ -1818,14 +1825,26 @@
             if (!btn) return;
             const params = new URLSearchParams(window.location.search);
             const hasExplicitReturn = params.get('returnUrl') || params.get('cancelUrl') || window._orderReturnUrl;
+
+            // Priority: merchant's custom backButtonText > displayName-based > legal name > "STORE"
+            if (window._merchantBackButtonText) {
+                btn.textContent = window._merchantBackButtonText;
+                btn.style.display = '';
+                return;
+            }
             if (hasExplicitReturn) {
                 btn.textContent = '← BACK';
-            } else if (window._merchantName) {
-                btn.textContent = '← BACK TO ' + window._merchantName.toUpperCase();
+                btn.style.display = '';
+                return;
+            }
+            const brand = window._merchantDisplayName || window._merchantName;
+            if (brand) {
+                btn.textContent = '← BACK TO ' + brand.toUpperCase();
+                btn.style.display = '';
             } else if (window._merchantWebsite) {
                 btn.textContent = '← BACK TO STORE';
+                btn.style.display = '';
             } else {
-                // No clear destination — hide button rather than confuse customer
                 btn.style.display = 'none';
             }
         }

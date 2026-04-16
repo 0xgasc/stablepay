@@ -1779,12 +1779,22 @@ onMounted(() => {
                                         </select>
                                     </div>
                                     <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Display Name <span class="text-slate-500">(optional, shown in header)</span></label>
+                                        <input type="text" id="wcDisplayName" placeholder="Your Store Name" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800 text-sm">
+                                        <div class="text-[10px] text-slate-500 mt-1">Defaults to your company name. Used in checkout page header instead of your legal name.</div>
+                                    </div>
+                                    <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Logo URL <span class="text-slate-500">(optional)</span></label>
                                         <input type="text" id="wcLogoUrl" placeholder="https://yoursite.com/logo.png" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800 text-sm">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Button Text <span class="text-slate-500">(optional)</span></label>
                                         <input type="text" id="wcButtonText" placeholder="Pay Now" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-2">Back Button Text <span class="text-slate-500">(optional)</span></label>
+                                        <input type="text" id="wcBackButtonText" placeholder="← Back to Store" onchange="updateWidgetPreview()" class="w-full px-3 py-2 bg-black text-white border border-slate-800 text-sm">
+                                        <div class="text-[10px] text-slate-500 mt-1">Defaults to "← Back to {Display Name}". Only used on checkout pages.</div>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-2">Font Family <span class="text-slate-500">(optional)</span></label>
@@ -5765,6 +5775,8 @@ onMounted(() => {
                     if (wc.buttonText) document.getElementById('wcButtonText').value = wc.buttonText;
                     if (wc.fontFamily) document.getElementById('wcFontFamily').value = wc.fontFamily;
                     if (wc.hideFooter) document.getElementById('wcHideFooter').checked = true;
+                    if (wc.displayName) document.getElementById('wcDisplayName').value = wc.displayName;
+                    if (wc.backButtonText) document.getElementById('wcBackButtonText').value = wc.backButtonText;
                     updateWidgetPreview();
                 }
             } catch (err) {
@@ -5787,6 +5799,8 @@ onMounted(() => {
                 buttonText: document.getElementById('wcButtonText')?.value || '',
                 fontFamily: document.getElementById('wcFontFamily')?.value || '',
                 hideFooter: document.getElementById('wcHideFooter')?.checked || false,
+                displayName: document.getElementById('wcDisplayName')?.value || '',
+                backButtonText: document.getElementById('wcBackButtonText')?.value || '',
             };
 
             // Remove empty values
