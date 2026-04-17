@@ -28,73 +28,75 @@ const RETRY_DELAYS = [60, 300, 900, 3600, 7200]; // 1m, 5m, 15m, 1h, 2h in secon
 
 class WebhookService {
   /**
-   * Generate HMAC signature for webhook payload
+   * Generate HMAC signature for webhook payload.
+   *
+   * Signs `<timestamp>.<body>` (Stripe-style) so the signature is bound to the timestamp header.
+   * Replaying the same payload with a shifted timestamp will fail verification, and merchants
+   * that enforce a 5-minute timestamp tolerance get full replay protection.
    */
-  private generateSignature(payload: string, secret: string): string {
+  private generateSignature(payload: string, secret: string, timestamp: string): string {
     return crypto
       .createHmac('sha256', secret)
-      .update(payload)
+      .update(`${timestamp}.${payload}`)
       .digest('hex');
   }
 
   /**
-   * Send webhook to merchant
+   * Send webhook. When `opts.storeId` is provided AND the store has a webhook URL configured,
+   * delivery is scoped to the store (its URL, secret, enabled flag, and events subscription).
+   * Otherwise falls back to merchant-level config. Store webhooks are isolated — a store with
+   * `webhookEnabled=false` suppresses delivery even if merchant-level is enabled.
    */
   async sendWebhook(
     merchantId: string,
     event: WebhookEventType,
-    data: Record<string, any>
+    data: Record<string, any>,
+    opts?: { storeId?: string | null }
   ): Promise<void> {
     try {
-      // Get merchant webhook config
-      const merchant = await db.merchant.findUnique({
-        where: { id: merchantId },
-        select: {
-          webhookUrl: true,
-          webhookSecret: true,
-          webhookEnabled: true,
-          webhookEvents: true,
-        },
-      });
+      const { resolveWebhookTarget } = await import('./storeResolver');
+      const target = await resolveWebhookTarget(merchantId, opts?.storeId ?? null);
 
-      if (!merchant?.webhookEnabled || !merchant.webhookUrl) {
-        logger.debug('Webhook not configured or disabled', { merchantId, event });
+      if (!target || !target.enabled) {
+        logger.debug('Webhook not configured or disabled', { merchantId, storeId: opts?.storeId, event });
         return;
       }
 
-      // Check if merchant subscribes to this event
-      if (merchant.webhookEvents.length > 0 && !merchant.webhookEvents.includes(event)) {
-        logger.debug('Merchant not subscribed to event', { merchantId, event });
+      // Subscription filter
+      if (target.events.length > 0 && !target.events.includes(event)) {
+        logger.debug('Not subscribed to event', { merchantId, storeId: opts?.storeId, event });
         return;
       }
 
+      const timestamp = new Date().toISOString();
       const payload: WebhookPayload = {
         event,
-        timestamp: new Date().toISOString(),
+        timestamp,
         data,
       };
 
       const payloadString = JSON.stringify(payload);
-      const signature = this.generateSignature(payloadString, merchant.webhookSecret || '');
+      const signature = this.generateSignature(payloadString, target.secret, timestamp);
 
-      // Create log entry
+      // Create log entry (storeId column nullable — legacy merchant-level webhooks leave it null)
       const log = await db.webhookLog.create({
         data: {
           merchantId,
+          storeId: target.source === 'store' ? (opts?.storeId ?? null) : null,
           event,
           payload: payload as any,
-          url: merchant.webhookUrl,
+          url: target.url,
           attempts: 1,
         },
       });
 
       // Attempt delivery (fire-and-forget, don't block main flow)
-      this.deliverWebhook(log.id, merchant.webhookUrl, payloadString, signature, merchantId).catch(err => {
-        logger.error('Webhook delivery error', err as Error, { logId: log.id, merchantId, event });
+      this.deliverWebhook(log.id, target.url, payloadString, signature, timestamp, merchantId).catch(err => {
+        logger.error('Webhook delivery error', err as Error, { logId: log.id, merchantId, storeId: opts?.storeId, event });
       });
 
     } catch (error) {
-      logger.error('Failed to send webhook', error as Error, { merchantId, event });
+      logger.error('Failed to send webhook', error as Error, { merchantId, storeId: opts?.storeId, event });
     }
   }
 
@@ -106,6 +108,7 @@ class WebhookService {
     url: string,
     payload: string,
     signature: string,
+    timestamp: string,
     merchantId?: string
   ): Promise<boolean> {
     try {
@@ -117,7 +120,8 @@ class WebhookService {
         headers: {
           'Content-Type': 'application/json',
           'X-StablePay-Signature': signature,
-          'X-StablePay-Timestamp': new Date().toISOString(),
+          'X-StablePay-Timestamp': timestamp,
+          'X-StablePay-Idempotency-Key': logId,
         },
         body: payload,
         signal: controller.signal,
@@ -255,6 +259,14 @@ class WebhookService {
             webhookSecret: true,
           },
         },
+        store: {
+          select: {
+            webhookUrl: true,
+            webhookSecret: true,
+            webhookEnabled: true,
+            isArchived: true,
+          },
+        },
       },
       take: 100,
     });
@@ -262,15 +274,30 @@ class WebhookService {
     let processed = 0;
 
     for (const log of pendingRetries) {
-      if (!log.merchant.webhookUrl) continue;
+      // Resolve target at retry time so rotated store secrets apply to in-flight retries.
+      // Store takes precedence if the log was originally store-scoped and the store still has
+      // a URL. If the store was archived mid-flight, we fall back to merchant so delivery can
+      // still complete (it's safer to deliver to the previous "parent" URL than to abandon).
+      let url: string;
+      let secret: string;
+      if (log.storeId && log.store?.webhookUrl && !log.store.isArchived && log.store.webhookEnabled) {
+        url = log.store.webhookUrl;
+        secret = log.store.webhookSecret;
+      } else if (log.merchant.webhookUrl) {
+        url = log.merchant.webhookUrl;
+        secret = log.merchant.webhookSecret || '';
+      } else {
+        continue;
+      }
 
       const payloadString = JSON.stringify(log.payload);
-      const signature = this.generateSignature(
-        payloadString,
-        log.merchant.webhookSecret || ''
-      );
+      // Retries use the ORIGINAL payload timestamp so the signature stays valid across
+      // attempts. Merchants enforcing a replay window will reject if too old — that's correct
+      // behavior for a stuck/dead endpoint.
+      const timestamp = (log.payload as any)?.timestamp || log.createdAt.toISOString();
+      const signature = this.generateSignature(payloadString, secret, timestamp);
 
-      await this.deliverWebhook(log.id, log.merchant.webhookUrl, payloadString, signature);
+      await this.deliverWebhook(log.id, url, payloadString, signature, timestamp);
       processed++;
     }
 
@@ -318,10 +345,23 @@ class WebhookService {
       webhookEnabled?: boolean;
       webhookEvents?: string[];
     }
-  ): Promise<{ webhookUrl: string | null; webhookEnabled: boolean; webhookEvents: string[] }> {
+  ): Promise<{ webhookUrl: string | null; webhookEnabled: boolean; webhookEvents: string[]; webhookSecret?: string; secretGenerated?: boolean }> {
     // Validate URL if provided
     if (config.webhookUrl && !config.webhookUrl.startsWith('https://')) {
       throw new Error('Webhook URL must use HTTPS');
+    }
+
+    // Auto-generate a secret the first time a merchant configures a URL, so signature verification
+    // is never a silent null. Returned exactly once in the response — the dashboard should surface it
+    // prominently with a "copy to clipboard" button and a warning that it won't be shown again.
+    // (Learned the hard way — see LEARNINGS.md, 2026-04-17.)
+    const existing = await db.merchant.findUnique({
+      where: { id: merchantId },
+      select: { webhookSecret: true },
+    });
+    let newSecret: string | undefined;
+    if (config.webhookUrl && !existing?.webhookSecret) {
+      newSecret = crypto.randomBytes(32).toString('hex');
     }
 
     const updated = await db.merchant.update({
@@ -330,6 +370,7 @@ class WebhookService {
         webhookUrl: config.webhookUrl,
         webhookEnabled: config.webhookEnabled,
         webhookEvents: config.webhookEvents,
+        ...(newSecret && { webhookSecret: newSecret }),
       },
       select: {
         webhookUrl: true,
@@ -338,9 +379,16 @@ class WebhookService {
       },
     });
 
-    logger.info('Webhook config updated', { merchantId, event: 'webhook.config_updated' });
+    logger.info('Webhook config updated', {
+      merchantId,
+      secretGenerated: !!newSecret,
+      event: 'webhook.config_updated',
+    });
 
-    return updated;
+    return {
+      ...updated,
+      ...(newSecret && { webhookSecret: newSecret, secretGenerated: true }),
+    };
   }
 
   /**

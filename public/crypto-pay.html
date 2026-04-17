@@ -1427,8 +1427,35 @@
                     if (orderData.merchantName) window._merchantName = orderData.merchantName;
                     updateBackButtonLabel();
 
-                    // Apply merchant branding (logo, colors, theme, button text, footer)
-                    applyBranding(orderData.widgetConfig, orderData.merchantName);
+                    // If the order is scoped to a store, pull branding directly from the public
+                    // store endpoint — server-side already merges into orderData, but this keeps
+                    // display fields visible even if the API response gets cached for staleness.
+                    let brandingConfig = orderData.widgetConfig;
+                    let brandingName = orderData.merchantName;
+                    if (orderData.storeId) {
+                        try {
+                            const storeRes = await fetch('/api/embed/store/' + orderData.storeId);
+                            if (storeRes.ok) {
+                                const store = await storeRes.json();
+                                brandingName = store.displayName || store.name || brandingName;
+                                // Flatten store fields into widgetConfig shape applyBranding expects
+                                brandingConfig = Object.assign({}, store.widgetConfig || {}, {
+                                    displayName: store.displayName,
+                                    logoUrl: store.logoUrl,
+                                    headerColor: store.headerColor,
+                                    headerTextColor: store.headerTextColor,
+                                    backButtonText: store.backButtonText,
+                                });
+                                if (store.website) window._merchantWebsite = store.website;
+                                if (brandingName) window._merchantName = brandingName;
+                                updateBackButtonLabel();
+                            }
+                        } catch (e) { /* fall back to merchant branding */ }
+                    }
+
+                    // Apply branding (logo, colors, theme, button text, footer) — store fully
+                    // replaces merchant when storeId present.
+                    applyBranding(brandingConfig, brandingName);
 
                     if (orderData.chainAgnostic && orderData.availableChains?.length) {
                         // Chain not locked yet — show chain selector with merchant's active chains
@@ -1917,6 +1944,14 @@
             if (!btn) return;
             const params = new URLSearchParams(window.location.search);
             const hasExplicitReturn = params.get('returnUrl') || params.get('cancelUrl') || window._orderReturnUrl;
+
+            // Query-param override wins over merchant default (payment links pass this through).
+            const queryBackText = params.get('backButtonText');
+            if (queryBackText) {
+                btn.textContent = queryBackText;
+                btn.style.display = '';
+                return;
+            }
 
             // Priority: merchant's custom backButtonText > displayName-based > legal name > "STORE"
             if (window._merchantBackButtonText) {
@@ -2586,12 +2621,30 @@
             document.getElementById('receiptBtnSlot').innerHTML = '';
             document.getElementById('historyBtnSlot').innerHTML = '';
 
-            // Show payment history link if wallet is connected
-            if (connectedAddress) {
-                document.getElementById('historyBtnSlot').innerHTML = `<a href="/history?wallet=${encodeURIComponent(connectedAddress)}" target="_blank"
+            // Payment history: prefer live connected wallet, fall back to customerWallet recorded on the
+            // order, then the paying transaction's fromAddress. This keeps the link visible even if the
+            // customer disconnects the wallet before reaching the success screen.
+            const historyWallet = connectedAddress
+                || (typeof cpCurrentOrderId !== 'undefined' && window.cpOrderCache && window.cpOrderCache.customerWallet)
+                || (typeof cpCurrentOrderId !== 'undefined' && window.cpOrderCache && window.cpOrderCache.transactions && window.cpOrderCache.transactions[0] && window.cpOrderCache.transactions[0].fromAddress)
+                || null;
+            if (historyWallet) {
+                document.getElementById('historyBtnSlot').innerHTML = `<a href="/history?wallet=${encodeURIComponent(historyWallet)}" target="_blank"
+                    aria-label="View payment history for this wallet"
                     class="block w-full px-6 py-3 font-bold tracking-wide text-gray-500 mb-4 text-center"
                     style="text-transform: uppercase; text-decoration: none; font-size: 12px; border: 3px solid #e2e8f0;">
                     Payment History
+                </a>`;
+            }
+
+            // Receipt link: always render, always points at the server-side /receipt/:orderId page
+            // which creates-on-read if the receipt doesn't exist yet. No polling / retry flicker.
+            if (orderId) {
+                document.getElementById('receiptBtnSlot').innerHTML = `<a href="/receipt/${encodeURIComponent(orderId)}" target="_blank"
+                    aria-label="View receipt for this payment"
+                    class="block w-full px-6 py-4 font-bold tracking-wide btn-brutal text-white mb-4"
+                    style="text-transform: uppercase; background: #000; text-decoration: none;">
+                    VIEW RECEIPT
                 </a>`;
             }
 
@@ -2600,28 +2653,6 @@
 
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
-
-            // Async: check if receipt exists before showing button
-            if (orderId) {
-                const checkReceipt = async (attempts) => {
-                    try {
-                        const res = await fetch(`/api/receipts/for-order/${orderId}`);
-                        if (res.ok) {
-                            const slot = document.getElementById('receiptBtnSlot');
-                            if (slot) slot.innerHTML = `<a href="/receipt/${orderId}" target="_blank"
-                                class="block w-full px-6 py-4 font-bold tracking-wide btn-brutal text-white mb-4"
-                                style="text-transform: uppercase; background: #000; text-decoration: none;">
-                                VIEW RECEIPT
-                            </a>`;
-                        } else if (attempts < 3) {
-                            setTimeout(() => checkReceipt(attempts + 1), 3000);
-                        }
-                    } catch (e) {
-                        if (attempts < 3) setTimeout(() => checkReceipt(attempts + 1), 3000);
-                    }
-                };
-                setTimeout(() => checkReceipt(0), 2000);
-            }
         }
 
         // Buy again - reload the same product
@@ -3171,6 +3202,9 @@
                 if (elapsed > 45000) {
                     document.getElementById('cpManualTxBox').classList.remove('hidden');
                     if (timerEl) timerEl.textContent = 'Pasting your TX below speeds this up';
+                } else {
+                    const secsLeft = Math.max(1, Math.ceil((45000 - elapsed) / 1000));
+                    if (timerEl) timerEl.textContent = `Manual TX paste unlocks in ${secsLeft}s`;
                 }
                 if (elapsed > TIMEOUT_MS) {
                     if (statusEl) statusEl.textContent = 'Still scanning...';
@@ -3183,6 +3217,8 @@
                 try {
                     const res = await fetch('/api/embed/order/' + window.currentOrderId);
                     const data = await res.json();
+                    // Cache so the success screen can pull customerWallet / tx.fromAddress as history fallback
+                    window.cpOrderCache = data;
                     if (data.status === 'CONFIRMED') {
                         clearInterval(window._cpPolling); window._cpPolling = null;
                         clearInterval(window._cpProgressTimer); window._cpProgressTimer = null;

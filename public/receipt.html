@@ -112,6 +112,7 @@
                         ${explorerUrl ? `<a href="${explorerUrl}" target="_blank" class="btn btn-primary">View on Explorer</a>` : ''}
                         <a href="${BASE_URL}/api/receipts/${r.id}/pdf" class="btn btn-secondary">Download PDF</a>
                     </div>
+                    ${order.customerWallet ? `<div style="text-align:center;margin-top:12px;padding:0 24px;"><a href="${BASE_URL}/history?wallet=${encodeURIComponent(order.customerWallet)}" style="font-size:12px;color:#64748b;text-decoration:underline;">View all your orders</a></div>` : ''}
                     <div class="footer">Powered by <strong>StablePay</strong></div>
                 `;
 

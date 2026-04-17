@@ -107,6 +107,57 @@ router.get('/for-order/:orderId', async (req, res) => {
   }
 });
 
+// Public: customer self-service receipt email (rate-limited 3/hr per order).
+// Sends the receipt to whatever email the customer provides — useful when the merchant didn't
+// auto-email and the customer lost the receipt URL.
+router.post('/for-order/:orderId/email', rateLimit({
+  getMerchantId: async () => null,
+  limitAnonymous: true,
+  anonymousLimit: 3,
+}), async (req, res) => {
+  try {
+    const { email } = req.body as { email?: string };
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Valid email address required' });
+    }
+    if (!emailService.isConfigured()) {
+      return res.status(503).json({ error: 'Email service not configured' });
+    }
+
+    let receipt = await db.receipt.findFirst({
+      where: { orderId: req.params.orderId },
+      select: { id: true },
+    });
+    if (!receipt) {
+      const order = await db.order.findUnique({
+        where: { id: req.params.orderId },
+        select: { status: true },
+      });
+      if (order?.status === 'CONFIRMED') {
+        try {
+          const created = await receiptService.createReceipt(req.params.orderId);
+          receipt = { id: created.id };
+        } catch { /* creation failed — return 404 below */ }
+      }
+    }
+    if (!receipt) return res.status(404).json({ error: 'Receipt not available for this order' });
+
+    const sent = await emailService.sendReceipt(receipt.id, email);
+    if (!sent) return res.status(500).json({ error: 'Failed to send email' });
+
+    logger.info('Customer self-service receipt email', {
+      receiptId: receipt.id,
+      orderId: req.params.orderId,
+      to: email,
+      event: 'receipt.self_service_email',
+    });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Self-service receipt email error', error as Error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ============================================
 // PARAMETERIZED ROUTES LAST
 // ============================================

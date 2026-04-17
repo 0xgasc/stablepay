@@ -4,6 +4,8 @@ import { db } from '../config/database';
 import { PRICING_TIERS } from '../config/pricing';
 import { rateLimit } from '../middleware/rateLimit';
 import { requireMerchantAuth, requirePro } from '../middleware/auth';
+import { idempotency } from '../middleware/idempotency';
+import { logAdminAction } from '../utils/audit';
 import { logger } from '../utils/logger';
 import { webhookService } from '../services/webhookService';
 
@@ -228,7 +230,7 @@ router.post('/', rateLimit({
     return null;
   },
   limitAnonymous: false // Don't allow anonymous refund creation
-}), async (req, res) => {
+}), idempotency(), async (req, res) => {
   try {
     const data = createRefundSchema.parse(req.body);
 
@@ -327,7 +329,7 @@ router.post('/', rateLimit({
       event: 'refund.created'
     });
 
-    // Send webhook for refund request
+    // Send webhook for refund request — scoped to the order's store when present.
     if (order.merchantId) {
       webhookService.sendWebhook(order.merchantId, 'refund.requested', {
         refundId: refund.id,
@@ -335,7 +337,7 @@ router.post('/', rateLimit({
         amount: refundAmount,
         reason: data.reason,
         status: refund.status,
-      }).catch(err => {
+      }, { storeId: (order as any).storeId || undefined }).catch(err => {
         logger.error('Failed to send refund.requested webhook', err as Error, { refundId: refund.id });
       });
     }
@@ -387,6 +389,14 @@ router.post('/:refundId/approve', requireMerchantAuth, requirePro('Refunds'), as
     // Get customer wallet from payment transaction
     const paymentTx = updated.order.transactions.find((tx: any) => tx.status === 'CONFIRMED');
 
+    await logAdminAction(req, merchant.email || `merchant:${merchant.id}`, {
+      action: 'refund.approve',
+      resource: 'refund',
+      resourceId: refundId,
+      before: { status: 'PENDING' },
+      after: { status: 'APPROVED', approvedBy: merchant.email || 'MERCHANT' },
+    });
+
     logger.info('Refund approved', {
       refundId,
       approvedBy: merchant.email,
@@ -434,6 +444,15 @@ router.post('/:refundId/reject', requireMerchantAuth, async (req, res) => {
       }
     });
 
+    await logAdminAction(req, merchant.email || `merchant:${merchant.id}`, {
+      action: 'refund.reject',
+      resource: 'refund',
+      resourceId: refundId,
+      before: { status: 'PENDING' },
+      after: { status: 'REJECTED', approvedBy: merchant.email || 'MERCHANT' },
+      reason,
+    });
+
     logger.info('Refund rejected', {
       refundId,
       rejectedBy: merchant.email,
@@ -456,7 +475,7 @@ router.post('/:refundId/reject', requireMerchantAuth, async (req, res) => {
 });
 
 // Process refund - merchant submits tx hash after sending funds
-router.post('/:refundId/process', requireMerchantAuth, async (req, res) => {
+router.post('/:refundId/process', requireMerchantAuth, idempotency(), async (req, res) => {
   try {
     const { refundId } = req.params;
     const { txHash } = req.body;
@@ -528,6 +547,14 @@ router.post('/:refundId/process', requireMerchantAuth, async (req, res) => {
       });
     }
 
+    await logAdminAction(req, merchant.email || `merchant:${merchant.id}`, {
+      action: 'refund.process',
+      resource: 'refund',
+      resourceId: refundId,
+      before: { status: refund.status },
+      after: { status: 'PROCESSED', refundTxHash: txHash },
+    });
+
     logger.info('Refund processed', {
       refundId,
       txHash,
@@ -538,7 +565,7 @@ router.post('/:refundId/process', requireMerchantAuth, async (req, res) => {
       event: 'refund.processed'
     });
 
-    // Send webhook for refund processed
+    // Send webhook for refund processed — scoped to the order's store when present.
     if (order?.merchantId) {
       webhookService.sendWebhook(order.merchantId, 'refund.processed', {
         refundId,
@@ -546,7 +573,7 @@ router.post('/:refundId/process', requireMerchantAuth, async (req, res) => {
         amount: Number(refund.amount),
         txHash,
         processedAt: now.toISOString(),
-      }).catch(err => {
+      }, { storeId: (order as any).storeId || undefined }).catch(err => {
         logger.error('Failed to send refund.processed webhook', err as Error, { refundId });
       });
     }

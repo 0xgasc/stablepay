@@ -64,8 +64,8 @@ enum UserRole {
 
 enum PlanType {
   FREE
-  STARTER    // Legacy — treated as FREE
-  GROWTH     // Legacy — treated as PRO
+  STARTER // Legacy — treated as FREE
+  GROWTH // Legacy — treated as PRO
   PRO
   ENTERPRISE
 
@@ -87,88 +87,93 @@ enum NetworkMode {
 }
 
 model Merchant {
-  id                    String      @id @default(cuid())
-  email                 String      @unique
-  companyName           String
-  contactName           String
-  role                  UserRole    @default(MERCHANT)
-  plan                  PlanType    @default(FREE)
-  paymentMode           PaymentMode @default(DIRECT)
-  networkMode           NetworkMode @default(TESTNET)
-  isActive              Boolean     @default(false)
-  isSuspended           Boolean     @default(false)  // Suspended for unpaid fees
-  suspendedAt           DateTime?
-  setupCompleted        Boolean     @default(false)
-  emailVerified         Boolean     @default(false)
-  emailVerifyToken      String?
-  emailVerifyExpiry     DateTime?
-  passwordHash          String?
-  loginToken            String?     @unique
-  tokenExpiresAt        DateTime?
-  website               String?
-  industry              String?
-  country               String?
-  businessType          String?     // e-commerce, saas, marketplace, freelance, etc.
-  expectedVolume        String?     // <10k, 10k-50k, 50k-250k, 250k+
-  kycStatus             String      @default("PENDING") // PENDING, APPROVED, FLAGGED, REJECTED
-  kycNotes              String?
-  monthly_volume        Decimal?    @db.Decimal(18, 2) @map("monthly_volume")
-  monthlyVolumeUsed     Decimal     @default(0) @db.Decimal(18, 2)
-  monthlyTransactions   Int         @default(0)
-  mainnetVolumeUsed     Decimal     @default(0) @db.Decimal(18, 2)
-  mainnetTransactions   Int         @default(0)
-  testnetVolumeUsed     Decimal     @default(0) @db.Decimal(18, 2)
-  testnetTransactions   Int         @default(0)
-  feesDue               Decimal     @default(0) @db.Decimal(18, 6)  // Running balance of fees owed
-  lastFeeCalculation    DateTime    @default(now())  // When fees were last calculated
-  billingCycleStart     DateTime    @default(now())
-  stripeCustomerId      String?     @unique
-  stripeSubscriptionId  String?     @unique
-  customFeePercent      Decimal?    @db.Decimal(5, 4)  // For enterprise custom rates (e.g., 0.0020 = 0.2%)
-  notes                 String?
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  id                   String      @id @default(cuid())
+  email                String      @unique
+  companyName          String
+  contactName          String
+  role                 UserRole    @default(MERCHANT)
+  plan                 PlanType    @default(FREE)
+  paymentMode          PaymentMode @default(DIRECT)
+  networkMode          NetworkMode @default(TESTNET)
+  isActive             Boolean     @default(false)
+  isSuspended          Boolean     @default(false) // Suspended for unpaid fees
+  suspendedAt          DateTime?
+  setupCompleted       Boolean     @default(false)
+  emailVerified        Boolean     @default(false)
+  emailVerifyToken     String?
+  emailVerifyExpiry    DateTime?
+  passwordHash         String?
+  loginToken           String?     @unique
+  tokenExpiresAt       DateTime?
+  website              String?
+  industry             String?
+  country              String?
+  businessType         String? // e-commerce, saas, marketplace, freelance, etc.
+  expectedVolume       String? // <10k, 10k-50k, 50k-250k, 250k+
+  kycStatus            String      @default("PENDING") // PENDING, APPROVED, FLAGGED, REJECTED
+  kycNotes             String?
+  monthly_volume       Decimal?    @map("monthly_volume") @db.Decimal(18, 2)
+  monthlyVolumeUsed    Decimal     @default(0) @db.Decimal(18, 2)
+  monthlyTransactions  Int         @default(0)
+  mainnetVolumeUsed    Decimal     @default(0) @db.Decimal(18, 2)
+  mainnetTransactions  Int         @default(0)
+  testnetVolumeUsed    Decimal     @default(0) @db.Decimal(18, 2)
+  testnetTransactions  Int         @default(0)
+  feesDue              Decimal     @default(0) @db.Decimal(18, 6) // Running balance of fees owed
+  lastFeeCalculation   DateTime    @default(now()) // When fees were last calculated
+  billingCycleStart    DateTime    @default(now())
+  stripeCustomerId     String?     @unique
+  stripeSubscriptionId String?     @unique
+  customFeePercent     Decimal?    @db.Decimal(5, 4) // For enterprise custom rates (e.g., 0.0020 = 0.2%)
+  notes                String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
 
   // Webhook configuration
-  webhookUrl            String?                    // HTTPS URL for webhook delivery
-  webhookSecret         String?                    // HMAC secret for signing payloads
-  webhookEnabled        Boolean     @default(false)
-  webhookEvents         String[]    @default([])   // Array of event types to send
+  webhookUrl     String? // HTTPS URL for webhook delivery
+  webhookSecret  String? // HMAC secret for signing payloads
+  webhookEnabled Boolean  @default(false)
+  webhookEvents  String[] @default([]) // Array of event types to send
 
   // Checkout redirect URLs
-  successUrl            String?                    // Where customer goes after successful payment
-  cancelUrl             String?                    // Where customer goes if they cancel
+  successUrl String? // Where customer goes after successful payment
+  cancelUrl  String? // Where customer goes if they cancel
 
   // Receipt settings
-  autoSendReceipts      Boolean     @default(false)   // Auto-email receipts to customers
+  autoSendReceipts Boolean @default(false) // Auto-email receipts to customers
+
+  // Refund auto-approve ceiling ($ USD). Refunds ≤ this amount skip manual approval.
+  // null = use platform default ($50).
+  refundAutoApproveThreshold Decimal? @db.Decimal(18, 2)
 
   // PRO subscription
-  proExpiresAt          DateTime?   // If paying $19/mo, when does PRO expire? null = not subscribed (auto-unlock or free)
+  proExpiresAt DateTime? // If paying $19/mo, when does PRO expire? null = not subscribed (auto-unlock or free)
 
   // Email notification preferences
-  emailOnPayment        Boolean     @default(true)    // Email merchant when payment received
-  emailOnRefund         Boolean     @default(true)    // Email merchant when refund processed
-  emailOnExpiry         Boolean     @default(false)   // Email merchant when order expires
+  emailOnPayment Boolean @default(true) // Email merchant when payment received
+  emailOnRefund  Boolean @default(true) // Email merchant when refund processed
+  emailOnExpiry  Boolean @default(false) // Email merchant when order expires
 
   // Webhook health tracking
-  webhookLastSuccess    DateTime?
-  webhookLastFailure    DateTime?
+  webhookLastSuccess DateTime?
+  webhookLastFailure DateTime?
 
   // Widget customization (JSON stored as string)
-  widgetConfig          Json?       // { borderStyle, theme, headerColor, headerTextColor, logoUrl, buttonText, hideFooter }
+  widgetConfig Json? // { borderStyle, theme, headerColor, headerTextColor, logoUrl, buttonText, hideFooter }
 
-  wallets               MerchantWallet[]
-  orders                Order[]
-  feePayments           FeePayment[]
-  webhookLogs           WebhookLog[]
-  invoices              Invoice[]
-  receipts              Receipt[]
-  chatMessages          ChatMessage[]
-  agentMemories         AgentMemory[]
-  agentTips             AgentTip[]
-  managedWallets        ManagedWallet[]
-  auditLogs             AuditLog[]
-  paymentLinks          PaymentLink[]
+  wallets        MerchantWallet[]
+  orders         Order[]
+  feePayments    FeePayment[]
+  webhookLogs    WebhookLog[]
+  invoices       Invoice[]
+  receipts       Receipt[]
+  chatMessages   ChatMessage[]
+  agentMemories  AgentMemory[]
+  agentTips      AgentTip[]
+  managedWallets ManagedWallet[]
+  stores         Store[]
+  auditLogs      AuditLog[]
+  paymentLinks   PaymentLink[]
 
   @@index([plan])
   @@index([networkMode])
@@ -179,18 +184,18 @@ model Merchant {
 }
 
 model MerchantWallet {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   merchantId      String
   chain           Chain
   address         String
-  supportedTokens String[]  @default(["USDC"])
-  label           String?                        // Optional label: "Main wallet", "Treasury", etc.
-  isActive        Boolean   @default(true)
-  priority        Int       @default(0)          // Lower = shown first in checkout. 0 = default
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  supportedTokens String[] @default(["USDC"])
+  label           String? // Optional label: "Main wallet", "Treasury", etc.
+  isActive        Boolean  @default(true)
+  priority        Int      @default(0) // Lower = shown first in checkout. 0 = default
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  merchant        Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@unique([merchantId, chain])
   @@map("merchant_wallets")
@@ -198,35 +203,38 @@ model MerchantWallet {
 }
 
 model Order {
-  id              String      @id @default(cuid())
-  merchantId      String?     // NULL for DEMO orders
-  customerEmail   String?
-  customerName    String?
-  amount          Decimal     @db.Decimal(18, 6)
-  token           String      @default("USDC")  // USDC, USDT, EURC
-  feePercent      Decimal     @default(0.005) @db.Decimal(5, 4)  // 0.005 = 0.5%
-  feeAmount       Decimal     @default(0) @db.Decimal(18, 6)  // Calculated fee for this order
-  chain           Chain
-  status          OrderStatus @default(PENDING)
-  paymentAddress  String
-  customerWallet  String?     // Customer's wallet address — for precise FROM matching
-  paymentMethod   String?     // WALLET_CONNECT, MANUAL_SEND, INVOICE, API
-  source          String?     // EMBED_WIDGET, CHECKOUT_LINK, DASHBOARD, API, INVOICE
-  externalId      String?     // Merchant's own order/reference ID
-  metadata        Json?       // Arbitrary metadata from merchant
-  riskScore       Int?        // 0-100 from compliance screening
-  riskFlags       String[]    @default([]) // compliance flags
-  expiresAt       DateTime
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  merchantId     String? // NULL for DEMO orders
+  storeId        String? // Optional — NULL means merchant-level order (legacy / backward compat)
+  customerEmail  String?
+  customerName   String?
+  amount         Decimal     @db.Decimal(18, 6)
+  token          String      @default("USDC") // USDC, USDT, EURC
+  feePercent     Decimal     @default(0.005) @db.Decimal(5, 4) // 0.005 = 0.5%
+  feeAmount      Decimal     @default(0) @db.Decimal(18, 6) // Calculated fee for this order
+  chain          Chain
+  status         OrderStatus @default(PENDING)
+  paymentAddress String
+  customerWallet String? // Customer's wallet address — for precise FROM matching
+  paymentMethod  String? // WALLET_CONNECT, MANUAL_SEND, INVOICE, API
+  source         String? // EMBED_WIDGET, CHECKOUT_LINK, DASHBOARD, API, INVOICE
+  externalId     String? // Merchant's own order/reference ID
+  metadata       Json? // Arbitrary metadata from merchant
+  riskScore      Int? // 0-100 from compliance screening
+  riskFlags      String[]    @default([]) // compliance flags
+  expiresAt      DateTime
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  merchant        Merchant?   @relation(fields: [merchantId], references: [id])
-  transactions    Transaction[]
-  refunds         Refund[]
-  invoice         Invoice?
-  receipt         Receipt?
+  merchant     Merchant?     @relation(fields: [merchantId], references: [id])
+  store        Store?        @relation(fields: [storeId], references: [id])
+  transactions Transaction[]
+  refunds      Refund[]
+  invoice      Invoice?
+  receipt      Receipt?
 
   @@index([merchantId])
+  @@index([storeId])
   @@index([status])
   @@index([chain, status])
   @@index([expiresAt])
@@ -235,53 +243,52 @@ model Order {
 }
 
 model Transaction {
-  id              String            @id @default(cuid())
-  orderId         String
-  txHash          String            @unique
-  chain           Chain
-  amount          Decimal           @db.Decimal(18, 6)
-  fromAddress     String
-  toAddress       String
-  blockNumber     BigInt?
-  blockTimestamp  DateTime?
-  status          TransactionStatus @default(PENDING)
-  confirmations   Int               @default(0)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  orderId        String
+  txHash         String            @unique
+  chain          Chain
+  amount         Decimal           @db.Decimal(18, 6)
+  fromAddress    String
+  toAddress      String
+  blockNumber    BigInt?
+  blockTimestamp DateTime?
+  status         TransactionStatus @default(PENDING)
+  confirmations  Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  order           Order             @relation(fields: [orderId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
 
   @@map("transactions")
   @@schema("public")
 }
 
 model Refund {
-  id              String       @id @default(cuid())
-  orderId         String
-  amount          Decimal      @db.Decimal(18, 6)
-  reason          String
-  status          RefundStatus @default(PENDING)
-  approvedBy      String?
-  refundTxHash    String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  orderId      String
+  amount       Decimal      @db.Decimal(18, 6)
+  reason       String
+  status       RefundStatus @default(PENDING)
+  approvedBy   String?
+  refundTxHash String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  order           Order        @relation(fields: [orderId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
 
   @@map("refunds")
   @@schema("public")
 }
 
-
 model ChainConfig {
-  id                String @id @default(cuid())
-  chain             Chain  @unique
-  rpcUrl            String
-  usdcAddress       String
-  paymentAddress    String
-  requiredConfirms  Int    @default(12)
-  blockTimeSeconds  Int    @default(12)
-  lastScannedBlock  BigInt @default(0)
+  id               String @id @default(cuid())
+  chain            Chain  @unique
+  rpcUrl           String
+  usdcAddress      String
+  paymentAddress   String
+  requiredConfirms Int    @default(12)
+  blockTimeSeconds Int    @default(12)
+  lastScannedBlock BigInt @default(0)
 
   @@map("chain_configs")
   @@schema("public")
@@ -316,21 +323,21 @@ enum ReceiptDeliveryStatus {
 }
 
 model FeePayment {
-  id              String           @id @default(cuid())
-  merchantId      String
-  amount          Decimal          @db.Decimal(18, 6)  // Amount paid in USD
-  token           String           @default("USDC")     // Token used for payment
-  chain           Chain                                 // Chain used for payment
-  txHash          String?          @unique              // Transaction hash
-  status          FeePaymentStatus @default(PENDING)
-  periodStart     DateTime                              // Start of billing period covered
-  periodEnd       DateTime                              // End of billing period covered
-  verifiedBy      String?                               // Admin who verified (null = auto or pending)
-  verifiedAt      DateTime?                             // When admin verified
-  createdAt       DateTime         @default(now())
-  confirmedAt     DateTime?
+  id          String           @id @default(cuid())
+  merchantId  String
+  amount      Decimal          @db.Decimal(18, 6) // Amount paid in USD
+  token       String           @default("USDC") // Token used for payment
+  chain       Chain // Chain used for payment
+  txHash      String?          @unique // Transaction hash
+  status      FeePaymentStatus @default(PENDING)
+  periodStart DateTime // Start of billing period covered
+  periodEnd   DateTime // End of billing period covered
+  verifiedBy  String? // Admin who verified (null = auto or pending)
+  verifiedAt  DateTime? // When admin verified
+  createdAt   DateTime         @default(now())
+  confirmedAt DateTime?
 
-  merchant        Merchant         @relation(fields: [merchantId], references: [id])
+  merchant Merchant @relation(fields: [merchantId], references: [id])
 
   @@index([merchantId])
   @@index([status])
@@ -340,13 +347,13 @@ model FeePayment {
 
 // Platform wallets for collecting fees from merchants
 model PlatformWallet {
-  id              String    @id @default(cuid())
-  chain           Chain     @unique                    // One wallet per chain
-  address         String                               // Wallet address
-  label           String?                              // Optional label (e.g., "Main", "Treasury")
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  chain     Chain    @unique // One wallet per chain
+  address   String // Wallet address
+  label     String? // Optional label (e.g., "Main", "Treasury")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("platform_wallets")
   @@schema("public")
@@ -354,46 +361,112 @@ model PlatformWallet {
 
 // Persistent payment links with analytics
 model PaymentLink {
-  id              String    @id @default(cuid())
-  merchantId      String
-  slug            String    @unique    // Short URL: /pay/abc123
-  amount          Decimal   @db.Decimal(18, 6)
-  token           String    @default("USDC")
-  chains          String[]  @default([]) // Empty = all merchant chains
-  productName     String?
-  description     String?
-  externalId      String?   // Merchant's own reference
-  isActive        Boolean   @default(true)
-  viewCount       Int       @default(0)
-  paidCount       Int       @default(0)
-  totalCollected  Decimal   @default(0) @db.Decimal(18, 6)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String   @id @default(cuid())
+  merchantId     String
+  storeId        String?
+  slug           String   @unique // Short URL: /pay/abc123
+  amount         Decimal  @db.Decimal(18, 6)
+  token          String   @default("USDC")
+  chains         String[] @default([]) // Empty = all merchant chains
+  productName    String?
+  description    String?
+  externalId     String? // Merchant's own reference
+  isActive       Boolean  @default(true)
+  viewCount      Int      @default(0)
+  paidCount      Int      @default(0)
+  totalCollected Decimal  @default(0) @db.Decimal(18, 6)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  merchant        Merchant  @relation(fields: [merchantId], references: [id])
+  merchant Merchant @relation(fields: [merchantId], references: [id])
+  store    Store?   @relation(fields: [storeId], references: [id])
 
   @@index([merchantId])
+  @@index([storeId])
   @@index([slug])
   @@map("payment_links")
   @@schema("public")
 }
 
+// A Store is a brand operated by a merchant. One merchant can run multiple stores
+// (e.g. One Tease Tech runs flirtynlocal + other-site), each with isolated webhook config,
+// branding, and optional per-chain wallet routing overrides.
+model Store {
+  id              String  @id @default(cuid())
+  merchantId      String
+  slug            String // URL-safe, scoped per merchant
+  name            String // Internal name
+  displayName     String? // Header on checkout page
+  logoUrl         String?
+  headerColor     String?
+  headerTextColor String?
+  website         String?
+  backButtonText  String?
+  widgetConfig    Json?
+  successUrl      String?
+  cancelUrl       String?
+
+  // Webhook — each store has its own secret so a compromise doesn't spread across brands
+  webhookUrl     String?
+  webhookSecret  String // Auto-generated on create
+  webhookEnabled Boolean  @default(false)
+  webhookEvents  String[] @default([])
+
+  isArchived Boolean   @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  merchant     Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  wallets      StoreWallet[]
+  orders       Order[]
+  paymentLinks PaymentLink[]
+  webhookLogs  WebhookLog[]
+
+  @@unique([merchantId, slug])
+  @@index([merchantId, isArchived])
+  @@map("stores")
+  @@schema("public")
+}
+
+// Per-store wallet override. When a store has an entry for a chain, orders scoped to that
+// store route payments to this address instead of the merchant's default wallet on that chain.
+// Lookup: StoreWallet → MerchantWallet → CHAIN_CONFIGS fallback.
+model StoreWallet {
+  id              String   @id @default(cuid())
+  storeId         String
+  chain           Chain
+  address         String
+  supportedTokens String[] @default(["USDC"])
+  isActive        Boolean  @default(true)
+  priority        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, chain])
+  @@index([storeId])
+  @@map("store_wallets")
+  @@schema("public")
+}
+
 // Audit trail for all treasury operations (withdrawals, refunds, consolidations, bridges)
 model TreasuryMove {
-  id              String    @id @default(cuid())
-  merchantId      String
-  type            String    // WITHDRAWAL, REFUND, CONSOLIDATION, BRIDGE, GAS_SPONSOR
-  chain           String
-  token           String    @default("USDC")
-  amount          Decimal   @db.Decimal(18, 6)
-  fromAddress     String
-  toAddress       String
-  txHash          String?
-  gasTxHash       String?   // If gas was sponsored
-  status          String    @default("COMPLETED") // COMPLETED, FAILED, PENDING
-  error           String?   // Error message if failed
-  metadata        Json?     // Extra context
-  createdAt       DateTime  @default(now())
+  id          String   @id @default(cuid())
+  merchantId  String
+  type        String // WITHDRAWAL, REFUND, CONSOLIDATION, BRIDGE, GAS_SPONSOR
+  chain       String
+  token       String   @default("USDC")
+  amount      Decimal  @db.Decimal(18, 6)
+  fromAddress String
+  toAddress   String
+  txHash      String?
+  gasTxHash   String? // If gas was sponsored
+  status      String   @default("COMPLETED") // COMPLETED, FAILED, PENDING
+  error       String? // Error message if failed
+  metadata    Json? // Extra context
+  createdAt   DateTime @default(now())
 
   @@index([merchantId])
   @@index([type])
@@ -403,30 +476,84 @@ model TreasuryMove {
 
 // System-level key-value config (admin password, fee tiers, feature flags)
 model SystemConfig {
-  key         String    @id
-  value       String
-  updatedAt   DateTime  @updatedAt
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 
   @@map("system_config")
   @@schema("public")
 }
 
-model WebhookLog {
-  id              String      @id @default(cuid())
-  merchantId      String
-  event           String                          // e.g., "order.created", "order.confirmed"
-  payload         Json                            // The webhook payload that was sent
-  url             String                          // The URL it was sent to
-  httpStatus      Int?                            // Response status code (null if failed to connect)
-  response        String?                         // Response body (truncated to 1000 chars)
-  attempts        Int         @default(1)         // Number of delivery attempts
-  nextRetryAt     DateTime?                       // When to retry (null if succeeded or max retries)
-  deliveredAt     DateTime?                       // When successfully delivered
-  createdAt       DateTime    @default(now())
+// Centralized audit log for admin mutations (refund approvals, suspensions, manual confirms, etc.)
+// Every admin write op must emit a row. Queryable for compliance + dispute investigation.
+model AdminAction {
+  id         String   @id @default(cuid())
+  actor      String // admin identifier (email) or 'system'
+  action     String // e.g. 'refund.approve', 'order.confirm_manual', 'merchant.suspend'
+  resource   String // 'order' | 'merchant' | 'refund' | 'payout' | 'wallet' | 'fee_payment'
+  resourceId String
+  before     Json?
+  after      Json?
+  reason     String?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 
-  merchant        Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  @@index([actor, createdAt])
+  @@index([resource, resourceId])
+  @@index([action, createdAt])
+  @@map("admin_actions")
+  @@schema("public")
+}
+
+// Request-level idempotency cache. Keyed by (merchantId, path, Idempotency-Key, body-hash).
+// Returning the cached response prevents duplicate orders/refunds on customer/merchant retry.
+model IdempotencyKey {
+  id         String   @id @default(cuid())
+  merchantId String?
+  keyHash    String   @unique // sha256(merchantId + path + header + bodyHash)
+  statusCode Int
+  response   Json
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("idempotency_keys")
+  @@schema("public")
+}
+
+// Shared rate-limit bucket — replaces per-instance in-memory Map so multi-instance
+// deployments (Vercel) enforce a single global limit per merchant/IP.
+model RateLimitBucket {
+  id          String   @id @default(cuid())
+  key         String // e.g. "merchant:<id>" or "ip:<hash>"
+  windowStart DateTime
+  count       Int      @default(0)
+
+  @@unique([key, windowStart])
+  @@index([windowStart])
+  @@map("rate_limit_buckets")
+  @@schema("public")
+}
+
+model WebhookLog {
+  id          String    @id @default(cuid())
+  merchantId  String
+  storeId     String? // When the delivery was scoped to a store
+  event       String // e.g., "order.created", "order.confirmed"
+  payload     Json // The webhook payload that was sent
+  url         String // The URL it was sent to
+  httpStatus  Int? // Response status code (null if failed to connect)
+  response    String? // Response body (truncated to 1000 chars)
+  attempts    Int       @default(1) // Number of delivery attempts
+  nextRetryAt DateTime? // When to retry (null if succeeded or max retries)
+  deliveredAt DateTime? // When successfully delivered
+  createdAt   DateTime  @default(now())
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  store    Store?   @relation(fields: [storeId], references: [id])
 
   @@index([merchantId])
+  @@index([storeId])
   @@index([event])
   @@index([nextRetryAt])
   @@map("webhook_logs")
@@ -434,48 +561,48 @@ model WebhookLog {
 }
 
 model Invoice {
-  id                String        @id @default(cuid())
-  merchantId        String
-  invoiceNumber     String        @unique           // e.g., "INV-2026-0001"
+  id            String @id @default(cuid())
+  merchantId    String
+  invoiceNumber String @unique // e.g., "INV-2026-0001"
 
   // Customer info
-  customerEmail     String?
-  customerName      String?
-  customerAddress   String?
+  customerEmail   String?
+  customerName    String?
+  customerAddress String?
 
   // Financial
-  subtotal          Decimal       @db.Decimal(18, 6)
-  taxPercent        Decimal       @default(0) @db.Decimal(5, 4)
-  taxAmount         Decimal       @default(0) @db.Decimal(18, 6)
-  discountPercent   Decimal       @default(0) @db.Decimal(5, 4)
-  discountAmount    Decimal       @default(0) @db.Decimal(18, 6)
-  total             Decimal       @db.Decimal(18, 6)
+  subtotal        Decimal @db.Decimal(18, 6)
+  taxPercent      Decimal @default(0) @db.Decimal(5, 4)
+  taxAmount       Decimal @default(0) @db.Decimal(18, 6)
+  discountPercent Decimal @default(0) @db.Decimal(5, 4)
+  discountAmount  Decimal @default(0) @db.Decimal(18, 6)
+  total           Decimal @db.Decimal(18, 6)
 
   // Payment preferences
-  chain             Chain?                          // Preferred chain (optional)
-  token             String        @default("USDC")
-  paymentAddress    String?                         // Merchant's wallet for this chain
+  chain          Chain? // Preferred chain (optional)
+  token          String  @default("USDC")
+  paymentAddress String? // Merchant's wallet for this chain
 
   // Status tracking
-  status            InvoiceStatus @default(DRAFT)
-  dueDate           DateTime?
-  sentAt            DateTime?
-  viewedAt          DateTime?
-  paidAt            DateTime?
+  status   InvoiceStatus @default(DRAFT)
+  dueDate  DateTime?
+  sentAt   DateTime?
+  viewedAt DateTime?
+  paidAt   DateTime?
 
   // Linking to order when paid
-  orderId           String?       @unique
+  orderId String? @unique
 
   // Notes
-  notes             String?                         // Internal notes
-  customerNotes     String?                         // Notes visible to customer
+  notes         String? // Internal notes
+  customerNotes String? // Notes visible to customer
 
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  merchant          Merchant      @relation(fields: [merchantId], references: [id])
-  order             Order?        @relation(fields: [orderId], references: [id])
-  lineItems         InvoiceLineItem[]
+  merchant  Merchant          @relation(fields: [merchantId], references: [id])
+  order     Order?            @relation(fields: [orderId], references: [id])
+  lineItems InvoiceLineItem[]
 
   @@index([merchantId])
   @@index([status])
@@ -485,49 +612,49 @@ model Invoice {
 }
 
 model InvoiceLineItem {
-  id              String    @id @default(cuid())
-  invoiceId       String
-  description     String
-  quantity        Int       @default(1)
-  unitPrice       Decimal   @db.Decimal(18, 6)
-  amount          Decimal   @db.Decimal(18, 6)      // quantity * unitPrice
-  createdAt       DateTime  @default(now())
+  id          String   @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @db.Decimal(18, 6)
+  amount      Decimal  @db.Decimal(18, 6) // quantity * unitPrice
+  createdAt   DateTime @default(now())
 
-  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@map("invoice_line_items")
   @@schema("public")
 }
 
 model Receipt {
-  id                  String                @id @default(cuid())
-  orderId             String                @unique
-  merchantId          String
-  receiptNumber       String                @unique   // e.g., "RCP-2026-0001"
+  id            String @id @default(cuid())
+  orderId       String @unique
+  merchantId    String
+  receiptNumber String @unique // e.g., "RCP-2026-0001"
 
   // Payment details (denormalized for historical record)
-  amount              Decimal               @db.Decimal(18, 6)
-  token               String                @default("USDC")
-  chain               Chain
-  txHash              String?
+  amount Decimal @db.Decimal(18, 6)
+  token  String  @default("USDC")
+  chain  Chain
+  txHash String?
 
   // Merchant info (denormalized)
-  merchantName        String
+  merchantName String
 
   // Customer info
-  customerEmail       String?
-  customerName        String?
+  customerEmail String?
+  customerName  String?
 
   // Email delivery
-  emailStatus         ReceiptDeliveryStatus @default(PENDING)
-  emailSentAt         DateTime?
+  emailStatus ReceiptDeliveryStatus @default(PENDING)
+  emailSentAt DateTime?
 
   // Timestamps
-  paymentDate         DateTime                        // When payment was confirmed
-  createdAt           DateTime              @default(now())
+  paymentDate DateTime // When payment was confirmed
+  createdAt   DateTime @default(now())
 
-  order               Order                 @relation(fields: [orderId], references: [id])
-  merchant            Merchant              @relation(fields: [merchantId], references: [id])
+  order    Order    @relation(fields: [orderId], references: [id])
+  merchant Merchant @relation(fields: [merchantId], references: [id])
 
   @@index([merchantId])
   @@index([paymentDate])
@@ -538,11 +665,11 @@ model Receipt {
 model ChatMessage {
   id         String   @id @default(cuid())
   merchantId String
-  role       String   // "user" or "assistant"
+  role       String // "user" or "assistant"
   content    String
   createdAt  DateTime @default(now())
 
-  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@index([merchantId, createdAt])
   @@map("chat_messages")
@@ -552,12 +679,12 @@ model ChatMessage {
 model AgentMemory {
   id         String   @id @default(cuid())
   merchantId String
-  key        String   // e.g. "preferred_chain", "business_type", "integration_framework"
+  key        String // e.g. "preferred_chain", "business_type", "integration_framework"
   value      String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@unique([merchantId, key])
   @@map("agent_memories")
@@ -565,17 +692,17 @@ model AgentMemory {
 }
 
 model ManagedWallet {
-  id              String    @id @default(cuid())
-  merchantId      String
-  chain           String    // Which chain this managed wallet is for
-  address         String    // Public address
-  encryptedKey    String    // Encrypted private key (AES-256)
-  isActive        Boolean   @default(true)
-  migratedToOwn   Boolean   @default(false) // True once merchant provides their own wallet
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String   @id @default(cuid())
+  merchantId    String
+  chain         String // Which chain this managed wallet is for
+  address       String // Public address
+  encryptedKey  String // Encrypted private key (AES-256)
+  isActive      Boolean  @default(true)
+  migratedToOwn Boolean  @default(false) // True once merchant provides their own wallet
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  merchant        Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@unique([merchantId, chain])
   @@index([merchantId])
@@ -584,16 +711,16 @@ model ManagedWallet {
 }
 
 model AgentTip {
-  id            String   @id @default(cuid())
-  merchantId    String
-  amount        Decimal  @db.Decimal(18, 6)
-  token         String   @default("USDC")
-  chain         String
-  txHash        String?  @unique
-  fromAddress   String
-  createdAt     DateTime @default(now())
+  id          String   @id @default(cuid())
+  merchantId  String
+  amount      Decimal  @db.Decimal(18, 6)
+  token       String   @default("USDC")
+  chain       String
+  txHash      String?  @unique
+  fromAddress String
+  createdAt   DateTime @default(now())
 
-  merchant      Merchant @relation(fields: [merchantId], references: [id])
+  merchant Merchant @relation(fields: [merchantId], references: [id])
 
   @@index([merchantId])
   @@map("agent_tips")
@@ -604,8 +731,8 @@ model WalletScreen {
   id        String   @id @default(cuid())
   address   String
   chain     String
-  riskScore Int      // 0-100
-  riskLevel String   // LOW, MEDIUM, HIGH, BLOCKED
+  riskScore Int // 0-100
+  riskLevel String // LOW, MEDIUM, HIGH, BLOCKED
   flags     String[] @default([])
   details   Json?
   orderId   String?
@@ -620,12 +747,12 @@ model WalletScreen {
 model AuditLog {
   id         String   @id @default(cuid())
   merchantId String?
-  action     String   // WALLET_SCREENED, PAYMENT_FLAGGED, PAYMENT_BLOCKED, KYC_UPDATED, etc.
+  action     String // WALLET_SCREENED, PAYMENT_FLAGGED, PAYMENT_BLOCKED, KYC_UPDATED, etc.
   details    Json
   ip         String?
   createdAt  DateTime @default(now())
 
-  merchant   Merchant? @relation(fields: [merchantId], references: [id])
+  merchant Merchant? @relation(fields: [merchantId], references: [id])
 
   @@index([merchantId, createdAt])
   @@index([action])

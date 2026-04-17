@@ -19,6 +19,7 @@ import { complianceRouter } from './routes/compliance';
 import { treasuryRouter } from './routes/treasury';
 import { paymentLinksRouter } from './routes/paymentLinks';
 import { upgradeRouter } from './routes/upgrade';
+import storesRouter from './routes/stores';
 import { db } from './config/database';
 import { validateEnv } from './utils/env';
 import { logger } from './utils/logger';
@@ -121,6 +122,17 @@ app.get('/pay/:slug', async (req, res) => {
     if (!link || !link.isActive) {
       return res.status(404).send('Payment link not found or expired');
     }
+    // If the link is scoped to a store and that store has been archived, refuse to load —
+    // the merchant took the brand down, so the checkout should no longer appear.
+    if (link.storeId) {
+      const store = await db.store.findUnique({
+        where: { id: link.storeId },
+        select: { isArchived: true },
+      });
+      if (store?.isArchived) {
+        return res.status(410).send('This payment link is no longer available');
+      }
+    }
     await db.paymentLink.update({ where: { id: link.id }, data: { viewCount: { increment: 1 } } });
     const params = new URLSearchParams({
       merchantId: link.merchantId,
@@ -130,6 +142,7 @@ app.get('/pay/:slug', async (req, res) => {
     if (link.productName) params.set('productName', link.productName);
     if (link.chains.length > 0) params.set('chains', link.chains.join(','));
     if (link.externalId) params.set('externalId', link.externalId);
+    if (link.storeId) params.set('storeId', link.storeId);
     params.set('linkId', link.id);
     // Pass-through customization supplied by the merchant's outbound link. Keeps payment-link
     // flow feature-parity with the embed widget (which already accepts these).
@@ -169,6 +182,7 @@ app.use('/api/compliance', complianceRouter);
 app.use('/api/treasury', treasuryRouter);
 app.use('/api/payment-links', paymentLinksRouter);
 app.use('/api/upgrade', upgradeRouter);
+app.use('/api/stores', storesRouter);
 app.use('/api', authRouter);
 
 // ─── Legacy v1 redirects (old unprotected routes removed) ──────────────────

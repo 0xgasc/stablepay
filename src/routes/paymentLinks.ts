@@ -19,6 +19,7 @@ const createLinkSchema = z.object({
   productName: z.string().optional(),
   description: z.string().optional(),
   externalId: z.string().optional(),
+  storeId: z.string().optional(),  // Scope this link to a store — inherits store's branding/webhook
 });
 
 // Create payment link
@@ -41,10 +42,25 @@ router.post('/', requireMerchantAuth, async (req, res) => {
       }
     }
 
+    // If storeId provided, validate it belongs to this merchant and is active.
+    if (data.storeId) {
+      const store = await db.store.findUnique({
+        where: { id: data.storeId },
+        select: { merchantId: true, isArchived: true },
+      });
+      if (!store || store.merchantId !== merchant.id) {
+        return res.status(404).json({ error: 'Store not found' });
+      }
+      if (store.isArchived) {
+        return res.status(400).json({ error: 'Store is archived' });
+      }
+    }
+
     const slug = generateSlug();
     const link = await db.paymentLink.create({
       data: {
         merchantId: merchant.id,
+        storeId: data.storeId || null,
         slug,
         amount: data.amount,
         token: data.token,

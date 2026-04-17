@@ -136,6 +136,7 @@
         amount: options.amount || container.dataset.amount || '0',
         currency: options.currency || container.dataset.currency || 'USD',
         merchantId: options.merchantId || container.dataset.merchant,
+        storeId: options.storeId || container.dataset.storeId || container.dataset.store || null,
         productName: options.productName || container.dataset.product || 'Payment',
         customerEmail: options.customerEmail || container.dataset.customerEmail || null,
         externalId: options.externalId || container.dataset.externalId || null,
@@ -207,11 +208,35 @@
       }
 
       try {
-        const response = await fetch(`${STABLEPAY_URL}/api/embed/chains?merchantId=${this.options.merchantId}`);
+        // Append storeId so the server can return store-scoped branding + wallet union.
+        const chainsUrl = this.options.storeId
+          ? `${STABLEPAY_URL}/api/embed/chains?merchantId=${this.options.merchantId}&storeId=${encodeURIComponent(this.options.storeId)}`
+          : `${STABLEPAY_URL}/api/embed/chains?merchantId=${this.options.merchantId}`;
+        const response = await fetch(chainsUrl);
         if (!response.ok) throw new Error('Failed to load merchant');
 
         const data = await response.json();
         this.merchantData = data;
+
+        // When a store is scoped, pull its branding directly so it REPLACES merchant branding.
+        if (this.options.storeId) {
+          try {
+            const storeRes = await fetch(`${STABLEPAY_URL}/api/embed/store/${encodeURIComponent(this.options.storeId)}`);
+            if (storeRes.ok) {
+              const store = await storeRes.json();
+              this.storeData = store;
+              // Merge store widgetConfig on top of merchant widgetConfig so next block sees it.
+              data.widgetConfig = Object.assign({}, store.widgetConfig || {}, {
+                displayName: store.displayName,
+                logoUrl: store.logoUrl,
+                headerColor: store.headerColor,
+                headerTextColor: store.headerTextColor,
+                backButtonText: store.backButtonText,
+              });
+              if (store.displayName) data.merchantName = store.displayName;
+            }
+          } catch (e) { /* fall back to merchant branding */ }
+        }
 
         if (data.wallets && data.wallets.length > 0) {
           // Sort chains by global usage (Solana > Ethereum > TRON > BNB > Base > rest)
@@ -813,6 +838,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   merchantId: p.merchantId,
+                  storeId: this.options.storeId || undefined,
                   amount: p.amount,
                   chain: p.chain,
                   token: p.token,
@@ -1940,6 +1966,7 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 merchantId: this.options.merchantId,
+                storeId: this.options.storeId || undefined,
                 amount,
                 chain: this.selectedChain.chain,
                 token: this.selectedToken,

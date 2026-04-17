@@ -89,8 +89,16 @@ export class RefundService {
       throw new Error('Total refund amount would exceed paid amount');
     }
 
-    // Auto-approve small refunds, otherwise PENDING for merchant review
-    const shouldAutoApprove = refundAmount <= this.policy.autoApproveThreshold;
+    // Auto-approve small refunds. Merchant can override the platform-wide $50 default
+    // via `refundAutoApproveThreshold` in merchant settings (0 = never auto-approve).
+    const merchantThreshold = order.merchantId
+      ? await db.merchant.findUnique({
+          where: { id: order.merchantId },
+          select: { refundAutoApproveThreshold: true },
+        }).then(m => m?.refundAutoApproveThreshold != null ? Number(m.refundAutoApproveThreshold) : null)
+      : null;
+    const threshold = merchantThreshold != null ? merchantThreshold : this.policy.autoApproveThreshold;
+    const shouldAutoApprove = refundAmount <= threshold;
 
     const refund = await db.refund.create({
       data: {

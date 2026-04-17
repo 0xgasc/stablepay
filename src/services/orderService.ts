@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 import { webhookService } from './webhookService';
 import { receiptService } from './receiptService';
 import { emailService } from './emailService';
+import { resolvePaymentAddress } from './storeResolver';
 
 export class OrderService {
   async createOrder(data: CreateOrderRequest): Promise<CreateOrderResponse> {
@@ -18,20 +19,12 @@ export class OrderService {
     const expiryMinutes = data.expiryMinutes || 30;
     const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
-    // Use merchant wallet if available, fall back to chain config
-    let paymentAddress = chainConfig.paymentAddress;
-    if (data.merchantId) {
-      const wallet = await db.merchantWallet.findFirst({
-        where: { merchantId: data.merchantId, chain: data.chain, isActive: true },
-      });
-      if (wallet) {
-        paymentAddress = wallet.address;
-      }
-    }
-
-    if (!paymentAddress) {
-      throw new Error(`No payment address configured for ${data.chain}. Add a wallet for this chain in the dashboard.`);
-    }
+    // Resolve payment address: store override → merchant default → chain-config fallback.
+    const { address: paymentAddress } = await resolvePaymentAddress(
+      data.merchantId,
+      data.storeId ?? null,
+      data.chain,
+    );
 
     const order = await db.order.create({
       data: {
@@ -42,13 +35,14 @@ export class OrderService {
         paymentAddress,
         expiresAt,
         merchantId: data.merchantId,
+        storeId: data.storeId ?? null,
         externalId: data.externalId || null,
         metadata: data.metadata || undefined,
         source: 'API',
       },
     });
 
-    // Send webhook for order creation
+    // Send webhook for order creation — scoped to store if applicable.
     if (order.merchantId) {
       webhookService.sendWebhook(order.merchantId, 'order.created', {
         orderId: order.id,
@@ -56,7 +50,7 @@ export class OrderService {
         chain: data.chain,
         paymentAddress,
         expiresAt: expiresAt.toISOString(),
-      }).catch(err => {
+      }, { storeId: order.storeId || undefined }).catch(err => {
         logger.error('Failed to send order.created webhook', err as Error, { orderId: order.id });
       });
     }
@@ -281,9 +275,36 @@ export class OrderService {
       }
     }
 
-    // Use raw SQL to update status and updatedAt
+    // Atomic guard: only flip PENDING → CONFIRMED if the order is still PENDING and not yet expired.
+    // Returns 0 rows updated if the order was already confirmed/refunded/expired between the scanner
+    // detecting a TX and this call — preventing double-confirm or resurrecting an expired order.
     const confirmNow = new Date();
-    await db.$executeRaw`UPDATE orders SET status = 'CONFIRMED'::"OrderStatus", "updatedAt" = ${confirmNow} WHERE id = ${orderId}`;
+    const updated = await db.$executeRaw`
+      UPDATE orders SET status = 'CONFIRMED'::"OrderStatus", "updatedAt" = ${confirmNow}
+      WHERE id = ${orderId} AND status = 'PENDING' AND "expiresAt" > ${confirmNow}
+    `;
+    if (updated === 0) {
+      logger.warn('confirmOrder skipped — order not PENDING or expired', {
+        orderId,
+        txHash: txData?.txHash,
+        event: 'order.confirm_stale',
+      });
+      const existing = await db.order.findUnique({
+        where: { id: orderId },
+        include: { transactions: true }
+      });
+      if (!existing) throw new Error('Order not found after stale check');
+      return {
+        ...existing,
+        amount: Number(existing.amount),
+        transactions: existing.transactions.map((tx: any) => ({
+          ...tx,
+          amount: Number(tx.amount),
+          blockNumber: tx.blockNumber ? Number(tx.blockNumber) : null
+        })),
+        _staleSkipped: true,
+      };
+    }
 
     const confirmedOrder = await db.order.findUnique({
       where: { id: orderId },
@@ -364,7 +385,7 @@ export class OrderService {
         ? explorerUrls[confirmedOrder.chain] + txData.txHash
         : null;
 
-      // Send webhook for order confirmation
+      // Send webhook for order confirmation — scoped to store when applicable.
       webhookService.sendWebhook(confirmedOrder.merchantId, 'order.confirmed', {
         orderId: confirmedOrder.id,
         externalId: confirmedOrder.externalId || null,
@@ -383,7 +404,7 @@ export class OrderService {
         netAmount: orderAmount - feeAmount,
         metadata: confirmedOrder.metadata || null,
         confirmedAt: new Date().toISOString(),
-      }).catch(err => {
+      }, { storeId: confirmedOrder.storeId || undefined }).catch(err => {
         logger.error('Failed to send order.confirmed webhook', err as Error, { orderId });
       });
 
@@ -418,7 +439,7 @@ export class OrderService {
           orderId,
           amount: orderAmount,
           customerEmail: confirmedOrder.customerEmail,
-        }).catch(err => {
+        }, { storeId: confirmedOrder.storeId || undefined }).catch(err => {
           logger.error('Failed to send receipt.created webhook', err as Error, { orderId });
         });
 
@@ -468,7 +489,7 @@ export class OrderService {
         amount: Number(order.amount),
         chain: order.chain,
         expiredAt: now.toISOString(),
-      }).catch(err => {
+      }, { storeId: order.storeId || undefined }).catch(err => {
         logger.error('Failed to send order.expired webhook', err as Error, { orderId });
       });
     }

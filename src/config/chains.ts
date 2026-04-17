@@ -54,7 +54,9 @@ export const CHAIN_CONFIGS: Record<Chain, ChainConfig> = {
     rpcUrl: process.env.ETHEREUM_MAINNET_RPC_URL || 'https://eth.llamarpc.com',
     usdcAddress: process.env.USDC_ETHEREUM_MAINNET || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
     paymentAddress: process.env.PAYMENT_ADDRESS_ETHEREUM_MAINNET || '',
-    requiredConfirms: 12,
+    // 6 confirmations (~72s at 12s blocks). Down from 12 — 12 is overkill for sub-$10k payments
+    // and Circle/Binance-standard only kicks in for very large settlements. 6 is still multi-uncle safe.
+    requiredConfirms: 6,
     blockTimeSeconds: 12,
     explorerUrl: 'https://etherscan.io',
     isTestnet: false,
@@ -65,7 +67,9 @@ export const CHAIN_CONFIGS: Record<Chain, ChainConfig> = {
     rpcUrl: process.env.POLYGON_MAINNET_RPC_URL || 'https://polygon-rpc.com',
     usdcAddress: process.env.USDC_POLYGON_MAINNET || '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
     paymentAddress: process.env.PAYMENT_ADDRESS_POLYGON_MAINNET || '',
-    requiredConfirms: 128,
+    // 50 confirmations (~100s). Down from 128 — post-Bhilai upgrade finality is much faster,
+    // 50 is the modern mainstream default.
+    requiredConfirms: 50,
     blockTimeSeconds: 2,
     explorerUrl: 'https://polygonscan.com',
     isTestnet: false,

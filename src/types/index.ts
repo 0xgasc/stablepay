@@ -18,6 +18,7 @@ export interface CreateOrderRequest {
   amount: number;
   chain: Chain;
   merchantId?: string;
+  storeId?: string | null;
   customerEmail?: string;
   customerName?: string;
   expiryMinutes?: number;

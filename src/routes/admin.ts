@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { ethers } from 'ethers';
+import bcrypt from 'bcryptjs';
 import { db } from '../config/database';
 import { PRICING_TIERS } from '../config/pricing';
 import { logger } from '../utils/logger';
 import { rateLimit } from '../middleware/rateLimit';
+import { logAdminAction } from '../utils/audit';
 
 const router = Router();
 const crypto = require('crypto');
@@ -11,17 +13,51 @@ const crypto = require('crypto');
 // 2FA code store (in-memory, 10-min TTL)
 const pending2FA: Map<string, { code: string; expiresAt: number; email: string }> = new Map();
 
-// Get admin key — check DB first (for in-app password changes), fall back to env
+// Raw stored secret (hash if bcrypt-prefixed, plaintext legacy otherwise).
+// getAdminKey always returns the LIVE session token — which after bootstrap = the ADMIN_KEY env
+// value. The DB value is used ONLY for verifying admin login (see verifyAdminPassword).
 const getAdminKey = async (): Promise<string> => {
-  try {
-    const config = await db.systemConfig.findUnique({ where: { key: 'admin_password' } });
-    if (config?.value) return config.value;
-  } catch { /* DB not ready */ }
-  return process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN || '';
+  return (process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN || '').trim();
 };
 
-// Sync version for middleware (checks env only — DB password checked in login flow)
 const getAdminKeySync = () => (process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN || '').trim();
+
+// Compare a plaintext admin password attempt against the stored secret.
+// Order of precedence: DB (systemConfig.admin_password) → env (ADMIN_KEY / ADMIN_PASSWORD).
+// Supports silent-upgrade: if DB row stores plaintext, rewrites it as bcrypt after a successful match.
+async function verifyAdminPassword(plaintext: string): Promise<boolean> {
+  if (!plaintext) return false;
+  let stored = '';
+  let source: 'db' | 'env' = 'env';
+  try {
+    const config = await db.systemConfig.findUnique({ where: { key: 'admin_password' } });
+    if (config?.value) { stored = config.value; source = 'db'; }
+  } catch { /* DB offline — fall through to env */ }
+  if (!stored) {
+    stored = process.env.ADMIN_KEY || process.env.ADMIN_PASSWORD || process.env.ADMIN_API_TOKEN || '';
+  }
+  if (!stored) return false;
+
+  const isBcrypt = stored.startsWith('$2a$') || stored.startsWith('$2b$') || stored.startsWith('$2y$');
+  const matched = isBcrypt ? await bcrypt.compare(plaintext, stored) : plaintext === stored;
+  if (!matched) return false;
+
+  // Silent upgrade: re-hash plaintext DB values on successful login.
+  if (!isBcrypt && source === 'db') {
+    try {
+      const hash = await bcrypt.hash(plaintext, 12);
+      await db.systemConfig.upsert({
+        where: { key: 'admin_password' },
+        update: { value: hash },
+        create: { key: 'admin_password', value: hash },
+      });
+      logger.security('Admin password silently upgraded to bcrypt', { event: 'admin.password_hashed' });
+    } catch (err) {
+      logger.error('Failed to upgrade admin password to bcrypt', err as Error);
+    }
+  }
+  return true;
+}
 
 // Helper to serialize BigInt values to strings for JSON
 const serializeBigInt = (obj: any): any => {
@@ -115,7 +151,7 @@ router.get('/', requireAdminKey, rateLimit({
           include: {
             wallets: true,
             _count: {
-              select: { orders: true },
+              select: { orders: true, stores: { where: { isArchived: false } } },
             },
           },
           orderBy: { createdAt: 'desc' },
@@ -141,8 +177,21 @@ router.get('/', requireAdminKey, rateLimit({
           ...m,
           totalVolume: volumeMap.get(m.id)?.totalVolume || 0,
           orderCount: volumeMap.get(m.id)?.orderCount || 0,
+          storeCount: (m as any)._count?.stores ?? 0,
         }));
         return res.json(enrichedMerchants);
+
+      case 'stores':
+        if (!merchantId || typeof merchantId !== 'string') {
+          return res.status(400).json({ error: 'merchantId query param required' });
+        }
+        const stores = await db.store.findMany({
+          where: { merchantId },
+          orderBy: [{ isArchived: 'asc' }, { createdAt: 'desc' }],
+          include: { _count: { select: { orders: true, paymentLinks: true, wallets: true } } },
+        });
+        // Never return webhookSecret to admin UI either.
+        return res.json({ stores: stores.map(({ webhookSecret, ...rest }) => rest) });
 
       default:
         return res.status(400).json({ error: `Unknown resource: ${resource}` });
@@ -164,9 +213,9 @@ router.post('/', async (req, res) => {
     // Admin login — Step 1: validate password, send 2FA code
     if (resource === 'login') {
       const { email, password } = req.body;
-      const expectedKey = await getAdminKey();
+      const matched = await verifyAdminPassword(password);
 
-      if (password === expectedKey) {
+      if (matched) {
         // Generate 6-digit 2FA code
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const sessionId = crypto.randomBytes(16).toString('hex');
@@ -217,11 +266,14 @@ router.post('/', async (req, res) => {
       return res.json({ success: true, token });
     }
 
-    // For non-login resources, verify admin key
+    // For non-login resources, verify admin key.
+    // Bug fix: getAdminKey is async — comparing a string to a Promise always diverges, so the old
+    // check silently 401'd every non-login POST. Await the expected key before comparing.
     const authHeader = req.headers['authorization'] as string | undefined;
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
     const providedKey = req.headers['x-admin-key'] || bearerToken || req.body?.adminKey;
-    if (providedKey !== getAdminKey()) {
+    const expectedAdminKey = await getAdminKey();
+    if (!providedKey || providedKey !== expectedAdminKey) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -829,6 +881,14 @@ router.post('/refunds/:id/approve', requireAdminKey, async (req, res) => {
       id
     );
 
+    await logAdminAction(req, 'admin', {
+      action: 'refund.approve',
+      resource: 'refund',
+      resourceId: id,
+      before: { status: refund.status },
+      after: { status: 'APPROVED', approvedBy: 'admin' },
+    });
+
     const updated = await db.refund.findUnique({
       where: { id },
       include: { order: { include: { transactions: { select: { fromAddress: true }, take: 1 } } } },
@@ -860,6 +920,15 @@ router.post('/refunds/:id/reject', requireAdminKey, async (req, res) => {
     await db.$queryRawUnsafe(`UPDATE refunds SET status = 'REJECTED', "approvedBy" = 'admin' WHERE id = $1`, id);
     const updated = await db.refund.findUnique({ where: { id } });
 
+    await logAdminAction(req, 'admin', {
+      action: 'refund.reject',
+      resource: 'refund',
+      resourceId: id,
+      before: { status: refund.status },
+      after: { status: 'REJECTED', approvedBy: 'admin' },
+      reason,
+    });
+
     res.json({ success: true, refund: updated ? { ...updated, amount: Number(updated.amount) } : null, reason });
   } catch (error) {
     logger.error('Error rejecting refund', error as Error, {});
@@ -885,6 +954,14 @@ router.post('/refunds/:id/process', requireAdminKey, async (req, res) => {
     const processNow = new Date();
     await db.$executeRaw`UPDATE orders SET status = 'REFUNDED'::"OrderStatus", "updatedAt" = ${processNow} WHERE id = ${refund.orderId}`;
     const updated = await db.refund.findUnique({ where: { id } });
+
+    await logAdminAction(req, 'admin', {
+      action: 'refund.process',
+      resource: 'refund',
+      resourceId: id,
+      before: { status: refund.status },
+      after: { status: 'PROCESSED', refundTxHash: txHash },
+    });
 
     // Proportional fee reversal (match merchant refund route logic)
     let feeReversed = 0;
@@ -919,6 +996,85 @@ router.post('/refunds/:id/process', requireAdminKey, async (req, res) => {
   } catch (error) {
     logger.error('Error processing refund', error as Error, {});
     res.status(500).json({ error: 'Failed to process refund' });
+  }
+});
+
+// ============================================================================
+// ADMIN MANUAL ORDER CONFIRMATION
+// ============================================================================
+
+// Manually confirm a stuck PENDING order. Use when scanner missed a TX (e.g. lookback expired,
+// merchant's scanner was offline). Mirrors the confirmOrder path: writes Transaction, flips status,
+// fires webhook, accrues fees. Every call is audited.
+router.post('/orders/:orderId/confirm', requireAdminKey, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { txHash, reason } = req.body as { txHash?: string; reason?: string };
+    if (!reason || reason.trim().length < 3) {
+      return res.status(400).json({ error: 'reason (≥3 chars) required for audit trail' });
+    }
+
+    const order = await db.order.findUnique({ where: { id: orderId } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status !== 'PENDING') {
+      return res.status(400).json({ error: `Order is ${order.status}, cannot manually confirm` });
+    }
+
+    // Extend expiry if already past, so the atomic guard inside confirmOrder accepts it.
+    if (order.expiresAt < new Date()) {
+      await db.order.update({
+        where: { id: orderId },
+        data: { expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+      });
+    }
+
+    const { OrderService } = await import('../services/orderService');
+    const result = await new OrderService().confirmOrder(orderId, txHash ? { txHash } : undefined);
+
+    await logAdminAction(req, 'admin', {
+      action: 'order.confirm_manual',
+      resource: 'order',
+      resourceId: orderId,
+      before: { status: order.status },
+      after: { status: 'CONFIRMED', txHash: txHash || null },
+      reason,
+    });
+
+    logger.security('Order manually confirmed by admin', {
+      orderId,
+      txHash,
+      reason,
+      event: 'admin.order_manual_confirm',
+    });
+
+    res.json({ success: true, order: serializeBigInt(result) });
+  } catch (error) {
+    logger.error('Admin manual confirm error', error as Error, { orderId: req.params.orderId });
+    res.status(500).json({ error: 'Failed to confirm order', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+// List admin audit trail (paginated, filterable)
+router.get('/audit', requireAdminKey, async (req, res) => {
+  try {
+    const { actor, resource, resourceId, action, limit = '100' } = req.query as Record<string, string>;
+    const take = Math.min(parseInt(limit) || 100, 500);
+
+    const actions = await db.adminAction.findMany({
+      where: {
+        ...(actor && { actor }),
+        ...(resource && { resource }),
+        ...(resourceId && { resourceId }),
+        ...(action && { action }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take,
+    });
+
+    res.json({ actions });
+  } catch (error) {
+    logger.error('Audit list error', error as Error);
+    res.status(500).json({ error: 'Failed to list audit events' });
   }
 });
 
@@ -1219,19 +1375,25 @@ router.post('/change-password', requireAdminKey, async (req, res) => {
     if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both currentPassword and newPassword required' });
     if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
 
-    const current = await getAdminKey();
-    if (currentPassword !== current) return res.status(401).json({ error: 'Current password is incorrect' });
+    const currentMatched = await verifyAdminPassword(currentPassword);
+    if (!currentMatched) return res.status(401).json({ error: 'Current password is incorrect' });
 
+    const hash = await bcrypt.hash(newPassword, 12);
     await db.systemConfig.upsert({
       where: { key: 'admin_password' },
-      update: { value: newPassword },
-      create: { key: 'admin_password', value: newPassword },
+      update: { value: hash },
+      create: { key: 'admin_password', value: hash },
     });
 
+    await logAdminAction(req, 'admin', {
+      action: 'admin.password_changed',
+      resource: 'system',
+      resourceId: 'admin_password',
+    });
     logger.info('Admin password changed', { event: 'admin.password_changed' });
     res.json({ success: true, message: 'Password changed. Use new password on next login.' });
   } catch (error) {
-    console.error('Change password error:', error);
+    logger.error('Change password error', error as Error);
     res.status(500).json({ error: 'Failed to change password' });
   }
 });

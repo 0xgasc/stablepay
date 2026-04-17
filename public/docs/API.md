@@ -138,6 +138,90 @@ Rate limit: 20 req/hr per IP.
 
 ---
 
+## Stores (multi-brand)
+
+A merchant can operate multiple stores (brands) from one account. Each store has its own webhook URL + secret, branding (logo, colors, display name), and optional per-chain wallet routing overrides. Use stores when you run multiple brands that need isolated backend integrations or different deposit wallets.
+
+Every existing merchant has a **"Default" store** auto-created on migration — you don't need to use stores if you don't want to.
+
+### Create a store
+
+`POST /api/stores` (merchant auth)
+
+```json
+{
+  "slug": "flirtynlocal",
+  "name": "FlirtyNLocal",
+  "displayName": "FlirtyNLocal",
+  "logoUrl": "https://flirtynlocal.com/logo.svg",
+  "headerColor": "#FF2B6E",
+  "website": "https://flirtynlocal.com",
+  "webhookUrl": "https://api.flirtynlocal.com/webhooks/stablepay",
+  "webhookEnabled": true
+}
+```
+
+Response (webhook secret returned **exactly once**):
+
+```json
+{
+  "id": "cmp2xyz...",
+  "slug": "flirtynlocal",
+  "name": "FlirtyNLocal",
+  "webhookSecret": "e3f1a8...",
+  "secretGenerated": true,
+  "_secretWarning": "Store this secret now — it will never be shown again."
+}
+```
+
+### Manage
+
+- `GET /api/stores` — list active stores (`?includeArchived=1` to include archived)
+- `GET /api/stores/:id` — detail (never includes `webhookSecret`)
+- `PATCH /api/stores/:id` — update
+- `DELETE /api/stores/:id` — soft-archive (existing orders continue; new checkouts rejected)
+- `POST /api/stores/:id/webhook/rotate-secret` — returns new secret once
+
+### Store wallet overrides
+
+Optional: route payments for a specific chain to a different wallet for this store. By default, stores inherit the merchant's wallets.
+
+- `POST /api/stores/:id/wallets` — body `{ chain, address, supportedTokens?, priority?, isActive? }`
+- `PATCH /api/stores/:id/wallets/:walletId` — update
+- `DELETE /api/stores/:id/wallets/:walletId` — revert to merchant default
+
+### Using a store at checkout
+
+Pass `storeId` at order creation:
+
+**Widget:**
+```html
+<div class="stablepay-checkout"
+  data-merchant="MERCHANT_ID"
+  data-store-id="STORE_ID"
+  data-amount="19.99">
+</div>
+```
+
+**JS API:**
+```js
+StablePay.checkout({ merchantId: '...', storeId: '...', amount: 19.99 });
+```
+
+**Direct API:**
+```json
+POST /api/embed/checkout
+{ "merchantId": "...", "storeId": "...", "amount": 19.99, "token": "USDC" }
+```
+
+When an order has `storeId`, the checkout page renders the store's branding (logo, display name, colors) — not the merchant's. Webhooks go to the store's URL, signed with the store's secret.
+
+### Public branding endpoint
+
+`GET /api/embed/store/:id` — public, returns `{ id, name, displayName, logoUrl, headerColor, headerTextColor, website, backButtonText, widgetConfig }`. Used by the checkout page to display store-specific branding. Returns 410 if archived.
+
+---
+
 ## Payment Links
 
 ### Create
@@ -151,11 +235,12 @@ Rate limit: 20 req/hr per IP.
   "chains": ["BASE_MAINNET", "SOLANA_MAINNET"],
   "productName": "Newsletter",
   "description": "Annual subscription",
-  "externalId": "plan-nl-001"
+  "externalId": "plan-nl-001",
+  "storeId": "cmp2xyz..."
 }
 ```
 
-`chains` can be omitted or left empty — the customer will see every chain you have a wallet configured for.
+`chains` can be omitted or left empty — the customer will see every chain you have a wallet configured for. `storeId` is optional; when set, the link inherits the store's branding and routes webhooks to the store's URL.
 
 Response includes `url` (e.g. `https://wetakestables.shop/pay/abc12345`). Share that URL — customers land on a branded checkout page.
 

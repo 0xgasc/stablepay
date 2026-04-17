@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '../config/database';
 import { rateLimit } from '../middleware/rateLimit';
 import { requireMerchantAuth } from '../middleware/auth';
+import { idempotency } from '../middleware/idempotency';
 import { logger } from '../utils/logger';
 import { webhookService } from '../services/webhookService';
 
@@ -22,6 +23,7 @@ router.use((req, res, next) => {
 // Validation schema for checkout
 const checkoutSchema = z.object({
   merchantId: z.string().min(1),
+  storeId: z.string().optional(),  // Scope order to a merchant's sub-brand for webhook/branding isolation
   amount: z.number().positive(),
   chain: z.string().min(1).optional(),  // Optional: omit to let customer pick from merchant's active chains
   token: z.enum(['USDC', 'USDT', 'EURC']).default('USDC'),
@@ -38,12 +40,45 @@ const checkoutSchema = z.object({
 });
 
 /**
+/**
+ * Public branding for a store — used by the checkout page when an order has a storeId.
+ * Returns only display fields (no webhook secret, no merchant-level fields).
+ */
+router.get('/store/:storeId', async (req, res) => {
+  try {
+    const store = await db.store.findUnique({
+      where: { id: req.params.storeId },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        logoUrl: true,
+        headerColor: true,
+        headerTextColor: true,
+        website: true,
+        backButtonText: true,
+        widgetConfig: true,
+        isArchived: true,
+      },
+    });
+    if (!store) return res.status(404).json({ error: 'Store not found' });
+    if (store.isArchived) return res.status(410).json({ error: 'Store archived' });
+    const { isArchived, ...publicFields } = store;
+    res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
+    res.json(publicFields);
+  } catch (error) {
+    logger.error('Get store branding error', error as Error);
+    res.status(500).json({ error: 'Failed to fetch store' });
+  }
+});
+
+/*
  * Get available chains for a merchant
  * Used by widget to show chain selector
  */
 router.get('/chains', async (req, res) => {
   try {
-    const { merchantId } = req.query;
+    const { merchantId, storeId } = req.query;
 
     if (!merchantId) {
       return res.status(400).json({ error: 'merchantId is required' });
@@ -75,13 +110,48 @@ router.get('/chains', async (req, res) => {
     const canHideFooter = ['GROWTH', 'SCALE', 'ENTERPRISE'].includes(merchant.plan);
     if (!canHideFooter) delete widgetConfig.hideFooter;
 
+    // Store-scoped: overlay store wallet overrides on merchant defaults. Store overrides replace
+    // the merchant wallet for that chain; chains without store overrides inherit merchant wallets.
+    let finalWallets = merchant.wallets;
+    let storeBranding: any = null;
+    if (storeId) {
+      const store = await db.store.findUnique({
+        where: { id: storeId as string },
+        select: {
+          id: true, merchantId: true, isArchived: true, displayName: true, name: true,
+          logoUrl: true, headerColor: true, headerTextColor: true, website: true,
+          backButtonText: true, widgetConfig: true,
+          wallets: {
+            where: { isActive: true },
+            orderBy: { priority: 'asc' },
+            select: { chain: true, address: true, supportedTokens: true },
+          },
+        },
+      });
+      if (store && store.merchantId === merchantId && !store.isArchived) {
+        const byChain = new Map(merchant.wallets.map(w => [w.chain, w]));
+        for (const sw of store.wallets) byChain.set(sw.chain, sw as any);
+        finalWallets = Array.from(byChain.values());
+        // Store branding fully REPLACES merchant branding
+        storeBranding = {
+          displayName: store.displayName || store.name,
+          logoUrl: store.logoUrl,
+          headerColor: store.headerColor,
+          headerTextColor: store.headerTextColor,
+          backButtonText: store.backButtonText,
+          ...(store.widgetConfig as any || {}),
+        };
+      }
+    }
+
     res.json({
       merchantId,
-      merchantName: merchant.companyName,
-      merchantWebsite: merchant.website || null,
-      chains: merchant.wallets.map(w => w.chain),
-      wallets: merchant.wallets,
-      widgetConfig,
+      storeId: storeId || null,
+      merchantName: storeBranding?.displayName || merchant.companyName,
+      merchantWebsite: (storeId ? (await db.store.findUnique({ where: { id: storeId as string }, select: { website: true } }))?.website : null) || merchant.website || null,
+      chains: finalWallets.map(w => w.chain),
+      wallets: finalWallets,
+      widgetConfig: storeBranding || widgetConfig,
     });
   } catch (error) {
     console.error('Get embed chains error:', error);
@@ -97,7 +167,7 @@ router.post('/checkout', rateLimit({
   getMerchantId: async (req) => req.body.merchantId || null,
   limitAnonymous: true,
   anonymousLimit: 100
-}), async (req, res) => {
+}), idempotency(), async (req, res) => {
   try {
     const data = checkoutSchema.parse(req.body);
     const chainAgnostic = !data.chain;
@@ -125,6 +195,22 @@ router.post('/checkout', rateLimit({
         error: 'Payment unavailable',
         message: 'This merchant is temporarily unavailable'
       });
+    }
+
+    // Validate store (if scoped) — must belong to merchant, not be archived.
+    let resolvedStoreId: string | null = null;
+    if (data.storeId) {
+      const store = await db.store.findUnique({
+        where: { id: data.storeId },
+        select: { merchantId: true, isArchived: true },
+      });
+      if (!store || store.merchantId !== data.merchantId) {
+        return res.status(404).json({ error: 'Store not found' });
+      }
+      if (store.isArchived) {
+        return res.status(400).json({ error: 'Store is archived' });
+      }
+      resolvedStoreId = data.storeId;
     }
 
     const wallet = merchant.wallets[0];
@@ -192,15 +278,25 @@ router.post('/checkout', rateLimit({
     if (data.returnUrl) finalMetadata._returnUrl = data.returnUrl;
     if (chainAgnostic) finalMetadata._chainAgnostic = true;
 
+    // Resolve final payment address: honor store wallet override if present.
+    const resolvedChain = (data.chain || wallet.chain) as any;
+    let paymentAddress = wallet.address;
+    if (resolvedStoreId && !chainAgnostic) {
+      const { resolvePaymentAddress } = await import('../services/storeResolver');
+      const resolution = await resolvePaymentAddress(data.merchantId, resolvedStoreId, resolvedChain);
+      paymentAddress = resolution.address;
+    }
+
     const order = await db.order.create({
       data: {
         merchantId: data.merchantId,
+        storeId: resolvedStoreId,
         amount: data.amount,
         token: data.token,
-        chain: (data.chain || wallet.chain) as any,
+        chain: resolvedChain,
         customerEmail: data.customerEmail || null,
         customerName: data.customerName || data.productName || null,
-        paymentAddress: wallet.address,
+        paymentAddress,
         customerWallet: data.customerWallet || null,
         paymentMethod: data.paymentMethod || null,
         source: data.source || 'EMBED_WIDGET',
@@ -332,6 +428,26 @@ router.get('/order/:orderId', async (req, res) => {
       availableChains = wallets;
     }
 
+    // Resolve branding — store branding fully replaces merchant when order has storeId.
+    let brandedName = order.merchant?.companyName || null;
+    let brandedWebsite = order.merchant?.website || null;
+    let brandedWidgetConfig: any = widgetConfig;
+    if (order.storeId && order.merchantId) {
+      const { resolveBranding } = await import('../services/storeResolver');
+      const b = await resolveBranding(order.merchantId, order.storeId);
+      if (b.source === 'store') {
+        brandedName = b.displayName ?? brandedName;
+        brandedWebsite = b.website;
+        brandedWidgetConfig = b.widgetConfig || {
+          displayName: b.displayName,
+          logoUrl: b.logoUrl,
+          headerColor: b.headerColor,
+          headerTextColor: b.headerTextColor,
+          backButtonText: b.backButtonText,
+        };
+      }
+    }
+
     res.json({
       id: order.id,
       status: order.status,
@@ -342,9 +458,10 @@ router.get('/order/:orderId', async (req, res) => {
       availableChains, // populated only when chainAgnostic is true
       paymentAddress: order.paymentAddress,
       merchantId: order.merchantId,
-      merchantName: order.merchant?.companyName || null,
-      merchantWebsite: order.merchant?.website || null,
-      widgetConfig,
+      storeId: order.storeId || null,
+      merchantName: brandedName,
+      merchantWebsite: brandedWebsite,
+      widgetConfig: brandedWidgetConfig,
       productName: order.customerName, // productName is stored in customerName when set via embed
       customerEmail: order.customerEmail,
       returnUrl: md._returnUrl || null,
@@ -372,7 +489,7 @@ router.post('/order/:orderId/chain', async (req, res) => {
 
     const order = await db.order.findUnique({
       where: { id: orderId },
-      select: { status: true, merchantId: true, metadata: true, amount: true, token: true },
+      select: { status: true, merchantId: true, storeId: true, metadata: true, amount: true, token: true },
     });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.status !== 'PENDING') return res.status(400).json({ error: `Order status is ${order.status}` });
@@ -383,21 +500,35 @@ router.post('/order/:orderId/chain', async (req, res) => {
       return res.status(400).json({ error: 'Order chain is already locked' });
     }
 
-    // Find merchant's wallet for the requested chain
-    const wallet = await db.merchantWallet.findFirst({
-      where: { merchantId: order.merchantId, chain, isActive: true },
-    });
-    if (!wallet) {
-      return res.status(400).json({ error: `Merchant has no active wallet for ${chain}` });
+    // Resolve wallet: store override → merchant default. Validate token against whichever wins.
+    let walletAddress: string | null = null;
+    let supportedTokens: string[] = ['USDC'];
+    if (order.storeId) {
+      const sw = await db.storeWallet.findFirst({ where: { storeId: order.storeId, chain, isActive: true } });
+      if (sw) {
+        walletAddress = sw.address;
+        supportedTokens = sw.supportedTokens?.length ? sw.supportedTokens : ['USDC'];
+      }
+    }
+    if (!walletAddress) {
+      const wallet = await db.merchantWallet.findFirst({
+        where: { merchantId: order.merchantId, chain, isActive: true },
+      });
+      if (wallet) {
+        walletAddress = wallet.address;
+        supportedTokens = wallet.supportedTokens?.length ? wallet.supportedTokens : ['USDC'];
+      }
+    }
+    if (!walletAddress) {
+      return res.status(400).json({ error: `No active wallet for ${chain}` });
     }
 
     // Validate token
     const requestedToken = token || order.token || 'USDC';
-    const supported = wallet.supportedTokens?.length ? wallet.supportedTokens : ['USDC'];
-    if (!supported.includes(requestedToken)) {
+    if (!supportedTokens.includes(requestedToken)) {
       return res.status(400).json({
         error: 'Token not supported',
-        message: `Merchant does not accept ${requestedToken} on ${chain}. Supported: ${supported.join(', ')}`
+        message: `Does not accept ${requestedToken} on ${chain}. Supported: ${supportedTokens.join(', ')}`
       });
     }
 
@@ -419,12 +550,12 @@ router.post('/order/:orderId/chain', async (req, res) => {
         chain: chain as any,
         token: requestedToken,
         amount: finalAmount,
-        paymentAddress: wallet.address,
+        paymentAddress: walletAddress,
         metadata: Object.keys(newMetadata).length > 0 ? newMetadata : undefined,
       },
     });
 
-    res.json({ success: true, chain, token: requestedToken, amount: Number(finalAmount), paymentAddress: wallet.address });
+    res.json({ success: true, chain, token: requestedToken, amount: Number(finalAmount), paymentAddress: walletAddress });
   } catch (error) {
     console.error('Set order chain error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -505,11 +636,14 @@ router.post('/order/:orderId/tx', async (req, res) => {
       return res.status(400).json({ error: 'A transaction is already pending review for this order', txHash: pendingManualTx.txHash });
     }
 
-    // Try auto-verification on-chain — MUST verify destination, token, and amount
+    // Try auto-verification on-chain — MUST verify destination, token (== order.token), and amount.
+    // EVM manual paths ALSO wait for finality (requiredConfirms) before flipping the order to CONFIRMED.
     let verified = false;
+    let pendingFinality = false;
     let verifyError = '';
     try {
       if (order.chain === 'SOLANA_MAINNET') {
+        const { SOLANA_TOKEN_MINTS, amountWithinTolerance } = await import('../services/blockchainService');
         const solRpc = process.env.SOLANA_MAINNET_RPC_URL?.trim() || 'https://api.mainnet-beta.solana.com';
 
         // Get merchant's ATAs to match against
@@ -536,53 +670,51 @@ router.post('/order/:orderId/tx', async (req, res) => {
         if (!tx) { verifyError = 'Transaction not found on Solana'; }
         else if (tx.meta?.err) { verifyError = 'Transaction failed on-chain'; }
         else {
-          // Parse SPL transfers — verify destination is our ATA and amount matches
-          // Valid token mints we accept
-          const VALID_MINTS: Record<string, string> = {
-            'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
-            'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
-            'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr': 'EURC',
-          };
+          // The transfer MUST use the exact mint for this order's token — reject anything else.
+          const expectedMint = SOLANA_TOKEN_MINTS[order.token];
+          if (!expectedMint) { verifyError = `Unsupported token ${order.token} for Solana`; }
+          else {
+            const allIx = [...(tx.transaction?.message?.instructions || []), ...(tx.meta?.innerInstructions?.flatMap((i: any) => i.instructions) || [])];
+            let matchedAmount = 0;
+            let matchedFrom = '';
 
-          const allIx = [...(tx.transaction?.message?.instructions || []), ...(tx.meta?.innerInstructions?.flatMap((i: any) => i.instructions) || [])];
-          let matchedAmount = 0;
-          let matchedFrom = '';
+            for (const ix of allIx) {
+              if (!ix.parsed || ix.program !== 'spl-token') continue;
+              if (ix.parsed.type !== 'transferChecked' && ix.parsed.type !== 'transfer') continue;
+              const dest = ix.parsed.info.destination;
+              if (!merchantATAs.has(dest)) continue; // Not to our wallet
+              // Mint must match order.token exactly. Reject legacy `transfer` with no mint.
+              const mint = ix.parsed.info.mint;
+              if (!mint || mint !== expectedMint) continue;
+              const amt = parseFloat(ix.parsed.info.tokenAmount?.uiAmountString || '0');
+              matchedAmount += amt;
+              matchedFrom = ix.parsed.info.authority || ix.parsed.info.multisigAuthority || ix.parsed.info.signers?.[0] || '';
+            }
 
-          for (const ix of allIx) {
-            if (!ix.parsed || ix.program !== 'spl-token') continue;
-            if (ix.parsed.type !== 'transferChecked' && ix.parsed.type !== 'transfer') continue;
-            const dest = ix.parsed.info.destination;
-            if (!merchantATAs.has(dest)) continue; // Not to our wallet!
-            // Verify it's a stablecoin we accept (not a random SPL token)
-            const mint = ix.parsed.info.mint;
-            if (mint && !VALID_MINTS[mint]) continue;
-            const amt = parseFloat(ix.parsed.info.tokenAmount?.uiAmountString || '0');
-            matchedAmount += amt;
-            matchedFrom = ix.parsed.info.authority || ix.parsed.info.multisigAuthority || ix.parsed.info.signers?.[0] || '';
-          }
-
-          const orderAmt = Number(order.amount);
-          // Use percentage tolerance: must be within 2% of order amount, AND at least 95% paid
-          const pctDiff = orderAmt > 0 ? Math.abs(matchedAmount - orderAmt) / orderAmt : 1;
-          if (matchedAmount === 0) {
-            verifyError = 'This transaction does not send tokens to the merchant wallet';
-          } else if (matchedAmount < orderAmt * 0.999 || pctDiff > 0.001) {
-            verifyError = `Amount mismatch: TX sends $${matchedAmount.toFixed(6)} but order requires $${orderAmt.toFixed(6)}`;
-          } else {
-            verified = true;
-            await db.transaction.create({
-              data: { orderId, txHash, chain: order.chain, amount: matchedAmount,
-                fromAddress: matchedFrom || 'verified', toAddress: order.paymentAddress,
-                status: 'CONFIRMED', confirmations: 1,
-                blockTimestamp: tx.blockTime ? new Date(tx.blockTime * 1000) : new Date() },
-            });
-            const { OrderService } = await import('../services/orderService');
-            await new OrderService().confirmOrder(orderId, { txHash });
+            const orderAmt = Number(order.amount);
+            if (matchedAmount === 0) {
+              verifyError = `This transaction does not send ${order.token} to the merchant wallet`;
+            } else if (!amountWithinTolerance(matchedAmount, orderAmt)) {
+              verifyError = matchedAmount > orderAmt
+                ? `Overpayment: TX sends ${matchedAmount.toFixed(6)} ${order.token} but order requires ${orderAmt.toFixed(6)}`
+                : `Amount mismatch: TX sends ${matchedAmount.toFixed(6)} ${order.token} but order requires ${orderAmt.toFixed(6)}`;
+            } else {
+              verified = true;
+              await db.transaction.create({
+                data: { orderId, txHash, chain: order.chain, amount: matchedAmount,
+                  fromAddress: matchedFrom || 'verified', toAddress: order.paymentAddress,
+                  status: 'CONFIRMED', confirmations: 1,
+                  blockTimestamp: tx.blockTime ? new Date(tx.blockTime * 1000) : new Date() },
+              });
+              const { OrderService } = await import('../services/orderService');
+              await new OrderService().confirmOrder(orderId, { txHash });
+            }
           }
         }
       } else if (['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'BNB_MAINNET'].includes(order.chain)) {
         const { ethers } = await import('ethers');
         const { CHAIN_CONFIGS } = await import('../config/chains');
+        const { CHAIN_STABLES, getTokenDecimals, amountWithinTolerance } = await import('../services/blockchainService');
         const config = CHAIN_CONFIGS[order.chain as keyof typeof CHAIN_CONFIGS];
         if (!config?.rpcUrl) { verifyError = 'Chain not configured'; }
         else {
@@ -591,54 +723,71 @@ router.post('/order/:orderId/tx', async (req, res) => {
           if (!receipt) { verifyError = 'Transaction not found on this chain'; }
           else if (receipt.status !== 1) { verifyError = 'Transaction failed on-chain'; }
           else {
-            // Known stablecoin contracts per chain
-            const VALID_TOKENS: Record<string, string[]> = {
-              BASE_MAINNET: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42'],
-              ETHEREUM_MAINNET: ['0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', '0xdAC17F958D2ee523a2206206994597C13D831ec7', '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c'],
-              POLYGON_MAINNET: ['0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'],
-              ARBITRUM_MAINNET: ['0xaf88d065e77c8cC2239327C5EDb3A432268e5831', '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'],
-              BNB_MAINNET: ['0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', '0x55d398326f99059fF775485246999027B3197955'],
-            };
-            const validContracts = new Set((VALID_TOKENS[order.chain] || []).map(a => a.toLowerCase()));
-
-            // Parse ERC20 Transfer logs — verify TO is our address AND from a valid stablecoin contract
-            const transferTopic = ethers.id('Transfer(address,address,uint256)');
-            const matchingLog = receipt.logs.find(log =>
-              log.topics[0] === transferTopic &&
-              validContracts.has(log.address.toLowerCase()) && // Must be a known stablecoin
-              log.topics[2] && ethers.getAddress('0x' + log.topics[2].slice(26)).toLowerCase() === order.paymentAddress.toLowerCase()
-            );
-            if (!matchingLog) {
-              verifyError = 'This transaction does not send tokens to the merchant wallet';
+            // Only the order's exact token contract counts as a valid transfer source.
+            const expectedContract = (CHAIN_STABLES[order.chain]?.[order.token] || '').toLowerCase();
+            if (!expectedContract) {
+              verifyError = `Unsupported token ${order.token} for ${order.chain}`;
             } else {
-              const decimals = order.chain === 'BNB_MAINNET' ? 18 : 6;
-              const txAmount = parseFloat(ethers.formatUnits(BigInt(matchingLog.data), decimals));
-              const evmOrderAmt = Number(order.amount);
-              const evmPctDiff = evmOrderAmt > 0 ? Math.abs(txAmount - evmOrderAmt) / evmOrderAmt : 1;
-              if (txAmount < evmOrderAmt * 0.999 || evmPctDiff > 0.001) {
-                verifyError = `Amount mismatch: TX sends $${txAmount.toFixed(6)} but order requires $${evmOrderAmt.toFixed(6)}`;
+              const transferTopic = ethers.id('Transfer(address,address,uint256)');
+              const matchingLog = receipt.logs.find(log =>
+                log.topics[0] === transferTopic &&
+                log.address.toLowerCase() === expectedContract &&
+                log.topics[2] && ethers.getAddress('0x' + log.topics[2].slice(26)).toLowerCase() === order.paymentAddress.toLowerCase()
+              );
+              if (!matchingLog) {
+                verifyError = `This transaction does not send ${order.token} to the merchant wallet`;
               } else {
-                verified = true;
-                await db.transaction.create({
-                  data: { orderId, txHash, chain: order.chain, amount: txAmount,
-                    fromAddress: receipt.from, toAddress: order.paymentAddress,
-                    blockNumber: BigInt(receipt.blockNumber),
-                    status: 'CONFIRMED', confirmations: 1, blockTimestamp: new Date() },
-                });
-                const { OrderService } = await import('../services/orderService');
-                await new OrderService().confirmOrder(orderId, { txHash, blockNumber: receipt.blockNumber });
+                const decimals = getTokenDecimals(order.chain, order.token);
+                const txAmount = parseFloat(ethers.formatUnits(BigInt(matchingLog.data), decimals));
+                const evmOrderAmt = Number(order.amount);
+                if (!amountWithinTolerance(txAmount, evmOrderAmt)) {
+                  verifyError = txAmount > evmOrderAmt
+                    ? `Overpayment: TX sends ${txAmount.toFixed(6)} ${order.token} but order requires ${evmOrderAmt.toFixed(6)}`
+                    : `Amount mismatch: TX sends ${txAmount.toFixed(6)} ${order.token} but order requires ${evmOrderAmt.toFixed(6)}`;
+                } else {
+                  // Finality wait: if the TX is on-chain but below requiredConfirms, record as PENDING
+                  // and let updatePendingConfirmations promote it when the chain catches up.
+                  const currentBlock = await provider.getBlockNumber();
+                  const confirmations = Math.max(0, currentBlock - receipt.blockNumber);
+                  const isFinal = confirmations >= (config.requiredConfirms || 1);
+
+                  await db.transaction.create({
+                    data: {
+                      orderId, txHash, chain: order.chain, amount: txAmount,
+                      fromAddress: receipt.from, toAddress: order.paymentAddress,
+                      blockNumber: BigInt(receipt.blockNumber),
+                      status: 'CONFIRMED', // on-chain state
+                      confirmations,
+                      blockTimestamp: new Date(),
+                    },
+                  });
+                  if (isFinal) {
+                    verified = true;
+                    const { OrderService } = await import('../services/orderService');
+                    await new OrderService().confirmOrder(orderId, { txHash, blockNumber: receipt.blockNumber, confirmations });
+                  } else {
+                    pendingFinality = true;
+                  }
+                }
               }
             }
           }
         }
       }
     } catch (verifyErr: any) {
-      console.error(`[manual-tx] Auto-verify failed for ${orderId}:`, verifyErr.message);
+      logger.error('Manual TX auto-verify failed', verifyErr as Error, { orderId, txHash, event: 'manual_tx.verify_error' });
       verifyError = 'Verification failed: ' + verifyErr.message;
     }
 
     if (verified) {
       return res.json({ success: true, status: 'CONFIRMED', message: 'Payment verified and confirmed!' });
+    }
+    if (pendingFinality) {
+      return res.json({
+        success: true,
+        status: 'AWAITING_CONFIRMATIONS',
+        message: `Transaction found on-chain. Waiting for network confirmations — we'll confirm your order automatically.`,
+      });
     }
 
     // Verification failed with a specific reason — reject, don't queue

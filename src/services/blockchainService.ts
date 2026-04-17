@@ -4,6 +4,7 @@ import { CHAIN_CONFIGS } from '../config/chains';
 import { Chain } from '../types';
 import { Decimal } from '@prisma/client/runtime/library';
 import { OrderService } from './orderService';
+import { logger } from '../utils/logger';
 
 const USDC_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 value)",
@@ -21,13 +22,41 @@ const SCAN_CHAINS: Chain[] = [
 ];
 
 // All stablecoin contracts per chain (USDC + USDT + EURC where available)
-const CHAIN_STABLES: Record<string, Record<string, string>> = {
+export const CHAIN_STABLES: Record<string, Record<string, string>> = {
   BASE_MAINNET: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42' },
   ETHEREUM_MAINNET: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7', EURC: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c' },
   POLYGON_MAINNET: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' },
   ARBITRUM_MAINNET: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' },
   BNB_MAINNET: { USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', USDT: '0x55d398326f99059fF775485246999027B3197955' },
 };
+
+// Per-(chain, token) decimals. BNB's Binance-Peg USDC/USDT are 18; everything else we support is 6.
+export const CHAIN_TOKEN_DECIMALS: Record<string, Record<string, number>> = {
+  BNB_MAINNET: { USDC: 18, USDT: 18 },
+};
+export function getTokenDecimals(chain: string, token: string): number {
+  return CHAIN_TOKEN_DECIMALS[chain]?.[token] ?? 6;
+}
+
+// Solana SPL mints keyed by token name (source of truth for mint validation)
+export const SOLANA_TOKEN_MINTS: Record<string, string> = {
+  USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+  EURC: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr',
+};
+
+// TRON TRC-20 contracts keyed by token name
+export const TRON_TOKEN_CONTRACTS: Record<string, string> = {
+  USDT: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+  USDC: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8',
+};
+
+// Accepts ±0.1% tolerance. Anything outside (under OR over) is rejected.
+export function amountWithinTolerance(txAmount: number, orderAmount: number): boolean {
+  if (orderAmount <= 0) return false;
+  const diff = Math.abs(txAmount - orderAmount) / orderAmount;
+  return diff <= 0.001;
+}
 
 export class BlockchainService {
   private providers: Record<string, ethers.JsonRpcProvider> = {};
@@ -73,7 +102,7 @@ export class BlockchainService {
           status: 'PENDING',
           expiresAt: { gt: new Date() },
         },
-        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, createdAt: true },
+        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, createdAt: true, token: true },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -125,8 +154,7 @@ export class BlockchainService {
           if (!log.args) continue;
 
           const txHash = log.transactionHash;
-          const decimals = chain === 'BNB_MAINNET' ? 18 : 6;
-          const amount = ethers.formatUnits(log.args.value, decimals);
+          const logContract = (log.address || '').toLowerCase();
           const fromAddress = log.args.from;
           const toAddress = log.args.to?.toLowerCase();
 
@@ -134,13 +162,42 @@ export class BlockchainService {
           const existingTx = await db.transaction.findUnique({ where: { txHash } });
           if (existingTx) continue;
 
-          // Find matching pending order for this address + amount
+          // Find matching pending order for this address + token contract + amount
           let matchedOrder = null;
+          let matchedAmount: string | null = null;
           for (const order of pendingOrders) {
             if (order.paymentAddress.toLowerCase() !== toAddress) continue;
+
+            // Enforce token match: the contract that emitted this Transfer MUST be the order's expected token.
+            // Protects against USDT-for-USDC (or EURC-for-USDC, different currency) false positives.
+            const expectedContract = (CHAIN_STABLES[chain]?.[order.token] || '').toLowerCase();
+            if (!expectedContract || logContract !== expectedContract) {
+              logger.warn('scanner skipped wrong-token transfer', {
+                event: 'scanner.skip.wrong_token',
+                orderId: order.id,
+                chain,
+                expectedToken: order.token,
+                expectedContract,
+                logContract,
+                txHash,
+              });
+              continue;
+            }
+
+            const decimals = getTokenDecimals(chain, order.token);
+            const txAmount = Number(ethers.formatUnits(log.args.value, decimals));
             const orderAmount = Number(order.amount);
-            const txAmount = Number(amount);
-            if (txAmount < orderAmount * 0.999 || (orderAmount > 0 && Math.abs(txAmount - orderAmount) / orderAmount > 0.001)) continue;
+            if (!amountWithinTolerance(txAmount, orderAmount)) {
+              logger.warn('scanner skipped amount outside tolerance', {
+                event: txAmount > orderAmount ? 'scanner.skip.overpay' : 'scanner.skip.underpay',
+                orderId: order.id,
+                chain,
+                orderAmount,
+                txAmount,
+                txHash,
+              });
+              continue;
+            }
 
             // If order has customerWallet, require FROM match
             if (order.customerWallet && order.customerWallet.startsWith('0x')) {
@@ -148,10 +205,12 @@ export class BlockchainService {
             }
 
             matchedOrder = order;
+            matchedAmount = txAmount.toString();
             break;
           }
 
-          if (!matchedOrder) continue;
+          if (!matchedOrder || !matchedAmount) continue;
+          const amount = matchedAmount;
 
           // Get block info
           const receipt = await provider.getTransactionReceipt(txHash);
@@ -183,12 +242,24 @@ export class BlockchainService {
               const screening = await complianceService.screenTransaction(matchedOrder.id, fromAddress);
 
               if (screening.riskLevel === 'BLOCKED') {
-                console.log(`[scanner] BLOCKED order ${matchedOrder.id} — ${screening.flags.join(', ')}`);
+                logger.warn('scanner blocked by compliance', {
+                  event: 'scanner.compliance_blocked',
+                  orderId: matchedOrder.id,
+                  chain,
+                  flags: screening.flags,
+                  riskScore: screening.riskScore,
+                });
                 continue;
               }
 
               if (screening.riskLevel === 'HIGH') {
-                console.log(`[scanner] FLAGGED order ${matchedOrder.id} — risk ${screening.riskScore}, ${screening.flags.join(', ')}`);
+                logger.warn('scanner flagged high-risk payment', {
+                  event: 'scanner.compliance_flagged',
+                  orderId: matchedOrder.id,
+                  chain,
+                  flags: screening.flags,
+                  riskScore: screening.riskScore,
+                });
               }
 
               await this.orderService.confirmOrder(matchedOrder.id, {
@@ -320,7 +391,7 @@ export class BlockchainService {
     try {
       const pendingOrders = await db.order.findMany({
         where: { chain: 'SOLANA_MAINNET', status: 'PENDING', expiresAt: { gt: new Date() } },
-        select: { id: true, paymentAddress: true, amount: true, customerWallet: true },
+        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, token: true },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -330,11 +401,10 @@ export class BlockchainService {
       }
       console.log(`[scanner] Solana: ${pendingOrders.length} pending order(s)`);
 
-      const TOKEN_MINTS: Record<string, string> = {
-        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
-        'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
-        'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr': 'EURC',
-      };
+      // Mint → token name (for display/lookup only — authoritative validation uses SOLANA_TOKEN_MINTS reverse)
+      const TOKEN_MINTS: Record<string, string> = Object.fromEntries(
+        Object.entries(SOLANA_TOKEN_MINTS).map(([name, mint]) => [mint, name])
+      );
 
       // Group by payment address
       const addressMap = new Map<string, typeof pendingOrders>();
@@ -369,8 +439,9 @@ export class BlockchainService {
             this.solanaATACache.set(address, { atas: tokenAccounts, fetchedAt: Date.now() });
           }
 
-          // Step 2: Get signatures — only query ATAs (where transfers land), skip wallet if ATAs exist
-          const addressesToScan = tokenAccounts.length > 0 ? tokenAccounts : [address];
+          // Step 2: Get signatures — always include owner wallet (ATAs may be created mid-cache),
+          // plus every known ATA. Fetch up to 100 sigs per address (was 25).
+          const addressesToScan = Array.from(new Set([address, ...tokenAccounts]));
           const allSigs: any[] = [];
           for (const addr of addressesToScan) {
             try {
@@ -380,7 +451,7 @@ export class BlockchainService {
                 body: JSON.stringify({
                   jsonrpc: '2.0', id: 2,
                   method: 'getSignaturesForAddress',
-                  params: [addr, { limit: 25 }]
+                  params: [addr, { limit: 100 }]
                 }),
                 signal: AbortSignal.timeout(8000),
               });
@@ -439,8 +510,17 @@ export class BlockchainService {
               if (ix.parsed.type !== 'transferChecked' && ix.parsed.type !== 'transfer') continue;
 
               const info = ix.parsed.info;
-              const tokenName = info.mint ? TOKEN_MINTS[info.mint] : null;
-              if (ix.parsed.type === 'transferChecked' && !tokenName) continue;
+              // `transfer` (legacy) has no mint field — we cannot validate token identity, so skip it.
+              // All modern wallets/DEXes emit `transferChecked`. Rejecting legacy is safer than guessing.
+              if (!info.mint) {
+                logger.warn('scanner skipped legacy SPL transfer (no mint)', {
+                  event: 'scanner.skip.spl_unchecked',
+                  chain: 'SOLANA_MAINNET',
+                  txHash,
+                });
+                continue;
+              }
+              const tokenName = TOKEN_MINTS[info.mint] || null;
 
               const amount = parseFloat(info.tokenAmount?.uiAmountString || '0');
               const from = info.authority || info.multisigAuthority || info.signers?.[0] || '';
@@ -454,9 +534,33 @@ export class BlockchainService {
 
               // Match against pending orders
               for (const order of orders) {
+                // Token mint must match order's expected token
+                const expectedMint = SOLANA_TOKEN_MINTS[order.token];
+                if (!expectedMint || info.mint !== expectedMint) {
+                  logger.warn('scanner skipped wrong-token SPL transfer', {
+                    event: 'scanner.skip.wrong_token',
+                    orderId: order.id,
+                    chain: 'SOLANA_MAINNET',
+                    expectedToken: order.token,
+                    expectedMint,
+                    actualMint: info.mint,
+                    txHash,
+                  });
+                  continue;
+                }
+
                 const orderAmt = Number(order.amount);
-                // Must be within 2% AND at least 95% of order amount
-                if (amount < orderAmt * 0.999 || (orderAmt > 0 && Math.abs(amount - orderAmt) / orderAmt > 0.001)) continue;
+                if (!amountWithinTolerance(amount, orderAmt)) {
+                  logger.warn('scanner skipped amount outside tolerance', {
+                    event: amount > orderAmt ? 'scanner.skip.overpay' : 'scanner.skip.underpay',
+                    orderId: order.id,
+                    chain: 'SOLANA_MAINNET',
+                    orderAmount: orderAmt,
+                    txAmount: amount,
+                    txHash,
+                  });
+                  continue;
+                }
                 if (order.customerWallet && !order.customerWallet.startsWith('0x') && from !== order.customerWallet) continue;
 
                 // Match! Create transaction + confirm
@@ -503,16 +607,16 @@ export class BlockchainService {
           status: 'PENDING',
           expiresAt: { gt: new Date() },
         },
-        select: { id: true, paymentAddress: true, amount: true, customerWallet: true },
+        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, token: true },
         orderBy: { createdAt: 'desc' },
       });
 
       if (pendingOrders.length === 0) return;
 
-      const TOKEN_CONTRACTS: Record<string, string> = {
-        'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t': 'USDT',
-        'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8': 'USDC',
-      };
+      // Contract address → token name (derived from TRON_TOKEN_CONTRACTS so there's one source of truth)
+      const TOKEN_CONTRACTS: Record<string, string> = Object.fromEntries(
+        Object.entries(TRON_TOKEN_CONTRACTS).map(([name, addr]) => [addr, name])
+      );
 
       // Group by payment address
       const addressMap = new Map<string, typeof pendingOrders>();
@@ -550,8 +654,31 @@ export class BlockchainService {
 
             // Match against pending orders
             for (const order of orders) {
+              // Token must match (e.g. order for USDC should not confirm on USDT deposit)
+              if (tokenName !== order.token) {
+                logger.warn('scanner skipped wrong-token TRC20 transfer', {
+                  event: 'scanner.skip.wrong_token',
+                  orderId: order.id,
+                  chain: 'TRON_MAINNET',
+                  expectedToken: order.token,
+                  actualToken: tokenName,
+                  txHash,
+                });
+                continue;
+              }
+
               const orderAmount = Number(order.amount);
-              if (amount < orderAmount * 0.999 || (orderAmount > 0 && Math.abs(amount - orderAmount) / orderAmount > 0.001)) continue;
+              if (!amountWithinTolerance(amount, orderAmount)) {
+                logger.warn('scanner skipped amount outside tolerance', {
+                  event: amount > orderAmount ? 'scanner.skip.overpay' : 'scanner.skip.underpay',
+                  orderId: order.id,
+                  chain: 'TRON_MAINNET',
+                  orderAmount,
+                  txAmount: amount,
+                  txHash,
+                });
+                continue;
+              }
               // Only enforce wallet match if it's a TRON address (starts with T)
               if (order.customerWallet && order.customerWallet.startsWith('T') && fromAddress !== order.customerWallet) continue;
 
