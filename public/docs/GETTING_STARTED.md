@@ -11,11 +11,13 @@ StablePay lets you accept **stablecoin payments** (USDC) on multiple blockchains
 **Supported Chains:**
 - ✅ Base (Ethereum L2)
 - ✅ Solana
-- ✅ Ethereum, Polygon, Arbitrum (coming soon)
+- ✅ Ethereum, Polygon, Arbitrum
+- ✅ BNB Chain, TRON
 
 **Supported Tokens:**
-- ✅ USDC (primary)
-- 🔜 USDT, EURC (coming soon)
+- ✅ USDC (all chains)
+- ✅ USDT (all chains)
+- ✅ EURC (Base, Ethereum, Solana)
 
 ---
 
@@ -223,32 +225,50 @@ document.querySelector('.stablepay-checkout').addEventListener('stablepay:paymen
 
 ## Widget Configuration
 
-All available options:
+### Widget configuration — full reference
+
+Every option is optional except `data-merchant` and `data-amount`.
 
 ```html
 <div class="stablepay-checkout"
-     data-merchant="YOUR_MERCHANT_ID"          <!-- Required: Your merchant ID -->
-     data-amount="10.00"                        <!-- Required: Payment amount -->
-     data-chain="BASE_MAINNET"                  <!-- Optional: Default chain -->
-     data-customer-email="user@example.com"     <!-- Optional: Pre-fill email -->
-     data-theme="dark"                          <!-- Optional: light|dark -->
-     data-button-text="Pay with Crypto">        <!-- Optional: Button label -->
+     data-merchant="YOUR_MERCHANT_ID"              <!-- Required -->
+     data-amount="10.00"                            <!-- Required -->
+     data-token="USDC"                              <!-- USDC | USDT | EURC (default: USDC) -->
+     data-chain="BASE_MAINNET"                      <!-- Lock customer to one chain. Omit to let them pick. -->
+     data-chains="BASE_MAINNET,SOLANA_MAINNET"      <!-- Restrict to a subset of chains -->
+     data-product-name="Annual Plan"                <!-- Shown on checkout + receipt -->
+     data-external-id="your-order-123"              <!-- Echoed in webhooks and order.externalId -->
+     data-customer-email="user@example.com"         <!-- Pre-fill email -->
+     data-return-url="https://shop.example.com/thanks"  <!-- "Back" destination after payment -->
+     data-back-button-text="Back to Newsletter"     <!-- Override "Back to STORE" label -->
+     data-logo-url="https://cdn.example.com/logo.svg"   <!-- Override merchant logo for this session -->
+     data-theme="dark"                              <!-- light | dark -->
+     data-button-text="Pay with Crypto"             <!-- The launch-button label (not back button) -->
+     data-metadata='{"plan":"pro","userId":42}'     <!-- Arbitrary JSON echoed in webhooks -->
+     data-custom-css="..."                          <!-- Advanced: inject styles into the modal -->
+     data-hide-footer="true">                       <!-- Hide "Powered by StablePay" branding (paid plans) -->
 </div>
 ```
+
+Same options are available to the JavaScript API as top-level keys on the `StablePay.checkout({ ... })` call.
 
 ### Supported Chains
 
 **Testnets (for testing):**
 - `BASE_SEPOLIA` - Base testnet
 - `SOLANA_DEVNET` - Solana testnet
-- `ETH_SEPOLIA` - Ethereum testnet (coming soon)
+- `ETHEREUM_SEPOLIA` - Ethereum testnet
+- `ARBITRUM_SEPOLIA` - Arbitrum testnet
+- `POLYGON_MUMBAI` - Polygon testnet
 
 **Mainnets (production):**
 - `BASE_MAINNET` - Base (Ethereum L2)
 - `SOLANA_MAINNET` - Solana
-- `ETH_MAINNET` - Ethereum (coming soon)
-- `POLYGON_MAINNET` - Polygon (coming soon)
-- `ARBITRUM_MAINNET` - Arbitrum (coming soon)
+- `ETHEREUM_MAINNET` - Ethereum
+- `POLYGON_MAINNET` - Polygon
+- `ARBITRUM_MAINNET` - Arbitrum
+- `BNB_MAINNET` - BNB Chain
+- `TRON_MAINNET` - TRON
 
 ---
 
@@ -446,7 +466,7 @@ Add to your theme or page:
 - ✅ Test your integration on testnet
 - ✅ Go live on mainnet
 - 📊 Monitor your payments in the dashboard
-- 🔔 Set up webhooks for real-time notifications (coming soon)
+- 🔔 Set up webhooks for real-time notifications (see [API.md](./API.md#webhooks))
 - 💰 Enable multi-chain support (accept on Base + Solana simultaneously)
 
 **Welcome to StablePay!** 🚀

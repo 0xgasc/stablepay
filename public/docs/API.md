@@ -1,704 +1,307 @@
-# StablePay API Documentation
+# StablePay API Reference
 
-Complete reference for integrating StablePay programmatically.
+Base URL: `https://wetakestables.shop`
 
-**Base URL:** `https://wetakestables.shop`
-
----
-
-## Quick Start — Integration Handshake
-
-### 1. You send us an order
-
-```bash
-curl -X POST https://wetakestables.shop/api/embed/checkout \
-  -H "Content-Type: application/json" \
-  -d '{
-    "merchantId": "YOUR_MERCHANT_ID",
-    "amount": 25.00,
-    "token": "USDC",
-    "chain": "SOLANA_MAINNET",
-    "externalId": "your-order-123",
-    "customerEmail": "buyer@example.com",
-    "metadata": { "plan": "premium", "userId": "abc" }
-  }'
-```
-
-### 2. We return our order ID + payment address
-
-```json
-{
-  "success": true,
-  "order": {
-    "id": "cmng1234abc",
-    "externalId": "your-order-123",
-    "amount": 25,
-    "token": "USDC",
-    "chain": "SOLANA_MAINNET",
-    "paymentAddress": "A1ayHxPuLc6khkGmAxN3kNFYu2j7GZkDwRaWdk8xgUKm",
-    "expiresAt": "2026-04-02T12:30:00.000Z"
-  }
-}
-```
-
-### 3. Customer pays → We send you a webhook
-
-```json
-{
-  "event": "order.confirmed",
-  "timestamp": "2026-04-02T12:05:00.000Z",
-  "data": {
-    "orderId": "cmng1234abc",
-    "externalId": "your-order-123",
-    "amount": 25,
-    "token": "USDC",
-    "chain": "SOLANA_MAINNET",
-    "status": "CONFIRMED",
-    "txHash": "3XEgazdp9n1zd...",
-    "explorerLink": "https://solscan.io/tx/3XEgazdp...",
-    "customerEmail": "buyer@example.com",
-    "customerWallet": "EnFJ1c5x2XMS...",
-    "paymentAddress": "A1ayHxPuLc6k...",
-    "feePercent": 0.01,
-    "feeAmount": 0.25,
-    "netAmount": 24.75,
-    "metadata": { "plan": "premium", "userId": "abc" },
-    "confirmedAt": "2026-04-02T12:05:00.000Z"
-  }
-}
-```
-
-### 4. Match by `externalId` in your backend
-
-The webhook includes your `externalId` so you can match it to your order. Update your DB, fulfill the order.
-
----
-
-## Table of Contents
-
-- [Authentication](#authentication)
-- [Create Order](#create-order)
-- [Poll Order Status](#poll-order-status)
-- [Submit TX Manually](#submit-tx-manually)
-- [Payment Links](#payment-links)
-- [Webhooks](#webhooks)
-- [Supported Chains](#supported-chains)
-- [Fee Structure](#fee-structure)
+All request and response bodies are JSON. All timestamps are ISO-8601 UTC.
 
 ---
 
 ## Authentication
 
-Most endpoints are public. Merchant-specific endpoints require a Bearer token.
+Merchant endpoints require a Bearer token obtained from your StablePay dashboard → **Developer** tab.
 
 ```
-Authorization: Bearer YOUR_LOGIN_TOKEN
+Authorization: Bearer sp_live_...
 ```
 
-Get your token from the **Developer** tab in your [dashboard](https://wetakestables.shop/dashboard#developer).
+Public endpoints (customer checkout, order status, receipt lookup, wallet history) need no auth.
+
+Admin endpoints are out of scope for this document.
 
 ---
 
-## Create Order
+## Idempotency
 
-**`POST /api/embed/checkout`** — No auth required (merchantId in body)
+State-changing endpoints accept an optional `Idempotency-Key` header. Send a unique string (UUID v4 recommended) and StablePay will return the first response for that key verbatim on retries. Keys are scoped to `(merchantId, path, key, body-hash)` and cached 24 hours.
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `merchantId` | string | ✅ | Your merchant ID |
-| `amount` | number | ✅ | Payment amount in USD |
-| `chain` | string | ✅ | Blockchain (see [Supported Chains](#supported-chains)) |
-| `token` | string | ❌ | `USDC`, `USDT`, or `EURC` (default: USDC) |
-| `externalId` | string | ❌ | **Your order ID** — returned in webhooks for matching |
-| `customerEmail` | string | ❌ | Customer email — used for receipts |
-| `customerName` | string | ❌ | Product name / description |
-| `metadata` | object | ❌ | Any JSON — returned in webhooks unchanged |
-| `paymentMethod` | string | ❌ | `WALLET_CONNECT` or `MANUAL_SEND` |
-| `source` | string | ❌ | `EMBED_WIDGET`, `CHECKOUT_LINK`, `API`, `INVOICE` |
-
-**Response:**
-```json
-{
-  "success": true,
-  "order": {
-    "id": "cmng1234abc",
-    "externalId": "your-order-123",
-    "merchantId": "cmhkjckgi0000qut5wxmtsw1f",
-    "amount": "10.00",
-    "chain": "BASE_MAINNET",
-    "status": "PENDING",
-    "paymentAddress": "0x9e9Ebf31018EAeddB50E52085f4CCB4367235f2D",
-    "customerEmail": "customer@example.com",
-    "customerName": "Premium Plan",
-    "expiresAt": "2025-11-10T13:00:00Z",
-    "createdAt": "2025-11-10T12:00:00Z",
-    "updatedAt": "2025-11-10T12:00:00Z"
-  }
-}
+```
+Idempotency-Key: 9b3d4ab8-6ef5-4c6d-bafe-4f1a2e02a40a
 ```
 
-**Example:**
-```javascript
-const response = await fetch('https://stablepay-nine.vercel.app/api/v1/orders', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    merchantId: 'cmhkjckgi0000qut5wxmtsw1f',
-    amount: '49.99',
-    chain: 'BASE_MAINNET',
-    customerEmail: 'user@example.com',
-    customerName: 'Pro Subscription',
-    paymentAddress: '0x9e9Ebf31018EAeddB50E52085f4CCB4367235f2D'
-  })
-});
+Supported on: `POST /api/embed/checkout`, `POST /api/refunds`, `POST /api/refunds/:id/process`.
 
-const { order } = await response.json();
-console.log('Order ID:', order.id);
-```
-
----
-
-### Get Order
-
-Retrieve order details and status.
-
-**Endpoint:** `GET /orders/:orderId`
-
-**Response:**
-```json
-{
-  "id": "cmhxxx123abc",
-  "merchantId": "cmhkjckgi0000qut5wxmtsw1f",
-  "amount": "10.00",
-  "chain": "BASE_MAINNET",
-  "status": "CONFIRMED",
-  "paymentAddress": "0x9e9Ebf31018EAeddB50E52085f4CCB4367235f2D",
-  "customerEmail": "customer@example.com",
-  "transactions": [
-    {
-      "id": "txn_abc456",
-      "txHash": "0xdef789...",
-      "status": "CONFIRMED",
-      "amount": "10.00",
-      "fromAddress": "0x123...",
-      "toAddress": "0x9e9...",
-      "confirmations": 12,
-      "blockTimestamp": "2025-11-10T12:05:00Z"
-    }
-  ],
-  "createdAt": "2025-11-10T12:00:00Z",
-  "updatedAt": "2025-11-10T12:05:30Z"
-}
-```
-
-**Example:**
-```javascript
-const response = await fetch(`https://stablepay-nine.vercel.app/api/v1/orders/${orderId}`);
-const order = await response.json();
-
-if (order.status === 'CONFIRMED') {
-  console.log('Payment confirmed!');
-  console.log('Transaction:', order.transactions[0].txHash);
-}
-```
-
----
-
-### Confirm Order
-
-Mark an order as confirmed after blockchain transaction.
-
-**Endpoint:** `POST /orders/:orderId/confirm`
-
-**Request:**
-```json
-{
-  "txHash": "0xabc123def456..."
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "order": {
-    "id": "cmhxxx123abc",
-    "status": "CONFIRMED",
-    "updatedAt": "2025-11-10T12:05:30Z"
-  }
-}
-```
-
-**Example:**
-```javascript
-// After customer completes blockchain transaction
-const response = await fetch(`https://stablepay-nine.vercel.app/api/v1/orders/${orderId}/confirm`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    txHash: '0xabc123def456789...'
-  })
-});
-
-const { order } = await response.json();
-console.log('Order confirmed:', order.status);
-```
-
-**Note:** This endpoint also:
-- Creates a `Transaction` record in the database
-- Updates order status to `CONFIRMED`
-- Stores blockchain transaction details
-
----
-
-### List Orders
-
-Get all orders for a merchant.
-
-**Endpoint:** `GET /admin?resource=orders`
-
-**Headers:**
-```
-Authorization: Bearer YOUR_LOGIN_TOKEN
-```
-
-**Response:**
-```json
-{
-  "orders": [
-    {
-      "id": "cmhxxx123abc",
-      "amount": "10.00",
-      "chain": "BASE_MAINNET",
-      "status": "CONFIRMED",
-      "customerEmail": "customer@example.com",
-      "createdAt": "2025-11-10T12:00:00Z",
-      "transactions": [...]
-    }
-  ]
-}
-```
-
-**Example:**
-```javascript
-const response = await fetch('https://stablepay-nine.vercel.app/api/v1/admin?resource=orders', {
-  headers: {
-    'Authorization': `Bearer ${yourLoginToken}`
-  }
-});
-
-const { orders } = await response.json();
-console.log(`Total orders: ${orders.length}`);
-```
-
----
-
-## Transactions
-
-### Get Transaction
-
-Retrieve blockchain transaction details.
-
-**Endpoint:** `GET /admin?resource=transactions`
-
-**Headers:**
-```
-Authorization: Bearer YOUR_LOGIN_TOKEN
-```
-
-**Response:**
-```json
-{
-  "transactions": [
-    {
-      "id": "txn_abc123",
-      "orderId": "cmhxxx123abc",
-      "txHash": "0xdef789...",
-      "chain": "BASE_MAINNET",
-      "status": "CONFIRMED",
-      "amount": "10.00",
-      "fromAddress": "0x123...",
-      "toAddress": "0x9e9...",
-      "confirmations": 24,
-      "blockTimestamp": "2025-11-10T12:05:00Z",
-      "createdAt": "2025-11-10T12:05:30Z"
-    }
-  ]
-}
-```
-
----
-
-## Merchants
-
-### Get Merchant Info
-
-Retrieve merchant account details.
-
-**Endpoint:** `GET /admin?resource=merchants`
-
-**Headers:**
-```
-Authorization: Bearer YOUR_LOGIN_TOKEN
-```
-
-**Response:**
-```json
-{
-  "merchants": [
-    {
-      "id": "cmhkjckgi0000qut5wxmtsw1f",
-      "email": "merchant@example.com",
-      "companyName": "Acme Inc",
-      "contactName": "John Doe",
-      "plan": "STARTER",
-      "paymentMode": "DIRECT",
-      "networkMode": "MAINNET",
-      "isActive": true,
-      "setupCompleted": true,
-      "wallets": [...],
-      "createdAt": "2025-11-01T00:00:00Z"
-    }
-  ]
-}
-```
-
----
-
-## Wallets
-
-### Get Merchant Wallets
-
-Retrieve configured wallet addresses.
-
-**Endpoint:** `GET /admin?resource=wallets&merchantId=YOUR_MERCHANT_ID`
-
-**Response:**
-```json
-[
-  {
-    "id": "wallet_abc123",
-    "merchantId": "cmhkjckgi0000qut5wxmtsw1f",
-    "chain": "BASE_MAINNET",
-    "address": "0x9e9Ebf31018EAeddB50E52085f4CCB4367235f2D",
-    "isActive": true,
-    "createdAt": "2025-11-01T00:00:00Z"
-  },
-  {
-    "id": "wallet_def456",
-    "chain": "SOLANA_MAINNET",
-    "address": "9GW4bqrYugG8sRdMVC5zNwM6ZAm69ztevPadT3RCFqH2",
-    "isActive": true,
-    "createdAt": "2025-11-01T00:00:00Z"
-  }
-]
-```
-
-**Example:**
-```javascript
-const response = await fetch(
-  `https://stablepay-nine.vercel.app/api/v1/admin?resource=wallets&merchantId=${merchantId}`
-);
-
-const wallets = await response.json();
-const baseWallet = wallets.find(w => w.chain === 'BASE_MAINNET');
-console.log('Base wallet:', baseWallet.address);
-```
-
----
-
-## Supported Chains
-
-### Mainnets (Production)
-
-| Chain ID | Name | Network | Token Contract |
-|----------|------|---------|----------------|
-| `BASE_MAINNET` | Base | Ethereum L2 | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
-| `SOLANA_MAINNET` | Solana | Solana | `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` |
-| `ETH_MAINNET` | Ethereum | Ethereum | Coming soon |
-| `POLYGON_MAINNET` | Polygon | Polygon | Coming soon |
-| `ARBITRUM_MAINNET` | Arbitrum | Arbitrum | Coming soon |
-
-### Testnets (Testing)
-
-| Chain ID | Name | Network | Token Contract |
-|----------|------|---------|----------------|
-| `BASE_SEPOLIA` | Base Sepolia | Ethereum L2 | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
-| `SOLANA_DEVNET` | Solana Devnet | Solana | `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` |
-
----
-
-## Webhooks (Coming Soon)
-
-Get real-time notifications when payments are received.
-
-**Events:**
-- `order.created` - New order created
-- `order.confirmed` - Payment confirmed on blockchain
-- `order.expired` - Order expired without payment
-- `transaction.confirmed` - Blockchain transaction confirmed
-
-**Example Webhook Payload:**
-```json
-{
-  "event": "order.confirmed",
-  "data": {
-    "orderId": "cmhxxx123abc",
-    "amount": "10.00",
-    "chain": "BASE_MAINNET",
-    "txHash": "0xdef789...",
-    "timestamp": "2025-11-10T12:05:30Z"
-  }
-}
-```
-
----
-
-## Error Codes
-
-### HTTP Status Codes
-
-| Code | Meaning | Description |
-|------|---------|-------------|
-| `200` | OK | Request successful |
-| `201` | Created | Resource created successfully |
-| `400` | Bad Request | Invalid request parameters |
-| `401` | Unauthorized | Missing or invalid authentication |
-| `404` | Not Found | Resource not found |
-| `500` | Server Error | Internal server error |
-
-### Error Response Format
-
-```json
-{
-  "error": "Merchant not found",
-  "code": "MERCHANT_NOT_FOUND",
-  "details": {
-    "merchantId": "invalid_id"
-  }
-}
-```
-
-### Common Errors
-
-**Merchant not found:**
-```json
-{
-  "error": "Merchant not found",
-  "code": "MERCHANT_NOT_FOUND"
-}
-```
-→ Check your merchant ID is correct
-
-**Missing required fields:**
-```json
-{
-  "error": "Missing required fields",
-  "required": ["merchantId", "amount", "chain", "paymentAddress"]
-}
-```
-→ Include all required fields in request
-
-**Invalid chain:**
-```json
-{
-  "error": "Unsupported chain",
-  "supported": ["BASE_MAINNET", "SOLANA_MAINNET", ...]
-}
-```
-→ Use a supported chain ID
-
-**Wallet not configured:**
-```json
-{
-  "error": "No wallet configured for BASE_MAINNET"
-}
-```
-→ Add wallet address in dashboard
+A replayed response includes the header `Idempotent-Replayed: true`.
 
 ---
 
 ## Rate Limits
 
-**Current Limits:**
-- 100 requests per minute per IP
-- 1000 requests per hour per merchant
+| Tier | Limit |
+|---|---|
+| FREE | 100 requests / hour |
+| STARTER | 1,000 / hour |
+| PRO | 10,000 / hour |
+| ENTERPRISE | Custom |
+| Anonymous (per-IP) | 20–100 / hour depending on endpoint |
 
-**Rate Limit Headers:**
-```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1699564800
-```
-
----
-
-## Complete Integration Example
-
-Here's a full example of creating an order, processing payment, and confirming:
-
-```javascript
-// Step 1: Create order
-async function createOrder(amount, chain) {
-  const response = await fetch('https://stablepay-nine.vercel.app/api/v1/orders', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      merchantId: 'YOUR_MERCHANT_ID',
-      amount: amount,
-      chain: chain,
-      customerEmail: 'customer@example.com',
-      customerName: 'Product Purchase',
-      paymentAddress: 'YOUR_WALLET_ADDRESS'
-    })
-  });
-
-  const { order } = await response.json();
-  return order;
-}
-
-// Step 2: Connect wallet (MetaMask example)
-async function connectWallet() {
-  const accounts = await window.ethereum.request({
-    method: 'eth_requestAccounts'
-  });
-
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  const signer = await provider.getSigner();
-
-  return { provider, signer, address: accounts[0] };
-}
-
-// Step 3: Execute blockchain transaction
-async function executePayment(order, wallet) {
-  const usdcAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // Base USDC
-
-  const usdcContract = new ethers.Contract(
-    usdcAddress,
-    ['function transfer(address to, uint256 amount) returns (bool)'],
-    wallet.signer
-  );
-
-  const amount = ethers.parseUnits(order.amount, 6); // USDC has 6 decimals
-  const tx = await usdcContract.transfer(order.paymentAddress, amount);
-
-  await tx.wait(); // Wait for confirmation
-
-  return tx.hash;
-}
-
-// Step 4: Confirm order
-async function confirmOrder(orderId, txHash) {
-  const response = await fetch(
-    `https://stablepay-nine.vercel.app/api/v1/orders/${orderId}/confirm`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ txHash })
-    }
-  );
-
-  const { order } = await response.json();
-  return order;
-}
-
-// Complete flow
-async function processPayment() {
-  try {
-    // 1. Create order
-    const order = await createOrder('10.00', 'BASE_MAINNET');
-    console.log('Order created:', order.id);
-
-    // 2. Connect wallet
-    const wallet = await connectWallet();
-    console.log('Wallet connected:', wallet.address);
-
-    // 3. Execute payment
-    const txHash = await executePayment(order, wallet);
-    console.log('Transaction sent:', txHash);
-
-    // 4. Confirm order
-    const confirmedOrder = await confirmOrder(order.id, txHash);
-    console.log('Payment confirmed!', confirmedOrder.status);
-
-    // 5. Update your database
-    await fetch('/your-api/complete-purchase', {
-      method: 'POST',
-      body: JSON.stringify({
-        orderId: order.id,
-        txHash: txHash,
-        status: 'completed'
-      })
-    });
-
-  } catch (error) {
-    console.error('Payment failed:', error);
-  }
-}
-```
+Exceeded limits return `429`. The response header `Retry-After` specifies seconds until reset.
 
 ---
 
-## Testing with cURL
+## Chains & Tokens
 
-### Create Order
-```bash
-curl -X POST https://stablepay-nine.vercel.app/api/v1/orders \
-  -H "Content-Type: application/json" \
-  -d '{
-    "merchantId": "YOUR_MERCHANT_ID",
-    "amount": "10.00",
-    "chain": "BASE_SEPOLIA",
-    "customerEmail": "test@example.com",
-    "customerName": "Test Order",
-    "paymentAddress": "0x9e9Ebf31018EAeddB50E52085f4CCB4367235f2D"
-  }'
-```
+All chains below are **live on mainnet**. Decimals default to 6 unless noted.
 
-### Get Order
-```bash
-curl https://stablepay-nine.vercel.app/api/v1/orders/cmhxxx123abc
-```
+| Chain (`chain`) | Tokens (`token`) | Decimals |
+|---|---|---|
+| `BASE_MAINNET` | USDC, USDT, EURC | 6 |
+| `ETHEREUM_MAINNET` | USDC, USDT, EURC | 6 |
+| `POLYGON_MAINNET` | USDC, USDT | 6 |
+| `ARBITRUM_MAINNET` | USDC, USDT | 6 |
+| `BNB_MAINNET` | USDC, USDT | **18** |
+| `SOLANA_MAINNET` | USDC, USDT, EURC | 6 |
+| `TRON_MAINNET` | USDC, USDT | 6 |
 
-### Confirm Order
-```bash
-curl -X POST https://stablepay-nine.vercel.app/api/v1/orders/cmhxxx123abc/confirm \
-  -H "Content-Type: application/json" \
-  -d '{
-    "txHash": "0xabc123def456..."
-  }'
-```
+**Orders can be chain-agnostic**: omit `chain` at creation and the customer picks their chain on the checkout page.
 
-### Get Merchant Wallets
-```bash
-curl 'https://stablepay-nine.vercel.app/api/v1/admin?resource=wallets&merchantId=YOUR_MERCHANT_ID'
-```
+The scanner enforces that the token received on-chain matches `order.token` exactly — a USDC-typed order will not confirm if the customer sends USDT or EURC to the same address.
 
 ---
 
-## SDK & Libraries
+## Orders
 
-Official SDKs coming soon:
+### Create Order (customer checkout)
 
-- 🟡 JavaScript/TypeScript SDK (in development)
-- 🔵 Python SDK (planned)
-- 🟢 Ruby SDK (planned)
-- 🔴 PHP SDK (planned)
+`POST /api/embed/checkout`
 
-Meanwhile, use standard HTTP requests (fetch, axios, etc.)
+```json
+{
+  "merchantId": "cmnom9tx00000nbb6e12ewrnh",
+  "amount": 49.99,
+  "chain": "BASE_MAINNET",
+  "token": "USDC",
+  "productName": "Annual Plan",
+  "externalId": "your-order-123",
+  "customerEmail": "user@x.com",
+  "returnUrl": "https://shop.example.com/thanks",
+  "metadata": { "plan": "pro" }
+}
+```
+
+`chain`, `token`, and all other fields after `amount` are optional. Omit `chain` for a chain-agnostic order (customer picks on checkout).
+
+Response `200`:
+
+```json
+{
+  "orderId": "ord_01hm...",
+  "amount": 49.99,
+  "chain": "BASE_MAINNET",
+  "token": "USDC",
+  "paymentAddress": "0x...",
+  "expiresAt": "2026-04-16T18:30:00Z",
+  "status": "PENDING"
+}
+```
+
+Redirect the customer to `https://wetakestables.shop/checkout?orderId=<orderId>` (or embed the widget) to complete payment.
+
+### Get Order Status (public)
+
+`GET /api/embed/order/:orderId`
+
+Used by the checkout widget/page to poll for confirmation. Returns the order plus any attached transactions.
+
+### Attach TX Hash (public)
+
+`POST /api/embed/order/:orderId/tx`
+
+Body: `{ "txHash": "0x..." }`
+
+Used when the customer pastes a TX hash manually. StablePay auto-verifies on-chain:
+
+- EVM: the `Transfer` log must be emitted by the exact token contract that matches `order.token`, the destination must be the order's `paymentAddress`, and the amount must fall within ±0.1% of `order.amount`. The order flips to `CONFIRMED` only after the chain's required confirmations are reached; before that the response is `AWAITING_CONFIRMATIONS`.
+- Solana: the `transferChecked` mint must match `order.token`'s SPL mint. Legacy mint-less `transfer` instructions are rejected.
+- TRON: the TRC-20 contract must match `order.token`.
+
+### List Orders (merchant)
+
+`GET /api/orders?page=1&limit=50` — merchant auth required.
+
+### Customer Order History (public)
+
+`GET /api/orders/history/lookup?wallet=0x...`
+
+Returns up to 50 recent `CONFIRMED` + `REFUNDED` orders across all merchants for the given wallet. Embed `https://wetakestables.shop/history?wallet=<address>` anywhere to link customers to their purchase history.
+
+Rate limit: 20 req/hr per IP.
 
 ---
 
-## Support
+## Payment Links
 
-- **Email:** support@stablepay.com
-- **Documentation:** [Full Docs](./GETTING_STARTED.md)
-- **Status:** [status.stablepay.com](https://status.stablepay.com)
+### Create
+
+`POST /api/payment-links` (merchant auth)
+
+```json
+{
+  "amount": 19.99,
+  "token": "USDC",
+  "chains": ["BASE_MAINNET", "SOLANA_MAINNET"],
+  "productName": "Newsletter",
+  "description": "Annual subscription",
+  "externalId": "plan-nl-001"
+}
+```
+
+`chains` can be omitted or left empty — the customer will see every chain you have a wallet configured for.
+
+Response includes `url` (e.g. `https://wetakestables.shop/pay/abc12345`). Share that URL — customers land on a branded checkout page.
+
+Query-string customization is passed through when the customer follows the link:
+
+- `?returnUrl=https://shop.example.com/thanks` — where the "Back" button takes the customer after payment.
+- `?backButtonText=Back+to+Newsletter` — override the "Back" button label.
+- `?customerEmail=user@x.com` — pre-fill the email field.
+- `?logoUrl=https://...` — override the merchant logo for this session.
+
+### List / Update / Deactivate
+
+- `GET /api/payment-links`
+- `PATCH /api/payment-links/:id`
+- `DELETE /api/payment-links/:id` (soft-deactivates; orders already created still work)
 
 ---
 
-**Happy building!** 🚀
+## Refunds
+
+### Request
+
+`POST /api/refunds` — supports `Idempotency-Key`.
+
+```json
+{
+  "orderId": "ord_...",
+  "amount": 10.00,
+  "reason": "Customer requested"
+}
+```
+
+`amount` optional; defaults to the full order amount. Auto-approves if `amount ≤ refundAutoApproveThreshold` (merchant setting, platform default $50). Otherwise status starts `PENDING`. Refunds are only allowed within 30 days of order confirmation.
+
+### Approve / Reject (merchant)
+
+- `POST /api/refunds/:refundId/approve`
+- `POST /api/refunds/:refundId/reject` — body `{ "reason": "..." }`
+
+### Process (merchant — record TX hash after sending funds)
+
+`POST /api/refunds/:refundId/process` — supports `Idempotency-Key`.
+
+Body: `{ "txHash": "0x..." }`. Flips the order to `REFUNDED`, fires the `refund.processed` webhook, and proportionally reverses the fee on your account.
+
+### Get
+
+`GET /api/refunds/:refundId` — includes the customer's wallet address (where to send refunded funds).
+
+---
+
+## Webhooks
+
+Configure a webhook URL in dashboard → **Developer** tab. Must be HTTPS.
+
+### Payload
+
+```json
+{
+  "event": "order.confirmed",
+  "timestamp": "2026-04-16T17:45:12.123Z",
+  "data": { "orderId": "ord_...", "amount": 49.99, ... }
+}
+```
+
+### Headers on delivery
+
+- `X-StablePay-Signature` — HMAC-SHA256 hex of `"<timestamp>.<body>"` using your webhook secret.
+- `X-StablePay-Timestamp` — same timestamp embedded in the payload.
+- `X-StablePay-Idempotency-Key` — a unique id per event (stable across retries). **Dedupe on this key.**
+
+### Verification (Node.js)
+
+```js
+import crypto from 'crypto';
+
+function verify(rawBody, signature, timestamp, secret) {
+  // Reject anything older than 5 minutes — defeats replay attacks
+  if (Math.abs(Date.now() - Date.parse(timestamp)) > 5 * 60 * 1000) return false;
+
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(`${timestamp}.${rawBody}`)
+    .digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
+```
+
+### Verification (Python)
+
+```python
+import hmac, hashlib, time
+from datetime import datetime
+
+def verify(raw_body, signature, timestamp, secret):
+    ts = datetime.fromisoformat(timestamp.replace('Z', '+00:00')).timestamp()
+    if abs(time.time() - ts) > 300: return False
+    expected = hmac.new(secret.encode(), f"{timestamp}.{raw_body}".encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
+```
+
+### Events
+
+| Event | When |
+|---|---|
+| `order.created` | Order created, awaiting payment |
+| `order.confirmed` | Payment confirmed on-chain after required confirmations |
+| `order.expired` | Order timed out with no valid payment |
+| `refund.requested` | Refund was requested |
+| `refund.processed` | Refund completed, funds sent to customer |
+| `invoice.created`, `invoice.sent`, `invoice.viewed`, `invoice.paid`, `invoice.overdue`, `invoice.cancelled` | Invoice lifecycle |
+| `receipt.created`, `receipt.sent` | Receipt lifecycle |
+
+### Retries
+
+Failed deliveries retry with exponential backoff: 1min → 5min → 15min → 1h → 2h. After 5 attempts, delivery is abandoned. View and manually retry logs in dashboard → **Webhooks**.
+
+---
+
+## Receipts
+
+- `GET /receipt/:orderId` — public HTML receipt page (accepts either `orderId` or `receiptId`).
+- `GET /api/receipts/for-order/:orderId` — returns `{ receiptId }`; creates the receipt on-demand if the order is confirmed.
+- `GET /api/receipts/:receiptId` — receipt JSON.
+- `GET /api/receipts/:receiptId/pdf` — PDF download.
+- `POST /api/receipts/for-order/:orderId/email` — public, rate-limited (3/hr per IP). Body `{ "email": "..." }`. Sends the receipt to the given email.
+- `POST /api/receipts/:receiptId/resend` (merchant auth) — resend to the order's email on file or an override `{ "email": "..." }`.
+
+---
+
+## Error Format
+
+All errors return JSON:
+
+```json
+{ "error": "Order has expired", "status": "EXPIRED" }
+```
+
+Common HTTP codes:
+
+| Code | Meaning |
+|---|---|
+| 400 | Validation error |
+| 401 | Missing or invalid auth |
+| 403 | Auth valid but not allowed for this resource |
+| 404 | Resource not found |
+| 409 | Conflict (e.g. duplicate TX hash) |
+| 429 | Rate limited (`Retry-After` header) |
+| 5xx | Server error; safe to retry with the same `Idempotency-Key` |
