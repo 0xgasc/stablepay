@@ -131,6 +131,13 @@ app.get('/pay/:slug', async (req, res) => {
     if (link.chains.length > 0) params.set('chains', link.chains.join(','));
     if (link.externalId) params.set('externalId', link.externalId);
     params.set('linkId', link.id);
+    // Pass-through customization supplied by the merchant's outbound link. Keeps payment-link
+    // flow feature-parity with the embed widget (which already accepts these).
+    const passThrough = ['returnUrl', 'backButtonText', 'customerEmail', 'logoUrl'];
+    for (const key of passThrough) {
+      const v = req.query[key];
+      if (typeof v === 'string' && v.length > 0) params.set(key, v);
+    }
     res.redirect(`/crypto-pay.html?${params.toString()}`);
   } catch (err) {
     res.status(500).send('Error loading payment link');
@@ -203,18 +210,8 @@ async function startServer() {
       }
     });
 
-    // Cron: Process webhook retries every 5 minutes
-    cron.schedule('*/5 * * * *', async () => {
-      try {
-        const { webhookService } = await import('./services/webhookService');
-        const processed = await webhookService.processRetries();
-        if (processed > 0) {
-          logger.info('Webhook retries processed', { count: processed, event: 'cron.webhook_retries' });
-        }
-      } catch (error) {
-        logger.error('Cron webhook retry failed', error as Error, { event: 'cron.webhook_retry_error' });
-      }
-    });
+    // Webhook retries run on the Railway scanner (long-running process) — node-cron
+    // here never fires on Vercel serverless. See src/scanner.ts driveWebhookRetries.
 
     // Cron: Expire stale PENDING orders every 5 minutes
     cron.schedule('*/5 * * * *', async () => {
