@@ -2653,6 +2653,55 @@
 
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // Auto-redirect after 5 seconds when the merchant configured a returnUrl.
+            // User can cancel by interacting with any button on the success screen
+            // (Receipt, History, Buy Again, Back) — they'll cancel the auto-redirect
+            // because clicking those navigates away anyway.
+            const params = new URLSearchParams(window.location.search);
+            const redirectTarget =
+                params.get('returnUrl') ||
+                window._orderReturnUrl ||
+                null;
+            if (redirectTarget) {
+                let secs = 5;
+                let stopped = false;
+                const successCard = document.getElementById('paymentSuccessScreen');
+                let indicator = document.getElementById('autoRedirectIndicator');
+                if (!indicator) {
+                    indicator = document.createElement('div');
+                    indicator.id = 'autoRedirectIndicator';
+                    indicator.style.cssText = 'margin-top:16px;padding:10px 14px;border:2px dashed #999;font-size:12px;color:#666;text-align:center;cursor:pointer;';
+                    indicator.setAttribute('role', 'status');
+                    indicator.setAttribute('aria-live', 'polite');
+                    successCard.appendChild(indicator);
+                }
+                const render = () => { indicator.textContent = `Redirecting in ${secs}s… (tap to stop)`; };
+                render();
+                const cancel = () => {
+                    if (stopped) return;
+                    stopped = true;
+                    clearInterval(timer);
+                    indicator.textContent = 'Auto-redirect cancelled';
+                    indicator.style.opacity = '0.5';
+                };
+                indicator.addEventListener('click', cancel);
+                // Any click inside the success card (including button links) cancels the redirect
+                // so the user isn't yanked away mid-action.
+                successCard.addEventListener('click', (e) => {
+                    if (e.target.closest('a, button') && e.target.id !== 'autoRedirectIndicator') cancel();
+                }, { once: false });
+                const timer = setInterval(() => {
+                    if (stopped) return;
+                    secs -= 1;
+                    if (secs <= 0) {
+                        clearInterval(timer);
+                        window.location.href = redirectTarget;
+                        return;
+                    }
+                    render();
+                }, 1000);
+            }
         }
 
         // Buy again - reload the same product
