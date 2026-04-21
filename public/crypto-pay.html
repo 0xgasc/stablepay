@@ -2368,11 +2368,29 @@
             provider = new ethers.BrowserProvider(activeProvider);
             signer = await provider.getSigner();
 
-            // Verify we're on the correct chain now
-            const verifyChainId = await provider.getNetwork().then(n => Number(n.chainId));
-            if (verifyChainId !== targetChainId) {
-                throw new Error(`Please switch to ${chainConfig.chainName} in your wallet to complete this payment.`);
+            // Verify we're on the correct chain — but DO NOT trust ethers' cached getNetwork().
+            // MetaMask extension returns success from wallet_switchEthereumChain before the
+            // provider's network state has actually propagated. We saw real txs land on ETH
+            // when Base was selected because getNetwork() returned stale cached data.
+            //
+            // Instead, poll eth_chainId directly against the wallet (bypasses ethers cache)
+            // and wait up to 3s for the chain to actually change.
+            const directChainId = async () => {
+                const hex = await activeProvider.request({ method: 'eth_chainId' });
+                return parseInt(hex, 16);
+            };
+            let verifyChainId = await directChainId();
+            const chainSwitchDeadline = Date.now() + 3000;
+            while (verifyChainId !== targetChainId && Date.now() < chainSwitchDeadline) {
+                await new Promise(r => setTimeout(r, 150));
+                verifyChainId = await directChainId();
             }
+            if (verifyChainId !== targetChainId) {
+                throw new Error(`Wallet is still on chain ${verifyChainId}. Please switch to ${chainConfig.chainName} manually in MetaMask, then retry.`);
+            }
+            // Rebuild signer once chain change is confirmed, so the next contract call uses it.
+            provider = new ethers.BrowserProvider(activeProvider);
+            signer = await provider.getSigner();
 
             console.log('Successfully on chain:', verifyChainId);
 
@@ -2406,6 +2424,14 @@
             // Simple 1-click payment - fees collected separately from merchants
             showTxStatus('Confirm payment in your wallet...');
             console.log('Direct payment to:', order.paymentAddress);
+
+            // One last chain guard — wallet could have been switched during the decimals()
+            // fetch above. Cheap sanity check; abort the transfer if the wallet drifted.
+            const preTransferChainId = parseInt(await activeProvider.request({ method: 'eth_chainId' }), 16);
+            if (preTransferChainId !== targetChainId) {
+                throw new Error(`Wallet drifted to chain ${preTransferChainId} before submitting. Switch back to ${chainConfig.chainName} and retry.`);
+            }
+
             const tx = await tokenContract.transfer(order.paymentAddress, amount);
             
             showTxStatus('Transaction sent! Waiting for confirmation...');
