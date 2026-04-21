@@ -430,6 +430,16 @@ const TOOLS: Anthropic.Tool[] = [
     description: 'Summarize fees owed + paid for this merchant. Returns current balance, last billing cycle, and the volume tier. Use when merchant asks about billing.',
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
+  {
+    name: 'get_webhook_config',
+    description: 'Return the merchant\'s webhook URL, subscribed events, enabled flag, AND the current webhook secret. Use this when the merchant asks "what is my webhook secret" or "show me my signing key". This is the ONLY way to retrieve an existing secret — we store the real value so surfacing it here is safe for the owner; never show it to someone else. If the secret is null, suggest rotate_webhook_secret to generate one.',
+    input_schema: { type: 'object' as const, properties: {}, required: [] },
+  },
+  {
+    name: 'rotate_webhook_secret',
+    description: 'Mint a fresh merchant-level webhook secret (SHA256 HMAC key). The old secret becomes invalid immediately. Returns the new secret ONCE — surface it to the merchant and tell them to update their backend. Use ONLY when the merchant explicitly asks to rotate, OR when their current secret is null/missing.',
+    input_schema: { type: 'object' as const, properties: {}, required: [] },
+  },
   // ─── Stores (multi-brand) ─────────────────────────────────────────────
   {
     name: 'create_store',
@@ -1571,6 +1581,47 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
       }
     }
 
+    case 'get_webhook_config': {
+      try {
+        const m = await db.merchant.findUnique({
+          where: { id: merchantId },
+          select: {
+            webhookUrl: true, webhookSecret: true, webhookEnabled: true,
+            webhookEvents: true, webhookLastSuccess: true, webhookLastFailure: true,
+          },
+        });
+        if (!m) return JSON.stringify({ error: 'Merchant not found' });
+        return JSON.stringify({
+          webhookUrl: m.webhookUrl,
+          webhookSecret: m.webhookSecret || null,
+          secretMissing: !m.webhookSecret,
+          webhookEnabled: m.webhookEnabled,
+          webhookEvents: m.webhookEvents,
+          lastSuccess: m.webhookLastSuccess?.toISOString() || null,
+          lastFailure: m.webhookLastFailure?.toISOString() || null,
+          _note: m.webhookSecret
+            ? 'This is the real secret. Use it for HMAC verification on the merchant side.'
+            : 'No secret set — call rotate_webhook_secret to generate one.',
+        });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Failed to fetch webhook config: ${err.message}` });
+      }
+    }
+
+    case 'rotate_webhook_secret': {
+      try {
+        const { webhookService } = await import('./webhookService');
+        const secret = await webhookService.regenerateSecret(merchantId);
+        return JSON.stringify({
+          success: true,
+          webhookSecret: secret,
+          _secretWarning: 'Share this ONCE. Any backend using the old secret will fail verification until updated.',
+        });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Failed to rotate secret: ${err.message}` });
+      }
+    }
+
     // ─── Stores ──────────────────────────────────────────────────────────
     case 'create_store': {
       try {
@@ -1908,8 +1959,51 @@ import Script from 'next/script';
 \`\`\`
 
 ### Webhook payload we send:
-POST to their webhookUrl with:
-{ event: 'order.confirmed', orderId, amount, txHash, chain, token, status, customerEmail }
+POST to their webhookUrl with JSON body:
+\`{ event: 'order.confirmed', timestamp, data: { orderId, externalId, amount, chain, token, status, txHash, explorerLink, customerEmail, ... } }\`
+
+### Webhook signature (IMPORTANT — use EXACTLY this scheme):
+
+Every request carries these headers:
+- \`X-StablePay-Signature\`   — hex HMAC-SHA256 of \`"<timestamp>.<raw_body>"\` using the merchant's webhook secret
+- \`X-StablePay-Timestamp\`   — ISO timestamp (same value embedded in the payload)
+- \`X-StablePay-Idempotency-Key\` — stable id per event, stays constant across retries (dedupe on it)
+
+**Verification in Node.js:**
+\`\`\`js
+import crypto from 'crypto';
+function verify(rawBody, sig, ts, secret) {
+  if (Math.abs(Date.now() - Date.parse(ts)) > 5*60*1000) return false; // reject >5min old
+  const expected = crypto.createHmac('sha256', secret).update(\`\${ts}.\${rawBody}\`).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig));
+}
+\`\`\`
+
+**Verification in Python (FastAPI):**
+\`\`\`python
+import hmac, hashlib, time
+from datetime import datetime
+def verify(raw_body, sig, ts, secret):
+    t = datetime.fromisoformat(ts.replace('Z','+00:00')).timestamp()
+    if abs(time.time() - t) > 300: return False
+    expected = hmac.new(secret.encode(), f"{ts}.{raw_body}".encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig)
+\`\`\`
+
+**Supabase edge function (Deno):**
+\`\`\`ts
+const sig = req.headers.get('x-stablepay-signature') ?? '';
+const ts  = req.headers.get('x-stablepay-timestamp') ?? '';
+const body = await req.text();
+const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(\`\${ts}.\${body}\`));
+const expected = [...new Uint8Array(mac)].map(b => b.toString(16).padStart(2,'0')).join('');
+if (expected !== sig) return new Response('bad sig', { status: 401 });
+\`\`\`
+
+**COMMON MISTAKE — DO NOT DO THIS:** the previous signing scheme hashed just the body. It no longer works. Always hash \`"<timestamp>.<body>"\`.
+
+To retrieve or rotate a merchant's webhook secret, call \`get_webhook_config\` (read current) or \`rotate_webhook_secret\` (mint a new one). The new secret is returned ONCE — give it to the merchant immediately.
 
 ## Troubleshooting — Common Issues & Fixes
 
