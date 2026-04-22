@@ -86,12 +86,9 @@ export class BlockchainService {
 
   async scanForPayments(chain: Chain): Promise<number> {
     try {
-      const provider = this.providers[chain];
-      const contracts = this.contracts[chain];
       const config = CHAIN_CONFIGS[chain];
-
-      if (!provider || !contracts?.length) {
-        console.log(`[scanner] Skipping ${chain} — no provider configured`);
+      if (!config?.rpcUrl) {
+        logger.warn('scanner skipping chain — no RPC configured', { chain, event: 'scanner.no_rpc' });
         return 0;
       }
 
@@ -107,6 +104,13 @@ export class BlockchainService {
       });
 
       if (pendingOrders.length === 0) return 0;
+
+      // Resilient provider — if primary RPC (often llamarpc) is Cloudflare-blocking us,
+      // rotate to a public fallback. Previously we silently ate the 403 and lost real payments.
+      const { getHealthyProvider } = await import('./rpcProvider');
+      const provider = await getHealthyProvider(chain);
+      const stables = CHAIN_STABLES[chain] || { USDC: config.usdcAddress };
+      const contracts = Object.values(stables).map(addr => new ethers.Contract(addr, USDC_ABI, provider));
 
       const currentBlock = await provider.getBlockNumber();
 
@@ -146,7 +150,19 @@ export class BlockchainService {
             const filter = contract.filters.Transfer(null, targetAddress);
             const events = await contract.queryFilter(filter, fromBlock, currentBlock);
             allEvents.push(...(events as ethers.EventLog[]));
-          } catch { /* skip failed contract query */ }
+          } catch (err: any) {
+            // DO NOT silently swallow — this was the root cause of the UnlockRiver incident
+            // on 2026-04-22: llamarpc returned 403 Cloudflare, we ate it, real payment went
+            // unmatched. If it keeps failing, payments will land on the floor.
+            logger.error('scanner RPC query failed', err as Error, {
+              chain,
+              contract: (contract as any)?.target || 'unknown',
+              targetAddress,
+              fromBlock,
+              currentBlock,
+              event: 'scanner.rpc_query_failed',
+            });
+          }
         }
 
         for (const event of allEvents) {

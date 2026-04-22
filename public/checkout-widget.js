@@ -1372,7 +1372,15 @@
                   if (statusEl) { statusEl.textContent = 'Submitted for review. You\'ll be notified once confirmed.'; statusEl.style.color = '#22c55e'; }
                   submitBtn.textContent = 'Submitted';
                 } else {
-                  if (statusEl) { statusEl.textContent = data.error || 'Submission failed'; statusEl.style.color = '#ef4444'; }
+                  // Never render server error bodies verbatim — prior incident: the widget
+                  // displayed a full Cloudflare challenge HTML page to a customer. Strip
+                  // HTML-ish content and cap to a short message, fall back to a generic
+                  // reassurance if the server blob isn't human-friendly.
+                  let msg = typeof data.error === 'string' ? data.error : 'Verification failed';
+                  if (/<html|<!DOCTYPE|requestUrl|responseBody/i.test(msg) || msg.length > 240) {
+                    msg = 'We couldn\u2019t verify right now. Our scanner will keep watching — if the TX is on-chain, your order will confirm automatically within a minute.';
+                  }
+                  if (statusEl) { statusEl.textContent = msg; statusEl.style.color = '#ef4444'; }
                   submitBtn.disabled = false;
                   submitBtn.textContent = 'Submit';
                 }

@@ -715,21 +715,36 @@ router.post('/order/:orderId/tx', async (req, res) => {
         const { ethers } = await import('ethers');
         const { CHAIN_CONFIGS } = await import('../config/chains');
         const { CHAIN_STABLES, getTokenDecimals, amountWithinTolerance } = await import('../services/blockchainService');
+        const { getHealthyProvider } = await import('../services/rpcProvider');
         const config = CHAIN_CONFIGS[order.chain as keyof typeof CHAIN_CONFIGS];
         if (!config?.rpcUrl) { verifyError = 'Chain not configured'; }
         else {
-          const provider = new ethers.JsonRpcProvider(config.rpcUrl);
-          const receipt = await provider.getTransactionReceipt(txHash);
-          if (!receipt) { verifyError = 'Transaction not found on this chain'; }
-          else if (receipt.status !== 1) { verifyError = 'Transaction failed on-chain'; }
-          else {
+          // Use the fallback-aware helper so a single blocked RPC (e.g. llamarpc Cloudflare 403)
+          // doesn't surface a wall of challenge-page HTML to the customer. This was the root cause
+          // of the UnlockRiver $159.99 USDT incident on 2026-04-22.
+          let provider: any = null;
+          let receipt: any = null;
+          try {
+            provider = await getHealthyProvider(order.chain as any);
+            receipt = await provider.getTransactionReceipt(txHash);
+          } catch (rpcErr: any) {
+            logger.warn('manual-tx verify RPC unreachable', {
+              orderId, txHash, chain: order.chain,
+              err: String(rpcErr?.message || rpcErr).slice(0, 200),
+              event: 'manual_tx.rpc_unreachable',
+            });
+            verifyError = 'We could not reach a blockchain node to verify right now. The scanner will keep watching — your payment will confirm automatically once our nodes recover. No action needed.';
+          }
+          if (!receipt && !verifyError) { verifyError = 'Transaction not found on this chain'; }
+          else if (receipt && receipt.status !== 1) { verifyError = 'Transaction failed on-chain'; }
+          else if (receipt && provider) {
             // Only the order's exact token contract counts as a valid transfer source.
             const expectedContract = (CHAIN_STABLES[order.chain]?.[order.token] || '').toLowerCase();
             if (!expectedContract) {
               verifyError = `Unsupported token ${order.token} for ${order.chain}`;
             } else {
               const transferTopic = ethers.id('Transfer(address,address,uint256)');
-              const matchingLog = receipt.logs.find(log =>
+              const matchingLog = receipt.logs.find((log: any) =>
                 log.topics[0] === transferTopic &&
                 log.address.toLowerCase() === expectedContract &&
                 log.topics[2] && ethers.getAddress('0x' + log.topics[2].slice(26)).toLowerCase() === order.paymentAddress.toLowerCase()

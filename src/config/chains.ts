@@ -2,7 +2,14 @@ import { Chain } from '../types';
 
 export interface ChainConfig {
   name: string;
+  /** Primary RPC URL (configurable via env, typically a paid provider like Alchemy). */
   rpcUrl: string;
+  /**
+   * Ordered fallback list. Tried after the primary fails with 403/429/5xx.
+   * Public RPCs are included last — they rate-limit aggressively (llamarpc is Cloudflare-fronted
+   * and has blocked our Vercel/Railway egress in the past, causing silent scanner misses).
+   */
+  rpcFallbacks?: string[];
   usdcAddress: string;
   paymentAddress: string;
   requiredConfirms: number;
@@ -41,6 +48,11 @@ export const CHAIN_CONFIGS: Record<Chain, ChainConfig> = {
   BASE_MAINNET: {
     name: 'Base',
     rpcUrl: process.env.BASE_MAINNET_RPC_URL || 'https://mainnet.base.org',
+    rpcFallbacks: [
+      'https://base-rpc.publicnode.com',
+      'https://base.drpc.org',
+      'https://rpc.ankr.com/base',
+    ],
     usdcAddress: process.env.USDC_BASE_MAINNET || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     paymentAddress: process.env.PAYMENT_ADDRESS_BASE_MAINNET || '',
     requiredConfirms: 5,
@@ -52,6 +64,12 @@ export const CHAIN_CONFIGS: Record<Chain, ChainConfig> = {
   ETHEREUM_MAINNET: {
     name: 'Ethereum',
     rpcUrl: process.env.ETHEREUM_MAINNET_RPC_URL || 'https://eth.llamarpc.com',
+    rpcFallbacks: [
+      'https://cloudflare-eth.com',
+      'https://ethereum-rpc.publicnode.com',
+      'https://rpc.ankr.com/eth',
+      'https://eth.drpc.org',
+    ],
     usdcAddress: process.env.USDC_ETHEREUM_MAINNET || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
     paymentAddress: process.env.PAYMENT_ADDRESS_ETHEREUM_MAINNET || '',
     // 6 confirmations (~72s at 12s blocks). Down from 12 — 12 is overkill for sub-$10k payments
@@ -65,6 +83,11 @@ export const CHAIN_CONFIGS: Record<Chain, ChainConfig> = {
   POLYGON_MAINNET: {
     name: 'Polygon',
     rpcUrl: process.env.POLYGON_MAINNET_RPC_URL || 'https://polygon-rpc.com',
+    rpcFallbacks: [
+      'https://polygon-bor-rpc.publicnode.com',
+      'https://rpc.ankr.com/polygon',
+      'https://polygon.drpc.org',
+    ],
     usdcAddress: process.env.USDC_POLYGON_MAINNET || '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
     paymentAddress: process.env.PAYMENT_ADDRESS_POLYGON_MAINNET || '',
     // 50 confirmations (~100s). Down from 128 — post-Bhilai upgrade finality is much faster,
@@ -90,6 +113,11 @@ export const CHAIN_CONFIGS: Record<Chain, ChainConfig> = {
   ARBITRUM_MAINNET: {
     name: 'Arbitrum',
     rpcUrl: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc',
+    rpcFallbacks: [
+      'https://arbitrum-one-rpc.publicnode.com',
+      'https://arbitrum.drpc.org',
+      'https://rpc.ankr.com/arbitrum',
+    ],
     usdcAddress: process.env.USDC_ARBITRUM_MAINNET || '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
     paymentAddress: process.env.PAYMENT_ADDRESS_ARBITRUM_MAINNET || '',
     requiredConfirms: 5,
@@ -124,6 +152,11 @@ export const CHAIN_CONFIGS: Record<Chain, ChainConfig> = {
   BNB_MAINNET: {
     name: 'BNB Chain',
     rpcUrl: process.env.BNB_MAINNET_RPC_URL || 'https://bsc-dataseed.binance.org',
+    rpcFallbacks: [
+      'https://bsc-dataseed1.defibit.io',
+      'https://bsc-rpc.publicnode.com',
+      'https://bsc.drpc.org',
+    ],
     usdcAddress: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', // Binance-Peg USDC (18 decimals!)
     paymentAddress: '',
     requiredConfirms: 15,
