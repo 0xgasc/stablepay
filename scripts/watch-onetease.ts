@@ -20,6 +20,10 @@ let sinceOrderCreated = new Date(Date.now() - 2 * 60_000);       // catch anythi
 let sinceOrderUpdated = new Date(Date.now() - 2 * 60_000);
 let sinceWebhook      = new Date(Date.now() - 2 * 60_000);
 
+// Track last-seen chain/token per order so we can detect customer-initiated chain switches
+// (chain-agnostic orders → /api/embed/order/:id/chain PATCH). Status doesn't change, only updatedAt.
+const orderChain = new Map<string, string>();
+
 function line(kind: string, msg: string) {
   const ts = new Date().toISOString().slice(11, 19);
   // stdout line-buffered by Node by default; explicit newline for monitors that read line-by-line
@@ -51,11 +55,12 @@ async function tick() {
     `;
     for (const o of newOrders) {
       line('ORDER_NEW', `${o.id.slice(-8)} ext=${o.externalId || '-'} $${Number(o.amount)} ${o.token} ${o.chain} from=${(o.customerWallet || '').slice(0, 10)}`);
+      orderChain.set(o.id, `${o.chain}/${o.token}`);
       sinceOrderCreated = new Date(o.createdAt);
     }
 
     const updatedOrders = await db.$queryRaw<any[]>`
-      SELECT id, "externalId", status, "updatedAt"
+      SELECT id, "externalId", status, chain, token, "updatedAt"
       FROM orders
       WHERE "merchantId" = ${ONETEASE}
         AND "updatedAt" > ${sinceOrderUpdated}
@@ -63,8 +68,14 @@ async function tick() {
       ORDER BY "updatedAt" ASC
     `;
     for (const o of updatedOrders) {
+      const key = `${o.chain}/${o.token}`;
+      const prev = orderChain.get(o.id);
+      if (prev && prev !== key) {
+        line('ORDER_CHAIN_SWITCH', `${o.id.slice(-8)} ext=${o.externalId || '-'} ${prev} → ${key}`);
+      }
+      orderChain.set(o.id, key);
       const marker = o.status === 'CONFIRMED' ? '✓' : o.status === 'EXPIRED' ? '✗' : '•';
-      line(`ORDER_${o.status}`, `${marker} ${o.id.slice(-8)} ext=${o.externalId || '-'}`);
+      line(`ORDER_${o.status}`, `${marker} ${o.id.slice(-8)} ext=${o.externalId || '-'} ${o.chain}/${o.token}`);
       sinceOrderUpdated = new Date(o.updatedAt);
     }
 

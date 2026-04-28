@@ -49,25 +49,25 @@ async function checkDatabase(): Promise<ComponentHealth> {
 }
 
 async function checkScanner(): Promise<ComponentHealth> {
-  // Scanner is "alive" if SOMETHING wrote to webhook_logs OR flipped an order recently.
-  // Both happen as a side effect of normal scanner work — if both are stale for >30 min
-  // during a window where pending orders existed, the scanner is dead.
+  // Read the dedicated scanner heartbeat (written every cycle by blockchainService.startScanning).
+  // This is the authoritative liveness signal — independent of webhook traffic or order
+  // creation, so it doesn't false-flag during quiet periods.
   try {
-    const [lastLog, lastOrderUpdate, pendingNow] = await Promise.all([
-      db.webhookLog.findFirst({ orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
-      db.order.findFirst({ orderBy: { updatedAt: 'desc' }, select: { updatedAt: true, status: true } }),
+    const [hb, pendingNow] = await Promise.all([
+      db.systemConfig.findUnique({ where: { key: 'scanner_heartbeat_at' } }),
       db.order.count({ where: { status: 'PENDING', expiresAt: { gt: new Date() } } }),
     ]);
-    const lastTickMs = Math.max(lastLog?.createdAt.getTime() || 0, lastOrderUpdate?.updatedAt.getTime() || 0);
-    const ageMin = lastTickMs ? Math.round((Date.now() - lastTickMs) / 60_000) : Infinity;
+    const heartbeatTs = hb?.value ? new Date(hb.value).getTime() : 0;
+    const ageSec = heartbeatTs ? Math.round((Date.now() - heartbeatTs) / 1000) : Infinity;
 
-    if (pendingNow > 0 && ageMin > 5) {
-      return { status: 'down', message: `${pendingNow} pending orders but no scanner activity in ${ageMin} min`, details: { lastActivityMinAgo: ageMin, pendingNow } };
+    if (!heartbeatTs) {
+      return { status: 'warning', message: 'no scanner heartbeat recorded yet (waiting for first cycle)', details: { pendingNow } };
     }
-    if (ageMin > 240) {
-      return { status: 'warning', message: `idle (no activity ${ageMin} min, but no pending orders either)`, details: { lastActivityMinAgo: ageMin, pendingNow } };
+    // Scanner cycles every 5s when active, max 5s + idle gap. Anything >60s old means scanner stalled.
+    if (ageSec > 60) {
+      return { status: 'down', message: `scanner heartbeat ${ageSec}s old — worker is stalled`, details: { lastHeartbeatSecAgo: ageSec, pendingNow } };
     }
-    return { status: 'ok', details: { lastActivityMinAgo: ageMin, pendingNow } };
+    return { status: 'ok', details: { lastHeartbeatSecAgo: ageSec, pendingNow } };
   } catch (err: any) {
     return { status: 'down', message: String(err?.message || err).slice(0, 200) };
   }

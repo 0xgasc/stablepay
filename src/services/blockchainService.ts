@@ -741,10 +741,27 @@ export class BlockchainService {
   async startScanning(intervalMs = 15000): Promise<void> {
     console.log(`[scanner] Starting smart scanner — sleeps when idle, wakes on pending orders`);
 
+    // Scanner heartbeat — written to system_config every cycle (idle or active) so the health
+    // endpoint can prove "scanner is alive" without depending on webhook activity. Previously
+    // the health check inferred liveness from "recent webhook log or order update" which
+    // false-flags during quiet periods.
+    const writeHeartbeat = async () => {
+      const now = new Date().toISOString();
+      try {
+        await db.systemConfig.upsert({
+          where: { key: 'scanner_heartbeat_at' },
+          update: { value: now },
+          create: { key: 'scanner_heartbeat_at', value: now },
+        });
+      } catch { /* best-effort, never break the scanner */ }
+    };
+
     const runCycle = async () => {
       if (this.scanning) return;
       this.scanning = true;
       try {
+        await writeHeartbeat();
+
         // Check how many pending orders exist
         const pendingCount = await db.order.count({
           where: { status: 'PENDING', expiresAt: { gt: new Date() } }
