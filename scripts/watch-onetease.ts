@@ -26,6 +26,21 @@ function line(kind: string, msg: string) {
   process.stdout.write(`${ts} ${kind} ${msg}\n`);
 }
 
+// Suppress error spam — emit at most one ERROR every 60s, reconnect Prisma on failure.
+let lastErrorAt = 0;
+let consecutiveErrors = 0;
+async function recordError(err: any) {
+  consecutiveErrors++;
+  const now = Date.now();
+  if (now - lastErrorAt > 60_000 || consecutiveErrors === 1) {
+    lastErrorAt = now;
+    const msg = String(err?.message || err).split('\n')[0].slice(0, 160);
+    line('DB_ERR', `${msg} (consecutive=${consecutiveErrors})`);
+  }
+  // Force reconnect — next query gets a fresh socket
+  try { await db.$disconnect(); } catch {}
+}
+
 async function tick() {
   try {
     const newOrders = await db.$queryRaw<any[]>`
@@ -70,8 +85,14 @@ async function tick() {
       line(`WEBHOOK_${delivered}`, `${h.event} order=${orderId} attempt=${h.attempts}${tail}`);
       sinceWebhook = new Date(h.createdAt);
     }
+
+    // Successful tick — reset the error counter so the next blip is reported again
+    if (consecutiveErrors > 0) {
+      line('DB_OK', `recovered after ${consecutiveErrors} failed polls`);
+      consecutiveErrors = 0;
+    }
   } catch (err: any) {
-    line('ERROR', String(err?.message || err).slice(0, 200));
+    await recordError(err);
   }
 }
 

@@ -161,4 +161,18 @@ router.get('/metrics', (req: Request, res: Response) => {
   });
 });
 
+/**
+ * GET /health/platform
+ * Deep platform health: DB + scanner heartbeat + RPC fallbacks per chain +
+ * webhook retry queue depth + per-merchant delivery rate. Drives the /status page
+ * and the alerter loop on the Railway scanner.
+ */
+router.get('/platform', async (_req: Request, res: Response) => {
+  const { runHealthCheck } = await import('../services/healthCheck');
+  const report = await runHealthCheck();
+  res.setHeader('Cache-Control', 'public, max-age=15, must-revalidate');
+  const code = report.status === 'down' ? 503 : 200;
+  res.status(code).json(report);
+});
+
 export const healthRouter = router;

@@ -1063,6 +1063,39 @@
                 <div id="developerTab" class="tab-content hidden">
                     <div class="space-y-6">
 
+                        <!-- Webhook Health Panel -->
+                        <div id="webhookHealthCard" class="bg-slate-950 border border-slate-800 p-5 hidden">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <h3 class="text-white font-semibold">Webhook delivery (last 24h)</h3>
+                                    <p class="text-xs text-slate-400 mt-1" id="webhookHealthHint"></p>
+                                </div>
+                                <div id="webhookHealthBadge" class="text-xs px-2 py-1 border"></div>
+                            </div>
+                            <div class="grid grid-cols-4 gap-3 mb-4 text-center">
+                                <div class="bg-slate-900 border border-slate-800 p-3">
+                                    <div class="text-2xl font-bold text-white" id="webhookStatTotal">—</div>
+                                    <div class="text-xs text-slate-400 uppercase tracking-wide">Total</div>
+                                </div>
+                                <div class="bg-slate-900 border border-slate-800 p-3">
+                                    <div class="text-2xl font-bold text-green-400" id="webhookStatDelivered">—</div>
+                                    <div class="text-xs text-slate-400 uppercase tracking-wide">Delivered</div>
+                                </div>
+                                <div class="bg-slate-900 border border-slate-800 p-3">
+                                    <div class="text-2xl font-bold text-red-400" id="webhookStatFailed">—</div>
+                                    <div class="text-xs text-slate-400 uppercase tracking-wide">Failed</div>
+                                </div>
+                                <div class="bg-slate-900 border border-slate-800 p-3">
+                                    <div class="text-2xl font-bold text-amber-400" id="webhookStatQueue">—</div>
+                                    <div class="text-xs text-slate-400 uppercase tracking-wide">In retry queue</div>
+                                </div>
+                            </div>
+                            <div id="webhookFailuresContainer" class="hidden">
+                                <div class="text-xs uppercase tracking-wide text-slate-400 mb-2">Recent failures</div>
+                                <div id="webhookFailuresList" class="space-y-2"></div>
+                            </div>
+                        </div>
+
                         <!-- Quick Start Guide -->
                         <div class="bg-gradient-to-br from-blue-900/20 to-blue-900/20 border border-blue-800 p-6">
                             <h2 class="text-2xl font-bold text-white mb-2">Add Crypto Payments in 3 Steps</h2>
@@ -2339,6 +2372,7 @@ onMounted(() => {
                 loadWallets();
             } else if (tabName === 'developer') {
                 loadDevWallets();
+                loadWebhookHealth();
             } else if (tabName === 'settings') {
                 loadSettings();
             } else if (tabName === 'fees') {
@@ -4092,6 +4126,81 @@ onMounted(() => {
         document.getElementById('orderSearchInput')?.addEventListener('input', () => {
             applyOrderFilters();
         });
+
+        // Webhook delivery panel — shows merchant their last-24h health so they can self-diagnose
+        // before opening a support ticket. Hits /api/webhooks/health (added in same PR as this UI).
+        async function loadWebhookHealth() {
+            const card = document.getElementById('webhookHealthCard');
+            if (!card) return;
+            const token = sessionStorage.getItem('merchantToken');
+            try {
+                const res = await fetch('/api/webhooks/health', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (!res.ok) { card.classList.add('hidden'); return; }
+                const data = await res.json();
+                card.classList.remove('hidden');
+
+                document.getElementById('webhookStatTotal').textContent = data.total ?? '0';
+                document.getElementById('webhookStatDelivered').textContent = data.delivered ?? '0';
+                document.getElementById('webhookStatFailed').textContent = data.failed ?? '0';
+                document.getElementById('webhookStatQueue').textContent = data.queueDepth ?? '0';
+                document.getElementById('webhookHealthHint').textContent = data.hint || '';
+
+                const badge = document.getElementById('webhookHealthBadge');
+                const pct = data.successPct;
+                if (pct === null || pct === undefined) {
+                    badge.textContent = 'no traffic';
+                    badge.className = 'text-xs px-2 py-1 border border-slate-700 text-slate-400';
+                } else if (pct >= 95) {
+                    badge.textContent = pct + '% delivered';
+                    badge.className = 'text-xs px-2 py-1 border border-green-700 text-green-400';
+                } else if (pct >= 50) {
+                    badge.textContent = pct + '% delivered';
+                    badge.className = 'text-xs px-2 py-1 border border-amber-700 text-amber-400';
+                } else {
+                    badge.textContent = pct + '% delivered';
+                    badge.className = 'text-xs px-2 py-1 border border-red-700 text-red-400';
+                }
+
+                const failsList = document.getElementById('webhookFailuresList');
+                const failsContainer = document.getElementById('webhookFailuresContainer');
+                if (!data.recentFailures || data.recentFailures.length === 0) {
+                    failsContainer.classList.add('hidden');
+                } else {
+                    failsContainer.classList.remove('hidden');
+                    failsList.innerHTML = data.recentFailures.map(f => {
+                        const safe = (s) => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+                        return `
+                          <div class="bg-slate-900 border border-slate-800 p-3 text-xs">
+                            <div class="flex items-center justify-between mb-1">
+                              <span class="font-mono text-slate-300">${safe(f.event)}</span>
+                              <span class="text-red-400 font-bold">HTTP ${f.httpStatus}</span>
+                            </div>
+                            <div class="text-slate-500 text-[11px] mb-2">${new Date(f.createdAt).toLocaleString()} · attempts: ${f.attempts}</div>
+                            ${f.response ? `<div class="font-mono text-[11px] text-slate-400 break-all">${safe(f.response)}</div>` : ''}
+                            <button onclick="retryWebhook('${f.id}', this)" class="mt-2 bg-slate-800 hover:bg-slate-700 text-white px-2 py-1 border border-slate-700 text-[11px]">Retry now</button>
+                          </div>
+                        `;
+                    }).join('');
+                }
+            } catch (e) {
+                card.classList.add('hidden');
+            }
+        }
+
+        async function retryWebhook(logId, btn) {
+            const token = sessionStorage.getItem('merchantToken');
+            btn.disabled = true; btn.textContent = '…';
+            try {
+                const res = await fetch('/api/webhooks/logs/' + logId + '/retry', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                });
+                btn.textContent = res.ok ? 'Retried' : 'Failed';
+                setTimeout(loadWebhookHealth, 800);
+            } catch {
+                btn.textContent = 'Failed'; btn.disabled = false;
+            }
+        }
 
         // Load wallets
         async function loadWallets() {

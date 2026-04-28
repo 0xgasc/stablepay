@@ -10,8 +10,12 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import { initSentry } from './utils/sentry';
+initSentry('scanner');
+
 import { BlockchainService } from './services/blockchainService';
 import { webhookService } from './services/webhookService';
+import { startHealthAlerter } from './services/healthAlerter';
 
 const scanner = new BlockchainService();
 
@@ -19,6 +23,10 @@ console.log('[scanner] StablePay Blockchain Scanner starting...');
 console.log('[scanner] DATABASE_URL:', process.env.DATABASE_URL ? '✓ Set' : '✗ Missing');
 
 scanner.startScanning(15000); // Poll every 15 seconds
+
+// Synthetic health monitor — emails ops when components break / recover. Lives here on the
+// long-running Railway worker (the same reason the webhook-retry loop lives here, not on Vercel).
+startHealthAlerter();
 
 // Webhook retry driver. The web tier (Vercel) can't reliably host a scheduler
 // because serverless functions don't survive between requests — any node-cron

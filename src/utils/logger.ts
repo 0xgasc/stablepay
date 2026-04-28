@@ -72,10 +72,21 @@ class Logger {
 
   error(message: string, error?: Error, context?: LogContext) {
     this.log(LogLevel.ERROR, message, context, error);
+    // Mirror to Sentry when configured. Lazy-imported so logger has no hard dep on Sentry
+    // and the import cost is paid once per process.
+    try {
+      const { reportError, reportMessage } = require('./sentry');
+      if (error) reportError(error, { message, ...context });
+      else reportMessage('error', message, context);
+    } catch { /* sentry not configured / not installed — fine */ }
   }
 
   security(message: string, context?: LogContext) {
     this.log(LogLevel.SECURITY, message, context);
+    try {
+      const { reportMessage } = require('./sentry');
+      reportMessage('warning', `[security] ${message}`, context);
+    } catch { /* swallow */ }
   }
 
   // Convenience methods for common operations

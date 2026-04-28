@@ -28,6 +28,9 @@ import cron from 'node-cron';
 // Load and validate environment variables
 dotenv.config();
 
+// Initialize Sentry early — captures errors during startup too. Opt-in via SENTRY_DSN.
+import('./utils/sentry').then(({ initSentry }) => initSentry('web')).catch(() => {});
+
 let env;
 try {
   env = validateEnv();
@@ -164,6 +167,12 @@ app.get('/pay/:invoiceId', (req, res) => {
 
 // Health checks
 app.use('/health', healthRouter);
+app.use('/api/health', healthRouter);
+
+// Public status page — drives by /api/health/platform via JS poll
+app.get('/status', (_req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'status.html'));
+});
 
 // ─── API Routes ─────────────────────────────────────────────────────────────
 app.use('/api/orders', ordersRouter);

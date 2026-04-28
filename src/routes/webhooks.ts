@@ -117,6 +117,67 @@ router.post('/secret', requireMerchantAuth, async (req, res) => {
 });
 
 // GET /api/webhooks/logs - Get webhook delivery logs
+// GET /api/webhooks/health — summary view for the merchant dashboard.
+// Returns 24h delivery stats + 5 most recent failures (with response body) + queue depth,
+// so a merchant can self-diagnose "is my endpoint accepting our webhooks" without me
+// running scripts against the DB.
+router.get('/health', requireMerchantAuth, async (req, res) => {
+  try {
+    const merchant = (req as any).merchant;
+    const now = new Date();
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    const [recent, recentFails, queue] = await Promise.all([
+      db.webhookLog.findMany({
+        where: { merchantId: merchant.id, createdAt: { gte: dayAgo } },
+        select: { deliveredAt: true, httpStatus: true, attempts: true },
+      }),
+      db.webhookLog.findMany({
+        where: { merchantId: merchant.id, deliveredAt: null, httpStatus: { gte: 400 } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: { id: true, event: true, httpStatus: true, attempts: true, response: true, createdAt: true, nextRetryAt: true },
+      }),
+      db.webhookLog.count({
+        where: { merchantId: merchant.id, deliveredAt: null, nextRetryAt: { not: null } },
+      }),
+    ]);
+
+    const total = recent.length;
+    const delivered = recent.filter(r => r.deliveredAt).length;
+    const successPct = total === 0 ? null : Math.round((delivered / total) * 100);
+    const lastFailHttpStatus = recent.find(r => !r.deliveredAt && r.httpStatus)?.httpStatus || null;
+
+    res.json({
+      window: '24h',
+      total,
+      delivered,
+      failed: total - delivered,
+      successPct,
+      queueDepth: queue,
+      recentFailures: recentFails.map(r => ({
+        id: r.id,
+        event: r.event,
+        httpStatus: r.httpStatus,
+        attempts: r.attempts,
+        response: (r.response || '').substring(0, 280),
+        createdAt: r.createdAt.toISOString(),
+        nextRetryAt: r.nextRetryAt?.toISOString() || null,
+      })),
+      hint: total === 0 ? 'No webhook traffic in 24h.'
+        : successPct === 100 ? 'All clear.'
+        : successPct! >= 95 ? 'Mostly healthy — occasional failures may be transient.'
+        : lastFailHttpStatus === 401 ? 'Your endpoint is rejecting our signature. Check the verify function uses HMAC of `${timestamp}.${body}` (see /docs/API.md).'
+        : lastFailHttpStatus === 404 ? 'Your endpoint is returning 404 — the route may not be registered on your server.'
+        : (lastFailHttpStatus && lastFailHttpStatus >= 500) ? 'Your endpoint is 5xx-ing — backend is erroring on our payload.'
+        : 'Some failures detected. Inspect recentFailures.',
+    });
+  } catch (error) {
+    logger.error('Webhook health summary error', error as Error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/logs', requireMerchantAuth, async (req, res) => {
   try {
     const merchant = (req as any).merchant;

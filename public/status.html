@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StablePay Status</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: #0b0d12; color: #e2e8f0; min-height: 100vh; padding: 32px 16px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .subtitle { color: #94a3b8; font-size: 13px; margin-bottom: 24px; }
+    .overall {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 20px; border-radius: 12px; margin-bottom: 20px;
+      border: 2px solid #1e293b; background: #11141b;
+    }
+    .overall.ok { border-color: #22c55e; background: #052e16; }
+    .overall.warning { border-color: #f59e0b; background: #2a1c08; }
+    .overall.down { border-color: #ef4444; background: #2a0a0a; }
+    .dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.04);
+    }
+    .dot.ok { background: #22c55e; }
+    .dot.warning { background: #f59e0b; }
+    .dot.down { background: #ef4444; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .overall .label { font-size: 18px; font-weight: 600; }
+    .overall .stamp { margin-left: auto; color: #94a3b8; font-size: 12px; }
+    .components { display: flex; flex-direction: column; gap: 8px; }
+    .component {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-radius: 8px;
+      background: #11141b; border: 1px solid #1e293b;
+    }
+    .component .name { font-weight: 600; min-width: 140px; }
+    .component .status { color: #94a3b8; font-size: 13px; flex: 1; }
+    .component .status.warning { color: #fbbf24; }
+    .component .status.down { color: #f87171; }
+    .footer { margin-top: 28px; color: #64748b; font-size: 12px; text-align: center; }
+    .footer a { color: #94a3b8; text-decoration: underline; }
+    .err { color: #f87171; padding: 16px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>StablePay Status</h1>
+    <p class="subtitle">Live infrastructure health. Refreshes every 30 seconds.</p>
+    <div id="root">
+      <div class="err">Loading…</div>
+    </div>
+    <p class="footer">
+      Maintained at <a href="https://wetakestables.shop">wetakestables.shop</a> ·
+      <a href="https://wetakestables.shop/api/health/platform" target="_blank">JSON</a>
+    </p>
+  </div>
+
+  <script>
+    const COMPONENT_LABELS = {
+      database: 'Database',
+      scanner: 'Blockchain scanner',
+      rpc: 'RPC providers',
+      webhookQueue: 'Webhook retry queue',
+      webhookDelivery: 'Webhook delivery rate',
+    };
+
+    function render(report) {
+      const root = document.getElementById('root');
+      const overallStatus = report.status; // ok | warning | down
+      const overallLabel = {
+        ok: 'All systems operational',
+        warning: 'Degraded — some components flagged',
+        down: 'Service disruption',
+      }[overallStatus];
+      const stamp = new Date(report.checkedAt).toLocaleString();
+
+      let html = `
+        <div class="overall ${overallStatus}">
+          <div class="dot ${overallStatus}"></div>
+          <div class="label">${overallLabel}</div>
+          <div class="stamp">${stamp}</div>
+        </div>
+        <div class="components">
+      `;
+      for (const [key, c] of Object.entries(report.components)) {
+        const label = COMPONENT_LABELS[key] || key;
+        const msg = c.message || (c.status === 'ok' ? 'Operating normally' : '');
+        html += `
+          <div class="component">
+            <div class="dot ${c.status}"></div>
+            <div class="name">${label}</div>
+            <div class="status ${c.status}">${escapeHtml(msg)}</div>
+          </div>
+        `;
+      }
+      html += '</div>';
+      root.innerHTML = html;
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function poll() {
+      try {
+        const res = await fetch('/api/health/platform', { cache: 'no-store' });
+        const report = await res.json();
+        render(report);
+      } catch (err) {
+        document.getElementById('root').innerHTML = '<div class="err">Could not reach status API. The platform may be fully offline, or this status page itself is rate-limited. Check back in a moment.</div>';
+      }
+    }
+
+    poll();
+    setInterval(poll, 30_000);
+  </script>
+</body>
+</html>
