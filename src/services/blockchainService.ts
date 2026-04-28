@@ -760,8 +760,6 @@ export class BlockchainService {
       if (this.scanning) return;
       this.scanning = true;
       try {
-        await writeHeartbeat();
-
         // Check how many pending orders exist
         const pendingCount = await db.order.count({
           where: { status: 'PENDING', expiresAt: { gt: new Date() } }
@@ -790,12 +788,17 @@ export class BlockchainService {
       }
     };
 
-    // Initial scan
+    // Initial heartbeat + scan
+    await writeHeartbeat();
     await runCycle();
 
-    // Smart interval: 5s when pending orders exist, expire check every 6th cycle when idle
+    // Smart interval: 5s when pending orders exist, expire check every 6th cycle when idle.
+    // Heartbeat fires EVERY tick regardless of pending state — the health endpoint needs to
+    // see liveness during idle periods, not just when payments are flowing.
     let idleCycles = 0;
     setInterval(async () => {
+      await writeHeartbeat();
+
       const hasPending = await db.order.count({
         where: { status: 'PENDING', expiresAt: { gt: new Date() } }
       }).catch(() => 0);
