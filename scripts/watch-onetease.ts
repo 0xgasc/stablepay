@@ -111,6 +111,13 @@ line('READY', 'watching One Tease — polling every 10s');
 void tick();
 setInterval(tick, POLL_MS);
 
+// Proactively recycle the Prisma connection every 10 min — Supabase's pgBouncer kills idle
+// connections around that mark, and stale sockets cause "Server has closed the connection"
+// errors on the next query. By disconnecting before they go stale, we never see the blip.
+setInterval(async () => {
+  try { await db.$disconnect(); } catch {}
+}, 10 * 60_000);
+
 // Keep alive; signals stop it cleanly
 process.on('SIGINT',  () => { line('STOP', 'SIGINT');  process.exit(0); });
 process.on('SIGTERM', () => { line('STOP', 'SIGTERM'); process.exit(0); });

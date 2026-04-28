@@ -241,45 +241,113 @@ router.get('/logs/:logId', requireMerchantAuth, async (req, res) => {
 });
 
 // POST /api/webhooks/test - Send test webhook
+// Fire a synthetic webhook to the merchant's endpoint and return the actual delivery result
+// inline (HTTP status, response body, signature header, latency) so the merchant can debug
+// their verify function without running real money through. Bypasses event-subscription filtering
+// so the test always fires regardless of which events they're subscribed to.
 router.post('/test', requireMerchantAuth, async (req, res) => {
   try {
     const merchant = (req as any).merchant;
+    const eventType = (req.body?.event as string) || 'order.confirmed'; // default — most common verify target
 
-    // Get current config
-    const config = await webhookService.getConfig(merchant.id);
-
-    if (!config?.webhookUrl) {
-      return res.status(400).json({
-        error: 'Webhook URL not configured',
-        message: 'Please configure a webhook URL first',
-      });
-    }
-
-    if (!config.webhookEnabled) {
-      return res.status(400).json({
-        error: 'Webhooks disabled',
-        message: 'Please enable webhooks first',
-      });
-    }
-
-    // Send test webhook
-    await webhookService.sendWebhook(merchant.id, 'order.created', {
-      orderId: 'test_' + Date.now(),
-      amount: 10.00,
-      chain: 'BASE_SEPOLIA',
-      paymentAddress: '0x0000000000000000000000000000000000000000',
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      _isTest: true,
+    const m = await db.merchant.findUnique({
+      where: { id: merchant.id },
+      select: { webhookUrl: true, webhookSecret: true },
     });
+    if (!m?.webhookUrl) return res.status(400).json({ error: 'Webhook URL not configured' });
 
-    logger.info('Test webhook sent', {
-      merchantId: merchant.id,
-      event: 'webhook.test_sent'
+    const timestamp = new Date().toISOString();
+    const orderId = 'test_' + Date.now();
+    const payload = {
+      event: eventType,
+      timestamp,
+      data: {
+        orderId,
+        externalId: 'test-' + Math.random().toString(36).slice(2, 10),
+        amount: 1.00,
+        token: 'USDC',
+        chain: 'BASE_MAINNET',
+        status: 'CONFIRMED',
+        txHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        explorerLink: null,
+        customerEmail: 'test@stablepay.dev',
+        customerWallet: null,
+        paymentAddress: '0x0000000000000000000000000000000000000000',
+        paymentMethod: null,
+        feePercent: 0.01,
+        feeAmount: 0.01,
+        netAmount: 0.99,
+        metadata: { _isTest: true },
+        confirmedAt: timestamp,
+      },
+    };
+    const body = JSON.stringify(payload);
+    const secret = m.webhookSecret || '';
+    const signature = require('crypto')
+      .createHmac('sha256', secret)
+      .update(`${timestamp}.${body}`)
+      .digest('hex');
+    const idempotencyKey = 'test-' + require('crypto').randomBytes(8).toString('hex');
+
+    const t0 = Date.now();
+    let httpStatus: number | null = null;
+    let responseBody = '';
+    let networkError: string | null = null;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
+      const resp = await fetch(m.webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-StablePay-Signature': signature,
+          'X-StablePay-Timestamp': timestamp,
+          'X-StablePay-Idempotency-Key': idempotencyKey,
+        },
+        body,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      httpStatus = resp.status;
+      responseBody = await resp.text().catch(() => '');
+    } catch (err: any) {
+      networkError = String(err?.message || err).slice(0, 200);
+    }
+    const latencyMs = Date.now() - t0;
+
+    const ok = httpStatus !== null && httpStatus >= 200 && httpStatus < 300;
+    logger.info('Webhook test fired', {
+      merchantId: merchant.id, eventType, httpStatus, latencyMs, ok,
+      event: 'webhook.test_fired',
     });
 
     res.json({
-      success: true,
-      message: 'Test webhook sent. Check your webhook logs for delivery status.',
+      success: ok,
+      url: m.webhookUrl,
+      eventType,
+      sent: {
+        timestamp,
+        signature,
+        idempotencyKey,
+        bodyPreview: body.slice(0, 600),
+      },
+      received: {
+        httpStatus,
+        latencyMs,
+        responseBody: responseBody.slice(0, 1000),
+        networkError,
+      },
+      diagnosis: networkError
+        ? `Could not reach your endpoint: ${networkError}. Check the URL is reachable and HTTPS-valid.`
+        : httpStatus === 200 || httpStatus === 201 || httpStatus === 204
+        ? '✓ Endpoint accepted the webhook.'
+        : httpStatus === 401 || httpStatus === 403
+        ? `Your endpoint rejected the signature (HTTP ${httpStatus}). Check your verify function uses HMAC of "<timestamp>.<body>", and that you're using the secret shown in this dashboard.`
+        : httpStatus === 404
+        ? 'Your endpoint returned 404 — the route may not be registered on your server.'
+        : httpStatus && httpStatus >= 500
+        ? `Your endpoint is 5xx-ing (${httpStatus}). Server-side error processing the payload.`
+        : `Unexpected response: HTTP ${httpStatus}.`,
     });
   } catch (error) {
     logger.error('Send test webhook error', error as Error);

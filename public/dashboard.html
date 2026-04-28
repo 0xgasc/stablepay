@@ -1094,6 +1094,17 @@
                                 <div class="text-xs uppercase tracking-wide text-slate-400 mb-2">Recent failures</div>
                                 <div id="webhookFailuresList" class="space-y-2"></div>
                             </div>
+
+                            <div class="mt-4 pt-4 border-t border-slate-800">
+                                <div class="flex items-center justify-between gap-3 flex-wrap">
+                                    <div>
+                                        <div class="text-white font-semibold text-sm">Fire test webhook</div>
+                                        <div class="text-xs text-slate-400 mt-0.5">Sends a synthetic <code class="text-slate-300">order.confirmed</code> with valid signature so you can verify your endpoint without running real money through.</div>
+                                    </div>
+                                    <button id="fireTestWebhookBtn" onclick="fireTestWebhook()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 border font-medium text-sm whitespace-nowrap">Fire test webhook</button>
+                                </div>
+                                <div id="testWebhookResult" class="hidden mt-3 bg-slate-900 border border-slate-800 p-3 text-xs"></div>
+                            </div>
                         </div>
 
                         <!-- Quick Start Guide -->
@@ -4184,6 +4195,44 @@ onMounted(() => {
                 }
             } catch (e) {
                 card.classList.add('hidden');
+            }
+        }
+
+        async function fireTestWebhook() {
+            const btn = document.getElementById('fireTestWebhookBtn');
+            const resultDiv = document.getElementById('testWebhookResult');
+            const token = sessionStorage.getItem('merchantToken');
+            btn.disabled = true; btn.textContent = 'Firing…';
+            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = '<span class="text-slate-400">Sending synthetic webhook…</span>';
+            try {
+                const res = await fetch('/api/webhooks/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ event: 'order.confirmed' }),
+                });
+                const data = await res.json();
+                const safe = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+                if (!res.ok || data.error) {
+                    resultDiv.innerHTML = `<div class="text-red-400">${safe(data.error || 'Test failed')}</div>`;
+                } else {
+                    const okBadge = data.success
+                        ? '<span class="text-green-400 font-bold">✓ ' + safe(data.received.httpStatus) + '</span>'
+                        : '<span class="text-red-400 font-bold">✗ ' + safe(data.received.httpStatus ?? data.received.networkError ?? 'failed') + '</span>';
+                    resultDiv.innerHTML = `
+                      <div class="flex items-center justify-between mb-2">
+                        <div>${okBadge} <span class="text-slate-400">in ${safe(data.received.latencyMs)}ms</span></div>
+                        <span class="text-slate-500">→ ${safe(data.url)}</span>
+                      </div>
+                      <div class="text-slate-300 mb-2">${safe(data.diagnosis)}</div>
+                      ${data.received.responseBody ? `<details class="mt-2"><summary class="text-slate-400 cursor-pointer">Response body</summary><pre class="mt-1 font-mono text-[11px] text-slate-400 whitespace-pre-wrap break-all">${safe(data.received.responseBody)}</pre></details>` : ''}
+                      <details class="mt-2"><summary class="text-slate-400 cursor-pointer">Request headers we sent</summary><pre class="mt-1 font-mono text-[11px] text-slate-400 whitespace-pre-wrap break-all">X-StablePay-Signature: ${safe(data.sent.signature)}\nX-StablePay-Timestamp: ${safe(data.sent.timestamp)}\nX-StablePay-Idempotency-Key: ${safe(data.sent.idempotencyKey)}</pre></details>
+                    `;
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="text-red-400">Network error: ${String(e.message || e)}</div>`;
+            } finally {
+                btn.disabled = false; btn.textContent = 'Fire test webhook';
             }
         }
 
