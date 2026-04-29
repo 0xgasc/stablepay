@@ -6,6 +6,24 @@ All request and response bodies are JSON. All timestamps are ISO-8601 UTC.
 
 ---
 
+## Common Integration Mistakes (read this first)
+
+These are the bugs that have actually broken real merchant integrations. Avoid them.
+
+1. **Not passing `externalId`.** Every `POST /api/embed/checkout` should include your internal order id as `externalId`. We echo it back on every webhook so you can match 1:1. Without it, you're matching on email/payment-address which breaks for guest checkouts and creates support tickets.
+
+2. **Creating a new `/api/embed/checkout` order when the customer changes chain.** This creates a duplicate order in our DB, your original sits unpaid forever, and the new one (which gets the actual payment) often loses your `externalId` mapping. The right pattern: create **one chain-agnostic order** (omit `chain` at creation), and let our checkout page handle the chain selection via `POST /api/embed/order/:orderId/chain`. Same `orderId`, same `externalId`, no duplicates.
+
+3. **Not validating `X-StablePay-Signature` properly.** The signature is HMAC-SHA256 of `"<timestamp>.<body>"` (Stripe-style), not just the body. Hashing only the body returns 401 forever.
+
+4. **Not enforcing the `X-StablePay-Timestamp` freshness window.** Reject anything older than 5 minutes. We re-use the original timestamp on retries (so signatures stay valid across attempts) — your replay-protection check correctly rejects retries that took too long, which is the right behavior.
+
+5. **Not deduping on `X-StablePay-Idempotency-Key`.** Retries reuse the same key. Without dedupe, you'll process the same payment twice if the first delivery times out and we retry.
+
+6. **Returning 5xx (or no response) when you don't recognize an event type.** Always return 2xx for events you don't care about. We retry 5 times with exponential backoff on non-2xx — by the 5th retry your endpoint will be hammered with stale notifications.
+
+---
+
 ## Authentication
 
 Merchant endpoints require a Bearer token obtained from your StablePay dashboard → **Developer** tab.
@@ -88,7 +106,25 @@ The scanner enforces that the token received on-chain matches `order.token` exac
 }
 ```
 
-`chain`, `token`, and all other fields after `amount` are optional. Omit `chain` for a chain-agnostic order (customer picks on checkout).
+`chain`, `token`, and all other fields after `amount` are optional.
+
+#### `externalId` — strongly recommended (always pass it)
+
+Set this to **your own internal order id**. We echo it back verbatim in every webhook payload at `data.externalId`. Without it, when our `order.confirmed` webhook lands on your endpoint, you'll have to match payments by `customerEmail` or `paymentAddress` — which is fragile and breaks for guest checkouts. **Pass `externalId` on every checkout call.**
+
+#### Chain-agnostic orders (recommended for multi-chain merchants)
+
+If you accept payments on multiple chains (e.g. Base + Ethereum + Solana), do **NOT** create a separate StablePay order per chain. Instead:
+
+1. Create **one** chain-agnostic order — omit `chain` at creation:
+   ```json
+   { "merchantId": "...", "amount": 49.99, "externalId": "your-order-123" }
+   ```
+2. Redirect the customer to our checkout page. They pick the chain there.
+3. Our checkout page calls `POST /api/embed/order/:orderId/chain` internally to lock in the customer's choice — same `orderId`, same `externalId`, just a chain update.
+4. You receive `order.created` (once) and `order.confirmed` (once) with the same `externalId` throughout.
+
+**Anti-pattern:** creating a new `/api/embed/checkout` call when the customer changes chain. This duplicates orders, drops your `externalId` mapping, and leaves your reconciliation stuck on whichever order didn't get paid.
 
 Response `200`:
 
@@ -111,6 +147,16 @@ Redirect the customer to `https://wetakestables.shop/checkout?orderId=<orderId>`
 `GET /api/embed/order/:orderId`
 
 Used by the checkout widget/page to poll for confirmation. Returns the order plus any attached transactions.
+
+### Switch Chain (chain-agnostic orders only)
+
+`POST /api/embed/order/:orderId/chain`
+
+Body: `{ "chain": "SOLANA_MAINNET", "token": "USDC" }`
+
+Used by our checkout page when a customer picks a chain on a chain-agnostic order. Updates the order's `chain`, `token`, `paymentAddress` to the merchant's wallet for that chain. Same `orderId`, same `externalId` — no new order created.
+
+You typically don't call this directly — our checkout page handles it. But if you're building a custom checkout UI, this is how you swap chains without losing the original order's identity.
 
 ### Attach TX Hash (public)
 
