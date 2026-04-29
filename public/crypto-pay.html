@@ -354,10 +354,15 @@
     </nav>
 
     <div class="container mx-auto px-4 py-8 max-w-2xl">
-        <!-- Back Button -->
-        <div class="mb-6">
+        <!-- Back + Cancel buttons (always visible top of page) -->
+        <div class="mb-6 flex items-center justify-between gap-3">
             <button id="backBtn" onclick="goBack()" class="font-bold flex items-center tracking-wide btn-brutal px-4 py-2 mc-accent-bg" style="text-transform: uppercase;" data-i18n="backBtn">
                 BACK TO STORE
+            </button>
+            <button id="cpTopCancelBtn" onclick="cpCancelOrder()"
+                    class="text-xs text-red-600 hover:text-red-800 underline font-medium"
+                    title="Cancel this payment and return to merchant">
+                Cancel payment
             </button>
         </div>
 
@@ -434,6 +439,10 @@
                                class="flex-1 px-3 py-2 border-2 border-black text-sm font-mono outline-none"
                                autocomplete="off" spellcheck="false"
                                onkeydown="if(event.key==='Enter'){event.preventDefault();cpManualStep1Next();}" />
+                        <button type="button" onclick="cpPasteSenderWallet()"
+                                title="Paste from clipboard"
+                                class="px-3 py-2 text-xs font-bold text-black border-2 border-black bg-white hover:bg-gray-100"
+                                style="text-transform: uppercase;">Paste</button>
                         <button onclick="cpManualStep1Next()"
                                 class="px-4 py-2 font-bold text-sm text-black border-2 border-black mc-accent-bg"
                                 style="text-transform: uppercase;">Next</button>
@@ -3116,6 +3125,25 @@
             };
             tick();
             window._cpCountdownTimer = setInterval(tick, 1000);
+        }
+
+        // Paste from clipboard into the wallet input. Uses the modern Clipboard API
+        // (works on Chrome/Safari/Firefox post-2023; on iOS Safari may prompt for permission).
+        async function cpPasteSenderWallet() {
+            const input = document.getElementById('cpSenderWallet');
+            if (!input) return;
+            try {
+                const text = (await navigator.clipboard.readText()).trim();
+                if (!text) return;
+                input.value = text;
+                input.focus();
+                // Trigger change so any listeners (validation, character count) fire
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            } catch (err) {
+                // Permission denied or browser doesn't support — fall back to focus so user can manually paste
+                input.focus();
+                console.warn('Clipboard read failed:', err?.message || err);
+            }
         }
 
         async function cpCancelOrder() {
