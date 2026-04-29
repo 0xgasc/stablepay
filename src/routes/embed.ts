@@ -225,6 +225,48 @@ router.post('/checkout', rateLimit({
       resolvedStoreId = data.storeId;
     }
 
+    // ─── Idempotency on (merchantId, externalId) ─────────────────────────
+    // Real bug: our checkout page sometimes posts a SECOND /api/embed/checkout when
+    // a customer arrives via merchant redirect without orderId in the URL. The result
+    // was duplicate orders, the second one missing externalId, and the merchant's
+    // backend not being able to reconcile. Now: if the same merchant + externalId
+    // already maps to a PENDING order, return THAT order instead of creating a new one.
+    if (data.externalId) {
+      const existing = await db.order.findFirst({
+        where: {
+          merchantId: data.merchantId,
+          externalId: data.externalId,
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+        select: {
+          id: true, amount: true, chain: true, token: true,
+          paymentAddress: true, expiresAt: true, status: true, externalId: true,
+        },
+      });
+      if (existing) {
+        logger.info('Returning existing PENDING order for (merchantId, externalId)', {
+          merchantId: data.merchantId,
+          externalId: data.externalId,
+          orderId: existing.id,
+          event: 'order.dedupe_hit',
+        });
+        return res.json({
+          success: true,
+          order: {
+            id: existing.id,
+            externalId: existing.externalId,
+            amount: Number(existing.amount),
+            token: existing.token,
+            chain: existing.chain,
+            paymentAddress: existing.paymentAddress,
+            expiresAt: existing.expiresAt.toISOString(),
+          },
+          deduped: true,
+        });
+      }
+    }
+
     const wallet = merchant.wallets[0];
     if (!wallet) {
       return res.status(400).json({
@@ -578,6 +620,52 @@ router.post('/order/:orderId/chain', async (req, res) => {
  * Set customer wallet on existing order (for manual flow when order was pre-created via API)
  * Helps the scanner match by FROM address. Only allowed for PENDING orders.
  */
+/**
+ * Customer-initiated cancel. Marks a PENDING order as CANCELLED and fires order.expired
+ * webhook (so the merchant's backend treats it like an abandoned order — clears their
+ * "waiting for payment" state without waiting the full 30-min expiry).
+ *
+ * Public endpoint — no auth required. Customer-friendly. Only works on PENDING orders;
+ * confirmed/refunded/already-cancelled orders are no-ops with a clear message.
+ */
+router.post('/order/:orderId/cancel', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { reason } = (req.body || {}) as { reason?: string };
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, status: true, merchantId: true, storeId: true, amount: true, chain: true, externalId: true },
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status === 'CANCELLED') return res.json({ success: true, status: 'CANCELLED', message: 'Already cancelled' });
+    if (order.status !== 'PENDING') {
+      return res.status(400).json({ error: `Cannot cancel ${order.status} order` });
+    }
+
+    const now = new Date();
+    await db.$executeRaw`UPDATE orders SET status = 'CANCELLED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId}`;
+
+    if (order.merchantId) {
+      webhookService.sendWebhook(order.merchantId, 'order.expired', {
+        orderId: order.id,
+        externalId: order.externalId || null,
+        amount: Number(order.amount),
+        chain: order.chain,
+        cancelledAt: now.toISOString(),
+        reason: reason || 'customer_cancelled',
+      }, { storeId: order.storeId || undefined }).catch(err => {
+        logger.error('Failed to send order cancel webhook', err as Error, { orderId });
+      });
+    }
+
+    logger.info('Order cancelled by customer', { orderId, externalId: order.externalId, reason, event: 'order.cancelled' });
+    res.json({ success: true, status: 'CANCELLED' });
+  } catch (error) {
+    logger.error('Cancel order error', error as Error, { orderId: req.params.orderId });
+    res.status(500).json({ error: 'Failed to cancel order' });
+  }
+});
+
 router.post('/order/:orderId/wallet', async (req, res) => {
   try {
     const { orderId } = req.params;

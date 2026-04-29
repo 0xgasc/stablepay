@@ -506,6 +506,9 @@
                     <button onclick="cpManualBack()" class="w-full text-xs text-gray-500 underline mt-2">
                         ← Change wallet, network, or token
                     </button>
+                    <button onclick="cpCancelOrder()" class="w-full text-xs text-red-500 hover:text-red-700 underline mt-2">
+                        Cancel payment
+                    </button>
                 </div>
 
                 <!-- STEP 3: Listening / verifying -->
@@ -3112,6 +3115,27 @@
             window._cpCountdownTimer = setInterval(tick, 1000);
         }
 
+        async function cpCancelOrder() {
+            if (!confirm('Cancel this payment? You can start a new one any time.')) return;
+            // Stop any timers/polling so we don't keep banging on a cancelled order
+            if (window._cpPolling) { clearInterval(window._cpPolling); window._cpPolling = null; }
+            if (window._cpProgressTimer) { clearInterval(window._cpProgressTimer); window._cpProgressTimer = null; }
+            if (window._cpCountdownTimer) { clearInterval(window._cpCountdownTimer); window._cpCountdownTimer = null; }
+            try {
+                if (window.currentOrderId) {
+                    await fetch('/api/embed/order/' + window.currentOrderId + '/cancel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reason: 'customer_cancelled' }),
+                    }).catch(() => {});
+                }
+            } finally {
+                // Either way: send the customer back to the merchant. Same logic as goBack().
+                if (typeof goBack === 'function') goBack();
+                else window.location.href = '/';
+            }
+        }
+
         function cpManualBack() {
             // Stop polling if in step 3
             if (window._cpPolling) { clearInterval(window._cpPolling); window._cpPolling = null; }
@@ -3174,6 +3198,10 @@
                 const baseAmount = params.get('amount') || currentProduct.price.toString();
                 const amount = (token === 'EURC' && displayAmount) ? displayAmount : baseAmount;
                 try {
+                    // Pass externalId from URL params if present — backend will dedupe
+                    // (return existing PENDING order with same merchantId+externalId instead of
+                    // creating a duplicate). This is what closed the OneTease integration loop.
+                    const externalId = params.get('externalId') || undefined;
                     const res = await fetch('/api/embed/checkout', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3184,6 +3212,7 @@
                             token,
                             productName: currentProduct.name,
                             customerWallet: cpSenderWallet,
+                            externalId,
                             linkId: params.get('linkId') || undefined,
                             paymentMethod: 'MANUAL_SEND',
                             source: 'CHECKOUT_LINK',
