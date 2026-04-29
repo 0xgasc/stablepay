@@ -795,6 +795,37 @@
                 }
             },
 
+            // ========== BNB CHAIN MAINNET ==========
+            BNB_MAINNET: {
+                type: 'evm',
+                chainId: '0x38', // 56
+                chainName: 'BNB Chain',
+                rpcUrls: ['https://bsc-dataseed.binance.org'],
+                blockExplorerUrls: ['https://bscscan.com'],
+                nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                network: 'mainnet',
+                description: 'BNB Chain - Binance Smart Chain',
+                tokens: {
+                    // Binance-Peg tokens use 18 decimals on BNB chain (vs 6 on other EVMs)
+                    USDC: { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 18, name: 'Binance-Peg USDC' },
+                    USDT: { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18, name: 'Binance-Peg USDT' }
+                }
+            },
+
+            // ========== TRON MAINNET ==========
+            TRON_MAINNET: {
+                type: 'tron',
+                chainName: 'TRON',
+                rpcUrls: ['https://api.trongrid.io'],
+                blockExplorerUrls: ['https://tronscan.org'],
+                network: 'mainnet',
+                description: 'TRON - low fees, TRC-20 stablecoins',
+                tokens: {
+                    USDT: { address: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', decimals: 6, name: 'Tether USD (TRC-20)' },
+                    USDC: { address: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8', decimals: 6, name: 'USD Coin (TRC-20)' }
+                }
+            },
+
             // ========== SOLANA MAINNET ==========
             SOLANA_MAINNET: {
                 type: 'solana',
