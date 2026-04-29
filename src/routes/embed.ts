@@ -175,8 +175,8 @@ router.post('/checkout', rateLimit({
       logger.security('OneTease checkout payload (debug)', {
         event: 'debug.onetease_checkout',
         rawBody: req.body,
-        userAgent: req.get('user-agent') || null,
-        sourceIp: req.ip || (req.socket as any)?.remoteAddress || null,
+        userAgent: req.get('user-agent') || undefined,
+        sourceIp: req.ip || (req.socket as any)?.remoteAddress || undefined,
         receivedAt: new Date().toISOString(),
       });
     }
