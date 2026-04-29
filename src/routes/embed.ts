@@ -169,6 +169,18 @@ router.post('/checkout', rateLimit({
   anonymousLimit: 100
 }), idempotency(), async (req, res) => {
   try {
+    // TEMPORARY DEBUG — capture raw payload from One Tease so we can compare against
+    // what their devs claim they're sending. Remove when their integration is verified.
+    if (req.body?.merchantId === 'cmnem8xia00008da9g8o13tp4') {
+      logger.security('OneTease checkout payload (debug)', {
+        event: 'debug.onetease_checkout',
+        rawBody: req.body,
+        userAgent: req.get('user-agent') || null,
+        sourceIp: req.ip || (req.socket as any)?.remoteAddress || null,
+        receivedAt: new Date().toISOString(),
+      });
+    }
+
     const data = checkoutSchema.parse(req.body);
     const chainAgnostic = !data.chain;
 
