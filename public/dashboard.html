@@ -3979,9 +3979,9 @@ onMounted(() => {
                     : null;
                 const explorerUrl = txHash ? getExplorerUrl(order.chain, txHash) : null;
 
-                const customerDisplay = order.customerEmail
-                    ? (order.customerEmail.length > 15 ? order.customerEmail.slice(0, 12) + '...' : order.customerEmail)
-                    : 'Anon';
+                // Show the full email by default — let the column expand. Tooltip + click-to-copy
+                // also wired up so merchants can grab the full address even on tight viewports.
+                const customerDisplay = order.customerEmail || 'Anon';
 
                 return `
                     <tr class="hover:bg-slate-900/50">
@@ -4021,8 +4021,12 @@ onMounted(() => {
                                 </button>
                             ` : '<span class="text-slate-500 text-xs">-</span>'}
                         </td>
-                        <td class="px-3 py-3 whitespace-nowrap overflow-hidden">
-                            <div class="text-xs text-slate-400 truncate" title="${order.customerEmail || ''}">${customerDisplay}</div>
+                        <td class="px-3 py-3 whitespace-nowrap" style="min-width: 220px;">
+                            ${order.customerEmail
+                              ? `<button class="text-xs text-slate-300 hover:text-white text-left font-mono"
+                                  title="Click to copy"
+                                  onclick="navigator.clipboard.writeText('${order.customerEmail}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='${order.customerEmail}', 1200);">${customerDisplay}</button>`
+                              : `<span class="text-xs text-slate-500">Anon</span>`}
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap text-xs text-slate-400">
                             ${createdAt}
