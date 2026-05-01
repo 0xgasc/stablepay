@@ -151,17 +151,33 @@ export class BlockchainService {
             const events = await contract.queryFilter(filter, fromBlock, currentBlock);
             allEvents.push(...(events as ethers.EventLog[]));
           } catch (err: any) {
-            // DO NOT silently swallow — this was the root cause of the UnlockRiver incident
-            // on 2026-04-22: llamarpc returned 403 Cloudflare, we ate it, real payment went
-            // unmatched. If it keeps failing, payments will land on the floor.
-            logger.error('scanner RPC query failed', err as Error, {
+            // Classify by failure mode so we don't page Sentry on routine rate-limits.
+            // RPC providers throttle aggressively — JSON-RPC -32005 / "rate limit" / "batch
+            // triggered" / BAD_DATA from a 200 response with an embedded error are all
+            // expected infrastructure events. Scanner keeps going (other contracts continue,
+            // next tick retries). We log them at WARN, not ERROR — Sentry only pages on ERROR.
+            //
+            // Real RPC failures (TLS, timeouts, hard 5xx, no fallback healthy) STAY at error
+            // because those mean a payment may actually drop on the floor, like the UnlockRiver
+            // incident on 2026-04-22 with llamarpc Cloudflare 403.
+            const msg = String(err?.message || err);
+            const isRateLimit =
+              /rate.?limit|too many requests|throttle|-32005|-32016|BAD_DATA/i.test(msg) ||
+              err?.code === 'BAD_DATA';
+            const ctx = {
               chain,
               contract: (contract as any)?.target || 'unknown',
               targetAddress,
               fromBlock,
               currentBlock,
               event: 'scanner.rpc_query_failed',
-            });
+              reason: isRateLimit ? 'rate_limit' : 'other',
+            };
+            if (isRateLimit) {
+              logger.warn('scanner RPC rate-limited (will rotate next tick)', ctx);
+            } else {
+              logger.error('scanner RPC query failed', err as Error, ctx);
+            }
           }
         }
 
