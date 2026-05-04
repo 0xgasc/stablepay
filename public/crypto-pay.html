@@ -1332,26 +1332,54 @@
                     const raw = await erc20.balanceOf(connectedAddress);
                     balance = parseFloat(ethers.formatUnits(raw, tokenConfig.decimals || 6));
                 } else if (chainConfig.type === 'solana' && solanaConnection) {
-                    const rpc = chainConfig.rpcUrls[0];
-                    const res = await fetch(rpc, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner',
-                            params: [connectedAddress, { mint: tokenConfig.address }, { encoding: 'jsonParsed' }],
-                        }),
-                    });
-                    const data = await res.json();
-                    const accounts = data.result?.value || [];
-                    balance = accounts.reduce((sum, a) => sum + parseFloat(a.account?.data?.parsed?.info?.tokenAmount?.uiAmountString || '0'), 0);
+                    // Try a couple public Solana RPCs in sequence — api.mainnet-beta is
+                    // aggressive about rate-limiting browsers and returns {error} instead
+                    // of {result}, which would silently look like "0 USDC" and block payment.
+                    const rpcs = [
+                        chainConfig.rpcUrls[0],
+                        'https://solana-rpc.publicnode.com',
+                        'https://rpc.ankr.com/solana',
+                    ];
+                    let resolved = null;
+                    for (const rpc of rpcs) {
+                        try {
+                            const res = await fetch(rpc, {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner',
+                                    params: [connectedAddress, { mint: tokenConfig.address }, { encoding: 'jsonParsed' }],
+                                }),
+                            });
+                            if (!res.ok) continue;
+                            const data = await res.json();
+                            // RPC error (rate-limit, internal): try the next provider
+                            if (data?.error || !data?.result) continue;
+                            resolved = data.result.value || [];
+                            break;
+                        } catch { /* try next */ }
+                    }
+                    if (resolved === null) {
+                        // Every RPC failed — don't block payment, just warn and let them try.
+                        console.warn('Solana balance unverified (all RPCs failed); not blocking payment');
+                        balance = NaN;
+                    } else {
+                        balance = resolved.reduce((sum, a) => sum + parseFloat(a.account?.data?.parsed?.info?.tokenAmount?.uiAmountString || '0'), 0);
+                    }
                 }
 
                 window._cpBalance = balance;
-                const sufficient = balance >= requiredAmt;
+                // Treat NaN as "couldn't check" — let the user try rather than blocking on a false 0.
+                const sufficient = Number.isNaN(balance) || balance >= requiredAmt;
                 if (!sufficient) {
                     payBtn.textContent = `Insufficient ${selectedToken} (${balance.toFixed(2)} available)`;
                     payBtn.style.background = '#ef4444';
                     payBtn.style.color = '#fff';
                     payBtn.disabled = true;
+                } else if (Number.isNaN(balance)) {
+                    payBtn.textContent = window._mcCustomButtonText || `PAY WITH ${selectedToken}`;
+                    payBtn.style.background = '';
+                    payBtn.style.color = '';
+                    payBtn.disabled = false;
                 } else {
                     payBtn.textContent = window._mcCustomButtonText || `Pay ${requiredAmt} ${selectedToken} (${balance.toFixed(2)} available)`;
                     payBtn.style.background = '';
