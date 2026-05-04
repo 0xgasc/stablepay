@@ -434,17 +434,21 @@
                         <div class="pt-2 border-t border-gray-300"><strong class="text-black">Which address?</strong> Use the one for the network you picked above. <span id="cpWalletHelpFormat">EVM addresses start with 0x and are 42 chars.</span></div>
                     </div>
 
-                    <div class="flex gap-2">
-                        <input id="cpSenderWallet" type="text" placeholder="0x... or chain-specific address"
-                               class="flex-1 px-3 py-2 border-2 border-black text-sm font-mono outline-none"
-                               autocomplete="off" spellcheck="false"
-                               onkeydown="if(event.key==='Enter'){event.preventDefault();cpManualStep1Next();}" />
-                        <button type="button" onclick="cpPasteSenderWallet()"
-                                title="Paste from clipboard"
-                                class="px-3 py-2 text-xs font-bold text-black border-2 border-black bg-white hover:bg-gray-100"
-                                style="text-transform: uppercase;">Paste</button>
+                    <div class="space-y-2">
+                        <div class="relative">
+                            <input id="cpSenderWallet" type="text" placeholder="0x... or chain-specific address"
+                                   class="w-full px-3 py-3 pr-12 border-2 border-black text-sm font-mono outline-none"
+                                   autocomplete="off" spellcheck="false"
+                                   onkeydown="if(event.key==='Enter'){event.preventDefault();cpManualStep1Next();}" />
+                            <button type="button" onclick="cpPasteSenderWallet()"
+                                    title="Paste from clipboard"
+                                    aria-label="Paste from clipboard"
+                                    class="absolute top-1/2 right-1 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-black hover:bg-gray-100 active:bg-gray-200 border-l-2 border-black">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><rect x="8" y="2.5" width="8" height="4"/><path d="M16 4.5h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-14a2 2 0 0 1 2-2h2"/></svg>
+                            </button>
+                        </div>
                         <button onclick="cpManualStep1Next()"
-                                class="px-4 py-2 font-bold text-sm text-black border-2 border-black mc-accent-bg"
+                                class="w-full px-4 py-3 font-bold text-sm text-black border-2 border-black mc-accent-bg"
                                 style="text-transform: uppercase;">Next</button>
                     </div>
                     <p id="cpStep1Error" class="text-xs text-red-600 mt-2 hidden"></p>
@@ -1444,6 +1448,22 @@
                     if (!orderRes.ok) throw new Error('Order not found');
                     const orderData = await orderRes.json();
 
+                    // If the customer reopens the link after the order is already settled
+                    // (closed tab, then opened from history), short-circuit to the right
+                    // terminal state instead of letting them try to pay again.
+                    if (orderData.status === 'CONFIRMED') {
+                        const product = { name: orderData.productName || 'Order ' + orderIdParam.slice(-8), price: Number(orderData.amount) };
+                        selectedToken = orderData.token || 'USDC';
+                        if (typeof showPaymentSuccess === 'function') {
+                            showPaymentSuccess(product, orderData.chain, orderData.explorerLink || '#', orderData.id);
+                        }
+                        return;
+                    }
+                    if (orderData.status === 'CANCELLED' || orderData.status === 'EXPIRED' || orderData.status === 'REFUNDED') {
+                        showError('This order is ' + orderData.status.toLowerCase() + '. Please start a new payment from the merchant.');
+                        return;
+                    }
+
                     currentProduct = {
                         id: orderIdParam,
                         name: orderData.productName || 'Order ' + orderIdParam.slice(-8),
@@ -1801,9 +1821,11 @@
 
         // Select a chain
         function selectChain(chainKey) {
-            // If chain changed, invalidate any previously created order/address
-            // (each chain has its own merchant wallet so we need a new order)
-            if (selectedChainKey && selectedChainKey !== chainKey) {
+            // If chain changed AND we don't have a chain-pending order, drop the previous order
+            // so the customer creates a fresh one on the new chain. For chain-agnostic orders
+            // (window._chainPending), we keep currentOrderId — cpManualStep2Done PATCHes /chain
+            // on commit, which preserves merchant externalId and avoids duplicate-order bug.
+            if (selectedChainKey && selectedChainKey !== chainKey && !window._chainPending) {
                 window.currentOrderId = null;
                 window.merchantPaymentAddress = null;
                 if (window._cpPolling) { clearInterval(window._cpPolling); window._cpPolling = null; }
