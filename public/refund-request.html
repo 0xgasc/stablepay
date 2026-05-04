@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-i18n-page="refund-request">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Request Refund - StablePay</title>
+    <title data-i18n="title">Request Refund - StablePay</title>
+    <script src="/js/lang.js"></script>
+    <script src="/js/i18n.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -134,38 +136,41 @@
     <main class="max-w-2xl mx-auto px-4 py-12">
         <!-- Request Form -->
         <div id="requestForm" class="bg-white brutal-border shadow-brutal p-8">
-            <h1 class="text-3xl font-bold text-black mb-2">Request a Refund</h1>
-            <p class="text-gray-500 mb-8">Fill out the form below to submit a refund request. The merchant will review and process your request.</p>
+            <h1 class="text-3xl font-bold text-black mb-2" data-i18n="form.heading">Request a Refund</h1>
+            <p class="text-gray-500 mb-8" data-i18n="form.subheading">Fill out the form below to submit a refund request. The merchant will review and process your request.</p>
 
             <form id="refundForm" class="space-y-6">
                 <div>
-                    <label for="orderId" class="block text-sm font-bold text-black mb-2">ORDER ID</label>
+                    <label for="orderId" class="block text-sm font-bold text-black mb-2" data-i18n="form.orderId.label">ORDER ID</label>
                     <input type="text" id="orderId" name="orderId" required
                            class="w-full px-4 py-3 text-black"
+                           data-i18n-attr="placeholder:form.orderId.placeholder"
                            placeholder="Enter your order ID (e.g., clx123abc...)">
-                    <p class="text-gray-400 text-xs mt-1">You can find this in your payment confirmation email</p>
+                    <p class="text-gray-400 text-xs mt-1" data-i18n="form.orderId.hint">You can find this in your payment confirmation email</p>
                 </div>
 
                 <div>
-                    <label for="email" class="block text-sm font-bold text-black mb-2">EMAIL ADDRESS</label>
+                    <label for="email" class="block text-sm font-bold text-black mb-2" data-i18n="form.email.label">EMAIL ADDRESS</label>
                     <input type="email" id="email" name="email" required
                            class="w-full px-4 py-3 text-black"
+                           data-i18n-attr="placeholder:form.email.placeholder"
                            placeholder="Email used during payment">
-                    <p class="text-gray-400 text-xs mt-1">Must match the email from your original order</p>
+                    <p class="text-gray-400 text-xs mt-1" data-i18n="form.email.hint">Must match the email from your original order</p>
                 </div>
 
                 <div>
-                    <label for="amount" class="block text-sm font-bold text-black mb-2">REFUND AMOUNT (USD)</label>
+                    <label for="amount" class="block text-sm font-bold text-black mb-2" data-i18n="form.amount.label">REFUND AMOUNT (USD)</label>
                     <input type="number" id="amount" name="amount" step="0.01" min="0.01" required
                            class="w-full px-4 py-3 text-black"
                            placeholder="0.00">
-                    <p class="text-gray-400 text-xs mt-1">Enter the amount you wish to refund (partial refunds allowed)</p>
+                    <p class="text-gray-400 text-xs mt-1" data-i18n="form.amount.hint">Enter the amount you wish to refund (partial refunds allowed)</p>
                 </div>
 
                 <div>
-                    <label for="reason" class="block text-sm font-bold text-black mb-2">REASON FOR REFUND</label>
+                    <label for="reason" class="block text-sm font-bold text-black mb-2" data-i18n="form.reason.label">REASON FOR REFUND</label>
                     <textarea id="reason" name="reason" rows="4" required
                               class="w-full px-4 py-3 text-black resize-none"
+                              data-i18n-attr="placeholder:form.reason.placeholder"
                               placeholder="Please explain why you're requesting a refund..."></textarea>
                 </div>
 
@@ -173,7 +178,7 @@
                 </div>
 
                 <button type="submit" id="submitBtn"
-                        class="w-full btn-brutal bg-black text-white py-4 shadow-brutal">
+                        class="w-full btn-brutal bg-black text-white py-4 shadow-brutal" data-i18n="form.submit">
                     SUBMIT REFUND REQUEST
                 </button>
             </form>
@@ -185,45 +190,45 @@
                 <div class="w-20 h-20 bg-green-100 brutal-border mx-auto mb-4 flex items-center justify-center">
                     <span class="text-4xl text-green-600">&#10003;</span>
                 </div>
-                <h2 class="text-2xl font-bold text-black mb-2">Refund Request Submitted</h2>
-                <p class="text-gray-500">Your request has been sent to the merchant for review.</p>
+                <h2 class="text-2xl font-bold text-black mb-2" data-i18n="success.heading">Refund Request Submitted</h2>
+                <p class="text-gray-500" data-i18n="success.subheading">Your request has been sent to the merchant for review.</p>
             </div>
 
             <div class="bg-gray-50 brutal-border p-4 mb-6">
                 <div class="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <span class="text-gray-500">Refund ID</span>
+                        <span class="text-gray-500" data-i18n="success.refundId">Refund ID</span>
                         <p id="refundId" class="font-bold text-black font-mono">-</p>
                     </div>
                     <div>
-                        <span class="text-gray-500">Status</span>
+                        <span class="text-gray-500" data-i18n="success.status">Status</span>
                         <p><span id="refundStatus" class="px-2 py-1 text-xs font-bold status-pending">PENDING</span></p>
                     </div>
                     <div>
-                        <span class="text-gray-500">Amount</span>
+                        <span class="text-gray-500" data-i18n="success.amount">Amount</span>
                         <p id="refundAmount" class="font-bold text-black">-</p>
                     </div>
                     <div>
-                        <span class="text-gray-500">Submitted</span>
+                        <span class="text-gray-500" data-i18n="success.submitted">Submitted</span>
                         <p id="refundDate" class="font-bold text-black">-</p>
                     </div>
                 </div>
             </div>
 
             <div class="bg-blue-50 brutal-border border-blue-500 p-4 mb-6">
-                <h3 class="font-bold text-blue-800 mb-2">What happens next?</h3>
+                <h3 class="font-bold text-blue-800 mb-2" data-i18n="next.heading">What happens next?</h3>
                 <ol class="text-sm text-blue-700 space-y-2">
-                    <li>1. The merchant will review your request</li>
-                    <li>2. If approved, they will send the refund to your wallet</li>
-                    <li>3. You'll receive the funds at the same wallet address you paid from</li>
+                    <li data-i18n="next.s1">1. The merchant will review your request</li>
+                    <li data-i18n="next.s2">2. If approved, they will send the refund to your wallet</li>
+                    <li data-i18n="next.s3">3. You'll receive the funds at the same wallet address you paid from</li>
                 </ol>
             </div>
 
             <div class="flex gap-4">
-                <button onclick="checkStatus()" class="flex-1 btn-brutal bg-white text-black py-3">
+                <button onclick="checkStatus()" class="flex-1 btn-brutal bg-white text-black py-3" data-i18n="actions.checkStatus">
                     CHECK STATUS
                 </button>
-                <button onclick="submitAnother()" class="flex-1 btn-brutal bg-black text-white py-3 shadow-brutal">
+                <button onclick="submitAnother()" class="flex-1 btn-brutal bg-black text-white py-3 shadow-brutal" data-i18n="actions.newRequest">
                     NEW REQUEST
                 </button>
             </div>
@@ -231,12 +236,13 @@
 
         <!-- Status Check -->
         <div id="statusCheck" class="mt-8 bg-white brutal-border shadow-brutal p-6">
-            <h3 class="text-lg font-bold text-black mb-4">Check Existing Request</h3>
+            <h3 class="text-lg font-bold text-black mb-4" data-i18n="check.heading">Check Existing Request</h3>
             <div class="flex gap-2">
                 <input type="text" id="checkRefundId"
                        class="flex-1 px-4 py-2 text-black"
+                       data-i18n-attr="placeholder:check.placeholder"
                        placeholder="Enter refund ID to check status">
-                <button onclick="checkRefundStatus()" class="btn-brutal bg-black text-white px-6 py-2 shadow-brutal">
+                <button onclick="checkRefundStatus()" class="btn-brutal bg-black text-white px-6 py-2 shadow-brutal" data-i18n="check.cta">
                     CHECK
                 </button>
             </div>
@@ -246,7 +252,7 @@
 
     <!-- Footer -->
     <footer class="max-w-7xl mx-auto px-4 py-8 text-center text-gray-400 text-sm">
-        <p>Powered by StablePay - Crypto Payments Made Simple</p>
+        <p data-i18n="footer">Powered by StablePay - Crypto Payments Made Simple</p>
     </footer>
 
     <script>

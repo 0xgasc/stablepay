@@ -1,0 +1,77 @@
+{
+  "title": "Preços - StablePay",
+  "nav": { "features": "Recursos", "pricing": "Preços", "docs": "Docs", "login": "Entrar", "getStarted": "Começar" },
+  "hero": {
+    "title": "Tarifas <span class=\"fee-gradient\">Progressivas</span> Simples",
+    "tagline": "Sem assinaturas. Sem custos ocultos. Pague apenas quando receber.",
+    "subtagline": "As tarifas se aplicam por faixa — como o imposto de renda. Quanto mais você processa, menos paga.",
+    "cta": "Começar Grátis →"
+  },
+  "brackets": {
+    "heading": "Faixas de Tarifa",
+    "tier1Label": "Primeiros US$ 10k",
+    "tier2Label": "Próximos US$ 40k",
+    "tier3Label": "Próximos US$ 200k",
+    "tier4Label": "Acima de US$ 250k"
+  },
+  "example": {
+    "heading": "Como funciona — Exemplo: US$ 60k/mês",
+    "totalLabel": "Tarifa total sobre US$ 60k"
+  },
+  "exFirst": "Primeiros US$ 10k",
+  "exNext": "Próximos US$ 40k",
+  "exLast": "Últimos US$ 10k",
+  "effectiveRate": "Taxa efetiva",
+  "compare": { "text": "Comparação: Stripe cobra <span class=\"line-through text-red-400\">US$ 1.740</span> sobre US$ 60k (2,9%). Você economiza <span class=\"font-black text-green-500\">US$ 540</span>." },
+  "plans": {
+    "heading": "Free vs Pro",
+    "subheading": "Mesmas tarifas para todos. PRO desbloqueia recursos premium.",
+    "freeBadge": "Free",
+    "freeDesc": "Tudo o que você precisa para começar a aceitar pagamentos em stablecoins.",
+    "freeCta": "Começar Grátis",
+    "feat": {
+      "chains": "Todas as 7 blockchains",
+      "tokens": "USDC, USDT, EURC",
+      "api": "Webhooks e API",
+      "ai": "Assistente Stablo AI",
+      "links5": "5 links de pagamento",
+      "refunds": "Reembolsos",
+      "receipts": "Recibos e faturas",
+      "branding": "Marca personalizada"
+    },
+    "recommended": "Recomendado",
+    "proBadge": "Pro",
+    "perMonth": "/mês",
+    "proDesc": "Suite completa de ferramentas para empresas em crescimento.",
+    "proAuto": "Pague em cripto. Desbloqueio gratuito com volume de US$ 5k/mês.",
+    "proCta": "Começar com Pro",
+    "proFeat": {
+      "everything": "Tudo do Free",
+      "refunds": "Reembolsos (gerenciados + manuais)",
+      "receipts": "Recibos, faturas e PDF",
+      "branding": "Marca e temas de widget personalizados",
+      "unlimited": "Links de pagamento ilimitados",
+      "support": "Suporte prioritário",
+      "bridging": "Ponte entre redes (CCTP)",
+      "consolidation": "Consolidação de tesouraria"
+    }
+  },
+  "chains": { "heading": "7 Blockchains. 3 Stablecoins. Uma Integração.", "tokens": "USDC · USDT · EURC em todas as redes" },
+  "enterprise": {
+    "heading": "Enterprise",
+    "tagline": "US$ 250k+/mês? Tarifas personalizadas, suporte dedicado, garantias de SLA.",
+    "lower": "ou menor",
+    "support": "suporte",
+    "sla": "garantido",
+    "cta": "Contatar Vendas"
+  },
+  "faq": {
+    "heading": "Perguntas Frequentes",
+    "q1": { "q": "Como funcionam as faixas progressivas?", "a": "Como o imposto de renda — cada faixa se aplica apenas ao volume nessa faixa. Seus primeiros US$ 10k sempre pagam 1%, independente do volume total. Apenas valores acima de cada limite recebem a taxa menor." },
+    "q2": { "q": "Quando recebo os recursos PRO grátis?", "a": "Quando seu volume móvel de 30 dias atinge US$ 5.000, os recursos PRO desbloqueiam automaticamente — sem pagamento. Ou pague US$ 19/mês em cripto para desbloquear imediatamente." },
+    "q3": { "q": "Como pago as tarifas?", "a": "As tarifas se acumulam mensalmente. Você as paga em stablecoins (USDC/USDT) pelo seu painel. Você recebe 100% de cada pagamento imediatamente — as tarifas são faturadas separadamente." },
+    "q4": { "q": "Quais redes e tokens vocês suportam?", "a": "Solana, Ethereum, TRON, BNB Chain, Base, Polygon e Arbitrum. USDC, USDT e EURC em todas as redes onde estão disponíveis." }
+  },
+  "footerCta": { "heading": "Pronto para aceitar stablecoins?", "subheading": "Configure em 5 minutos. Sem cartão de crédito.", "cta": "Começar Grátis →" },
+  "footer": { "privacy": "Privacidade", "terms": "Termos", "docs": "API Docs", "security": "Segurança" }
+}

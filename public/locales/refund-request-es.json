@@ -1,0 +1,29 @@
+{
+  "title": "Solicitar Reembolso - StablePay",
+  "form": {
+    "heading": "Solicitar un Reembolso",
+    "subheading": "Completa el formulario a continuación para enviar una solicitud de reembolso. El comerciante revisará y procesará tu solicitud.",
+    "orderId": { "label": "ID DE PEDIDO", "placeholder": "Ingresa tu ID de pedido (ej., clx123abc...)", "hint": "Lo encuentras en tu correo de confirmación de pago" },
+    "email": { "label": "DIRECCIÓN DE CORREO", "placeholder": "Correo usado durante el pago", "hint": "Debe coincidir con el correo de tu pedido original" },
+    "amount": { "label": "MONTO DEL REEMBOLSO (USD)", "hint": "Ingresa el monto que deseas reembolsar (se permiten reembolsos parciales)" },
+    "reason": { "label": "MOTIVO DEL REEMBOLSO", "placeholder": "Por favor explica por qué solicitas un reembolso..." },
+    "submit": "ENVIAR SOLICITUD DE REEMBOLSO"
+  },
+  "success": {
+    "heading": "Solicitud de Reembolso Enviada",
+    "subheading": "Tu solicitud ha sido enviada al comerciante para su revisión.",
+    "refundId": "ID de Reembolso",
+    "status": "Estado",
+    "amount": "Monto",
+    "submitted": "Enviado"
+  },
+  "next": {
+    "heading": "¿Qué sucede después?",
+    "s1": "1. El comerciante revisará tu solicitud",
+    "s2": "2. Si se aprueba, enviarán el reembolso a tu billetera",
+    "s3": "3. Recibirás los fondos en la misma dirección de billetera desde la que pagaste"
+  },
+  "actions": { "checkStatus": "VER ESTADO", "newRequest": "NUEVA SOLICITUD" },
+  "check": { "heading": "Revisar Solicitud Existente", "placeholder": "Ingresa el ID de reembolso para ver el estado", "cta": "VERIFICAR" },
+  "footer": "Procesado por StablePay - Pagos en Cripto Hechos Simples"
+}

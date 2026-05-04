@@ -1,0 +1,24 @@
+{
+  "title": "Pay Invoice - StablePay",
+  "loading": "Loading Invoice...",
+  "error": { "title": "Invoice Not Found", "message": "The invoice you're looking for doesn't exist or has been cancelled." },
+  "paid": { "title": "Already Paid", "message": "This invoice has already been paid. Thank you!", "cta": "Go Home" },
+  "invoiceLabel": "INVOICE",
+  "from": "From",
+  "billTo": "Bill To",
+  "dueDate": "Due Date:",
+  "items": { "heading": "Items", "description": "Description", "qty": "Qty", "price": "Price", "amount": "Amount" },
+  "totals": { "subtotal": "Subtotal", "tax": "Tax", "discount": "Discount", "total": "TOTAL" },
+  "noteFromMerchant": "Note from merchant:",
+  "payment": {
+    "heading": "Payment",
+    "selectNetwork": "Select Network",
+    "loadingChains": "Loading chains...",
+    "connectWallet": "CONNECT WALLET",
+    "connected": "Connected Wallet",
+    "payNow": "PAY NOW"
+  },
+  "processing": { "title": "Processing Payment...", "body": "Please confirm the transaction in your wallet" },
+  "success": { "title": "Payment Successful!", "body": "Your payment has been confirmed.", "txLink": "View Transaction" },
+  "poweredBy": "Powered by"
+}

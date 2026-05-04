@@ -1,0 +1,29 @@
+{
+  "title": "Request Refund - StablePay",
+  "form": {
+    "heading": "Request a Refund",
+    "subheading": "Fill out the form below to submit a refund request. The merchant will review and process your request.",
+    "orderId": { "label": "ORDER ID", "placeholder": "Enter your order ID (e.g., clx123abc...)", "hint": "You can find this in your payment confirmation email" },
+    "email": { "label": "EMAIL ADDRESS", "placeholder": "Email used during payment", "hint": "Must match the email from your original order" },
+    "amount": { "label": "REFUND AMOUNT (USD)", "hint": "Enter the amount you wish to refund (partial refunds allowed)" },
+    "reason": { "label": "REASON FOR REFUND", "placeholder": "Please explain why you're requesting a refund..." },
+    "submit": "SUBMIT REFUND REQUEST"
+  },
+  "success": {
+    "heading": "Refund Request Submitted",
+    "subheading": "Your request has been sent to the merchant for review.",
+    "refundId": "Refund ID",
+    "status": "Status",
+    "amount": "Amount",
+    "submitted": "Submitted"
+  },
+  "next": {
+    "heading": "What happens next?",
+    "s1": "1. The merchant will review your request",
+    "s2": "2. If approved, they will send the refund to your wallet",
+    "s3": "3. You'll receive the funds at the same wallet address you paid from"
+  },
+  "actions": { "checkStatus": "CHECK STATUS", "newRequest": "NEW REQUEST" },
+  "check": { "heading": "Check Existing Request", "placeholder": "Enter refund ID to check status", "cta": "CHECK" },
+  "footer": "Powered by StablePay - Crypto Payments Made Simple"
+}

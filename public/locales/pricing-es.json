@@ -1,0 +1,77 @@
+{
+  "title": "Precios - StablePay",
+  "nav": { "features": "Funciones", "pricing": "Precios", "docs": "Docs", "login": "Iniciar Sesión", "getStarted": "Empezar" },
+  "hero": {
+    "title": "Tarifas <span class=\"fee-gradient\">Progresivas</span> Simples",
+    "tagline": "Sin suscripciones. Sin costos ocultos. Paga solo cuando recibes pagos.",
+    "subtagline": "Las tarifas se aplican por tramo — como el impuesto sobre la renta. Cuanto más procesas, menos pagas.",
+    "cta": "Empezar Gratis →"
+  },
+  "brackets": {
+    "heading": "Tramos de Tarifas",
+    "tier1Label": "Primeros $10k",
+    "tier2Label": "Siguientes $40k",
+    "tier3Label": "Siguientes $200k",
+    "tier4Label": "Más de $250k"
+  },
+  "example": {
+    "heading": "Cómo funciona — Ejemplo: $60k/mes",
+    "totalLabel": "Tarifa total sobre $60k"
+  },
+  "exFirst": "Primeros $10k",
+  "exNext": "Siguientes $40k",
+  "exLast": "Últimos $10k",
+  "effectiveRate": "Tasa efectiva",
+  "compare": { "text": "Comparación: Stripe cobra <span class=\"line-through text-red-400\">$1,740</span> sobre $60k (2.9%). Tú ahorras <span class=\"font-black text-green-500\">$540</span>." },
+  "plans": {
+    "heading": "Free vs Pro",
+    "subheading": "Mismas tarifas para todos. PRO desbloquea funciones premium.",
+    "freeBadge": "Free",
+    "freeDesc": "Todo lo que necesitas para empezar a aceptar pagos en stablecoins.",
+    "freeCta": "Empezar Gratis",
+    "feat": {
+      "chains": "Las 7 blockchains",
+      "tokens": "USDC, USDT, EURC",
+      "api": "Webhooks y API",
+      "ai": "Asistente Stablo AI",
+      "links5": "5 enlaces de pago",
+      "refunds": "Reembolsos",
+      "receipts": "Recibos y facturas",
+      "branding": "Marca personalizada"
+    },
+    "recommended": "Recomendado",
+    "proBadge": "Pro",
+    "perMonth": "/mes",
+    "proDesc": "Suite completa de herramientas para negocios en crecimiento.",
+    "proAuto": "Paga en cripto. Se desbloquea gratis con $5k/mes de volumen.",
+    "proCta": "Empezar con Pro",
+    "proFeat": {
+      "everything": "Todo lo de Free",
+      "refunds": "Reembolsos (gestionados + manuales)",
+      "receipts": "Recibos, facturas y PDF",
+      "branding": "Marca y temas de widget personalizados",
+      "unlimited": "Enlaces de pago ilimitados",
+      "support": "Soporte prioritario",
+      "bridging": "Puente entre cadenas (CCTP)",
+      "consolidation": "Consolidación de tesorería"
+    }
+  },
+  "chains": { "heading": "7 Blockchains. 3 Stablecoins. Una Integración.", "tokens": "USDC · USDT · EURC en todas las cadenas" },
+  "enterprise": {
+    "heading": "Enterprise",
+    "tagline": "¿$250k+/mes? Tarifas personalizadas, soporte dedicado, garantías de SLA.",
+    "lower": "o menos",
+    "support": "soporte",
+    "sla": "garantizado",
+    "cta": "Contactar Ventas"
+  },
+  "faq": {
+    "heading": "Preguntas Frecuentes",
+    "q1": { "q": "¿Cómo funcionan los tramos progresivos?", "a": "Como el impuesto sobre la renta — cada tramo se aplica solo al volumen en ese rango. Tus primeros $10k siempre pagan 1%, independientemente del volumen total. Solo los montos que superan cada umbral obtienen la tarifa más baja." },
+    "q2": { "q": "¿Cuándo obtengo las funciones PRO gratis?", "a": "Cuando tu volumen móvil de 30 días alcanza $5,000, las funciones PRO se desbloquean automáticamente — sin pagos. O paga $19/mes en cripto para desbloquear inmediatamente." },
+    "q3": { "q": "¿Cómo pago las tarifas?", "a": "Las tarifas se acumulan mensualmente. Las pagas en stablecoins (USDC/USDT) desde tu panel. Recibes el 100% de cada pago al instante — las tarifas se facturan por separado." },
+    "q4": { "q": "¿Qué cadenas y tokens soportan?", "a": "Solana, Ethereum, TRON, BNB Chain, Base, Polygon y Arbitrum. USDC, USDT y EURC en todas las cadenas donde estén disponibles." }
+  },
+  "footerCta": { "heading": "¿Listo para aceptar stablecoins?", "subheading": "Configura en 5 minutos. Sin tarjeta de crédito.", "cta": "Empezar Gratis →" },
+  "footer": { "privacy": "Privacidad", "terms": "Términos", "docs": "API Docs", "security": "Seguridad" }
+}

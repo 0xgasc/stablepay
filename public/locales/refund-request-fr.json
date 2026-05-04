@@ -1,0 +1,29 @@
+{
+  "title": "Demander un Remboursement - StablePay",
+  "form": {
+    "heading": "Demander un Remboursement",
+    "subheading": "Remplissez le formulaire ci-dessous pour soumettre une demande de remboursement. Le marchand examinera et traitera votre demande.",
+    "orderId": { "label": "ID DE COMMANDE", "placeholder": "Entrez l'ID de votre commande (ex. clx123abc...)", "hint": "Vous le trouverez dans votre e-mail de confirmation de paiement" },
+    "email": { "label": "ADRESSE E-MAIL", "placeholder": "E-mail utilisé lors du paiement", "hint": "Doit correspondre à l'e-mail de votre commande d'origine" },
+    "amount": { "label": "MONTANT DU REMBOURSEMENT (USD)", "hint": "Entrez le montant que vous souhaitez rembourser (les remboursements partiels sont autorisés)" },
+    "reason": { "label": "MOTIF DU REMBOURSEMENT", "placeholder": "Veuillez expliquer pourquoi vous demandez un remboursement..." },
+    "submit": "SOUMETTRE LA DEMANDE DE REMBOURSEMENT"
+  },
+  "success": {
+    "heading": "Demande de Remboursement Soumise",
+    "subheading": "Votre demande a été envoyée au marchand pour examen.",
+    "refundId": "ID de Remboursement",
+    "status": "Statut",
+    "amount": "Montant",
+    "submitted": "Soumis"
+  },
+  "next": {
+    "heading": "Que se passe-t-il ensuite ?",
+    "s1": "1. Le marchand examinera votre demande",
+    "s2": "2. Si elle est approuvée, ils enverront le remboursement à votre portefeuille",
+    "s3": "3. Vous recevrez les fonds à la même adresse de portefeuille depuis laquelle vous avez payé"
+  },
+  "actions": { "checkStatus": "VÉRIFIER LE STATUT", "newRequest": "NOUVELLE DEMANDE" },
+  "check": { "heading": "Vérifier une Demande Existante", "placeholder": "Entrez l'ID du remboursement pour vérifier le statut", "cta": "VÉRIFIER" },
+  "footer": "Propulsé par StablePay - Paiements Crypto Simplifiés"
+}

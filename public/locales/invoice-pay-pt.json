@@ -1,0 +1,24 @@
+{
+  "title": "Pagar Fatura - StablePay",
+  "loading": "Carregando fatura...",
+  "error": { "title": "Fatura Não Encontrada", "message": "A fatura que você procura não existe ou foi cancelada." },
+  "paid": { "title": "Já Paga", "message": "Esta fatura já foi paga. Obrigado!", "cta": "Ir para Início" },
+  "invoiceLabel": "FATURA",
+  "from": "De",
+  "billTo": "Faturar para",
+  "dueDate": "Data de Vencimento:",
+  "items": { "heading": "Itens", "description": "Descrição", "qty": "Qtd", "price": "Preço", "amount": "Valor" },
+  "totals": { "subtotal": "Subtotal", "tax": "Imposto", "discount": "Desconto", "total": "TOTAL" },
+  "noteFromMerchant": "Nota do comerciante:",
+  "payment": {
+    "heading": "Pagamento",
+    "selectNetwork": "Selecionar Rede",
+    "loadingChains": "Carregando redes...",
+    "connectWallet": "CONECTAR CARTEIRA",
+    "connected": "Carteira Conectada",
+    "payNow": "PAGAR AGORA"
+  },
+  "processing": { "title": "Processando Pagamento...", "body": "Por favor, confirme a transação na sua carteira" },
+  "success": { "title": "Pagamento Bem-Sucedido!", "body": "Seu pagamento foi confirmado.", "txLink": "Ver Transação" },
+  "poweredBy": "Processado por"
+}

@@ -1,0 +1,77 @@
+{
+  "title": "Pricing - StablePay",
+  "nav": { "features": "Features", "pricing": "Pricing", "docs": "Docs", "login": "Login", "getStarted": "Get Started" },
+  "hero": {
+    "title": "Simple <span class=\"fee-gradient\">Progressive</span> Fees",
+    "tagline": "No subscriptions. No hidden costs. Pay only when you get paid.",
+    "subtagline": "Fees apply per bracket — like income tax. The more you process, the less you pay.",
+    "cta": "Start Free →"
+  },
+  "brackets": {
+    "heading": "Fee Brackets",
+    "tier1Label": "First $10k",
+    "tier2Label": "Next $40k",
+    "tier3Label": "Next $200k",
+    "tier4Label": "Above $250k"
+  },
+  "example": {
+    "heading": "How it works — Example: $60k/month",
+    "totalLabel": "Total fee on $60k"
+  },
+  "exFirst": "First $10k",
+  "exNext": "Next $40k",
+  "exLast": "Last $10k",
+  "effectiveRate": "Effective rate",
+  "compare": { "text": "Compare: Stripe charges <span class=\"line-through text-red-400\">$1,740</span> on $60k (2.9%). You save <span class=\"font-black text-green-500\">$540</span>." },
+  "plans": {
+    "heading": "Free vs Pro",
+    "subheading": "Same fee rates for everyone. PRO unlocks premium features.",
+    "freeBadge": "Free",
+    "freeDesc": "Everything you need to start accepting stablecoin payments.",
+    "freeCta": "Get Started Free",
+    "feat": {
+      "chains": "All 7 blockchains",
+      "tokens": "USDC, USDT, EURC",
+      "api": "Webhooks & API",
+      "ai": "Stablo AI assistant",
+      "links5": "5 payment links",
+      "refunds": "Refunds",
+      "receipts": "Receipts & invoices",
+      "branding": "Custom branding"
+    },
+    "recommended": "Recommended",
+    "proBadge": "Pro",
+    "perMonth": "/mo",
+    "proDesc": "Full suite of tools for growing businesses.",
+    "proAuto": "Pay in crypto. Auto-unlocks free at $5k/mo volume.",
+    "proCta": "Start with Pro",
+    "proFeat": {
+      "everything": "Everything in Free",
+      "refunds": "Refunds (managed + manual)",
+      "receipts": "Receipts, invoices & PDF",
+      "branding": "Custom branding & widget themes",
+      "unlimited": "Unlimited payment links",
+      "support": "Priority support",
+      "bridging": "Cross-chain bridging (CCTP)",
+      "consolidation": "Treasury consolidation"
+    }
+  },
+  "chains": { "heading": "7 Blockchains. 3 Stablecoins. One Integration.", "tokens": "USDC · USDT · EURC on every chain" },
+  "enterprise": {
+    "heading": "Enterprise",
+    "tagline": "$250k+/month? Custom rates, dedicated support, SLA guarantees.",
+    "lower": "or lower",
+    "support": "support",
+    "sla": "guaranteed",
+    "cta": "Contact Sales"
+  },
+  "faq": {
+    "heading": "FAQ",
+    "q1": { "q": "How do progressive brackets work?", "a": "Like income tax — each bracket applies only to volume in that range. Your first $10k always pays 1%, regardless of total volume. Only amounts above each threshold get the lower rate." },
+    "q2": { "q": "When do I get PRO features for free?", "a": "When your 30-day rolling volume reaches $5,000, PRO features unlock automatically — no payment needed. Or pay $19/mo in crypto to unlock immediately." },
+    "q3": { "q": "How do I pay fees?", "a": "Fees accumulate monthly. You pay them in stablecoins (USDC/USDT) from your dashboard. You receive 100% of every payment upfront — fees are invoiced separately." },
+    "q4": { "q": "What chains and tokens do you support?", "a": "Solana, Ethereum, TRON, BNB Chain, Base, Polygon, and Arbitrum. USDC, USDT, and EURC on all chains where available." }
+  },
+  "footerCta": { "heading": "Ready to accept stablecoins?", "subheading": "Set up in 5 minutes. No credit card required.", "cta": "Get Started Free →" },
+  "footer": { "privacy": "Privacy", "terms": "Terms", "docs": "API Docs", "security": "Security" }
+}

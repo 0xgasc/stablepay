@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-i18n-page="pricing">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pricing - StablePay</title>
+    <title data-i18n="title">Pricing - StablePay</title>
+    <script src="/js/lang.js"></script>
+    <script src="/js/i18n.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,11 +33,11 @@
             <div class="flex items-center justify-between">
                 <a href="/" class="text-2xl font-black text-black uppercase tracking-tight">StablePay</a>
                 <div class="hidden md:flex items-center space-x-6">
-                    <a href="/#features" class="font-bold text-black uppercase text-sm hover:underline">Features</a>
-                    <a href="/pricing" class="font-bold text-black uppercase text-sm underline">Pricing</a>
-                    <a href="/api-docs.html" class="font-bold text-black uppercase text-sm hover:underline">Docs</a>
-                    <a href="/login" class="font-bold text-black uppercase text-sm hover:underline">Login</a>
-                    <a href="/signup" class="btn-brutal text-sm">Get Started</a>
+                    <a href="/#features" class="font-bold text-black uppercase text-sm hover:underline" data-i18n="nav.features">Features</a>
+                    <a href="/pricing" class="font-bold text-black uppercase text-sm underline" data-i18n="nav.pricing">Pricing</a>
+                    <a href="/api-docs.html" class="font-bold text-black uppercase text-sm hover:underline" data-i18n="nav.docs">Docs</a>
+                    <a href="/login" class="font-bold text-black uppercase text-sm hover:underline" data-i18n="nav.login">Login</a>
+                    <a href="/signup" class="btn-brutal text-sm" data-i18n="nav.getStarted">Get Started</a>
                 </div>
             </div>
         </div>
@@ -44,61 +46,60 @@
     <!-- Hero -->
     <div class="bg-gradient-to-br from-cyan-50 via-white to-blue-50 py-20 brutal-border">
         <div class="max-w-4xl mx-auto px-6 text-center">
-            <h1 class="text-5xl md:text-7xl font-black text-black mb-4 uppercase leading-tight">
+            <h1 class="text-5xl md:text-7xl font-black text-black mb-4 uppercase leading-tight" data-i18n="hero.title">
                 Simple <span class="fee-gradient">Progressive</span> Fees
             </h1>
-            <p class="text-xl text-gray-600 font-medium max-w-2xl mx-auto mb-2">
+            <p class="text-xl text-gray-600 font-medium max-w-2xl mx-auto mb-2" data-i18n="hero.tagline">
                 No subscriptions. No hidden costs. Pay only when you get paid.
             </p>
-            <p class="text-lg text-gray-500 mb-8">
+            <p class="text-lg text-gray-500 mb-8" data-i18n="hero.subtagline">
                 Fees apply per bracket — like income tax. The more you process, the less you pay.
             </p>
-            <a href="/signup" class="btn-brutal text-lg">Start Free →</a>
+            <a href="/signup" class="btn-brutal text-lg" data-i18n="hero.cta">Start Free →</a>
         </div>
     </div>
 
     <!-- Progressive Brackets -->
     <div class="max-w-5xl mx-auto px-6 py-16">
-        <h2 class="text-3xl font-black text-black uppercase mb-8 text-center">Fee Brackets</h2>
+        <h2 class="text-3xl font-black text-black uppercase mb-8 text-center" data-i18n="brackets.heading">Fee Brackets</h2>
 
-        <!-- Bracket visualization (loaded dynamically from API) -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-0 mb-12" id="tierGrid">
             <div class="bg-cyan-50 brutal-border p-6 text-center">
                 <p class="text-4xl font-black text-black" id="tier1Pct">—</p>
-                <p class="text-sm font-bold text-gray-500 mt-1">First $10k</p>
+                <p class="text-sm font-bold text-gray-500 mt-1" data-i18n="brackets.tier1Label">First $10k</p>
                 <div class="mt-3 h-2 bg-cyan-400 rounded-full"></div>
                 <p class="text-xs text-gray-400 mt-2">$0 → $10,000</p>
             </div>
             <div class="bg-blue-50 brutal-border p-6 text-center">
                 <p class="text-4xl font-black text-black" id="tier2Pct">—</p>
-                <p class="text-sm font-bold text-gray-500 mt-1">Next $40k</p>
+                <p class="text-sm font-bold text-gray-500 mt-1" data-i18n="brackets.tier2Label">Next $40k</p>
                 <div class="mt-3 h-2 bg-blue-400 rounded-full"></div>
                 <p class="text-xs text-gray-400 mt-2">$10,001 → $50,000</p>
             </div>
             <div class="bg-indigo-50 brutal-border p-6 text-center">
                 <p class="text-4xl font-black text-black" id="tier3Pct">—</p>
-                <p class="text-sm font-bold text-gray-500 mt-1">Next $200k</p>
+                <p class="text-sm font-bold text-gray-500 mt-1" data-i18n="brackets.tier3Label">Next $200k</p>
                 <div class="mt-3 h-2 bg-indigo-400 rounded-full"></div>
                 <p class="text-xs text-gray-400 mt-2">$50,001 → $250,000</p>
             </div>
             <div class="bg-purple-50 brutal-border p-6 text-center">
                 <p class="text-4xl font-black text-black" id="tier4Pct">—</p>
-                <p class="text-sm font-bold text-gray-500 mt-1">Above $250k</p>
+                <p class="text-sm font-bold text-gray-500 mt-1" data-i18n="brackets.tier4Label">Above $250k</p>
                 <div class="mt-3 h-2 bg-purple-400 rounded-full"></div>
                 <p class="text-xs text-gray-400 mt-2">$250,001+</p>
             </div>
         </div>
 
-        <!-- Example (computed dynamically) -->
+        <!-- Example -->
         <div class="bg-black brutal-border p-8 text-white brutal-shadow mb-12">
-            <h3 class="text-lg font-black uppercase mb-4 text-cyan-400">How it works — Example: $60k/month</h3>
+            <h3 class="text-lg font-black uppercase mb-4 text-cyan-400" data-i18n="example.heading">How it works — Example: $60k/month</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center" id="exampleBreakdown">
                 <div><p class="text-sm text-gray-400" id="ex1Label">Loading...</p><p class="text-2xl font-black" id="ex1Amt">—</p></div>
                 <div><p class="text-sm text-gray-400" id="ex2Label"></p><p class="text-2xl font-black" id="ex2Amt">—</p></div>
                 <div><p class="text-sm text-gray-400" id="ex3Label"></p><p class="text-2xl font-black" id="ex3Amt">—</p></div>
             </div>
             <div class="border-t border-gray-700 mt-6 pt-4 text-center">
-                <p class="text-gray-400">Total fee on $60k</p>
+                <p class="text-gray-400" data-i18n="example.totalLabel">Total fee on $60k</p>
                 <p class="text-4xl font-black text-cyan-400" id="exTotal">—</p>
                 <p class="text-sm text-gray-500" id="exEffective"></p>
             </div>
@@ -106,60 +107,60 @@
 
         <!-- Compare -->
         <div class="text-center mb-8">
-            <p class="text-gray-500 font-medium">Compare: Stripe charges <span class="line-through text-red-400">$1,740</span> on $60k (2.9%). You save <span class="font-black text-green-500">$540</span>.</p>
+            <p class="text-gray-500 font-medium" data-i18n="compare.text">Compare: Stripe charges <span class="line-through text-red-400">$1,740</span> on $60k (2.9%). You save <span class="font-black text-green-500">$540</span>.</p>
         </div>
     </div>
 
     <!-- FREE vs PRO -->
     <div class="max-w-5xl mx-auto px-6 py-16">
-        <h2 class="text-3xl font-black text-black uppercase mb-2 text-center">Free vs Pro</h2>
-        <p class="text-center text-gray-500 mb-8">Same fee rates for everyone. PRO unlocks premium features.</p>
+        <h2 class="text-3xl font-black text-black uppercase mb-2 text-center" data-i18n="plans.heading">Free vs Pro</h2>
+        <p class="text-center text-gray-500 mb-8" data-i18n="plans.subheading">Same fee rates for everyone. PRO unlocks premium features.</p>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <!-- FREE -->
             <div class="bg-white brutal-border p-8 brutal-shadow-sm">
                 <div class="flex items-center gap-3 mb-6">
-                    <span class="bg-gray-200 text-black px-3 py-1 font-black uppercase text-sm border-2 border-black">Free</span>
+                    <span class="bg-gray-200 text-black px-3 py-1 font-black uppercase text-sm border-2 border-black" data-i18n="plans.freeBadge">Free</span>
                     <span class="text-2xl font-black">$0</span>
                 </div>
-                <p class="text-gray-600 mb-6">Everything you need to start accepting stablecoin payments.</p>
+                <p class="text-gray-600 mb-6" data-i18n="plans.freeDesc">Everything you need to start accepting stablecoin payments.</p>
                 <ul class="space-y-3 mb-8">
-                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium">All 7 blockchains</span></li>
-                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium">USDC, USDT, EURC</span></li>
-                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium">Webhooks & API</span></li>
-                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium">Stablo AI assistant</span></li>
-                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium">5 payment links</span></li>
-                    <li class="flex items-center gap-2"><span class="text-gray-300 font-black">✗</span><span class="text-gray-400">Refunds</span></li>
-                    <li class="flex items-center gap-2"><span class="text-gray-300 font-black">✗</span><span class="text-gray-400">Receipts & invoices</span></li>
-                    <li class="flex items-center gap-2"><span class="text-gray-300 font-black">✗</span><span class="text-gray-400">Custom branding</span></li>
+                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium" data-i18n="plans.feat.chains">All 7 blockchains</span></li>
+                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium" data-i18n="plans.feat.tokens">USDC, USDT, EURC</span></li>
+                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium" data-i18n="plans.feat.api">Webhooks & API</span></li>
+                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium" data-i18n="plans.feat.ai">Stablo AI assistant</span></li>
+                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium" data-i18n="plans.feat.links5">5 payment links</span></li>
+                    <li class="flex items-center gap-2"><span class="text-gray-300 font-black">✗</span><span class="text-gray-400" data-i18n="plans.feat.refunds">Refunds</span></li>
+                    <li class="flex items-center gap-2"><span class="text-gray-300 font-black">✗</span><span class="text-gray-400" data-i18n="plans.feat.receipts">Receipts & invoices</span></li>
+                    <li class="flex items-center gap-2"><span class="text-gray-300 font-black">✗</span><span class="text-gray-400" data-i18n="plans.feat.branding">Custom branding</span></li>
                 </ul>
-                <a href="/signup" class="block w-full text-center bg-white border-4 border-black text-black py-3 font-bold uppercase brutal-shadow-sm hover:bg-gray-100">
+                <a href="/signup" class="block w-full text-center bg-white border-4 border-black text-black py-3 font-bold uppercase brutal-shadow-sm hover:bg-gray-100" data-i18n="plans.freeCta">
                     Get Started Free
                 </a>
             </div>
 
             <!-- PRO -->
             <div class="bg-gradient-to-br from-cyan-50 to-blue-50 brutal-border p-8 brutal-shadow relative">
-                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-cyan-400 text-black px-4 py-1 font-black uppercase text-xs border-2 border-black">
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-cyan-400 text-black px-4 py-1 font-black uppercase text-xs border-2 border-black" data-i18n="plans.recommended">
                     Recommended
                 </div>
                 <div class="flex items-center gap-3 mb-6">
-                    <span class="bg-cyan-400 text-black px-3 py-1 font-black uppercase text-sm border-2 border-black">Pro</span>
-                    <span class="text-2xl font-black">$19<span class="text-sm font-medium text-gray-500">/mo</span></span>
+                    <span class="bg-cyan-400 text-black px-3 py-1 font-black uppercase text-sm border-2 border-black" data-i18n="plans.proBadge">Pro</span>
+                    <span class="text-2xl font-black">$19<span class="text-sm font-medium text-gray-500" data-i18n="plans.perMonth">/mo</span></span>
                 </div>
-                <p class="text-gray-600 mb-2">Full suite of tools for growing businesses.</p>
-                <p class="text-xs text-gray-400 mb-6">Pay in crypto. Auto-unlocks free at $5k/mo volume.</p>
+                <p class="text-gray-600 mb-2" data-i18n="plans.proDesc">Full suite of tools for growing businesses.</p>
+                <p class="text-xs text-gray-400 mb-6" data-i18n="plans.proAuto">Pay in crypto. Auto-unlocks free at $5k/mo volume.</p>
                 <ul class="space-y-3 mb-8">
-                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium">Everything in Free</span></li>
-                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium">Refunds (managed + manual)</span></li>
-                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium">Receipts, invoices & PDF</span></li>
-                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium">Custom branding & widget themes</span></li>
-                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium">Unlimited payment links</span></li>
-                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium">Priority support</span></li>
-                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium">Cross-chain bridging (CCTP)</span></li>
-                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium">Treasury consolidation</span></li>
+                    <li class="flex items-center gap-2"><span class="text-green-500 font-black">✓</span><span class="font-medium" data-i18n="plans.proFeat.everything">Everything in Free</span></li>
+                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium" data-i18n="plans.proFeat.refunds">Refunds (managed + manual)</span></li>
+                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium" data-i18n="plans.proFeat.receipts">Receipts, invoices & PDF</span></li>
+                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium" data-i18n="plans.proFeat.branding">Custom branding & widget themes</span></li>
+                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium" data-i18n="plans.proFeat.unlimited">Unlimited payment links</span></li>
+                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium" data-i18n="plans.proFeat.support">Priority support</span></li>
+                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium" data-i18n="plans.proFeat.bridging">Cross-chain bridging (CCTP)</span></li>
+                    <li class="flex items-center gap-2"><span class="text-cyan-500 font-black">★</span><span class="font-medium" data-i18n="plans.proFeat.consolidation">Treasury consolidation</span></li>
                 </ul>
-                <a href="/signup" class="block w-full btn-brutal text-center">
+                <a href="/signup" class="block w-full btn-brutal text-center" data-i18n="plans.proCta">
                     Start with Pro
                 </a>
             </div>
@@ -168,7 +169,7 @@
 
     <!-- Chains -->
     <div class="max-w-5xl mx-auto px-6 py-16 text-center">
-        <h2 class="text-2xl font-black text-black uppercase mb-8">7 Blockchains. 3 Stablecoins. One Integration.</h2>
+        <h2 class="text-2xl font-black text-black uppercase mb-8" data-i18n="chains.heading">7 Blockchains. 3 Stablecoins. One Integration.</h2>
         <div class="flex flex-wrap justify-center gap-6 items-center">
             <img src="https://www.svgrepo.com/show/470684/solana.svg" class="h-8" alt="Solana" title="Solana">
             <img src="https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg" class="h-8" alt="Ethereum" title="Ethereum">
@@ -178,20 +179,20 @@
             <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/polygon-matic-icon-svg-download-png-5795452.png?f=webp&w=128" class="h-8" alt="Polygon" title="Polygon">
             <img src="https://arbitrum.io/_next/image?url=%2Fbrandkit%2F1225_Arbitrum_Logomark_OneColorNavy_ClearSpace.png&w=640&q=75" class="h-8" alt="Arbitrum" title="Arbitrum">
         </div>
-        <p class="text-gray-400 text-sm mt-4">USDC · USDT · EURC on every chain</p>
+        <p class="text-gray-400 text-sm mt-4" data-i18n="chains.tokens">USDC · USDT · EURC on every chain</p>
     </div>
 
     <!-- Enterprise -->
     <div class="max-w-5xl mx-auto px-6 py-16">
         <div class="bg-black brutal-border p-10 text-white text-center brutal-shadow">
-            <h2 class="text-3xl font-black uppercase mb-3">Enterprise</h2>
-            <p class="text-lg text-gray-300 mb-6">$250k+/month? Custom rates, dedicated support, SLA guarantees.</p>
+            <h2 class="text-3xl font-black uppercase mb-3" data-i18n="enterprise.heading">Enterprise</h2>
+            <p class="text-lg text-gray-300 mb-6" data-i18n="enterprise.tagline">$250k+/month? Custom rates, dedicated support, SLA guarantees.</p>
             <div class="flex justify-center gap-8 mb-8">
-                <div><p class="text-3xl font-black text-cyan-400">1.0%</p><p class="text-xs text-gray-500">or lower</p></div>
-                <div><p class="text-3xl font-black text-cyan-400">24/7</p><p class="text-xs text-gray-500">support</p></div>
-                <div><p class="text-3xl font-black text-cyan-400">SLA</p><p class="text-xs text-gray-500">guaranteed</p></div>
+                <div><p class="text-3xl font-black text-cyan-400">1.0%</p><p class="text-xs text-gray-500" data-i18n="enterprise.lower">or lower</p></div>
+                <div><p class="text-3xl font-black text-cyan-400">24/7</p><p class="text-xs text-gray-500" data-i18n="enterprise.support">support</p></div>
+                <div><p class="text-3xl font-black text-cyan-400">SLA</p><p class="text-xs text-gray-500" data-i18n="enterprise.sla">guaranteed</p></div>
             </div>
-            <a href="mailto:hello@wetakestables.shop" class="inline-block bg-white text-black px-8 py-3 font-black uppercase border-4 border-white brutal-shadow-sm hover:bg-gray-100">
+            <a href="mailto:hello@wetakestables.shop" class="inline-block bg-white text-black px-8 py-3 font-black uppercase border-4 border-white brutal-shadow-sm hover:bg-gray-100" data-i18n="enterprise.cta">
                 Contact Sales
             </a>
         </div>
@@ -199,32 +200,32 @@
 
     <!-- FAQ -->
     <div class="max-w-3xl mx-auto px-6 py-16">
-        <h2 class="text-2xl font-black text-black uppercase mb-8 text-center">FAQ</h2>
+        <h2 class="text-2xl font-black text-black uppercase mb-8 text-center" data-i18n="faq.heading">FAQ</h2>
         <div class="space-y-6">
             <div class="brutal-border p-6 bg-white">
-                <p class="font-black text-black mb-2">How do progressive brackets work?</p>
-                <p class="text-gray-600 text-sm">Like income tax — each bracket applies only to volume in that range. Your first $10k always pays 1%, regardless of total volume. Only amounts above each threshold get the lower rate.</p>
+                <p class="font-black text-black mb-2" data-i18n="faq.q1.q">How do progressive brackets work?</p>
+                <p class="text-gray-600 text-sm" data-i18n="faq.q1.a">Like income tax — each bracket applies only to volume in that range. Your first $10k always pays 1%, regardless of total volume. Only amounts above each threshold get the lower rate.</p>
             </div>
             <div class="brutal-border p-6 bg-white">
-                <p class="font-black text-black mb-2">When do I get PRO features for free?</p>
-                <p class="text-gray-600 text-sm">When your 30-day rolling volume reaches $5,000, PRO features unlock automatically — no payment needed. Or pay $19/mo in crypto to unlock immediately.</p>
+                <p class="font-black text-black mb-2" data-i18n="faq.q2.q">When do I get PRO features for free?</p>
+                <p class="text-gray-600 text-sm" data-i18n="faq.q2.a">When your 30-day rolling volume reaches $5,000, PRO features unlock automatically — no payment needed. Or pay $19/mo in crypto to unlock immediately.</p>
             </div>
             <div class="brutal-border p-6 bg-white">
-                <p class="font-black text-black mb-2">How do I pay fees?</p>
-                <p class="text-gray-600 text-sm">Fees accumulate monthly. You pay them in stablecoins (USDC/USDT) from your dashboard. You receive 100% of every payment upfront — fees are invoiced separately.</p>
+                <p class="font-black text-black mb-2" data-i18n="faq.q3.q">How do I pay fees?</p>
+                <p class="text-gray-600 text-sm" data-i18n="faq.q3.a">Fees accumulate monthly. You pay them in stablecoins (USDC/USDT) from your dashboard. You receive 100% of every payment upfront — fees are invoiced separately.</p>
             </div>
             <div class="brutal-border p-6 bg-white">
-                <p class="font-black text-black mb-2">What chains and tokens do you support?</p>
-                <p class="text-gray-600 text-sm">Solana, Ethereum, TRON, BNB Chain, Base, Polygon, and Arbitrum. USDC, USDT, and EURC on all chains where available.</p>
+                <p class="font-black text-black mb-2" data-i18n="faq.q4.q">What chains and tokens do you support?</p>
+                <p class="text-gray-600 text-sm" data-i18n="faq.q4.a">Solana, Ethereum, TRON, BNB Chain, Base, Polygon, and Arbitrum. USDC, USDT, and EURC on all chains where available.</p>
             </div>
         </div>
     </div>
 
     <!-- Footer CTA -->
     <div class="bg-cyan-400 brutal-border py-16 text-center">
-        <h2 class="text-4xl font-black text-black uppercase mb-4">Ready to accept stablecoins?</h2>
-        <p class="text-lg text-black/70 mb-8">Set up in 5 minutes. No credit card required.</p>
-        <a href="/signup" class="btn-brutal text-lg bg-black text-white">Get Started Free →</a>
+        <h2 class="text-4xl font-black text-black uppercase mb-4" data-i18n="footerCta.heading">Ready to accept stablecoins?</h2>
+        <p class="text-lg text-black/70 mb-8" data-i18n="footerCta.subheading">Set up in 5 minutes. No credit card required.</p>
+        <a href="/signup" class="btn-brutal text-lg bg-black text-white" data-i18n="footerCta.cta">Get Started Free →</a>
     </div>
 
     <!-- Footer -->
@@ -232,17 +233,28 @@
         <div class="max-w-5xl mx-auto px-6 flex flex-wrap justify-between items-center gap-4">
             <p class="font-black uppercase">StablePay</p>
             <div class="flex gap-6 text-sm">
-                <a href="/privacy.html" class="hover:underline">Privacy</a>
-                <a href="/terms.html" class="hover:underline">Terms</a>
-                <a href="/api-docs.html" class="hover:underline">API Docs</a>
-                <a href="/trust.html" class="hover:underline">Security</a>
+                <a href="/privacy.html" class="hover:underline" data-i18n="footer.privacy">Privacy</a>
+                <a href="/terms.html" class="hover:underline" data-i18n="footer.terms">Terms</a>
+                <a href="/api-docs.html" class="hover:underline" data-i18n="footer.docs">API Docs</a>
+                <a href="/trust.html" class="hover:underline" data-i18n="footer.security">Security</a>
             </div>
         </div>
     </footer>
 <script>
-// Load fee tiers from API and update display
+// Load fee tiers from API and update display.
+// Locale strings used here are looked up from the i18n module after it loads.
 (async () => {
+    function t(key, fallback) {
+        const lang = (window.SP_LANG && window.SP_LANG.getLang()) || 'en';
+        return (window._PRICING_LOCALE && window._PRICING_LOCALE[key]) || fallback;
+    }
     try {
+        // Wait briefly for the i18n loader to populate (fires on DOMContentLoaded);
+        // we cache the locale on window for the dynamic labels below.
+        const lang = (window.SP_LANG && window.SP_LANG.getLang()) || 'en';
+        const localeRes = await fetch(`/locales/pricing-${lang}.json`, { cache: 'no-store' });
+        if (localeRes.ok) window._PRICING_LOCALE = await localeRes.json();
+
         const res = await fetch('/api/fees/pricing');
         const data = await res.json();
         const tiers = data.volumeTiers || [];
@@ -252,21 +264,25 @@
             document.getElementById('tier3Pct').textContent = tiers[2].feeDisplay;
             document.getElementById('tier4Pct').textContent = tiers[3].feeDisplay;
 
-            // Compute $60k example
             const r = tiers.map(t => t.feePercent);
-            const ex1 = 10000 * r[0]; // First $10k
-            const ex2 = 40000 * r[1]; // Next $40k
-            const ex3 = 10000 * r[2]; // Last $10k
+            const ex1 = 10000 * r[0];
+            const ex2 = 40000 * r[1];
+            const ex3 = 10000 * r[2];
             const total = ex1 + ex2 + ex3;
 
-            document.getElementById('ex1Label').textContent = `First $10k × ${tiers[0].feeDisplay}`;
+            const exFirstLabel = t('exFirst', 'First $10k') + ` × ${tiers[0].feeDisplay}`;
+            const exNextLabel = t('exNext', 'Next $40k') + ` × ${tiers[1].feeDisplay}`;
+            const exLastLabel = t('exLast', 'Last $10k') + ` × ${tiers[2].feeDisplay}`;
+            const effectiveLabel = t('effectiveRate', 'Effective rate');
+
+            document.getElementById('ex1Label').textContent = exFirstLabel;
             document.getElementById('ex1Amt').textContent = '$' + Math.round(ex1).toLocaleString();
-            document.getElementById('ex2Label').textContent = `Next $40k × ${tiers[1].feeDisplay}`;
+            document.getElementById('ex2Label').textContent = exNextLabel;
             document.getElementById('ex2Amt').textContent = '$' + Math.round(ex2).toLocaleString();
-            document.getElementById('ex3Label').textContent = `Last $10k × ${tiers[2].feeDisplay}`;
+            document.getElementById('ex3Label').textContent = exLastLabel;
             document.getElementById('ex3Amt').textContent = '$' + Math.round(ex3).toLocaleString();
             document.getElementById('exTotal').textContent = '$' + Math.round(total).toLocaleString();
-            document.getElementById('exEffective').textContent = `Effective rate: ${(total / 60000 * 100).toFixed(1)}%`;
+            document.getElementById('exEffective').textContent = `${effectiveLabel}: ${(total / 60000 * 100).toFixed(1)}%`;
         }
     } catch { /* use defaults shown in HTML */ }
 })();

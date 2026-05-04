@@ -1,0 +1,24 @@
+{
+  "title": "Payer la Facture - StablePay",
+  "loading": "Chargement de la facture...",
+  "error": { "title": "Facture Introuvable", "message": "La facture que vous recherchez n'existe pas ou a été annulée." },
+  "paid": { "title": "Déjà Payée", "message": "Cette facture a déjà été payée. Merci !", "cta": "Retour à l'accueil" },
+  "invoiceLabel": "FACTURE",
+  "from": "De",
+  "billTo": "Facturé à",
+  "dueDate": "Date d'échéance :",
+  "items": { "heading": "Articles", "description": "Description", "qty": "Qté", "price": "Prix", "amount": "Montant" },
+  "totals": { "subtotal": "Sous-total", "tax": "Taxe", "discount": "Remise", "total": "TOTAL" },
+  "noteFromMerchant": "Note du marchand :",
+  "payment": {
+    "heading": "Paiement",
+    "selectNetwork": "Sélectionner le Réseau",
+    "loadingChains": "Chargement des réseaux...",
+    "connectWallet": "CONNECTER LE PORTEFEUILLE",
+    "connected": "Portefeuille Connecté",
+    "payNow": "PAYER MAINTENANT"
+  },
+  "processing": { "title": "Traitement du Paiement...", "body": "Veuillez confirmer la transaction dans votre portefeuille" },
+  "success": { "title": "Paiement Réussi !", "body": "Votre paiement a été confirmé.", "txLink": "Voir la Transaction" },
+  "poweredBy": "Propulsé par"
+}

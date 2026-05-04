@@ -1,0 +1,29 @@
+{
+  "title": "Solicitar Reembolso - StablePay",
+  "form": {
+    "heading": "Solicitar um Reembolso",
+    "subheading": "Preencha o formulário abaixo para enviar uma solicitação de reembolso. O comerciante revisará e processará sua solicitação.",
+    "orderId": { "label": "ID DO PEDIDO", "placeholder": "Insira o ID do seu pedido (ex.: clx123abc...)", "hint": "Você o encontra no e-mail de confirmação de pagamento" },
+    "email": { "label": "ENDEREÇO DE E-MAIL", "placeholder": "E-mail usado no pagamento", "hint": "Deve corresponder ao e-mail do seu pedido original" },
+    "amount": { "label": "VALOR DO REEMBOLSO (USD)", "hint": "Insira o valor que deseja reembolsar (reembolsos parciais permitidos)" },
+    "reason": { "label": "MOTIVO DO REEMBOLSO", "placeholder": "Por favor, explique por que está solicitando um reembolso..." },
+    "submit": "ENVIAR SOLICITAÇÃO DE REEMBOLSO"
+  },
+  "success": {
+    "heading": "Solicitação de Reembolso Enviada",
+    "subheading": "Sua solicitação foi enviada ao comerciante para análise.",
+    "refundId": "ID do Reembolso",
+    "status": "Status",
+    "amount": "Valor",
+    "submitted": "Enviado"
+  },
+  "next": {
+    "heading": "O que acontece em seguida?",
+    "s1": "1. O comerciante revisará sua solicitação",
+    "s2": "2. Se aprovado, enviarão o reembolso para sua carteira",
+    "s3": "3. Você receberá os fundos no mesmo endereço de carteira de onde pagou"
+  },
+  "actions": { "checkStatus": "VER STATUS", "newRequest": "NOVA SOLICITAÇÃO" },
+  "check": { "heading": "Verificar Solicitação Existente", "placeholder": "Insira o ID do reembolso para verificar o status", "cta": "VERIFICAR" },
+  "footer": "Processado por StablePay - Pagamentos em Cripto Simplificados"
+}

@@ -1,0 +1,77 @@
+{
+  "title": "Tarifs - StablePay",
+  "nav": { "features": "Fonctionnalités", "pricing": "Tarifs", "docs": "Docs", "login": "Connexion", "getStarted": "Commencer" },
+  "hero": {
+    "title": "Frais <span class=\"fee-gradient\">Progressifs</span> Simples",
+    "tagline": "Pas d'abonnements. Pas de frais cachés. Payez uniquement quand vous êtes payé.",
+    "subtagline": "Les frais s'appliquent par tranche — comme l'impôt sur le revenu. Plus vous traitez, moins vous payez.",
+    "cta": "Commencer Gratuit →"
+  },
+  "brackets": {
+    "heading": "Tranches de Frais",
+    "tier1Label": "Premiers 10 k$",
+    "tier2Label": "40 k$ suivants",
+    "tier3Label": "200 k$ suivants",
+    "tier4Label": "Au-dessus de 250 k$"
+  },
+  "example": {
+    "heading": "Comment ça marche — Exemple : 60 k$/mois",
+    "totalLabel": "Frais totaux sur 60 k$"
+  },
+  "exFirst": "Premiers 10 k$",
+  "exNext": "40 k$ suivants",
+  "exLast": "Derniers 10 k$",
+  "effectiveRate": "Taux effectif",
+  "compare": { "text": "Comparaison : Stripe facture <span class=\"line-through text-red-400\">1 740 $</span> sur 60 k$ (2,9 %). Vous économisez <span class=\"font-black text-green-500\">540 $</span>." },
+  "plans": {
+    "heading": "Free vs Pro",
+    "subheading": "Mêmes taux pour tous. PRO débloque les fonctionnalités premium.",
+    "freeBadge": "Free",
+    "freeDesc": "Tout ce qu'il faut pour commencer à accepter les paiements en stablecoins.",
+    "freeCta": "Commencer Gratuit",
+    "feat": {
+      "chains": "Les 7 blockchains",
+      "tokens": "USDC, USDT, EURC",
+      "api": "Webhooks et API",
+      "ai": "Assistant Stablo AI",
+      "links5": "5 liens de paiement",
+      "refunds": "Remboursements",
+      "receipts": "Reçus et factures",
+      "branding": "Image de marque personnalisée"
+    },
+    "recommended": "Recommandé",
+    "proBadge": "Pro",
+    "perMonth": "/mois",
+    "proDesc": "Suite complète d'outils pour les entreprises en croissance.",
+    "proAuto": "Payez en crypto. Débloqué gratuitement à 5 k$/mois de volume.",
+    "proCta": "Commencer avec Pro",
+    "proFeat": {
+      "everything": "Tout ce qui est dans Free",
+      "refunds": "Remboursements (gérés + manuels)",
+      "receipts": "Reçus, factures et PDF",
+      "branding": "Image de marque et thèmes de widget personnalisés",
+      "unlimited": "Liens de paiement illimités",
+      "support": "Support prioritaire",
+      "bridging": "Pont inter-chaînes (CCTP)",
+      "consolidation": "Consolidation de trésorerie"
+    }
+  },
+  "chains": { "heading": "7 Blockchains. 3 Stablecoins. Une Intégration.", "tokens": "USDC · USDT · EURC sur toutes les chaînes" },
+  "enterprise": {
+    "heading": "Enterprise",
+    "tagline": "250 k$+/mois ? Tarifs personnalisés, support dédié, garanties SLA.",
+    "lower": "ou moins",
+    "support": "support",
+    "sla": "garanti",
+    "cta": "Contacter les Ventes"
+  },
+  "faq": {
+    "heading": "FAQ",
+    "q1": { "q": "Comment fonctionnent les tranches progressives ?", "a": "Comme l'impôt sur le revenu — chaque tranche ne s'applique qu'au volume dans cette plage. Vos premiers 10 k$ paient toujours 1 %, quel que soit le volume total. Seuls les montants au-dessus de chaque seuil obtiennent le taux inférieur." },
+    "q2": { "q": "Quand est-ce que j'obtiens les fonctionnalités PRO gratuitement ?", "a": "Lorsque votre volume glissant de 30 jours atteint 5 000 $, les fonctionnalités PRO se débloquent automatiquement — sans paiement. Ou payez 19 $/mois en crypto pour débloquer immédiatement." },
+    "q3": { "q": "Comment payer les frais ?", "a": "Les frais s'accumulent mensuellement. Vous les payez en stablecoins (USDC/USDT) depuis votre tableau de bord. Vous recevez 100 % de chaque paiement immédiatement — les frais sont facturés séparément." },
+    "q4": { "q": "Quelles chaînes et jetons supportez-vous ?", "a": "Solana, Ethereum, TRON, BNB Chain, Base, Polygon et Arbitrum. USDC, USDT et EURC sur toutes les chaînes où ils sont disponibles." }
+  },
+  "footerCta": { "heading": "Prêt à accepter les stablecoins ?", "subheading": "Configuration en 5 minutes. Pas de carte de crédit requise.", "cta": "Commencer Gratuit →" },
+  "footer": { "privacy": "Confidentialité", "terms": "Conditions", "docs": "API Docs", "security": "Sécurité" }
+}
