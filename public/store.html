@@ -343,7 +343,7 @@
         });
 
         // i18n functionality
-        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+        let currentLang = localStorage.getItem('language') || 'en';
         let translations = {};
 
         async function loadTranslations(lang) {
@@ -380,7 +380,7 @@
         // Language selector
         document.getElementById('languageSelector').addEventListener('change', (e) => {
             currentLang = e.target.value;
-            localStorage.setItem('preferredLanguage', currentLang);
+            localStorage.setItem('language', currentLang);
             loadTranslations(currentLang);
         });
 
