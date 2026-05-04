@@ -112,7 +112,12 @@ export class BlockchainService {
       const stables = CHAIN_STABLES[chain] || { USDC: config.usdcAddress };
       const contracts = Object.values(stables).map(addr => new ethers.Contract(addr, USDC_ABI, provider));
 
-      const currentBlock = await provider.getBlockNumber();
+      // Use head minus a small safety margin. Different RPCs in our fallback pool can be
+      // a block or two behind the one we just queried for getBlockNumber(); without the margin
+      // we hit "block range extends beyond current head block" (-32602). The next tick re-scans
+      // anyway, so we don't lose anything by trailing slightly.
+      const headBlock = await provider.getBlockNumber();
+      const currentBlock = Math.max(0, headBlock - 2);
 
       // Ensure chain config exists (for confirmation tracking)
       let chainConfig = await db.chainConfig.findUnique({ where: { chain } });
@@ -161,9 +166,20 @@ export class BlockchainService {
             // because those mean a payment may actually drop on the floor, like the UnlockRiver
             // incident on 2026-04-22 with llamarpc Cloudflare 403.
             const msg = String(err?.message || err);
+            const inner = String(err?.error?.message || '');
+            const code = err?.error?.code ?? err?.code;
             const isRateLimit =
               /rate.?limit|too many requests|throttle|-32005|-32016|BAD_DATA/i.test(msg) ||
               err?.code === 'BAD_DATA';
+            // Transient: the RPC fallback rotation can land us on a node whose head is a few
+            // blocks behind the head we measured pre-call. eth_getLogs then rejects -32602
+            // "block range extends beyond current head". Next tick recomputes currentBlock, the
+            // logs were not lost. Warn, don't page.
+            const isAheadOfHead =
+              code === -32602 ||
+              /beyond current head|exceeds the maximum|block range/i.test(msg) ||
+              /beyond current head|exceeds the maximum|block range/i.test(inner);
+            const transient = isRateLimit || isAheadOfHead;
             const ctx = {
               chain,
               contract: (contract as any)?.target || 'unknown',
@@ -171,10 +187,10 @@ export class BlockchainService {
               fromBlock,
               currentBlock,
               event: 'scanner.rpc_query_failed',
-              reason: isRateLimit ? 'rate_limit' : 'other',
+              reason: isRateLimit ? 'rate_limit' : isAheadOfHead ? 'rpc_behind_head' : 'other',
             };
-            if (isRateLimit) {
-              logger.warn('scanner RPC rate-limited (will rotate next tick)', ctx);
+            if (transient) {
+              logger.warn('scanner RPC transient (will retry next tick)', ctx);
             } else {
               logger.error('scanner RPC query failed', err as Error, ctx);
             }
