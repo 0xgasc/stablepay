@@ -173,9 +173,20 @@ class WebhookService {
 
       try {
         await this.scheduleRetry(logId, null, errorMessage);
-      } catch (retryErr) {
-        // If scheduleRetry itself fails, at least mark the log so processRetries can pick it up
-        logger.error('Failed to schedule webhook retry', retryErr as Error, { logId });
+      } catch (retryErr: any) {
+        // If scheduleRetry itself fails (e.g. transient Supabase DB blip — TLS reset, idle
+        // connection recycled), do NOT page Sentry. The retry processor will pick the log
+        // up automatically on its next cycle (every 60s on the Railway scanner). At worst
+        // the merchant gets a slightly delayed delivery; nothing is lost.
+        const isTransient = /Can't reach database|TLS|connection (pool|closed|reset|terminated|timeout)|Timed out fetching/i
+          .test(String(retryErr?.message || retryErr));
+        if (isTransient) {
+          logger.warn('Webhook retry scheduling hit transient DB error — processRetries will recover', {
+            logId, message: String(retryErr?.message || retryErr).slice(0, 160), event: 'webhook.retry_schedule_db_blip',
+          });
+        } else {
+          logger.error('Failed to schedule webhook retry', retryErr as Error, { logId });
+        }
         await db.webhookLog.update({
           where: { id: logId },
           data: { response: errorMessage.substring(0, 1000), nextRetryAt: new Date(Date.now() + 60000) },
