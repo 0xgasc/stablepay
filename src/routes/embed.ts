@@ -464,8 +464,11 @@ router.get('/order/:orderId', async (req, res) => {
     const order = await db.order.findUnique({
       where: { id: orderId },
       include: {
+        // Include the latest transaction regardless of status so we can surface
+        // confirmation progress to the frontend (e.g. "3 of 6 confirmations") while
+        // the customer waits — slow chains like ETH otherwise look indistinguishable
+        // from "didn't pay yet" for ~90s.
         transactions: {
-          where: { status: 'CONFIRMED' },
           take: 1,
           orderBy: { createdAt: 'desc' }
         },
@@ -485,7 +488,14 @@ router.get('/order/:orderId', async (req, res) => {
       delete widgetConfig.hideFooter;
     }
 
-    const txHash = order.transactions[0]?.txHash || null;
+    const tx = order.transactions[0] || null;
+    const txHash = tx?.txHash || null;
+    // Pull the chain's requiredConfirms so the frontend can show progress.
+    let requiredConfirms: number | null = null;
+    try {
+      const { CHAIN_CONFIGS } = await import('../config/chains');
+      requiredConfirms = (CHAIN_CONFIGS as any)[order.chain]?.requiredConfirms ?? null;
+    } catch { /* fall through */ }
     const explorerUrls: Record<string, string> = {
       BASE_MAINNET: 'https://basescan.org/tx/',
       ETHEREUM_MAINNET: 'https://etherscan.io/tx/',
@@ -551,7 +561,13 @@ router.get('/order/:orderId', async (req, res) => {
       returnUrl: md._returnUrl || null,
       txHash,
       explorerLink: txHash && explorerUrls[order.chain] ? explorerUrls[order.chain] + txHash : null,
-      confirmedAt: order.transactions[0]?.blockTimestamp?.toISOString() || null,
+      // Progress fields — populated as soon as we detect the transaction on-chain, well before
+      // it has enough confirmations to mark the order CONFIRMED. Frontend uses these to render
+      // "Confirmation X of Y" while the customer waits.
+      txDetected: !!tx,
+      confirmations: tx?.confirmations ?? 0,
+      requiredConfirms,
+      confirmedAt: tx?.blockTimestamp?.toISOString() || null,
       expiresAt: order.expiresAt.toISOString(),
     });
   } catch (error) {

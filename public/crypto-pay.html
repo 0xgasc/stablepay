@@ -2782,17 +2782,18 @@
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
-            // Auto-redirect after 5 seconds when the merchant configured a returnUrl.
-            // User can cancel by interacting with any button on the success screen
-            // (Receipt, History, Buy Again, Back) — they'll cancel the auto-redirect
-            // because clicking those navigates away anyway.
+            // Auto-redirect after 12 seconds when the merchant configured a returnUrl.
+            // (Was 5 — too aggressive on slow chains where the success screen finally
+            // appears after a long wait; customers were yanked away before they could
+            // see "Payment confirmed!" register.) User can cancel by interacting with
+            // any button on the success screen (Receipt, History, Buy Again, Back).
             const params = new URLSearchParams(window.location.search);
             const redirectTarget =
                 params.get('returnUrl') ||
                 window._orderReturnUrl ||
                 null;
             if (redirectTarget) {
-                let secs = 5;
+                let secs = 12;
                 let stopped = false;
                 const successCard = document.getElementById('paymentSuccessScreen');
                 let indicator = document.getElementById('autoRedirectIndicator');
@@ -3473,8 +3474,14 @@
                     : '0x... or explorer link';
             }
 
+            window._cpProgressLocked = false;
             // Progress bar + dynamic status updates
             window._cpProgressTimer = setInterval(() => {
+                // Once the polling loop has detected the tx and is rendering real confirmation
+                // progress, this generic "scanning…" timeline backs off entirely so it doesn't
+                // flicker or contradict the live count.
+                if (window._cpProgressLocked) return;
+
                 const elapsed = Date.now() - startedAt;
                 const pct = Math.min(95, (elapsed / TIMEOUT_MS) * 100);
                 if (bar) bar.style.width = pct + '%';
@@ -3518,6 +3525,19 @@
                         clearInterval(window._cpProgressTimer); window._cpProgressTimer = null;
                         if (statusEl) statusEl.textContent = 'Order ' + data.status.toLowerCase();
                         if (timerEl) timerEl.textContent = 'Please start a new payment';
+                    } else if (data.txDetected && data.requiredConfirms) {
+                        // Tx detected on-chain but not yet enough confirmations.
+                        // Show the customer real progress instead of the generic timeline so they
+                        // know we're waiting on the chain (especially on ETH where this is ~90s).
+                        const got = Math.max(0, Math.min(data.confirmations || 0, data.requiredConfirms));
+                        const pct = Math.min(95, 30 + (got / data.requiredConfirms) * 65);
+                        if (bar) bar.style.width = pct + '%';
+                        if (statusEl) statusEl.textContent = `Detected on-chain — confirmation ${got} of ${data.requiredConfirms}`;
+                        if (timerEl) timerEl.textContent = 'Block confirmations are protocol-level — usually under 90 seconds on this chain.';
+                        // Hide the manual-TX fallback box if we showed it; we already have the tx.
+                        document.getElementById('cpManualTxBox')?.classList.add('hidden');
+                        // Lock the dynamic timeline so it doesn't keep re-overwriting our progress text.
+                        window._cpProgressLocked = true;
                     }
                 } catch (e) {}
             }, 4000);
