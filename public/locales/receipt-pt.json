@@ -1,0 +1,31 @@
+{
+  "title": "Recibo de Pagamento — StablePay",
+  "loading": "Carregando recibo...",
+  "generating": "Gerando recibo...",
+  "confirmed": "Pagamento Confirmado",
+  "amountPaid": "Valor Pago",
+  "row": {
+    "receipt": "Recibo nº",
+    "merchant": "Comerciante",
+    "network": "Rede",
+    "date": "Data",
+    "transaction": "Transação",
+    "email": "E-mail"
+  },
+  "actions": {
+    "explorer": "Ver no Explorador",
+    "pdf": "Baixar PDF",
+    "history": "Ver todos os seus pedidos"
+  },
+  "poweredBy": "Processado por",
+  "titlePrefix": "Recibo",
+  "defaults": {
+    "merchant": "Comerciante"
+  },
+  "error": {
+    "title": "Recibo não encontrado",
+    "line1": "Este recibo ainda não foi gerado ou o link está incorreto.",
+    "line2": "Se seu pagamento acabou de ser confirmado, pode levar um momento.",
+    "retry": "Tentar Novamente"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "title": "Termos de Serviço — StablePay",
+  "header": { "signup": "Cadastrar" },
+  "heading": "Termos de Serviço",
+  "lastUpdated": "Última atualização: 28 de março de 2026",
+  "s1": {
+    "h": "1. Descrição do Serviço",
+    "p": "StablePay (\"nós\", \"nosso\", \"o Serviço\") fornece infraestrutura de processamento de pagamentos em stablecoins. Permitimos que comerciantes aceitem pagamentos em USDC, USDT e EURC em blockchains suportadas (Base, Ethereum, Polygon, Arbitrum, Solana). Os pagamentos são direcionados diretamente para os endereços de carteira designados pelo comerciante."
+  },
+  "s2": {
+    "h": "2. Contas",
+    "p": "Você deve fornecer informações precisas ao criar uma conta. Você é responsável por manter a segurança de suas credenciais de login. Uma conta por endereço de e-mail. Reservamo-nos o direito de suspender contas que violem estes termos ou sejam usadas para atividades ilegais."
+  },
+  "s3": {
+    "h": "3. Processamento de Pagamentos",
+    "nonCustodial": "<strong class=\"text-white\">Não Custodial (Sua Própria Carteira):</strong> Quando você fornece seu próprio endereço de carteira, os pagamentos vão diretamente do cliente para sua carteira. Nunca retemos, controlamos ou temos acesso aos seus fundos. Você é o único responsável pela segurança de sua carteira e chaves privadas.",
+    "managed": "<strong class=\"text-white\">Carteiras Gerenciadas:</strong> Se você optar por uma carteira gerenciada, geramos e mantemos as chaves privadas em seu nome. Os fundos em carteiras gerenciadas são acessíveis a nós com o propósito de facilitar saques a seu pedido. Recomendamos fortemente fazer a transição para sua própria carteira o mais rápido possível. Não somos responsáveis por perdas devido a violações de segurança de carteiras gerenciadas além de medidas de segurança comercialmente razoáveis."
+  },
+  "s4": {
+    "h": "4. Tarifas",
+    "intro": "Cobramos uma tarifa de transação baseada em porcentagem sobre pagamentos confirmados. As tarifas são baseadas em volume e calculadas em um período móvel de 30 dias:",
+    "tier1": "Menos de US$ 10.000/mês: 1,0%",
+    "tier2": "US$ 10.000 - US$ 50.000/mês: 0,8%",
+    "tier3": "US$ 50.000 - US$ 250.000/mês: 0,5%",
+    "tier4": "US$ 250.000+/mês: 0,3%",
+    "outro": "As tarifas se acumulam e são faturadas por ciclo de cobrança (semanal, quinzenal ou mensal dependendo do nível de volume). Você recebe 100% de cada pagamento imediatamente — as tarifas são faturadas separadamente. A falha no pagamento das tarifas faturadas pode resultar na suspensão da conta."
+  },
+  "s5": {
+    "h": "5. Transações Blockchain",
+    "p": "As transações blockchain são irreversíveis. Não somos responsáveis por transações enviadas para endereços incorretos, em redes incorretas ou com valores incorretos. As taxas de gás da rede são pagas pelo remetente (cliente) e não são cobradas por nós. Os tempos de confirmação dependem da rede blockchain e estão fora de nosso controle."
+  },
+  "s6": {
+    "h": "6. Reembolsos",
+    "p": "Os reembolsos são iniciados pelo comerciante através do nosso painel. Facilitamos o processo de reembolso, mas não garantimos sua execução. Reembolsos na blockchain são transações separadas e podem incorrer em taxas de gás."
+  },
+  "s7": {
+    "h": "7. Usos Proibidos",
+    "p": "Você não pode usar o Serviço para: atividades ilegais, lavagem de dinheiro, financiamento ao terrorismo, evasão de sanções, fraude, venda de bens ou serviços proibidos, ou qualquer atividade que viole as leis aplicáveis em sua jurisdição."
+  },
+  "s8": {
+    "h": "8. Assistente de IA",
+    "p": "Nosso assistente de IA fornece orientação e pode executar ações de configuração de conta em seu nome. O código e os conselhos gerados pela IA são fornecidos como estão. Você é responsável por revisar e testar qualquer código antes de implantá-lo em produção. As respostas do assistente de IA não constituem aconselhamento financeiro, jurídico ou profissional."
+  },
+  "s9": {
+    "h": "9. Limitação de Responsabilidade",
+    "p": "O Serviço é fornecido \"como está\" sem garantias de qualquer tipo. Não somos responsáveis por: fundos perdidos devido a endereços de carteira incorretos, falhas de rede blockchain, vulnerabilidades de contratos inteligentes, violações de segurança de carteiras de terceiros ou perdas que excedam as tarifas pagas a nós nos 12 meses anteriores."
+  },
+  "s10": {
+    "h": "10. Rescisão",
+    "p": "Qualquer parte pode rescindir o relacionamento a qualquer momento. Após a rescisão, os saldos de tarifas pendentes permanecem devidos. Forneceremos aviso razoável antes de rescindir contas ativas, exceto em casos de suspeita de fraude ou exigência legal."
+  },
+  "s11": {
+    "h": "11. Alterações",
+    "p": "Podemos atualizar estes termos com aviso de 30 dias por e-mail. O uso continuado do Serviço após as alterações constitui a aceitação dos termos atualizados."
+  },
+  "s12": {
+    "h": "12. Contato",
+    "p": "Dúvidas sobre estes termos: <a href=\"mailto:legal@wetakestables.shop\" class=\"text-cyan-400 underline\">legal@wetakestables.shop</a>"
+  },
+  "footer": "StablePay — Infraestrutura de pagamento em stablecoins"
+}

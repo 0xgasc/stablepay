@@ -1,0 +1,26 @@
+{
+  "title": "Estado de StablePay",
+  "heading": "Estado de StablePay",
+  "subtitle": "Salud de la infraestructura en vivo. Se actualiza cada 30 segundos.",
+  "loading": "Cargando…",
+  "maintained": "Mantenido en",
+  "jsonLink": "JSON",
+  "overall": {
+    "ok": "Todos los sistemas operativos",
+    "warning": "Degradado — algunos componentes marcados",
+    "down": "Interrupción del servicio"
+  },
+  "components": {
+    "database": "Base de datos",
+    "scanner": "Escáner de blockchain",
+    "rpc": "Proveedores RPC",
+    "webhookQueue": "Cola de reintentos de webhook",
+    "webhookDelivery": "Tasa de entrega de webhooks"
+  },
+  "component": {
+    "operatingNormally": "Funcionando normalmente"
+  },
+  "errors": {
+    "unreachable": "No se pudo acceder a la API de estado. La plataforma puede estar completamente fuera de línea, o esta misma página de estado está limitada por tasa. Vuelve a intentarlo en un momento."
+  }
+}

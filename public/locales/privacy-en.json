@@ -1,0 +1,69 @@
+{
+  "title": "Privacy Policy — StablePay",
+  "header": { "signup": "Sign Up" },
+  "heading": "Privacy Policy",
+  "lastUpdated": "Last updated: March 28, 2026",
+  "s1": {
+    "h": "1. What We Collect",
+    "account": "<strong class=\"text-white\">Account Data:</strong> Email address, company name, contact name, hashed password. We never store plain-text passwords.",
+    "wallets": "<strong class=\"text-white\">Wallet Addresses:</strong> Public wallet addresses you provide. For managed wallets, we also store encrypted private keys (AES-256).",
+    "tx": "<strong class=\"text-white\">Transaction Data:</strong> Order amounts, blockchain transaction hashes, chain, token type, timestamps, payment status.",
+    "chat": "<strong class=\"text-white\">Chat History:</strong> Conversations with the AI assistant are stored to provide continuity and personalized support.",
+    "usage": "<strong class=\"text-white\">Usage Data:</strong> IP addresses (for rate limiting), feature usage patterns."
+  },
+  "s2": {
+    "h": "2. What We Don't Collect",
+    "l1": "Private keys for non-managed wallets (we never have access)",
+    "l2": "Customer (payer) personal data beyond optional email",
+    "l3": "Browsing history or tracking cookies",
+    "l4": "Government-issued identification (no KYC currently required)"
+  },
+  "s3": {
+    "h": "3. How We Use Your Data",
+    "l1": "Process and confirm stablecoin payments",
+    "l2": "Calculate and invoice transaction fees",
+    "l3": "Send verification emails and payment notifications",
+    "l4": "Provide AI-assisted onboarding and support",
+    "l5": "Prevent fraud and enforce rate limits",
+    "l6": "Improve the service"
+  },
+  "s4": {
+    "h": "4. Data Storage",
+    "p": "Data is stored on Railway (PostgreSQL) and served via Vercel. All connections use TLS encryption. Managed wallet private keys are encrypted at rest with AES-256. Database backups are automated by the hosting provider."
+  },
+  "s5": {
+    "h": "5. Third-Party Services",
+    "resend": "<strong class=\"text-white\">Resend:</strong> Email delivery (verification codes, invoices, receipts)",
+    "anthropic": "<strong class=\"text-white\">Anthropic (Claude):</strong> AI assistant — your chat messages are sent to Anthropic's API for processing",
+    "rpc": "<strong class=\"text-white\">Blockchain RPCs:</strong> Public blockchain nodes for payment detection (no personal data sent)"
+  },
+  "s6": {
+    "h": "6. Data Retention",
+    "p": "Account data: retained while account is active + 90 days after deletion. Transaction records: retained for 7 years (financial compliance). Chat history: retained while account is active, deletable by user. You can request full data export or deletion by contacting us."
+  },
+  "s7": {
+    "h": "7. Your Rights",
+    "l1": "Access your data (available in dashboard)",
+    "l2": "Delete your chat history (via dashboard)",
+    "l3": "Export your transaction data",
+    "l4": "Delete your account (contact us)",
+    "l5": "Withdraw managed wallet funds at any time"
+  },
+  "s8": {
+    "h": "8. Security",
+    "p": "We use: HTTPS everywhere, bcrypt password hashing (12 rounds), AES-256 encryption for managed wallet keys, Bearer token authentication, rate limiting on all endpoints. We follow OWASP security best practices."
+  },
+  "s9": {
+    "h": "9. Cookies",
+    "p": "We use sessionStorage (not cookies) for authentication. No tracking cookies, no analytics cookies, no third-party cookies."
+  },
+  "s10": {
+    "h": "10. Changes",
+    "p": "We'll notify you via email of material changes to this policy. Minor changes are posted here with an updated date."
+  },
+  "s11": {
+    "h": "11. Contact",
+    "p": "Privacy questions: <a href=\"mailto:privacy@wetakestables.shop\" class=\"text-cyan-400 underline\">privacy@wetakestables.shop</a>"
+  },
+  "footer": "StablePay — Stablecoin payment infrastructure"
+}

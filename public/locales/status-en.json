@@ -1,0 +1,26 @@
+{
+  "title": "StablePay Status",
+  "heading": "StablePay Status",
+  "subtitle": "Live infrastructure health. Refreshes every 30 seconds.",
+  "loading": "Loading…",
+  "maintained": "Maintained at",
+  "jsonLink": "JSON",
+  "overall": {
+    "ok": "All systems operational",
+    "warning": "Degraded — some components flagged",
+    "down": "Service disruption"
+  },
+  "components": {
+    "database": "Database",
+    "scanner": "Blockchain scanner",
+    "rpc": "RPC providers",
+    "webhookQueue": "Webhook retry queue",
+    "webhookDelivery": "Webhook delivery rate"
+  },
+  "component": {
+    "operatingNormally": "Operating normally"
+  },
+  "errors": {
+    "unreachable": "Could not reach status API. The platform may be fully offline, or this status page itself is rate-limited. Check back in a moment."
+  }
+}

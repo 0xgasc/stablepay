@@ -1,0 +1,69 @@
+{
+  "title": "Politique de Confidentialité — StablePay",
+  "header": { "signup": "Inscription" },
+  "heading": "Politique de Confidentialité",
+  "lastUpdated": "Dernière mise à jour : 28 mars 2026",
+  "s1": {
+    "h": "1. Ce Que Nous Collectons",
+    "account": "<strong class=\"text-white\">Données de Compte :</strong> Adresse e-mail, nom de l'entreprise, nom de contact, mot de passe haché. Nous ne stockons jamais les mots de passe en clair.",
+    "wallets": "<strong class=\"text-white\">Adresses de Portefeuille :</strong> Adresses publiques de portefeuille que vous fournissez. Pour les portefeuilles gérés, nous stockons également les clés privées chiffrées (AES-256).",
+    "tx": "<strong class=\"text-white\">Données de Transaction :</strong> Montants des commandes, hachages de transactions blockchain, chaîne, type de jeton, horodatages, statut du paiement.",
+    "chat": "<strong class=\"text-white\">Historique de Chat :</strong> Les conversations avec l'assistant IA sont stockées pour fournir de la continuité et un support personnalisé.",
+    "usage": "<strong class=\"text-white\">Données d'Utilisation :</strong> Adresses IP (pour la limitation de débit), modèles d'utilisation des fonctionnalités."
+  },
+  "s2": {
+    "h": "2. Ce Que Nous Ne Collectons Pas",
+    "l1": "Clés privées pour les portefeuilles non gérés (nous n'y avons jamais accès)",
+    "l2": "Données personnelles du client (payeur) au-delà de l'e-mail facultatif",
+    "l3": "Historique de navigation ou cookies de suivi",
+    "l4": "Pièces d'identité officielles (pas de KYC requis actuellement)"
+  },
+  "s3": {
+    "h": "3. Comment Nous Utilisons Vos Données",
+    "l1": "Traiter et confirmer les paiements en stablecoins",
+    "l2": "Calculer et facturer les frais de transaction",
+    "l3": "Envoyer des e-mails de vérification et notifications de paiement",
+    "l4": "Fournir l'intégration et le support assistés par IA",
+    "l5": "Prévenir la fraude et appliquer les limites de débit",
+    "l6": "Améliorer le service"
+  },
+  "s4": {
+    "h": "4. Stockage des Données",
+    "p": "Les données sont stockées sur Railway (PostgreSQL) et servies via Vercel. Toutes les connexions utilisent le chiffrement TLS. Les clés privées des portefeuilles gérés sont chiffrées au repos avec AES-256. Les sauvegardes de la base de données sont automatisées par le fournisseur d'hébergement."
+  },
+  "s5": {
+    "h": "5. Services Tiers",
+    "resend": "<strong class=\"text-white\">Resend :</strong> Livraison d'e-mails (codes de vérification, factures, reçus)",
+    "anthropic": "<strong class=\"text-white\">Anthropic (Claude) :</strong> Assistant IA — vos messages de chat sont envoyés à l'API d'Anthropic pour traitement",
+    "rpc": "<strong class=\"text-white\">RPC Blockchain :</strong> Nœuds blockchain publics pour la détection des paiements (aucune donnée personnelle envoyée)"
+  },
+  "s6": {
+    "h": "6. Conservation des Données",
+    "p": "Données de compte : conservées tant que le compte est actif + 90 jours après suppression. Enregistrements de transactions : conservés pendant 7 ans (conformité financière). Historique de chat : conservé tant que le compte est actif, supprimable par l'utilisateur. Vous pouvez demander l'exportation complète des données ou la suppression en nous contactant."
+  },
+  "s7": {
+    "h": "7. Vos Droits",
+    "l1": "Accéder à vos données (disponible dans le tableau de bord)",
+    "l2": "Supprimer votre historique de chat (via le tableau de bord)",
+    "l3": "Exporter vos données de transaction",
+    "l4": "Supprimer votre compte (contactez-nous)",
+    "l5": "Retirer les fonds des portefeuilles gérés à tout moment"
+  },
+  "s8": {
+    "h": "8. Sécurité",
+    "p": "Nous utilisons : HTTPS partout, hachage de mots de passe bcrypt (12 tours), chiffrement AES-256 pour les clés de portefeuilles gérés, authentification par jeton Bearer, limitation de débit sur tous les endpoints. Nous suivons les meilleures pratiques de sécurité OWASP."
+  },
+  "s9": {
+    "h": "9. Cookies",
+    "p": "Nous utilisons sessionStorage (pas de cookies) pour l'authentification. Pas de cookies de suivi, pas de cookies d'analyse, pas de cookies tiers."
+  },
+  "s10": {
+    "h": "10. Modifications",
+    "p": "Nous vous informerons par e-mail des modifications importantes de cette politique. Les modifications mineures sont publiées ici avec une date mise à jour."
+  },
+  "s11": {
+    "h": "11. Contact",
+    "p": "Questions sur la confidentialité : <a href=\"mailto:privacy@wetakestables.shop\" class=\"text-cyan-400 underline\">privacy@wetakestables.shop</a>"
+  },
+  "footer": "StablePay — Infrastructure de paiement en stablecoins"
+}

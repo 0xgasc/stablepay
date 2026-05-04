@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-i18n-page="status">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StablePay Status</title>
+  <title data-i18n="title">StablePay Status</title>
+  <script src="/js/lang.js"></script>
+  <script src="/js/i18n.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -49,34 +51,42 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>StablePay Status</h1>
-    <p class="subtitle">Live infrastructure health. Refreshes every 30 seconds.</p>
+    <h1 data-i18n="heading">StablePay Status</h1>
+    <p class="subtitle" data-i18n="subtitle">Live infrastructure health. Refreshes every 30 seconds.</p>
     <div id="root">
-      <div class="err">Loading…</div>
+      <div class="err" data-i18n="loading">Loading…</div>
     </div>
     <p class="footer">
-      Maintained at <a href="https://wetakestables.shop">wetakestables.shop</a> ·
-      <a href="https://wetakestables.shop/api/health/platform" target="_blank">JSON</a>
+      <span data-i18n="maintained">Maintained at</span> <a href="https://wetakestables.shop">wetakestables.shop</a> ·
+      <a href="https://wetakestables.shop/api/health/platform" target="_blank" data-i18n="jsonLink">JSON</a>
     </p>
   </div>
 
   <script>
-    const COMPONENT_LABELS = {
-      database: 'Database',
-      scanner: 'Blockchain scanner',
-      rpc: 'RPC providers',
-      webhookQueue: 'Webhook retry queue',
-      webhookDelivery: 'Webhook delivery rate',
-    };
+    // Pulled from locale at render-time so component names + status labels switch with language
+    function t(key, fallback) {
+      const en = window._STATUS_LOCALE || {};
+      return (key.split('.').reduce((o, k) => (o && o[k] != null) ? o[k] : null, en)) || fallback;
+    }
+
+    function componentLabel(key) {
+      return t(`components.${key}`, ({
+        database: 'Database',
+        scanner: 'Blockchain scanner',
+        rpc: 'RPC providers',
+        webhookQueue: 'Webhook retry queue',
+        webhookDelivery: 'Webhook delivery rate',
+      }[key] || key));
+    }
 
     function render(report) {
       const root = document.getElementById('root');
       const overallStatus = report.status; // ok | warning | down
-      const overallLabel = {
+      const overallLabel = t(`overall.${overallStatus}`, ({
         ok: 'All systems operational',
         warning: 'Degraded — some components flagged',
         down: 'Service disruption',
-      }[overallStatus];
+      }[overallStatus]));
       const stamp = new Date(report.checkedAt).toLocaleString();
 
       let html = `
@@ -88,8 +98,8 @@
         <div class="components">
       `;
       for (const [key, c] of Object.entries(report.components)) {
-        const label = COMPONENT_LABELS[key] || key;
-        const msg = c.message || (c.status === 'ok' ? 'Operating normally' : '');
+        const label = componentLabel(key);
+        const msg = c.message || (c.status === 'ok' ? t('component.operatingNormally', 'Operating normally') : '');
         html += `
           <div class="component">
             <div class="dot ${c.status}"></div>
@@ -112,11 +122,19 @@
         const report = await res.json();
         render(report);
       } catch (err) {
-        document.getElementById('root').innerHTML = '<div class="err">Could not reach status API. The platform may be fully offline, or this status page itself is rate-limited. Check back in a moment.</div>';
+        document.getElementById('root').innerHTML = `<div class="err">${t('errors.unreachable', 'Could not reach status API. The platform may be fully offline, or this status page itself is rate-limited. Check back in a moment.')}</div>`;
       }
     }
 
-    poll();
+    // Cache locale once for status-render-time t() lookups
+    async function loadLocale() {
+      const lang = (window.SP_LANG && window.SP_LANG.getLang()) || 'en';
+      try {
+        const res = await fetch(`/locales/status-${lang}.json`, { cache: 'no-store' });
+        if (res.ok) window._STATUS_LOCALE = await res.json();
+      } catch {}
+    }
+    loadLocale().then(poll);
     setInterval(poll, 30_000);
   </script>
 </body>

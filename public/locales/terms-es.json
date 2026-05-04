@@ -1,0 +1,61 @@
+{
+  "title": "Términos de Servicio — StablePay",
+  "header": { "signup": "Registrarse" },
+  "heading": "Términos de Servicio",
+  "lastUpdated": "Última actualización: 28 de marzo de 2026",
+  "s1": {
+    "h": "1. Descripción del Servicio",
+    "p": "StablePay (\"nosotros\", \"nos\", \"el Servicio\") proporciona infraestructura de procesamiento de pagos en stablecoins. Permitimos a los comerciantes aceptar pagos en USDC, USDT y EURC en blockchains compatibles (Base, Ethereum, Polygon, Arbitrum, Solana). Los pagos se dirigen directamente a las direcciones de billetera designadas por el comerciante."
+  },
+  "s2": {
+    "h": "2. Cuentas",
+    "p": "Debes proporcionar información precisa al crear una cuenta. Eres responsable de mantener la seguridad de tus credenciales de inicio de sesión. Una cuenta por dirección de correo electrónico. Nos reservamos el derecho de suspender cuentas que violen estos términos o se utilicen para actividades ilegales."
+  },
+  "s3": {
+    "h": "3. Procesamiento de Pagos",
+    "nonCustodial": "<strong class=\"text-white\">No Custodial (Tu Propia Billetera):</strong> Cuando proporcionas tu propia dirección de billetera, los pagos van directamente del cliente a tu billetera. Nunca retenemos, controlamos ni tenemos acceso a tus fondos. Eres el único responsable de la seguridad de tu billetera y claves privadas.",
+    "managed": "<strong class=\"text-white\">Billeteras Administradas:</strong> Si optas por una billetera administrada, generamos y mantenemos las claves privadas en tu nombre. Los fondos en billeteras administradas son accesibles para nosotros con el propósito de facilitar retiros a tu solicitud. Recomendamos encarecidamente cambiar a tu propia billetera lo antes posible. No somos responsables de pérdidas debidas a brechas de seguridad de billeteras administradas más allá de medidas de seguridad comercialmente razonables."
+  },
+  "s4": {
+    "h": "4. Tarifas",
+    "intro": "Cobramos una tarifa de transacción basada en porcentaje sobre los pagos confirmados. Las tarifas son por volumen y se calculan en un período móvil de 30 días:",
+    "tier1": "Menos de $10,000/mes: 1.0%",
+    "tier2": "$10,000 - $50,000/mes: 0.8%",
+    "tier3": "$50,000 - $250,000/mes: 0.5%",
+    "tier4": "$250,000+/mes: 0.3%",
+    "outro": "Las tarifas se acumulan y se facturan por ciclo de facturación (semanal, quincenal o mensual según el nivel de volumen). Recibes el 100% de cada pago inmediatamente — las tarifas se facturan por separado. El no pago de tarifas facturadas puede resultar en la suspensión de la cuenta."
+  },
+  "s5": {
+    "h": "5. Transacciones Blockchain",
+    "p": "Las transacciones blockchain son irreversibles. No somos responsables de transacciones enviadas a direcciones incorrectas, en cadenas incorrectas o con montos incorrectos. Las tarifas de gas de la red las paga el remitente (cliente) y no las cobramos nosotros. Los tiempos de confirmación dependen de la red blockchain y están fuera de nuestro control."
+  },
+  "s6": {
+    "h": "6. Reembolsos",
+    "p": "Los reembolsos los inicia el comerciante a través de nuestro panel. Facilitamos el proceso de reembolso pero no garantizamos su ejecución. Los reembolsos en blockchain son transacciones separadas y pueden incurrir en tarifas de gas."
+  },
+  "s7": {
+    "h": "7. Usos Prohibidos",
+    "p": "No puedes utilizar el Servicio para: actividades ilegales, lavado de dinero, financiación del terrorismo, evasión de sanciones, fraude, venta de bienes o servicios prohibidos, o cualquier actividad que viole las leyes aplicables en tu jurisdicción."
+  },
+  "s8": {
+    "h": "8. Asistente de IA",
+    "p": "Nuestro asistente de IA proporciona orientación y puede realizar acciones de configuración de cuenta en tu nombre. El código y los consejos generados por IA se proporcionan tal cual. Eres responsable de revisar y probar cualquier código antes de desplegarlo en producción. Las respuestas del asistente de IA no constituyen asesoramiento financiero, legal o profesional."
+  },
+  "s9": {
+    "h": "9. Limitación de Responsabilidad",
+    "p": "El Servicio se proporciona \"tal cual\" sin garantías de ningún tipo. No somos responsables de: fondos perdidos debido a direcciones de billetera incorrectas, fallos de la red blockchain, vulnerabilidades de contratos inteligentes, brechas de seguridad de billeteras de terceros, o pérdidas que excedan las tarifas pagadas a nosotros en los 12 meses anteriores."
+  },
+  "s10": {
+    "h": "10. Terminación",
+    "p": "Cualquiera de las partes puede terminar la relación en cualquier momento. Tras la terminación, los saldos de tarifas pendientes siguen siendo exigibles. Daremos aviso razonable antes de terminar cuentas activas excepto en casos de sospecha de fraude o requisito legal."
+  },
+  "s11": {
+    "h": "11. Cambios",
+    "p": "Podemos actualizar estos términos con 30 días de aviso por correo electrónico. El uso continuado del Servicio después de los cambios constituye la aceptación de los términos actualizados."
+  },
+  "s12": {
+    "h": "12. Contacto",
+    "p": "Preguntas sobre estos términos: <a href=\"mailto:legal@wetakestables.shop\" class=\"text-cyan-400 underline\">legal@wetakestables.shop</a>"
+  },
+  "footer": "StablePay — Infraestructura de pagos en stablecoins"
+}

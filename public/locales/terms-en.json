@@ -1,0 +1,61 @@
+{
+  "title": "Terms of Service — StablePay",
+  "header": { "signup": "Sign Up" },
+  "heading": "Terms of Service",
+  "lastUpdated": "Last updated: March 28, 2026",
+  "s1": {
+    "h": "1. Service Description",
+    "p": "StablePay (\"we\", \"us\", \"the Service\") provides stablecoin payment processing infrastructure. We enable merchants to accept USDC, USDT, and EURC payments on supported blockchains (Base, Ethereum, Polygon, Arbitrum, Solana). Payments are routed directly to merchant-designated wallet addresses."
+  },
+  "s2": {
+    "h": "2. Accounts",
+    "p": "You must provide accurate information when creating an account. You are responsible for maintaining the security of your login credentials. One account per email address. We reserve the right to suspend accounts that violate these terms or are used for illegal activity."
+  },
+  "s3": {
+    "h": "3. Payment Processing",
+    "nonCustodial": "<strong class=\"text-white\">Non-Custodial (Own Wallet):</strong> When you provide your own wallet address, payments go directly from the customer to your wallet. We never hold, control, or have access to your funds. You are solely responsible for the security of your wallet and private keys.",
+    "managed": "<strong class=\"text-white\">Managed Wallets:</strong> If you opt for a managed wallet, we generate and hold the private keys on your behalf. Funds in managed wallets are accessible to us for the purpose of facilitating withdrawals at your request. We strongly recommend transitioning to your own wallet as soon as possible. We are not liable for losses due to security breaches of managed wallets beyond commercially reasonable security measures."
+  },
+  "s4": {
+    "h": "4. Fees",
+    "intro": "We charge a percentage-based transaction fee on confirmed payments. Fee rates are volume-based and calculated on a rolling 30-day basis:",
+    "tier1": "Under $10,000/month: 1.0%",
+    "tier2": "$10,000 - $50,000/month: 0.8%",
+    "tier3": "$50,000 - $250,000/month: 0.5%",
+    "tier4": "$250,000+/month: 0.3%",
+    "outro": "Fees accumulate and are invoiced per billing cycle (weekly, bi-weekly, or monthly depending on volume tier). You receive 100% of each payment immediately — fees are billed separately. Failure to pay invoiced fees may result in account suspension."
+  },
+  "s5": {
+    "h": "5. Blockchain Transactions",
+    "p": "Blockchain transactions are irreversible. We are not responsible for transactions sent to incorrect addresses, on incorrect chains, or with incorrect amounts. Network gas fees are paid by the sender (customer) and are not charged by us. Transaction confirmation times depend on the blockchain network and are outside our control."
+  },
+  "s6": {
+    "h": "6. Refunds",
+    "p": "Refunds are initiated by the merchant through our dashboard. We facilitate the refund process but do not guarantee refund execution. Refunds on blockchain are separate transactions and may incur gas fees."
+  },
+  "s7": {
+    "h": "7. Prohibited Uses",
+    "p": "You may not use the Service for: illegal activities, money laundering, terrorist financing, sanctions evasion, fraud, sale of prohibited goods or services, or any activity that violates applicable laws in your jurisdiction."
+  },
+  "s8": {
+    "h": "8. AI Assistant",
+    "p": "Our AI assistant provides guidance and can perform account configuration actions on your behalf. AI-generated code and advice are provided as-is. You are responsible for reviewing and testing any code before deploying it to production. The AI assistant's responses do not constitute financial, legal, or professional advice."
+  },
+  "s9": {
+    "h": "9. Limitation of Liability",
+    "p": "The Service is provided \"as is\" without warranties of any kind. We are not liable for: lost funds due to incorrect wallet addresses, blockchain network failures, smart contract vulnerabilities, third-party wallet security breaches, or losses exceeding the fees paid to us in the preceding 12 months."
+  },
+  "s10": {
+    "h": "10. Termination",
+    "p": "Either party may terminate the relationship at any time. Upon termination, outstanding fee balances remain due. We will provide reasonable notice before terminating active accounts except in cases of suspected fraud or legal requirement."
+  },
+  "s11": {
+    "h": "11. Changes",
+    "p": "We may update these terms with 30 days notice via email. Continued use of the Service after changes constitutes acceptance of the updated terms."
+  },
+  "s12": {
+    "h": "12. Contact",
+    "p": "Questions about these terms: <a href=\"mailto:legal@wetakestables.shop\" class=\"text-cyan-400 underline\">legal@wetakestables.shop</a>"
+  },
+  "footer": "StablePay — Stablecoin payment infrastructure"
+}

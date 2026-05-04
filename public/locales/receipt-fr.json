@@ -1,0 +1,31 @@
+{
+  "title": "Reçu de Paiement — StablePay",
+  "loading": "Chargement du reçu...",
+  "generating": "Génération du reçu...",
+  "confirmed": "Paiement Confirmé",
+  "amountPaid": "Montant Payé",
+  "row": {
+    "receipt": "Reçu n°",
+    "merchant": "Marchand",
+    "network": "Réseau",
+    "date": "Date",
+    "transaction": "Transaction",
+    "email": "E-mail"
+  },
+  "actions": {
+    "explorer": "Voir sur l'Explorateur",
+    "pdf": "Télécharger le PDF",
+    "history": "Voir toutes vos commandes"
+  },
+  "poweredBy": "Propulsé par",
+  "titlePrefix": "Reçu",
+  "defaults": {
+    "merchant": "Marchand"
+  },
+  "error": {
+    "title": "Reçu introuvable",
+    "line1": "Ce reçu n'a pas encore été généré ou le lien est incorrect.",
+    "line2": "Si votre paiement vient d'être confirmé, cela peut prendre un instant.",
+    "retry": "Réessayer"
+  }
+}

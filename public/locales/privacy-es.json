@@ -1,0 +1,69 @@
+{
+  "title": "Política de Privacidad — StablePay",
+  "header": { "signup": "Registrarse" },
+  "heading": "Política de Privacidad",
+  "lastUpdated": "Última actualización: 28 de marzo de 2026",
+  "s1": {
+    "h": "1. Qué Recopilamos",
+    "account": "<strong class=\"text-white\">Datos de Cuenta:</strong> Dirección de correo electrónico, nombre de empresa, nombre de contacto, contraseña con hash. Nunca almacenamos contraseñas en texto plano.",
+    "wallets": "<strong class=\"text-white\">Direcciones de Billetera:</strong> Direcciones públicas de billetera que proporcionas. Para billeteras administradas, también almacenamos claves privadas cifradas (AES-256).",
+    "tx": "<strong class=\"text-white\">Datos de Transacción:</strong> Montos de pedidos, hashes de transacciones blockchain, cadena, tipo de token, marcas de tiempo, estado del pago.",
+    "chat": "<strong class=\"text-white\">Historial de Chat:</strong> Las conversaciones con el asistente de IA se almacenan para proporcionar continuidad y soporte personalizado.",
+    "usage": "<strong class=\"text-white\">Datos de Uso:</strong> Direcciones IP (para limitación de tasa), patrones de uso de funciones."
+  },
+  "s2": {
+    "h": "2. Qué No Recopilamos",
+    "l1": "Claves privadas de billeteras no administradas (nunca tenemos acceso)",
+    "l2": "Datos personales del cliente (pagador) más allá del correo electrónico opcional",
+    "l3": "Historial de navegación o cookies de seguimiento",
+    "l4": "Identificación oficial (no se requiere KYC actualmente)"
+  },
+  "s3": {
+    "h": "3. Cómo Usamos Tus Datos",
+    "l1": "Procesar y confirmar pagos en stablecoins",
+    "l2": "Calcular y facturar tarifas de transacción",
+    "l3": "Enviar correos de verificación y notificaciones de pago",
+    "l4": "Proporcionar incorporación y soporte asistido por IA",
+    "l5": "Prevenir fraude y aplicar límites de tasa",
+    "l6": "Mejorar el servicio"
+  },
+  "s4": {
+    "h": "4. Almacenamiento de Datos",
+    "p": "Los datos se almacenan en Railway (PostgreSQL) y se sirven vía Vercel. Todas las conexiones usan cifrado TLS. Las claves privadas de billeteras administradas se cifran en reposo con AES-256. Las copias de seguridad de la base de datos son automatizadas por el proveedor de hosting."
+  },
+  "s5": {
+    "h": "5. Servicios de Terceros",
+    "resend": "<strong class=\"text-white\">Resend:</strong> Envío de correos electrónicos (códigos de verificación, facturas, recibos)",
+    "anthropic": "<strong class=\"text-white\">Anthropic (Claude):</strong> Asistente de IA — tus mensajes de chat se envían a la API de Anthropic para procesamiento",
+    "rpc": "<strong class=\"text-white\">RPCs Blockchain:</strong> Nodos públicos de blockchain para detección de pagos (no se envían datos personales)"
+  },
+  "s6": {
+    "h": "6. Retención de Datos",
+    "p": "Datos de cuenta: retenidos mientras la cuenta esté activa + 90 días después de la eliminación. Registros de transacciones: retenidos durante 7 años (cumplimiento financiero). Historial de chat: retenido mientras la cuenta esté activa, eliminable por el usuario. Puedes solicitar exportación completa de datos o eliminación contactándonos."
+  },
+  "s7": {
+    "h": "7. Tus Derechos",
+    "l1": "Acceder a tus datos (disponible en el panel)",
+    "l2": "Eliminar tu historial de chat (vía panel)",
+    "l3": "Exportar tus datos de transacciones",
+    "l4": "Eliminar tu cuenta (contáctanos)",
+    "l5": "Retirar fondos de billeteras administradas en cualquier momento"
+  },
+  "s8": {
+    "h": "8. Seguridad",
+    "p": "Usamos: HTTPS en todas partes, hashing de contraseñas bcrypt (12 rondas), cifrado AES-256 para claves de billeteras administradas, autenticación con token Bearer, limitación de tasa en todos los endpoints. Seguimos las mejores prácticas de seguridad de OWASP."
+  },
+  "s9": {
+    "h": "9. Cookies",
+    "p": "Usamos sessionStorage (no cookies) para autenticación. Sin cookies de seguimiento, sin cookies de análisis, sin cookies de terceros."
+  },
+  "s10": {
+    "h": "10. Cambios",
+    "p": "Te notificaremos por correo electrónico sobre cambios materiales en esta política. Los cambios menores se publican aquí con una fecha actualizada."
+  },
+  "s11": {
+    "h": "11. Contacto",
+    "p": "Preguntas sobre privacidad: <a href=\"mailto:privacy@wetakestables.shop\" class=\"text-cyan-400 underline\">privacy@wetakestables.shop</a>"
+  },
+  "footer": "StablePay — Infraestructura de pagos en stablecoins"
+}

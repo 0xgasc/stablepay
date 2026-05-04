@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-i18n-page="receipt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Receipt — StablePay</title>
+    <title data-i18n="title">Payment Receipt — StablePay</title>
+    <script src="/js/lang.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -36,12 +37,23 @@
 <body>
     <div class="receipt" id="receipt">
         <div class="loading" id="loading">
-            <p>Loading receipt...</p>
+            <p data-i18n="loading">Loading receipt...</p>
         </div>
     </div>
 
     <script>
         const pathId = window.location.pathname.split('/').pop();
+        let _LOCALE = {};
+        function t(key, fallback) {
+            return key.split('.').reduce((o, k) => (o && o[k] != null) ? o[k] : null, _LOCALE) || fallback;
+        }
+        async function loadLocale() {
+            const lang = (window.SP_LANG && window.SP_LANG.getLang()) || 'en';
+            try {
+                const res = await fetch(`/locales/receipt-${lang}.json`, { cache: 'no-store' });
+                if (res.ok) _LOCALE = await res.json();
+            } catch {}
+        }
         const BASE_URL = window.location.origin;
         // Can be a receiptId or orderId — try both
         const EXPLORERS = {
@@ -73,7 +85,7 @@
                 if (!res.ok) {
                     // Receipt may not be created yet (timing gap after order confirmation)
                     if (retryCount < 2) {
-                        document.getElementById('loading').innerHTML = '<p>Generating receipt...</p>';
+                        document.getElementById('loading').innerHTML = `<p>${t('generating', 'Generating receipt...')}</p>`;
                         await new Promise(r => setTimeout(r, 3000));
                         return loadReceipt(retryCount + 1);
                     }
@@ -88,49 +100,51 @@
                 const chainName = CHAIN_NAMES[chain] || chain;
                 const amount = Number(r.amount || order.amount || 0);
                 const token = r.token || order.token || 'USDC';
-                const merchantName = r.merchant?.companyName || 'Merchant';
-                const date = new Date(r.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                const merchantName = r.merchant?.companyName || t('defaults.merchant', 'Merchant');
+                const lang = (window.SP_LANG && window.SP_LANG.getLang()) || 'en';
+                const dateLocaleMap = { en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR' };
+                const date = new Date(r.createdAt).toLocaleDateString(dateLocaleMap[lang] || 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
                 document.getElementById('receipt').innerHTML = `
                     <div class="header">
                         <div class="check">✓</div>
-                        <h1>Payment Confirmed</h1>
+                        <h1>${t('confirmed', 'Payment Confirmed')}</h1>
                     </div>
                     <div class="amount-bar">
-                        <div class="label">Amount Paid</div>
+                        <div class="label">${t('amountPaid', 'Amount Paid')}</div>
                         <div class="value">$${amount.toFixed(2)} <span style="font-size:16px;opacity:0.6">${token}</span></div>
                     </div>
                     <div class="details">
-                        <div class="row"><span class="label">Receipt #</span><span class="value mono">${r.receiptNumber || r.id.slice(0, 12)}</span></div>
-                        <div class="row"><span class="label">Merchant</span><span class="value">${merchantName}</span></div>
-                        <div class="row"><span class="label">Network</span><span class="value">${chainName}</span></div>
-                        <div class="row"><span class="label">Date</span><span class="value">${date}</span></div>
-                        ${txHash ? `<div class="row"><span class="label">Transaction</span><span class="value mono"><a href="${explorerUrl}" target="_blank">${txHash.slice(0, 12)}...${txHash.slice(-6)}</a></span></div>` : ''}
-                        ${order.customerEmail ? `<div class="row"><span class="label">Email</span><span class="value">${order.customerEmail}</span></div>` : ''}
+                        <div class="row"><span class="label">${t('row.receipt', 'Receipt #')}</span><span class="value mono">${r.receiptNumber || r.id.slice(0, 12)}</span></div>
+                        <div class="row"><span class="label">${t('row.merchant', 'Merchant')}</span><span class="value">${merchantName}</span></div>
+                        <div class="row"><span class="label">${t('row.network', 'Network')}</span><span class="value">${chainName}</span></div>
+                        <div class="row"><span class="label">${t('row.date', 'Date')}</span><span class="value">${date}</span></div>
+                        ${txHash ? `<div class="row"><span class="label">${t('row.transaction', 'Transaction')}</span><span class="value mono"><a href="${explorerUrl}" target="_blank">${txHash.slice(0, 12)}...${txHash.slice(-6)}</a></span></div>` : ''}
+                        ${order.customerEmail ? `<div class="row"><span class="label">${t('row.email', 'Email')}</span><span class="value">${order.customerEmail}</span></div>` : ''}
                     </div>
                     <div class="actions">
-                        ${explorerUrl ? `<a href="${explorerUrl}" target="_blank" class="btn btn-primary">View on Explorer</a>` : ''}
-                        <a href="${BASE_URL}/api/receipts/${r.id}/pdf" class="btn btn-secondary">Download PDF</a>
+                        ${explorerUrl ? `<a href="${explorerUrl}" target="_blank" class="btn btn-primary">${t('actions.explorer', 'View on Explorer')}</a>` : ''}
+                        <a href="${BASE_URL}/api/receipts/${r.id}/pdf" class="btn btn-secondary">${t('actions.pdf', 'Download PDF')}</a>
                     </div>
-                    ${order.customerWallet ? `<div style="text-align:center;margin-top:12px;padding:0 24px;"><a href="${BASE_URL}/history?wallet=${encodeURIComponent(order.customerWallet)}" style="font-size:12px;color:#64748b;text-decoration:underline;">View all your orders</a></div>` : ''}
-                    <div class="footer">Powered by <strong>StablePay</strong></div>
+                    ${order.customerWallet ? `<div style="text-align:center;margin-top:12px;padding:0 24px;"><a href="${BASE_URL}/history?wallet=${encodeURIComponent(order.customerWallet)}" style="font-size:12px;color:#64748b;text-decoration:underline;">${t('actions.history', 'View all your orders')}</a></div>` : ''}
+                    <div class="footer">${t('poweredBy', 'Powered by')} <strong>StablePay</strong></div>
                 `;
 
-                document.title = `Receipt ${r.receiptNumber || ''} — $${amount.toFixed(2)} ${token}`;
+                document.title = `${t('titlePrefix', 'Receipt')} ${r.receiptNumber || ''} — $${amount.toFixed(2)} ${token}`;
             } catch (err) {
                 document.getElementById('receipt').innerHTML = `
                     <div class="error">
                         <p style="font-size:48px;margin-bottom:12px;">🔍</p>
-                        <p style="font-weight:700;font-size:16px;">Receipt not found</p>
-                        <p style="font-size:12px;color:#94a3b8;margin-top:8px;">This receipt hasn't been generated yet or the link is incorrect.</p>
-                        <p style="font-size:12px;color:#94a3b8;margin-top:4px;">If your payment was just confirmed, it may take a moment.</p>
-                        <button onclick="loadReceipt(0)" style="margin-top:16px;padding:10px 24px;background:#000;color:#fff;border:3px solid #000;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;">Try Again</button>
+                        <p style="font-weight:700;font-size:16px;">${t('error.title', 'Receipt not found')}</p>
+                        <p style="font-size:12px;color:#94a3b8;margin-top:8px;">${t('error.line1', "This receipt hasn't been generated yet or the link is incorrect.")}</p>
+                        <p style="font-size:12px;color:#94a3b8;margin-top:4px;">${t('error.line2', 'If your payment was just confirmed, it may take a moment.')}</p>
+                        <button onclick="loadReceipt(0)" style="margin-top:16px;padding:10px 24px;background:#000;color:#fff;border:3px solid #000;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;">${t('error.retry', 'Try Again')}</button>
                     </div>
                 `;
             }
         }
 
-        loadReceipt();
+        loadLocale().then(loadReceipt);
     </script>
 </body>
 </html>

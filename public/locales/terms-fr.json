@@ -1,0 +1,61 @@
+{
+  "title": "Conditions d'Utilisation — StablePay",
+  "header": { "signup": "Inscription" },
+  "heading": "Conditions d'Utilisation",
+  "lastUpdated": "Dernière mise à jour : 28 mars 2026",
+  "s1": {
+    "h": "1. Description du Service",
+    "p": "StablePay (\"nous\", \"notre\", \"le Service\") fournit une infrastructure de traitement des paiements en stablecoins. Nous permettons aux marchands d'accepter des paiements en USDC, USDT et EURC sur les blockchains prises en charge (Base, Ethereum, Polygon, Arbitrum, Solana). Les paiements sont acheminés directement vers les adresses de portefeuille désignées par le marchand."
+  },
+  "s2": {
+    "h": "2. Comptes",
+    "p": "Vous devez fournir des informations exactes lors de la création d'un compte. Vous êtes responsable du maintien de la sécurité de vos identifiants. Un compte par adresse e-mail. Nous nous réservons le droit de suspendre les comptes qui violent ces conditions ou sont utilisés pour des activités illégales."
+  },
+  "s3": {
+    "h": "3. Traitement des Paiements",
+    "nonCustodial": "<strong class=\"text-white\">Non-Custodial (Votre Propre Portefeuille) :</strong> Lorsque vous fournissez votre propre adresse de portefeuille, les paiements vont directement du client à votre portefeuille. Nous ne détenons, contrôlons ou n'avons jamais accès à vos fonds. Vous êtes seul responsable de la sécurité de votre portefeuille et de vos clés privées.",
+    "managed": "<strong class=\"text-white\">Portefeuilles Gérés :</strong> Si vous optez pour un portefeuille géré, nous générons et conservons les clés privées en votre nom. Les fonds dans les portefeuilles gérés nous sont accessibles dans le but de faciliter les retraits à votre demande. Nous recommandons fortement de passer à votre propre portefeuille dès que possible. Nous ne sommes pas responsables des pertes dues à des failles de sécurité des portefeuilles gérés au-delà des mesures de sécurité commercialement raisonnables."
+  },
+  "s4": {
+    "h": "4. Frais",
+    "intro": "Nous prélevons des frais de transaction basés sur un pourcentage des paiements confirmés. Les taux de frais sont basés sur le volume et calculés sur une période glissante de 30 jours :",
+    "tier1": "Moins de 10 000 $/mois : 1,0 %",
+    "tier2": "10 000 $ - 50 000 $/mois : 0,8 %",
+    "tier3": "50 000 $ - 250 000 $/mois : 0,5 %",
+    "tier4": "250 000 $+/mois : 0,3 %",
+    "outro": "Les frais s'accumulent et sont facturés par cycle de facturation (hebdomadaire, bimensuel ou mensuel selon le palier de volume). Vous recevez 100 % de chaque paiement immédiatement — les frais sont facturés séparément. Le non-paiement des frais facturés peut entraîner la suspension du compte."
+  },
+  "s5": {
+    "h": "5. Transactions Blockchain",
+    "p": "Les transactions blockchain sont irréversibles. Nous ne sommes pas responsables des transactions envoyées à des adresses incorrectes, sur des chaînes incorrectes, ou avec des montants incorrects. Les frais de gaz du réseau sont payés par l'expéditeur (client) et ne sont pas facturés par nous. Les délais de confirmation dépendent du réseau blockchain et sont hors de notre contrôle."
+  },
+  "s6": {
+    "h": "6. Remboursements",
+    "p": "Les remboursements sont initiés par le marchand via notre tableau de bord. Nous facilitons le processus de remboursement mais ne garantissons pas son exécution. Les remboursements sur la blockchain sont des transactions distinctes et peuvent entraîner des frais de gaz."
+  },
+  "s7": {
+    "h": "7. Utilisations Interdites",
+    "p": "Vous ne pouvez pas utiliser le Service pour : activités illégales, blanchiment d'argent, financement du terrorisme, évasion de sanctions, fraude, vente de biens ou services interdits, ou toute activité qui viole les lois applicables dans votre juridiction."
+  },
+  "s8": {
+    "h": "8. Assistant IA",
+    "p": "Notre assistant IA fournit des conseils et peut effectuer des actions de configuration de compte en votre nom. Le code et les conseils générés par l'IA sont fournis tels quels. Vous êtes responsable de la révision et du test de tout code avant son déploiement en production. Les réponses de l'assistant IA ne constituent pas des conseils financiers, juridiques ou professionnels."
+  },
+  "s9": {
+    "h": "9. Limitation de Responsabilité",
+    "p": "Le Service est fourni \"tel quel\" sans garanties d'aucune sorte. Nous ne sommes pas responsables de : fonds perdus en raison d'adresses de portefeuille incorrectes, défaillances du réseau blockchain, vulnérabilités de contrats intelligents, failles de sécurité de portefeuilles tiers, ou pertes dépassant les frais qui nous ont été payés au cours des 12 mois précédents."
+  },
+  "s10": {
+    "h": "10. Résiliation",
+    "p": "L'une ou l'autre partie peut mettre fin à la relation à tout moment. À la résiliation, les soldes de frais en cours restent dus. Nous fournirons un préavis raisonnable avant de résilier les comptes actifs sauf en cas de fraude présumée ou d'exigence légale."
+  },
+  "s11": {
+    "h": "11. Modifications",
+    "p": "Nous pouvons mettre à jour ces conditions avec un préavis de 30 jours par e-mail. L'utilisation continue du Service après les modifications constitue l'acceptation des conditions mises à jour."
+  },
+  "s12": {
+    "h": "12. Contact",
+    "p": "Questions sur ces conditions : <a href=\"mailto:legal@wetakestables.shop\" class=\"text-cyan-400 underline\">legal@wetakestables.shop</a>"
+  },
+  "footer": "StablePay — Infrastructure de paiement en stablecoins"
+}

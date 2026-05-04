@@ -1,0 +1,69 @@
+{
+  "title": "Política de Privacidade — StablePay",
+  "header": { "signup": "Cadastrar" },
+  "heading": "Política de Privacidade",
+  "lastUpdated": "Última atualização: 28 de março de 2026",
+  "s1": {
+    "h": "1. O Que Coletamos",
+    "account": "<strong class=\"text-white\">Dados de Conta:</strong> Endereço de e-mail, nome da empresa, nome de contato, senha com hash. Nunca armazenamos senhas em texto plano.",
+    "wallets": "<strong class=\"text-white\">Endereços de Carteira:</strong> Endereços públicos de carteira que você fornece. Para carteiras gerenciadas, também armazenamos chaves privadas criptografadas (AES-256).",
+    "tx": "<strong class=\"text-white\">Dados de Transação:</strong> Valores de pedidos, hashes de transações blockchain, rede, tipo de token, carimbos de data/hora, status do pagamento.",
+    "chat": "<strong class=\"text-white\">Histórico de Chat:</strong> Conversas com o assistente de IA são armazenadas para fornecer continuidade e suporte personalizado.",
+    "usage": "<strong class=\"text-white\">Dados de Uso:</strong> Endereços IP (para limitação de taxa), padrões de uso de recursos."
+  },
+  "s2": {
+    "h": "2. O Que Não Coletamos",
+    "l1": "Chaves privadas de carteiras não gerenciadas (nunca temos acesso)",
+    "l2": "Dados pessoais do cliente (pagador) além do e-mail opcional",
+    "l3": "Histórico de navegação ou cookies de rastreamento",
+    "l4": "Identificação oficial (KYC não é exigido atualmente)"
+  },
+  "s3": {
+    "h": "3. Como Usamos Seus Dados",
+    "l1": "Processar e confirmar pagamentos em stablecoins",
+    "l2": "Calcular e faturar tarifas de transação",
+    "l3": "Enviar e-mails de verificação e notificações de pagamento",
+    "l4": "Fornecer integração e suporte assistido por IA",
+    "l5": "Prevenir fraude e aplicar limites de taxa",
+    "l6": "Melhorar o serviço"
+  },
+  "s4": {
+    "h": "4. Armazenamento de Dados",
+    "p": "Os dados são armazenados no Railway (PostgreSQL) e servidos via Vercel. Todas as conexões usam criptografia TLS. As chaves privadas de carteiras gerenciadas são criptografadas em repouso com AES-256. Backups do banco de dados são automatizados pelo provedor de hospedagem."
+  },
+  "s5": {
+    "h": "5. Serviços de Terceiros",
+    "resend": "<strong class=\"text-white\">Resend:</strong> Entrega de e-mails (códigos de verificação, faturas, recibos)",
+    "anthropic": "<strong class=\"text-white\">Anthropic (Claude):</strong> Assistente de IA — suas mensagens de chat são enviadas para a API da Anthropic para processamento",
+    "rpc": "<strong class=\"text-white\">RPCs Blockchain:</strong> Nós públicos da blockchain para detecção de pagamentos (nenhum dado pessoal enviado)"
+  },
+  "s6": {
+    "h": "6. Retenção de Dados",
+    "p": "Dados de conta: retidos enquanto a conta estiver ativa + 90 dias após a exclusão. Registros de transação: retidos por 7 anos (conformidade financeira). Histórico de chat: retido enquanto a conta estiver ativa, removível pelo usuário. Você pode solicitar exportação completa de dados ou exclusão entrando em contato conosco."
+  },
+  "s7": {
+    "h": "7. Seus Direitos",
+    "l1": "Acessar seus dados (disponível no painel)",
+    "l2": "Excluir seu histórico de chat (via painel)",
+    "l3": "Exportar seus dados de transação",
+    "l4": "Excluir sua conta (entre em contato conosco)",
+    "l5": "Sacar fundos de carteiras gerenciadas a qualquer momento"
+  },
+  "s8": {
+    "h": "8. Segurança",
+    "p": "Usamos: HTTPS em todos os lugares, hash de senha bcrypt (12 rodadas), criptografia AES-256 para chaves de carteiras gerenciadas, autenticação com token Bearer, limitação de taxa em todos os endpoints. Seguimos as melhores práticas de segurança OWASP."
+  },
+  "s9": {
+    "h": "9. Cookies",
+    "p": "Usamos sessionStorage (não cookies) para autenticação. Sem cookies de rastreamento, sem cookies de análise, sem cookies de terceiros."
+  },
+  "s10": {
+    "h": "10. Alterações",
+    "p": "Notificaremos por e-mail sobre alterações importantes nesta política. Alterações menores são publicadas aqui com uma data atualizada."
+  },
+  "s11": {
+    "h": "11. Contato",
+    "p": "Dúvidas sobre privacidade: <a href=\"mailto:privacy@wetakestables.shop\" class=\"text-cyan-400 underline\">privacy@wetakestables.shop</a>"
+  },
+  "footer": "StablePay — Infraestrutura de pagamento em stablecoins"
+}

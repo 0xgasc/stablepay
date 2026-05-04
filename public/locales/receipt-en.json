@@ -1,0 +1,31 @@
+{
+  "title": "Payment Receipt — StablePay",
+  "loading": "Loading receipt...",
+  "generating": "Generating receipt...",
+  "confirmed": "Payment Confirmed",
+  "amountPaid": "Amount Paid",
+  "row": {
+    "receipt": "Receipt #",
+    "merchant": "Merchant",
+    "network": "Network",
+    "date": "Date",
+    "transaction": "Transaction",
+    "email": "Email"
+  },
+  "actions": {
+    "explorer": "View on Explorer",
+    "pdf": "Download PDF",
+    "history": "View all your orders"
+  },
+  "poweredBy": "Powered by",
+  "titlePrefix": "Receipt",
+  "defaults": {
+    "merchant": "Merchant"
+  },
+  "error": {
+    "title": "Receipt not found",
+    "line1": "This receipt hasn't been generated yet or the link is incorrect.",
+    "line2": "If your payment was just confirmed, it may take a moment.",
+    "retry": "Try Again"
+  }
+}
