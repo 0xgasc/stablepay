@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>StablePay — Slides FB (ES)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Space Grotesk', system-ui, sans-serif; }
+    body {
+      background: #f3f4f6;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+    }
+    /*
+     * 1080×1080 slides — Facebook / Instagram carousel native size.
+     * Open this file in a desktop browser, hit your screenshot tool of choice,
+     * crop each slide one at a time. Or use Cmd+Shift+5 → "Capture Selected Window"
+     * if you make each slide fullscreen via dev-tools first.
+     */
+    .slide {
+      width: 1080px;
+      height: 1080px;
+      background: #FFFFFF;
+      border: 8px solid #000;
+      box-shadow: 16px 16px 0 #000;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .slide-num {
+      position: absolute; top: 32px; right: 40px;
+      font-size: 18px; font-weight: 700; letter-spacing: 2px;
+      color: #94a3b8;
+    }
+    .brand {
+      position: absolute; bottom: 36px; left: 40px;
+      font-size: 24px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .brand .dot { color: #00E5FF; }
+    .url {
+      position: absolute; bottom: 36px; right: 40px;
+      font-size: 18px; color: #64748b; font-weight: 500;
+    }
+
+    /* SLIDE 1 — Hook */
+    .s1 {
+      background: #FFFFFF;
+      justify-content: center;
+      padding: 120px 80px;
+    }
+    .s1 .hero {
+      font-size: 110px; font-weight: 700; line-height: 1.0;
+      letter-spacing: -3px; text-transform: uppercase;
+    }
+    .s1 .hero .accent { color: #00E5FF; -webkit-text-stroke: 4px #000; }
+    .s1 .sub {
+      margin-top: 48px;
+      font-size: 32px; color: #475569; font-weight: 500;
+    }
+
+    /* SLIDE 2 — Problem */
+    .s2 {
+      background: #fef2f2;
+      padding: 100px 80px;
+      justify-content: center;
+    }
+    .s2 .heading {
+      font-size: 72px; font-weight: 700; line-height: 1.05;
+      letter-spacing: -2px; text-transform: uppercase;
+      margin-bottom: 64px;
+    }
+    .s2 .row {
+      display: flex; align-items: baseline; gap: 24px;
+      margin-bottom: 28px; padding-bottom: 24px;
+      border-bottom: 4px solid #000;
+    }
+    .s2 .row .label {
+      font-size: 36px; font-weight: 700; min-width: 200px;
+    }
+    .s2 .row .cost {
+      font-size: 42px; font-weight: 700; color: #dc2626;
+      text-decoration: line-through;
+    }
+    .s2 .row .desc {
+      font-size: 26px; color: #475569; font-weight: 500;
+    }
+    .s2 .arrow {
+      margin-top: 40px;
+      font-size: 36px; font-weight: 700;
+    }
+    .s2 .arrow .accent { color: #00E5FF; -webkit-text-stroke: 2px #000; }
+
+    /* SLIDE 3 — Solution */
+    .s3 {
+      background: linear-gradient(135deg, #ecfeff 0%, #ffffff 50%, #eff6ff 100%);
+      padding: 120px 80px;
+      justify-content: center;
+    }
+    .s3 .flow {
+      display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center; gap: 24px;
+      margin-bottom: 80px;
+    }
+    .s3 .node {
+      background: #FFFFFF; border: 6px solid #000; padding: 32px;
+      text-align: center; box-shadow: 6px 6px 0 #000;
+    }
+    .s3 .node .icon {
+      font-size: 56px; margin-bottom: 12px;
+    }
+    .s3 .node .name {
+      font-size: 22px; font-weight: 700; text-transform: uppercase;
+    }
+    .s3 .arrow-icon { font-size: 60px; font-weight: 700; }
+    .s3 .heading {
+      font-size: 52px; font-weight: 700; line-height: 1.1;
+      letter-spacing: -1px; text-align: center;
+    }
+    .s3 .heading .accent { color: #00E5FF; -webkit-text-stroke: 3px #000; }
+
+    /* SLIDE 4 — Networks */
+    .s4 {
+      background: #000;
+      color: #fff;
+      padding: 100px 80px;
+      justify-content: center;
+    }
+    .s4 .heading {
+      font-size: 76px; font-weight: 700; line-height: 1.0;
+      letter-spacing: -2px; text-transform: uppercase;
+      margin-bottom: 64px; text-align: center;
+    }
+    .s4 .heading .accent { color: #00E5FF; }
+    .s4 .grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+      max-width: 800px; margin: 0 auto;
+    }
+    .s4 .grid .chain {
+      background: #FFFFFF; border: 4px solid #00E5FF;
+      padding: 24px 12px; text-align: center;
+      color: #000;
+    }
+    .s4 .grid .chain img {
+      width: 60px; height: 60px; object-fit: contain;
+      margin: 0 auto 12px;
+    }
+    .s4 .grid .chain .name {
+      font-size: 18px; font-weight: 700; text-transform: uppercase;
+    }
+    .s4 .tokens {
+      margin-top: 56px; text-align: center;
+      font-size: 28px; font-weight: 700; letter-spacing: 2px;
+      color: #00E5FF;
+    }
+    .s4 .brand { color: #fff; }
+    .s4 .url { color: #94a3b8; }
+
+    /* SLIDE 5 — Setup */
+    .s5 {
+      background: #FFFFFF;
+      padding: 100px 80px;
+      justify-content: center;
+    }
+    .s5 .heading {
+      font-size: 88px; font-weight: 700; line-height: 1.0;
+      letter-spacing: -3px; text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .s5 .heading .accent { color: #00E5FF; -webkit-text-stroke: 4px #000; }
+    .s5 .subhead {
+      font-size: 30px; color: #475569; font-weight: 500;
+      margin-bottom: 64px;
+    }
+    .s5 .step {
+      display: flex; align-items: center; gap: 32px;
+      margin-bottom: 28px; padding: 24px;
+      border: 5px solid #000; background: #f8fafc;
+    }
+    .s5 .step .num {
+      font-size: 56px; font-weight: 700; line-height: 1;
+      color: #00E5FF; -webkit-text-stroke: 3px #000;
+      min-width: 80px;
+    }
+    .s5 .step .text {
+      font-size: 32px; font-weight: 600; line-height: 1.2;
+    }
+
+    /* SLIDE 6 — CTA */
+    .s6 {
+      background: linear-gradient(135deg, #00E5FF 0%, #06b6d4 100%);
+      color: #000;
+      padding: 100px 80px;
+      justify-content: center;
+      text-align: center;
+    }
+    .s6 .top {
+      font-size: 36px; font-weight: 700; letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 40px;
+    }
+    .s6 .url-big {
+      font-size: 84px; font-weight: 700; line-height: 1.0;
+      letter-spacing: -3px;
+      margin-bottom: 56px;
+      word-break: break-all;
+    }
+    .s6 .cta {
+      display: inline-block;
+      background: #000; color: #FFFFFF;
+      padding: 32px 64px;
+      font-size: 40px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 3px;
+      border: 6px solid #000;
+      box-shadow: 12px 12px 0 #FFFFFF;
+    }
+    .s6 .footer-note {
+      position: absolute; bottom: 80px; left: 0; right: 0;
+      text-align: center;
+      font-size: 22px; color: #000; opacity: 0.7;
+    }
+    .s6 .brand { color: #000; }
+
+    /* Helper toolbar */
+    .toolbar {
+      position: fixed; top: 16px; right: 16px; z-index: 999;
+      background: #000; color: #fff; padding: 12px 16px;
+      font-size: 14px; border: 3px solid #fff;
+      box-shadow: 4px 4px 0 #fff;
+    }
+    .toolbar a { color: #00E5FF; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    6 slides · 1080×1080 · screenshot each · paste in FB carousel
+  </div>
+
+  <!-- SLIDE 1 — HOOK -->
+  <div class="slide s1">
+    <div class="slide-num">01 / 06</div>
+    <div class="hero">
+      1%<br>
+      DE <span class="accent">COMISIÓN</span><br>
+      SIN<br>
+      CHARGEBACKS<br>
+      PAGOS<br>
+      EN <span class="accent">CRIPTO</span>
+    </div>
+    <div class="sub">
+      Una pasarela de pagos en stablecoins<br>
+      para tu negocio.
+    </div>
+    <div class="brand">Stable<span class="dot">·</span>Pay</div>
+    <div class="url">wetakestables.shop</div>
+  </div>
+
+  <!-- SLIDE 2 — PROBLEM (Guatemala-specific) -->
+  <div class="slide s2">
+    <div class="slide-num">02 / 06</div>
+    <div class="heading">
+      Lo que cobra<br>
+      el POS en Guate:
+    </div>
+    <div class="row">
+      <div class="label">NeoNet</div>
+      <div class="cost">4.5%</div>
+      <div class="desc">+ Q20,000 mín/mes</div>
+    </div>
+    <div class="row">
+      <div class="label">Credomatic</div>
+      <div class="cost">4.5%</div>
+      <div class="desc">+ Q20,000 mín/mes</div>
+    </div>
+    <div class="row">
+      <div class="label">Sin historial</div>
+      <div class="cost">6%</div>
+      <div class="desc">tasa de "novato"</div>
+    </div>
+    <div class="row" style="border-bottom: 8px solid #00E5FF; padding-bottom: 28px;">
+      <div class="label" style="color: #00E5FF; -webkit-text-stroke: 1.5px #000;">StablePay</div>
+      <div class="cost" style="color: #16a34a; text-decoration: none;">1%</div>
+      <div class="desc">sin mínimos</div>
+    </div>
+    <div class="arrow">
+      Hay otra forma <span class="accent">→</span>
+    </div>
+    <div class="brand">Stable<span class="dot">·</span>Pay</div>
+    <div class="url">wetakestables.shop</div>
+  </div>
+
+  <!-- SLIDE 3 — SOLUTION -->
+  <div class="slide s3">
+    <div class="slide-num">03 / 06</div>
+    <div class="flow">
+      <div class="node">
+        <div class="icon">👤</div>
+        <div class="name">Cliente</div>
+      </div>
+      <div class="arrow-icon">→</div>
+      <div class="node">
+        <div class="icon">⛓</div>
+        <div class="name">Blockchain</div>
+      </div>
+      <div class="arrow-icon">→</div>
+      <div class="node">
+        <div class="icon">💰</div>
+        <div class="name">Tu wallet</div>
+      </div>
+    </div>
+    <div class="heading">
+      Tu cliente paga en<br>
+      <span class="accent">USDC, USDT o EURC.</span><br>
+      Tú recibes al instante.<br>
+      Sin intermediarios.
+    </div>
+    <div class="brand">Stable<span class="dot">·</span>Pay</div>
+    <div class="url">wetakestables.shop</div>
+  </div>
+
+  <!-- SLIDE 4 — NETWORKS -->
+  <div class="slide s4">
+    <div class="slide-num" style="color:#475569">04 / 06</div>
+    <div class="heading">
+      7 redes.<br>
+      3 stablecoins.<br>
+      <span class="accent">Una integración.</span>
+    </div>
+    <div class="grid">
+      <div class="chain">
+        <img src="https://www.svgrepo.com/show/470684/solana.svg" alt="Solana">
+        <div class="name">Solana</div>
+      </div>
+      <div class="chain">
+        <img src="https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg" alt="Ethereum">
+        <div class="name">Ethereum</div>
+      </div>
+      <div class="chain">
+        <img src="https://avatars.githubusercontent.com/u/108554348?s=80&v=4" alt="Base">
+        <div class="name">Base</div>
+      </div>
+      <div class="chain">
+        <img src="https://www.svgrepo.com/show/366901/bnb.svg" alt="BNB">
+        <div class="name">BNB</div>
+      </div>
+      <div class="chain">
+        <img src="https://www.svgrepo.com/show/428648/tron-crypto-cryptocurrency.svg" alt="TRON">
+        <div class="name">TRON</div>
+      </div>
+      <div class="chain">
+        <img src="https://cdn.iconscout.com/icon/premium/png-256-thumb/polygon-matic-icon-svg-download-png-5795452.png?f=webp&w=128" alt="Polygon">
+        <div class="name">Polygon</div>
+      </div>
+      <div class="chain">
+        <img src="https://arbitrum.io/_next/image?url=%2Fbrandkit%2F1225_Arbitrum_Logomark_OneColorNavy_ClearSpace.png&w=640&q=75" alt="Arbitrum">
+        <div class="name">Arbitrum</div>
+      </div>
+      <div class="chain" style="border-color:#fff;background:#000;color:#fff">
+        <div style="font-size:42px;font-weight:700;color:#00E5FF;margin-bottom:10px">+</div>
+        <div class="name" style="color:#fff">Más</div>
+      </div>
+    </div>
+    <div class="tokens">USDC · USDT · EURC</div>
+    <div class="brand">Stable<span class="dot">·</span>Pay</div>
+    <div class="url">wetakestables.shop</div>
+  </div>
+
+  <!-- SLIDE 5 — SETUP -->
+  <div class="slide s5">
+    <div class="slide-num">05 / 06</div>
+    <div class="heading">
+      Listo en<br>
+      <span class="accent">5 minutos.</span>
+    </div>
+    <div class="subhead">
+      Sin tarjeta de crédito. Empieza gratis.
+    </div>
+    <div class="step">
+      <div class="num">1</div>
+      <div class="text">Crea tu cuenta con tu correo.</div>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <div class="text">Pega la dirección de tu billetera (o usa una administrada).</div>
+    </div>
+    <div class="step">
+      <div class="num">3</div>
+      <div class="text">Copia el widget en tu sitio. Ya recibes pagos.</div>
+    </div>
+    <div class="brand">Stable<span class="dot">·</span>Pay</div>
+    <div class="url">wetakestables.shop</div>
+  </div>
+
+  <!-- SLIDE 6 — CTA -->
+  <div class="slide s6">
+    <div class="slide-num" style="color:#000;opacity:0.4">06 / 06</div>
+    <div class="top">Empieza hoy</div>
+    <div class="url-big">wetakestables.shop</div>
+    <div class="cta">Empieza Gratis →</div>
+    <div class="footer-note">
+      Sin tarjeta de crédito · Configuración en 5 minutos
+    </div>
+    <div class="brand">Stable<span class="dot">·</span>Pay</div>
+  </div>
+</body>
+</html>
