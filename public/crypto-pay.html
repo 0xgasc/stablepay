@@ -2958,6 +2958,12 @@
         };
 
         function switchPayMethod(method) {
+            // Once the customer has committed to the manual flow (entered wallet, clicked Next),
+            // the Connect Wallet tab is locked so they can't accidentally jump tabs and lose
+            // their progress. They have to hit Back from step 2 to unlock.
+            if (method === 'wallet' && document.getElementById('methodTabWallet')?.dataset.cpLocked) {
+                return;
+            }
             document.getElementById('payMethodWallet').style.display = method === 'wallet' ? 'block' : 'none';
             document.getElementById('payMethodManual').style.display = method === 'manual' ? 'block' : 'none';
 
@@ -2976,6 +2982,27 @@
                 manualTab.classList.add('mc-accent-bg');
                 walletTab.style.color = '#999';
                 populateManualPayment();
+            }
+        }
+
+        // Lock the Connect Wallet tab once the customer is committed to the manual flow.
+        // Visually fades it but keeps the flex layout, sets cursor + tooltip, and switchPayMethod
+        // refuses to switch into it while locked. Cleared by cpManualBack.
+        function cpLockMethodTab(locked) {
+            const walletTab = document.getElementById('methodTabWallet');
+            if (!walletTab) return;
+            if (locked) {
+                walletTab.dataset.cpLocked = '1';
+                walletTab.style.opacity = '0.4';
+                walletTab.style.cursor = 'not-allowed';
+                walletTab.title = 'Press Back to switch payment methods';
+                walletTab.setAttribute('aria-disabled', 'true');
+            } else {
+                delete walletTab.dataset.cpLocked;
+                walletTab.style.opacity = '';
+                walletTab.style.cursor = '';
+                walletTab.removeAttribute('title');
+                walletTab.removeAttribute('aria-disabled');
             }
         }
 
@@ -3132,9 +3159,11 @@
             cpRenderQR(false);
 
             if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText || 'Next'; }
-            // Lock chain/token selectors — once they entered a wallet, switching chain
-            // would invalidate the address. Customer must hit Back to change.
+            // Lock chain/token selectors AND the Connect Wallet tab — once they entered a wallet,
+            // switching chain would invalidate the address, and switching tabs loses progress.
+            // Customer must hit Back to change either.
             cpLockChainSelectors(true);
+            cpLockMethodTab(true);
             cpSetStep(2);
             cpStartCountdown();
         }
@@ -3265,6 +3294,8 @@
             // Unlock chain/token selectors so customer can change them
             // (only if no wallet is connected — that has its own lock)
             if (!connectedAddress) cpLockChainSelectors(false);
+            // Unlock the Connect Wallet tab — they're free to switch payment methods now.
+            cpLockMethodTab(false);
             // Don't clear currentOrderId — order persists, we just reset UI
             cpSetStep(1);
         }
