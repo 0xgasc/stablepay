@@ -3183,19 +3183,30 @@
             window._cpCountdownTimer = setInterval(tick, 1000);
         }
 
-        // Paste from clipboard into the wallet input. Uses the modern Clipboard API
-        // (works on Chrome/Safari/Firefox post-2023; on iOS Safari may prompt for permission).
+        // Cache from the focus-time probe so the Paste button doesn't trigger iOS's
+        // clipboard consent dialog a second time. Cleared after paste or on disconnect.
+        let _cpClipboardCache = null;
+
+        // Paste from clipboard into the wallet input. Uses the cache from the focus probe
+        // when available (avoids iOS's "Paste?" prompt firing a second time); otherwise
+        // falls back to a fresh clipboard read.
         async function cpPasteSenderWallet() {
             const input = document.getElementById('cpSenderWallet');
             if (!input) return;
+            if (_cpClipboardCache) {
+                input.value = _cpClipboardCache;
+                input.focus();
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                document.getElementById('cpPasteBtn')?.classList.remove('cp-paste-magic');
+                _cpClipboardCache = null;
+                return;
+            }
             try {
                 const text = (await navigator.clipboard.readText()).trim();
                 if (!text) return;
                 input.value = text;
                 input.focus();
-                // Trigger change so any listeners (validation, character count) fire
                 input.dispatchEvent(new Event('input', { bubbles: true }));
-                // Once pasted, drop the magic glow
                 document.getElementById('cpPasteBtn')?.classList.remove('cp-paste-magic');
             } catch (err) {
                 // Permission denied or browser doesn't support — fall back to focus so user can manually paste
@@ -3206,17 +3217,19 @@
 
         // Silent clipboard probe — when the user focuses the wallet input we peek at the
         // clipboard and, if it looks like a wallet address (alnum string, 20+ chars), light
-        // up the Paste button so the customer notices it without us doing anything intrusive.
-        // Failures (permission denied, clipboard empty, no API) are silent — button just stays
-        // in its default state and the customer can still tap it manually.
+        // up the Paste button AND cache the value so the explicit Paste tap doesn't trigger
+        // a second iOS consent dialog. Failures (permission denied, clipboard empty, no API)
+        // are silent — button stays in its default state and the customer can still tap it.
         async function cpDetectClipboardAddress() {
             const btn = document.getElementById('cpPasteBtn');
             if (!btn || !navigator.clipboard?.readText) return;
             try {
                 const text = (await navigator.clipboard.readText()).trim();
                 if (text && /^[a-zA-Z0-9]{20,128}$/.test(text)) {
+                    _cpClipboardCache = text;
                     btn.classList.add('cp-paste-magic');
                 } else {
+                    _cpClipboardCache = null;
                     btn.classList.remove('cp-paste-magic');
                 }
             } catch { /* permission denied or browser blocked — silently fall back */ }
