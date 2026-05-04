@@ -11,6 +11,7 @@ const router = Router();
 const VALID_EVENTS: WebhookEventType[] = [
   'order.created',
   'order.confirmed',
+  'order.cancelled',
   'order.expired',
   'refund.requested',
   'refund.processed',
@@ -31,6 +32,7 @@ const updateConfigSchema = z.object({
   webhookEvents: z.array(z.enum([
     'order.created',
     'order.confirmed',
+    'order.cancelled',
     'order.expired',
     'refund.requested',
     'refund.processed',

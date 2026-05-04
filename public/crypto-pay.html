@@ -325,6 +325,21 @@
                 display: block;
             }
         }
+
+        /* "Magic" paste button — fires when clipboard appears to hold a wallet address.
+           Subtle, not noisy: cyan glow + breathing animation that decays after 3 cycles. */
+        .cp-paste-magic {
+            background: #4FC3F7 !important;
+            color: #ffffff !important;
+            border-color: #0288D1 !important;
+            box-shadow: 0 0 0 0 rgba(79, 195, 247, 0.6);
+            animation: cpPasteMagicPulse 1.4s ease-out 3;
+        }
+        @keyframes cpPasteMagicPulse {
+            0%   { box-shadow: 0 0 0 0   rgba(79, 195, 247, 0.55); }
+            70%  { box-shadow: 0 0 0 10px rgba(79, 195, 247, 0); }
+            100% { box-shadow: 0 0 0 0   rgba(79, 195, 247, 0); }
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -435,16 +450,18 @@
                     </div>
 
                     <div class="space-y-2">
-                        <div class="relative">
+                        <div class="flex gap-2 items-stretch">
                             <input id="cpSenderWallet" type="text" placeholder="0x... or chain-specific address"
-                                   class="w-full px-3 py-3 pr-12 border-2 border-black text-sm font-mono outline-none"
+                                   onfocus="cpDetectClipboardAddress()"
+                                   class="flex-1 min-w-0 px-3 py-3 border-2 border-black text-sm font-mono outline-none"
                                    autocomplete="off" spellcheck="false"
                                    onkeydown="if(event.key==='Enter'){event.preventDefault();cpManualStep1Next();}" />
-                            <button type="button" onclick="cpPasteSenderWallet()"
+                            <button id="cpPasteBtn" type="button" onclick="cpPasteSenderWallet()"
                                     title="Paste from clipboard"
-                                    aria-label="Paste from clipboard"
-                                    class="absolute top-1/2 right-1 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-black hover:bg-gray-100 active:bg-gray-200 border-l-2 border-black">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><rect x="8" y="2.5" width="8" height="4"/><path d="M16 4.5h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-14a2 2 0 0 1 2-2h2"/></svg>
+                                    class="shrink-0 px-3 py-3 text-xs font-bold border-2 border-black bg-white text-black hover:bg-gray-100 active:bg-gray-200 flex items-center gap-1.5 whitespace-nowrap transition-colors"
+                                    style="text-transform: uppercase;">
+                                <svg id="cpPasteSparkle" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.5l1.6 5.9 5.9 1.6-5.9 1.6L12 16.5l-1.6-5.9L4.5 9l5.9-1.6z"/><path d="M19 14l.7 2.3 2.3.7-2.3.7L19 20l-.7-2.3-2.3-.7 2.3-.7z" opacity=".7"/></svg>
+                                <span>Paste</span>
                             </button>
                         </div>
                         <button onclick="cpManualStep1Next()"
@@ -3161,11 +3178,31 @@
                 input.focus();
                 // Trigger change so any listeners (validation, character count) fire
                 input.dispatchEvent(new Event('input', { bubbles: true }));
+                // Once pasted, drop the magic glow
+                document.getElementById('cpPasteBtn')?.classList.remove('cp-paste-magic');
             } catch (err) {
                 // Permission denied or browser doesn't support — fall back to focus so user can manually paste
                 input.focus();
                 console.warn('Clipboard read failed:', err?.message || err);
             }
+        }
+
+        // Silent clipboard probe — when the user focuses the wallet input we peek at the
+        // clipboard and, if it looks like a wallet address (alnum string, 20+ chars), light
+        // up the Paste button so the customer notices it without us doing anything intrusive.
+        // Failures (permission denied, clipboard empty, no API) are silent — button just stays
+        // in its default state and the customer can still tap it manually.
+        async function cpDetectClipboardAddress() {
+            const btn = document.getElementById('cpPasteBtn');
+            if (!btn || !navigator.clipboard?.readText) return;
+            try {
+                const text = (await navigator.clipboard.readText()).trim();
+                if (text && /^[a-zA-Z0-9]{20,128}$/.test(text)) {
+                    btn.classList.add('cp-paste-magic');
+                } else {
+                    btn.classList.remove('cp-paste-magic');
+                }
+            } catch { /* permission denied or browser blocked — silently fall back */ }
         }
 
         async function cpCancelOrder() {

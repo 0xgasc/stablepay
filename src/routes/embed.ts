@@ -621,9 +621,8 @@ router.post('/order/:orderId/chain', async (req, res) => {
  * Helps the scanner match by FROM address. Only allowed for PENDING orders.
  */
 /**
- * Customer-initiated cancel. Marks a PENDING order as CANCELLED and fires order.expired
- * webhook (so the merchant's backend treats it like an abandoned order — clears their
- * "waiting for payment" state without waiting the full 30-min expiry).
+ * Customer-initiated cancel. Marks a PENDING order as CANCELLED and fires the
+ * order.cancelled webhook (distinct from order.expired, which is the 30-min timeout).
  *
  * Public endpoint — no auth required. Customer-friendly. Only works on PENDING orders;
  * confirmed/refunded/already-cancelled orders are no-ops with a clear message.
@@ -646,7 +645,7 @@ router.post('/order/:orderId/cancel', async (req, res) => {
     await db.$executeRaw`UPDATE orders SET status = 'CANCELLED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId}`;
 
     if (order.merchantId) {
-      webhookService.sendWebhook(order.merchantId, 'order.expired', {
+      webhookService.sendWebhook(order.merchantId, 'order.cancelled', {
         orderId: order.id,
         externalId: order.externalId || null,
         amount: Number(order.amount),

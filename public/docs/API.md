@@ -394,7 +394,8 @@ def verify(raw_body, signature, timestamp, secret):
 |---|---|
 | `order.created` | Order created, awaiting payment |
 | `order.confirmed` | Payment confirmed on-chain after required confirmations |
-| `order.expired` | Order timed out with no valid payment |
+| `order.cancelled` | Customer cancelled checkout (clicked Cancel on the payment page) |
+| `order.expired` | Order timed out with no valid payment (30-min auto-expiry) |
 | `refund.requested` | Refund was requested |
 | `refund.processed` | Refund completed, funds sent to customer |
 | `invoice.created`, `invoice.sent`, `invoice.viewed`, `invoice.paid`, `invoice.overdue`, `invoice.cancelled` | Invoice lifecycle |

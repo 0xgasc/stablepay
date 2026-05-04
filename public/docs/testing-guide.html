@@ -523,7 +523,8 @@ function testPay() {
     <tr><th>Event</th><th>Triggered By</th><th>Status</th></tr>
     <tr><td><code>order.created</code></td><td>New order created</td><td class="badge badge-pass">Active</td></tr>
     <tr><td><code>order.confirmed</code></td><td>Order confirmed with tx</td><td class="badge badge-pass">Active</td></tr>
-    <tr><td><code>order.expired</code></td><td>Order past expiry time</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>order.cancelled</code></td><td>Customer cancelled on checkout</td><td class="badge badge-pass">Active</td></tr>
+    <tr><td><code>order.expired</code></td><td>Order past expiry time (30-min auto)</td><td class="badge badge-pass">Active</td></tr>
     <tr><td><code>refund.requested</code></td><td>Refund created</td><td class="badge badge-pass">Active</td></tr>
     <tr><td><code>refund.processed</code></td><td>Refund completed with tx</td><td class="badge badge-pass">Active</td></tr>
     <tr><td><code>invoice.created</code></td><td>Invoice created</td><td class="badge badge-pass">Active</td></tr>

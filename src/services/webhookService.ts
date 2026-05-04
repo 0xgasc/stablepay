@@ -5,6 +5,7 @@ import { logger } from '../utils/logger';
 export type WebhookEventType =
   | 'order.created'
   | 'order.confirmed'
+  | 'order.cancelled'
   | 'order.expired'
   | 'refund.requested'
   | 'refund.processed'
