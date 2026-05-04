@@ -101,6 +101,11 @@ export async function getTokenBalance(chain: string, owner: string, token: strin
   let result;
   if (chain === 'SOLANA_MAINNET' || chain === 'SOLANA_DEVNET') {
     result = await fetchSolanaTokenBalance(owner, token);
+  } else if (chain === 'TRON_MAINNET') {
+    // TRON uses TronGrid (not EVM JSON-RPC) and we don't expose a connect-wallet flow for it
+    // anyway — payments come in via manual send. Throwing here means /balance returns 503 →
+    // frontend treats it as "couldn't verify" → never falsely blocks the customer.
+    throw new Error('TRON balance check unsupported (manual send only)');
   } else if (Object.prototype.hasOwnProperty.call(CHAIN_CONFIGS, chain)) {
     result = await fetchEvmTokenBalance(chain as Chain, owner, token);
   } else {
