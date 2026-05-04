@@ -1335,6 +1335,8 @@
                     // Try a couple public Solana RPCs in sequence — api.mainnet-beta is
                     // aggressive about rate-limiting browsers and returns {error} instead
                     // of {result}, which would silently look like "0 USDC" and block payment.
+                    // Each attempt has a hard 4s timeout so a hung connection can't keep the
+                    // button stuck on "Checking balance..." indefinitely.
                     const rpcs = [
                         chainConfig.rpcUrls[0],
                         'https://solana-rpc.publicnode.com',
@@ -1342,9 +1344,12 @@
                     ];
                     let resolved = null;
                     for (const rpc of rpcs) {
+                        const ac = new AbortController();
+                        const t = setTimeout(() => ac.abort(), 3000);
                         try {
                             const res = await fetch(rpc, {
                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                signal: ac.signal,
                                 body: JSON.stringify({
                                     jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner',
                                     params: [connectedAddress, { mint: tokenConfig.address }, { encoding: 'jsonParsed' }],
@@ -1356,7 +1361,8 @@
                             if (data?.error || !data?.result) continue;
                             resolved = data.result.value || [];
                             break;
-                        } catch { /* try next */ }
+                        } catch { /* abort or network — try next */ }
+                        finally { clearTimeout(t); }
                     }
                     if (resolved === null) {
                         // Every RPC failed — don't block payment, just warn and let them try.
