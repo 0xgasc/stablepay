@@ -8,6 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#FFFFFF">
     <title data-i18n="title">Crypto Payment - StablePay</title>
+    <script src="/js/lang.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
     <!-- Solana Web3.js for Solana chain support -->
@@ -3681,6 +3682,7 @@
         document.getElementById('languageSelector').addEventListener('change', (e) => {
             currentLang = e.target.value;
             localStorage.setItem('language', currentLang);
+            if (window.SP_LANG) window.SP_LANG.setLang(currentLang);
             loadTranslations(currentLang);
         });
 

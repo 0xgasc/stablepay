@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Merchant Dashboard - StablePay</title>
+    <script src="/js/lang.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/chain-config.js"></script>
     <style>
@@ -6645,6 +6646,7 @@ onMounted(() => {
                 translations = await response.json();
                 currentLang = lang;
                 localStorage.setItem('language', lang);
+                if (window.SP_LANG) window.SP_LANG.setLang(lang);
                 document.getElementById('langSelector').value = lang;
                 updatePageText();
             } catch (error) {

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StablePay - Accept Stablecoin Payments | USDC, USDT, EURC</title>
+    <script src="/js/lang.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
@@ -691,6 +692,7 @@
                 translations = await response.json();
                 currentLang = lang;
                 localStorage.setItem('language', lang);
+                if (window.SP_LANG) window.SP_LANG.setLang(lang);
                 document.getElementById('langSelector').value = lang;
                 updatePageText();
             } catch (error) {

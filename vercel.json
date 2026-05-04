@@ -16,6 +16,34 @@
   ],
   "rewrites": [
     {
+      "source": "/:lang(en|es|fr|pt)/api/:rest*",
+      "destination": "/api/:rest*"
+    },
+    {
+      "source": "/:lang(en|es|fr|pt)/health/:rest*",
+      "destination": "/api"
+    },
+    {
+      "source": "/:lang(en|es|fr|pt)/pay/:rest*",
+      "destination": "/api"
+    },
+    {
+      "source": "/:lang(en|es|fr|pt)/receipt/:rest*",
+      "destination": "/api"
+    },
+    {
+      "source": "/:lang(en|es|fr|pt)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/:lang(en|es|fr|pt)/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/:lang(en|es|fr|pt)/:slug",
+      "destination": "/:slug.html"
+    },
+    {
       "source": "/dashboard",
       "destination": "/dashboard.html"
     },
