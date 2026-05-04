@@ -692,8 +692,8 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         success: true,
         wallets: results,
         tokens: supportedTokens,
-        message: `Wallets created:\n${walletSummary}\n\nPayments go directly to these addresses. WeTakeStables holds the private keys for you — like a bank holding your account. To take full control, set up MetaMask (for EVM) or Phantom (for Solana) and give us your own address.`,
-        custody: 'WeTakeStables (us) holds the keys. You can withdraw anytime or switch to your own wallet.',
+        message: `Wallets created:\n${walletSummary}\n\nPayments go directly to these addresses. StablePay holds the private keys for you — like a bank holding your account. To take full control, set up MetaMask (for EVM) or Phantom (for Solana) and give us your own address.`,
+        custody: 'StablePay (us) holds the keys. You can withdraw anytime or switch to your own wallet.',
       });
     }
 
@@ -1834,7 +1834,7 @@ After wallets + domain → generate code → call complete_setup → done.
 
 - Save memory: crypto_level and has_managed_wallet
 - In future conversations, gently remind once if they still have a managed wallet.
-- When mentioning managed wallets, ALWAYS be clear: "WeTakeStables holds the keys for your managed wallet. You can withdraw anytime, but for full control, set up your own wallet."
+- When mentioning managed wallets, ALWAYS be clear: "StablePay holds the keys for your managed wallet. You can withdraw anytime, but for full control, set up your own wallet."
 - NEVER say "you already have wallets" without clarifying who holds the keys.
 - When a merchant wants to collect/consolidate funds, use consolidate_earnings. This sweeps all managed wallet balances to one destination.
 - When a merchant wants to move USDC between chains, use bridge_usdc. This uses Circle CCTP (native burn/mint, ~10-20 min, no slippage).
