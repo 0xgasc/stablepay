@@ -6,6 +6,7 @@ import { requireMerchantAuth } from '../middleware/auth';
 import { idempotency } from '../middleware/idempotency';
 import { logger } from '../utils/logger';
 import { webhookService } from '../services/webhookService';
+import { getTokenBalance } from '../services/balanceService';
 
 const router = Router();
 
@@ -76,6 +77,35 @@ router.get('/store/:storeId', async (req, res) => {
  * Get available chains for a merchant
  * Used by widget to show chain selector
  */
+/**
+ * Server-side balance lookup. The browser used to query Solana / EVM RPCs directly,
+ * which was unreliable from public networks (rate-limits, CORS, etc.) and would silently
+ * return 0 — causing the checkout to falsely block as "Insufficient". We proxy through
+ * here so balance checks use our resilient RPC layer + cache.
+ *
+ * Public — no auth (matches the rest of /api/embed/*). Owner addresses are derived from
+ * the user's wallet, tokens are public contracts. No write paths.
+ */
+router.get('/balance', async (req, res) => {
+  try {
+    const chain = String(req.query.chain || '').trim();
+    const owner = String(req.query.owner || '').trim();
+    const token = String(req.query.token || '').trim();
+    if (!chain || !owner || !token) {
+      return res.status(400).json({ error: 'chain, owner, and token are required' });
+    }
+    if (owner.length > 128 || token.length > 128) {
+      return res.status(400).json({ error: 'owner/token too long' });
+    }
+    const result = await getTokenBalance(chain, owner, token);
+    res.json(result);
+  } catch (err) {
+    // Never block payment on balance failures — the customer should still be allowed to try.
+    logger.warn('Balance lookup failed', { error: (err as Error).message, chain: req.query.chain });
+    res.status(503).json({ error: 'Balance check unavailable', balance: null });
+  }
+});
+
 router.get('/chains', async (req, res) => {
   try {
     const { merchantId, storeId } = req.query;

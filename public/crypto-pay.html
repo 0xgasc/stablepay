@@ -1303,7 +1303,12 @@
             cpCheckBalance();
         }
 
-        // Check connected wallet's balance for selected chain+token, update Pay button label
+        // Check connected wallet's balance for selected chain+token, update Pay button label.
+        // Uses our /api/embed/balance proxy so balance checks go through resilient server-side
+        // RPCs + 15s cache instead of hammering public RPCs from the browser (which would
+        // silently return 0 due to rate-limits and falsely block "Insufficient").
+        // The function is also rate-limited locally: the same (chain,token,wallet) combo isn't
+        // re-fetched if the last check was within 8s — covers the chain/token toggle storm.
         async function cpCheckBalance() {
             const payBtn = document.getElementById('payBtn');
             if (!payBtn || !connectedAddress || !selectedChainKey || !selectedToken) return;
@@ -1312,8 +1317,8 @@
             const tokenConfig = chainConfig?.tokens?.[selectedToken];
             if (!chainConfig || !tokenConfig) return;
 
-            // Required amount: EURC uses converted EUR amount, others use USD price
-            // Fall back to URL param if currentProduct is incomplete (chain-agnostic flow)
+            // Required amount: EURC uses converted EUR amount, others use USD price.
+            // Fall back to URL param if currentProduct is incomplete (chain-agnostic flow).
             const _params = new URLSearchParams(window.location.search);
             const baseAmt = parseFloat(currentProduct?.price || _params.get('amount') || 0);
             const requiredAmt = (selectedToken === 'EURC' && displayAmount)
@@ -1321,60 +1326,36 @@
                 : baseAmt;
             if (!requiredAmt || requiredAmt <= 0) return; // can't check, let it through
 
+            const fetchKey = `${selectedChainKey}:${selectedToken}:${connectedAddress}`;
+            const now = Date.now();
+            // Skip the network call if we just fetched this exact key (8s window) and the cached
+            // value is sufficient — avoids re-rendering "Checking balance..." on every dropdown click.
+            if (window._cpLastBalanceKey === fetchKey && window._cpLastBalanceAt && now - window._cpLastBalanceAt < 8000) {
+                return;
+            }
+
             payBtn.textContent = 'Checking balance...';
             payBtn.disabled = true;
 
             try {
-                let balance = 0;
-                if (chainConfig.type === 'evm') {
-                    const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrls[0]);
-                    const erc20 = new ethers.Contract(tokenConfig.address, ['function balanceOf(address) view returns (uint256)'], provider);
-                    const raw = await erc20.balanceOf(connectedAddress);
-                    balance = parseFloat(ethers.formatUnits(raw, tokenConfig.decimals || 6));
-                } else if (chainConfig.type === 'solana' && solanaConnection) {
-                    // Try a couple public Solana RPCs in sequence — api.mainnet-beta is
-                    // aggressive about rate-limiting browsers and returns {error} instead
-                    // of {result}, which would silently look like "0 USDC" and block payment.
-                    // Each attempt has a hard 4s timeout so a hung connection can't keep the
-                    // button stuck on "Checking balance..." indefinitely.
-                    const rpcs = [
-                        chainConfig.rpcUrls[0],
-                        'https://solana-rpc.publicnode.com',
-                        'https://rpc.ankr.com/solana',
-                    ];
-                    let resolved = null;
-                    for (const rpc of rpcs) {
-                        const ac = new AbortController();
-                        const t = setTimeout(() => ac.abort(), 3000);
-                        try {
-                            const res = await fetch(rpc, {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                signal: ac.signal,
-                                body: JSON.stringify({
-                                    jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner',
-                                    params: [connectedAddress, { mint: tokenConfig.address }, { encoding: 'jsonParsed' }],
-                                }),
-                            });
-                            if (!res.ok) continue;
-                            const data = await res.json();
-                            // RPC error (rate-limit, internal): try the next provider
-                            if (data?.error || !data?.result) continue;
-                            resolved = data.result.value || [];
-                            break;
-                        } catch { /* abort or network — try next */ }
-                        finally { clearTimeout(t); }
+                const url = `/api/embed/balance?chain=${encodeURIComponent(selectedChainKey)}&owner=${encodeURIComponent(connectedAddress)}&token=${encodeURIComponent(tokenConfig.address)}`;
+                const ac = new AbortController();
+                const t = setTimeout(() => ac.abort(), 9000);
+                let balance = NaN;
+                try {
+                    const res = await fetch(url, { signal: ac.signal });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (typeof data?.balance === 'number') balance = data.balance;
                     }
-                    if (resolved === null) {
-                        // Every RPC failed — don't block payment, just warn and let them try.
-                        console.warn('Solana balance unverified (all RPCs failed); not blocking payment');
-                        balance = NaN;
-                    } else {
-                        balance = resolved.reduce((sum, a) => sum + parseFloat(a.account?.data?.parsed?.info?.tokenAmount?.uiAmountString || '0'), 0);
-                    }
-                }
+                } catch { /* timeout or network — fall through to NaN */ }
+                finally { clearTimeout(t); }
 
                 window._cpBalance = balance;
-                // Treat NaN as "couldn't check" — let the user try rather than blocking on a false 0.
+                window._cpLastBalanceKey = fetchKey;
+                window._cpLastBalanceAt = Date.now();
+
+                // NaN = "couldn't check" — let the user try rather than blocking on a false 0.
                 const sufficient = Number.isNaN(balance) || balance >= requiredAmt;
                 if (!sufficient) {
                     payBtn.textContent = `Insufficient ${selectedToken} (${balance.toFixed(2)} available)`;
@@ -1394,7 +1375,7 @@
                 }
             } catch (err) {
                 console.warn('Balance check failed:', err);
-                // Don't block payment if balance check fails — let them try
+                // Don't block payment if balance check fails — let them try.
                 payBtn.textContent = window._mcCustomButtonText || `PAY WITH ${selectedToken}`;
                 payBtn.disabled = false;
             }
@@ -2134,6 +2115,8 @@
             selectedWalletProvider = null;
             solanaConnection = null;
             solanaWallet = null;
+            window._cpLastBalanceKey = null;
+            window._cpLastBalanceAt = 0;
 
             // Update UI
             document.getElementById('connectWalletBtn').classList.remove('hidden');
