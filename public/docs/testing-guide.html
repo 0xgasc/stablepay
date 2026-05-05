@@ -412,7 +412,7 @@ curl -s -X POST $API/api/v1/admin/refunds/ANOTHER_REFUND_ID/reject \
 
 <h3>8.7 View Pricing Tiers</h3>
 <pre>curl -s $API/api/fees/pricing | python3 -m json.tool</pre>
-<div class="expect">Lists all plans (FREE 0.5%, STARTER 1%, GROWTH 0.8%, PRO 0.5%, ENTERPRISE 0.3%)</div>
+<div class="expect">Lists volume tiers (Tier 1: 2.0%, Tier 2: 1.5%, Tier 3: 1.2%, Tier 4: 1.0%)</div>
 
 <!-- ====================== SECTION 9: INVOICES & RECEIPTS ====================== -->
 <h2 id="invoices"><span class="section-num">9.</span> Invoices &amp; Receipts <span class="badge badge-medium">Fix 8</span></h2>

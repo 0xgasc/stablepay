@@ -663,7 +663,7 @@
                     <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden mb-2">
                         <div id="volumeUsageBar" class="bg-gradient-to-r from-cyan-400 to-blue-500 h-full transition-all duration-500 rounded-full" style="width: 0%"></div>
                     </div>
-                    <p class="text-xs text-slate-500" id="nextTierText">Process $10,000 to unlock 0.8% fee rate</p>
+                    <p class="text-xs text-slate-500" id="nextTierText">Process $10,000 to unlock 1.5% fee rate</p>
                 </div>
 
                 <!-- Fee tiers (collapsible) -->
@@ -675,22 +675,22 @@
                 <div id="tierGrid" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-1 mb-5">
                     <div id="tierStarter" class="text-center p-2 bg-slate-800 border-2 border-cyan-400">
                         <p class="text-xs text-slate-400">Starter</p>
-                        <p class="text-sm font-bold text-white">1.0%</p>
+                        <p class="text-sm font-bold text-white">2.0%</p>
                         <p class="text-[10px] text-slate-500">&lt; $10k</p>
                     </div>
                     <div id="tierGrowth" class="text-center p-2 bg-slate-800/50 border border-slate-700">
                         <p class="text-xs text-slate-400">Growth</p>
-                        <p class="text-sm font-bold text-slate-400">0.8%</p>
+                        <p class="text-sm font-bold text-slate-400">1.5%</p>
                         <p class="text-[10px] text-slate-500">$10k-50k</p>
                     </div>
                     <div id="tierPro" class="text-center p-2 bg-slate-800/50 border border-slate-700">
                         <p class="text-xs text-slate-400">Pro</p>
-                        <p class="text-sm font-bold text-slate-400">0.5%</p>
+                        <p class="text-sm font-bold text-slate-400">1.2%</p>
                         <p class="text-[10px] text-slate-500">$50k-250k</p>
                     </div>
                     <div id="tierEnterprise" class="text-center p-2 bg-slate-800/50 border border-slate-700">
                         <p class="text-xs text-slate-400">Enterprise</p>
-                        <p class="text-sm font-bold text-slate-400">0.3%</p>
+                        <p class="text-sm font-bold text-slate-400">1.0%</p>
                         <p class="text-[10px] text-slate-500">$250k+</p>
                     </div>
                 </div>
@@ -1690,17 +1690,17 @@ onMounted(() => {
                             <p class="text-slate-400 text-sm mb-4">Fees apply per bracket — like income tax. Only volume above each threshold gets the lower rate.</p>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div class="bg-black p-3 border border-slate-800 text-center">
-                                    <p class="text-blue-400 font-bold">2.5%</p>
+                                    <p class="text-blue-400 font-bold">2.0%</p>
                                     <p class="text-slate-500 text-xs">First $10k</p>
                                     <p class="text-slate-600 text-[10px]">$0 → $10,000</p>
                                 </div>
                                 <div class="bg-black p-3 border border-slate-800 text-center">
-                                    <p class="text-blue-400 font-bold">2.0%</p>
+                                    <p class="text-blue-400 font-bold">1.5%</p>
                                     <p class="text-slate-500 text-xs">Next $40k</p>
                                     <p class="text-slate-600 text-[10px]">$10,001 → $50,000</p>
                                 </div>
                                 <div class="bg-black p-3 border border-slate-800 text-center">
-                                    <p class="text-blue-400 font-bold">1.5%</p>
+                                    <p class="text-blue-400 font-bold">1.2%</p>
                                     <p class="text-slate-500 text-xs">Next $200k</p>
                                     <p class="text-slate-600 text-[10px]">$50,001 → $250,000</p>
                                 </div>

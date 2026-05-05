@@ -429,12 +429,12 @@
         },
         "noHiddenFees": {
           "title": "Sin tarifas ocultas",
-          "text": "Un precio simple: 0.5% por transacción. Sin tarifas de configuración, sin tarifas mensuales, sin cargos sorpresa. Lo que ve es lo que paga."
+          "text": "Precios simples: desde 2% por transacción (descuentos por volumen hasta 1.0%). Sin tarifas de configuración, sin tarifas mensuales, sin cargos sorpresa. Lo que ve es lo que paga."
         },
         "pricing": {
           "title": "Estructura de precios clara",
           "text": "Precios transparentes, siempre:",
-          "item1": "0.5% de tarifa de transacción",
+          "item1": "Desde 2% de tarifa de transacción (1.0% para volumen alto)",
           "item2": "Sin mínimos mensuales",
           "item3": "Sin tarifas de integración",
           "item4": "Descuentos por volumen disponibles"
@@ -472,7 +472,7 @@
     "benefits": {
       "title": "Lo que obtiene:",
       "item1": "En vivo en 5 minutos",
-      "item2": "0.5% por transacción",
+      "item2": "Desde 2% por transacción",
       "item3": "Soporte multi-cadena",
       "item4": "Reembolsos integrados",
       "item5": "Webhooks en tiempo real",

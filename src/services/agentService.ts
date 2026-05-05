@@ -1877,10 +1877,11 @@ If they want to customize (specific chains, custom code for React/Shopify, etc.)
 - Solana: USDC, USDT
 
 ## Pricing (volume-based, no subscriptions, no setup fees)
-- Under $10k/month: 1.0% fee, invoiced weekly
-- $10k-$50k/month: 0.8% fee, invoiced bi-weekly
-- $50k-$250k/month: 0.5% fee, invoiced monthly
-- $250k+/month: 0.3% fee, invoiced monthly
+- Under $10k/month: 2.0% fee, invoiced weekly
+- $10k-$50k/month: 1.5% fee, invoiced bi-weekly
+- $50k-$250k/month: 1.2% fee, invoiced monthly
+- $250k+/month: 1.0% fee, invoiced monthly
+- "Day 1" early-adopter merchants (existing onboarded customers): flat 1% across all volume — internal program, not advertised publicly. Set via Merchant.isDayOne flag.
 - 100% of every payment goes to merchant's wallet immediately. We never touch their money.
 - Fees accumulate separately and are invoiced per billing cycle (shorter cycles at lower tiers).
 - No monthly fees, no setup costs, no hidden charges. Customers pay their own gas fees (cents).

@@ -429,12 +429,12 @@
         },
         "noHiddenFees": {
           "title": "No hidden fees",
-          "text": "One simple price: 0.5% per transaction. No setup fees, no monthly fees, no surprise charges. What you see is what you pay."
+          "text": "Simple pricing: from 2% per transaction (volume discounts to 1.0%). No setup fees, no monthly fees, no surprise charges. What you see is what you pay."
         },
         "pricing": {
           "title": "Clear pricing structure",
           "text": "Transparent pricing, always:",
-          "item1": "0.5% transaction fee",
+          "item1": "From 2% transaction fee (1.0% for high volume)",
           "item2": "No monthly minimums",
           "item3": "No integration fees",
           "item4": "Volume discounts available"
@@ -472,7 +472,7 @@
     "benefits": {
       "title": "What you get:",
       "item1": "Live in 5 minutes",
-      "item2": "0.5% per transaction",
+      "item2": "From 2% per transaction",
       "item3": "Multi-chain support",
       "item4": "Built-in refunds",
       "item5": "Real-time webhooks",
