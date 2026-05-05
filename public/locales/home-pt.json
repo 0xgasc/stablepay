@@ -70,34 +70,25 @@
     }
   },
   "pricing": {
-    "title": "Preços Transparentes",
-    "subtitle": "Escolha o plano que atende suas necessidades",
-    "perMonth": "/mês",
+    "heroPrefix": "A partir de",
+    "tagline": "Sem assinaturas. Sem custos ocultos.",
+    "subtagline": "Descontos por volume até 1,0%.",
     "popular": "Popular",
-    "getStarted": "Começar",
-    "contactSales": "Contatar Vendas",
-    "starter": {
-      "name": "Inicial",
-      "feature1": "$1,000 volume mensal",
-      "feature2": "Pagamentos diretos para carteira",
-      "feature3": "Links de pagamento",
-      "feature4": "Suporte por e-mail"
+    "startFree": "Começar Grátis",
+    "seeFullDetails": "Ver Detalhes",
+    "compare": {
+      "heading": "Mais barato que processadores tradicionais",
+      "posLabel": "POS bancário"
     },
-    "growth": {
-      "name": "Crescimento",
-      "feature1": "$10,000 volume mensal",
-      "feature2": "Opção de custódia",
-      "feature3": "Marca personalizada",
-      "feature4": "Acesso API",
-      "feature5": "Suporte prioritário"
-    },
-    "enterprise": {
-      "name": "Empresa",
-      "feature1": "Volume ilimitado",
-      "feature2": "Solução de marca branca",
-      "feature3": "Gerenciamento de múltiplas carteiras",
-      "feature4": "Webhooks e integrações",
-      "feature5": "Suporte dedicado"
+    "tier1": { "name": "Starter", "range": "Até US$ 10k / mês", "billing": "Faturamento semanal" },
+    "tier2": { "name": "Growth", "range": "Até US$ 50k / mês", "billing": "Faturamento quinzenal" },
+    "tier3": { "name": "Pro", "range": "Até US$ 250k / mês", "billing": "Faturamento mensal" },
+    "tier4": { "name": "Enterprise", "range": "Volume ilimitado", "billing": "Mensal / Net-30" },
+    "billing": {
+      "heading": "Como Funciona a Cobrança",
+      "s1": { "title": "Você recebe 100%", "body": "Os pagamentos vão direto para sua carteira" },
+      "s2": { "title": "Tarifas acumulam", "body": "Acompanhamos suas tarifas de plataforma" },
+      "s3": { "title": "Paga ao ser faturado", "body": "Conforme o ciclo de cobrança do seu plano" }
     }
   },
   "footer": {

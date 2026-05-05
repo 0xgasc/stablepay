@@ -70,34 +70,25 @@
     }
   },
   "pricing": {
-    "title": "Precios Transparentes",
-    "subtitle": "Elige el plan que se adapte a tus necesidades",
-    "perMonth": "/mes",
+    "heroPrefix": "Desde",
+    "tagline": "Sin suscripciones. Sin costos ocultos.",
+    "subtagline": "Descuentos por volumen hasta 1.0%.",
     "popular": "Popular",
-    "getStarted": "Comenzar",
-    "contactSales": "Contactar Ventas",
-    "starter": {
-      "name": "Inicial",
-      "feature1": "$1,000 volumen mensual",
-      "feature2": "Pagos directos a billetera",
-      "feature3": "Enlaces de pago",
-      "feature4": "Soporte por correo electrónico"
+    "startFree": "Empezar Gratis",
+    "seeFullDetails": "Ver Detalles",
+    "compare": {
+      "heading": "Más barato que los procesadores tradicionales",
+      "posLabel": "POS bancario"
     },
-    "growth": {
-      "name": "Crecimiento",
-      "feature1": "$10,000 volumen mensual",
-      "feature2": "Opción de depósito en garantía",
-      "feature3": "Marca personalizada",
-      "feature4": "Acceso API",
-      "feature5": "Soporte prioritario"
-    },
-    "enterprise": {
-      "name": "Empresa",
-      "feature1": "Volumen ilimitado",
-      "feature2": "Solución de marca blanca",
-      "feature3": "Gestión de múltiples billeteras",
-      "feature4": "Webhooks e integraciones",
-      "feature5": "Soporte dedicado"
+    "tier1": { "name": "Starter", "range": "Hasta $10k / mes", "billing": "Facturación semanal" },
+    "tier2": { "name": "Growth", "range": "Hasta $50k / mes", "billing": "Facturación quincenal" },
+    "tier3": { "name": "Pro", "range": "Hasta $250k / mes", "billing": "Facturación mensual" },
+    "tier4": { "name": "Enterprise", "range": "Volumen ilimitado", "billing": "Mensual / Net-30" },
+    "billing": {
+      "heading": "Cómo Funciona la Facturación",
+      "s1": { "title": "Recibes el 100%", "body": "Los pagos van directo a tu billetera" },
+      "s2": { "title": "Tarifas se Acumulan", "body": "Llevamos cuenta de tus tarifas" },
+      "s3": { "title": "Pagas al Facturarte", "body": "Según el ciclo de facturación de tu plan" }
     }
   },
   "footer": {

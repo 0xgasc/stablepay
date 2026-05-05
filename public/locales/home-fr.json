@@ -70,34 +70,25 @@
     }
   },
   "pricing": {
-    "title": "Tarification Transparente",
-    "subtitle": "Choisissez le plan qui correspond à vos besoins",
-    "perMonth": "/mois",
+    "heroPrefix": "À partir de",
+    "tagline": "Pas d'abonnements. Pas de frais cachés.",
+    "subtagline": "Remises de volume jusqu'à 1,0 %.",
     "popular": "Populaire",
-    "getStarted": "Commencer",
-    "contactSales": "Contacter les Ventes",
-    "starter": {
-      "name": "Débutant",
-      "feature1": "$1,000 volume mensuel",
-      "feature2": "Paiements directs au portefeuille",
-      "feature3": "Liens de paiement",
-      "feature4": "Support par e-mail"
+    "startFree": "Commencer Gratuit",
+    "seeFullDetails": "Voir les détails",
+    "compare": {
+      "heading": "Moins cher que les processeurs traditionnels",
+      "posLabel": "TPE bancaire"
     },
-    "growth": {
-      "name": "Croissance",
-      "feature1": "$10,000 volume mensuel",
-      "feature2": "Option d'entiercement",
-      "feature3": "Personnalisation de marque",
-      "feature4": "Accès API",
-      "feature5": "Support prioritaire"
-    },
-    "enterprise": {
-      "name": "Entreprise",
-      "feature1": "Volume illimité",
-      "feature2": "Solution en marque blanche",
-      "feature3": "Gestion multi-portefeuilles",
-      "feature4": "Webhooks et intégrations",
-      "feature5": "Support dédié"
+    "tier1": { "name": "Starter", "range": "Jusqu'à 10 k$ / mois", "billing": "Facturation hebdomadaire" },
+    "tier2": { "name": "Growth", "range": "Jusqu'à 50 k$ / mois", "billing": "Facturation bimensuelle" },
+    "tier3": { "name": "Pro", "range": "Jusqu'à 250 k$ / mois", "billing": "Facturation mensuelle" },
+    "tier4": { "name": "Enterprise", "range": "Volume illimité", "billing": "Mensuel / Net-30" },
+    "billing": {
+      "heading": "Comment fonctionne la facturation",
+      "s1": { "title": "Vous recevez 100 %", "body": "Les paiements vont directement à votre portefeuille" },
+      "s2": { "title": "Les frais s'accumulent", "body": "Nous suivons vos frais de plateforme" },
+      "s3": { "title": "Payer à la facturation", "body": "Selon le cycle de facturation de votre plan" }
     }
   },
   "footer": {

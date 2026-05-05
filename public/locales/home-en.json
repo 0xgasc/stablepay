@@ -70,34 +70,25 @@
     }
   },
   "pricing": {
-    "title": "Transparent Pricing",
-    "subtitle": "Choose the plan that fits your needs",
-    "perMonth": "/mo",
+    "heroPrefix": "From",
+    "tagline": "No subscriptions. No hidden fees.",
+    "subtagline": "Volume discounts down to 1.0%.",
     "popular": "Popular",
-    "getStarted": "Get Started",
-    "contactSales": "Contact Sales",
-    "starter": {
-      "name": "Starter",
-      "feature1": "$1,000 monthly volume",
-      "feature2": "Direct wallet payments",
-      "feature3": "Payment links",
-      "feature4": "Email support"
+    "startFree": "Start Free",
+    "seeFullDetails": "See Full Details",
+    "compare": {
+      "heading": "Cheaper Than Traditional Processors",
+      "posLabel": "POS bancario"
     },
-    "growth": {
-      "name": "Growth",
-      "feature1": "$10,000 monthly volume",
-      "feature2": "Escrow option",
-      "feature3": "Custom branding",
-      "feature4": "API access",
-      "feature5": "Priority support"
-    },
-    "enterprise": {
-      "name": "Enterprise",
-      "feature1": "Unlimited volume",
-      "feature2": "White-label solution",
-      "feature3": "Multi-wallet management",
-      "feature4": "Webhooks & integrations",
-      "feature5": "Dedicated support"
+    "tier1": { "name": "Starter", "range": "Up to $10k / month", "billing": "Weekly billing" },
+    "tier2": { "name": "Growth", "range": "Up to $50k / month", "billing": "Bi-weekly billing" },
+    "tier3": { "name": "Pro", "range": "Up to $250k / month", "billing": "Monthly billing" },
+    "tier4": { "name": "Enterprise", "range": "Unlimited volume", "billing": "Monthly / Net-30" },
+    "billing": {
+      "heading": "How Billing Works",
+      "s1": { "title": "You Receive 100%", "body": "Payments go directly to your wallet" },
+      "s2": { "title": "Fees Accumulate", "body": "We track your platform fees" },
+      "s3": { "title": "Pay When Invoiced", "body": "Based on your plan's billing cycle" }
     }
   },
   "footer": {
