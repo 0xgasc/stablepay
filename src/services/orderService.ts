@@ -322,11 +322,13 @@ export class OrderService {
       const customFee = confirmedOrder.merchant.customFeePercent
         ? Number(confirmedOrder.merchant.customFeePercent)
         : null;
+      const isDayOne = (confirmedOrder.merchant as any).isDayOne === true;
 
-      // Calculate fee using progressive brackets (fee applies per bracket, not flat)
-      // currentVolume is BEFORE this order — fee calculated on marginal position
-      const feeAmount = calculateFee(orderAmount, currentVolume, customFee);
-      const feePercent = orderAmount > 0 ? feeAmount / orderAmount : getTransactionFeePercent(currentVolume, customFee);
+      // Calculate fee using progressive brackets (fee applies per bracket, not flat).
+      // Day 1 early-adopter merchants get flat 1% instead.
+      // currentVolume is BEFORE this order — fee calculated on marginal position.
+      const feeAmount = calculateFee(orderAmount, currentVolume, customFee, isDayOne);
+      const feePercent = orderAmount > 0 ? feeAmount / orderAmount : getTransactionFeePercent(currentVolume, customFee, isDayOne);
       const newVolume = currentVolume + orderAmount;
 
       const isMainnet = confirmedOrder.merchant.networkMode === 'MAINNET';

@@ -15,19 +15,19 @@ import {
 
 describe('Volume Tiers', () => {
   it('returns Tier 1 for $0 volume', () => {
-    expect(getVolumeTier(0).feePercent).toBe(0.025);
+    expect(getVolumeTier(0).feePercent).toBe(0.020);
   });
 
   it('returns Tier 1 for $9,999 volume', () => {
-    expect(getVolumeTier(9999).feePercent).toBe(0.025);
+    expect(getVolumeTier(9999).feePercent).toBe(0.020);
   });
 
   it('returns Tier 2 at exactly $10,000', () => {
-    expect(getVolumeTier(10000).feePercent).toBe(0.02);
+    expect(getVolumeTier(10000).feePercent).toBe(0.015);
   });
 
   it('returns Tier 3 at $50,000', () => {
-    expect(getVolumeTier(50000).feePercent).toBe(0.015);
+    expect(getVolumeTier(50000).feePercent).toBe(0.012);
   });
 
   it('returns Tier 4 at $250,000', () => {
@@ -40,16 +40,16 @@ describe('Volume Tiers', () => {
 });
 
 describe('Fee Calculation', () => {
-  it('calculates 2.5% fee for $100 at $0 volume', () => {
-    expect(calculateFee(100, 0)).toBeCloseTo(2.5);
+  it('calculates 2.0% fee for $100 at $0 volume', () => {
+    expect(calculateFee(100, 0)).toBeCloseTo(2.0);
   });
 
-  it('calculates 2.0% fee at $10k volume', () => {
-    expect(calculateFee(100, 10000)).toBeCloseTo(2.0);
+  it('calculates 1.5% fee at $10k volume', () => {
+    expect(calculateFee(100, 10000)).toBeCloseTo(1.5);
   });
 
-  it('calculates 1.5% fee at $50k volume', () => {
-    expect(calculateFee(100, 50000)).toBeCloseTo(1.5);
+  it('calculates 1.2% fee at $50k volume', () => {
+    expect(calculateFee(100, 50000)).toBeCloseTo(1.2);
   });
 
   it('calculates 1.0% fee at $250k volume', () => {
@@ -62,11 +62,22 @@ describe('Fee Calculation', () => {
   });
 
   it('ignores custom rate when null', () => {
-    expect(getTransactionFeePercent(0, null)).toBe(0.025);
+    expect(getTransactionFeePercent(0, null)).toBe(0.020);
   });
 
   it('handles zero amount', () => {
     expect(calculateFee(0, 0)).toBe(0);
+  });
+
+  it('Day 1 merchants get flat 1% regardless of volume', () => {
+    expect(getTransactionFeePercent(0, null, true)).toBe(0.01);
+    expect(getTransactionFeePercent(100000, null, true)).toBe(0.01);
+    expect(calculateFee(1000, 0, null, true)).toBe(10);
+    expect(calculateFee(1000, 100000, null, true)).toBe(10);
+  });
+
+  it('Enterprise customFeePercent takes precedence over Day 1', () => {
+    expect(calculateFee(1000, 0, 0.005, true)).toBe(5); // 0.5% wins over 1%
   });
 });
 

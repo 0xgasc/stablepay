@@ -2,10 +2,12 @@
  * StablePay Pricing Configuration
  *
  * MODEL:
- * - Volume-based transaction fees for EVERYONE (1.0% → 0.8% → 0.5% → 0.3%)
+ * - Volume-based transaction fees for EVERYONE (2.0% → 1.5% → 1.2% → 1.0%)
+ * - "Day 1" program: early-adopter merchants get flat 1% regardless of volume.
+ *   Set Merchant.isDayOne = true to enroll. Not advertised publicly.
  * - PRO is a feature unlock (refunds, receipts, branding, unlimited links)
  * - PRO unlocks: auto at $5k/mo volume OR $19/mo crypto subscription
- * - ENTERPRISE: custom negotiated rates + dedicated support
+ * - ENTERPRISE: custom negotiated rates via customFeePercent + dedicated support
  *
  * BILLING:
  * - Merchants receive 100% of payments upfront
@@ -13,13 +15,17 @@
  * - Grace period before suspension
  */
 
+// ─── Day 1 program ───────────────────────────────────────────────────────────
+// Flat fee for early-adopter merchants. Locked in regardless of volume.
+export const DAY_ONE_FEE_PERCENT = 0.01; // 1.0%
+
 // ─── Volume-based fee tiers (apply to ALL plans) ─────────────────────────────
 // Default public rates — can be overridden by admin via SystemConfig 'fee_tiers' key
 
 export const DEFAULT_VOLUME_TIERS = [
-  { name: 'Tier 1', minVolume: 0, maxVolume: 10000, feePercent: 0.025 },        // 2.5%
-  { name: 'Tier 2', minVolume: 10000, maxVolume: 50000, feePercent: 0.02 },     // 2.0%
-  { name: 'Tier 3', minVolume: 50000, maxVolume: 250000, feePercent: 0.015 },   // 1.5%
+  { name: 'Tier 1', minVolume: 0, maxVolume: 10000, feePercent: 0.020 },        // 2.0%
+  { name: 'Tier 2', minVolume: 10000, maxVolume: 50000, feePercent: 0.015 },    // 1.5%
+  { name: 'Tier 3', minVolume: 50000, maxVolume: 250000, feePercent: 0.012 },   // 1.2%
   { name: 'Tier 4', minVolume: 250000, maxVolume: Infinity, feePercent: 0.01 }, // 1.0%
 ];
 
@@ -136,37 +142,46 @@ export function getVolumeTier(monthlyVolume: number): typeof VOLUME_TIERS[number
 }
 
 /**
- * Get the marginal fee rate for the next dollar at this volume level
+ * Get the marginal fee rate for the next dollar at this volume level.
+ * Precedence: customFeePercent (Enterprise) > Day 1 (flat 1%) > VOLUME_TIERS.
  */
 export function getTransactionFeePercent(
   monthlyVolume: number,
-  customFeePercent?: number | null
+  customFeePercent?: number | null,
+  isDayOne?: boolean | null
 ): number {
   if (customFeePercent !== null && customFeePercent !== undefined) {
     return customFeePercent;
+  }
+  if (isDayOne) {
+    return DAY_ONE_FEE_PERCENT;
   }
   return getVolumeTier(monthlyVolume).feePercent;
 }
 
 /**
- * Calculate fee using PROGRESSIVE BRACKETS (like income tax)
+ * Calculate fee using PROGRESSIVE BRACKETS (like income tax) — unless Day 1 or
+ * Enterprise override is set, in which case it's flat.
  *
- * First $10k → 1.0%, $10k-$50k → 0.8%, $50k-$250k → 0.5%, $250k+ → 0.3%
+ * Public tiers: $0-$10k → 2.0%, $10k-$50k → 1.5%, $50k-$250k → 1.2%, $250k+ → 1.0%
+ * Day 1 program: flat 1.0% for all volume.
+ * Enterprise: flat customFeePercent for all volume.
+ *
  * If a transaction crosses a bracket boundary, the fee is split proportionally.
- *
- * Example: volume is $8k, new order is $5k
- *   $2k at 1.0% ($8k→$10k) = $20
- *   $3k at 0.8% ($10k→$13k) = $24
- *   Total fee = $44 (effective rate 0.88%)
  */
 export function calculateFee(
   amount: number,
   monthlyVolume: number,
-  customFeePercent?: number | null
+  customFeePercent?: number | null,
+  isDayOne?: boolean | null
 ): number {
   // Enterprise custom rate — flat, no brackets
   if (customFeePercent !== null && customFeePercent !== undefined) {
     return amount * customFeePercent;
+  }
+  // Day 1 early-adopter program — flat 1% regardless of volume
+  if (isDayOne) {
+    return amount * DAY_ONE_FEE_PERCENT;
   }
 
   let remaining = amount;
@@ -195,10 +210,11 @@ export function calculateFee(
 export function getEffectiveFeeRate(
   amount: number,
   monthlyVolume: number,
-  customFeePercent?: number | null
+  customFeePercent?: number | null,
+  isDayOne?: boolean | null
 ): number {
-  if (amount <= 0) return getTransactionFeePercent(monthlyVolume, customFeePercent);
-  const fee = calculateFee(amount, monthlyVolume, customFeePercent);
+  if (amount <= 0) return getTransactionFeePercent(monthlyVolume, customFeePercent, isDayOne);
+  const fee = calculateFee(amount, monthlyVolume, customFeePercent, isDayOne);
   return fee / amount;
 }
 

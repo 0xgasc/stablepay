@@ -125,6 +125,7 @@ model Merchant {
   stripeCustomerId     String?     @unique
   stripeSubscriptionId String?     @unique
   customFeePercent     Decimal?    @db.Decimal(5, 4) // For enterprise custom rates (e.g., 0.0020 = 0.2%)
+  isDayOne             Boolean     @default(false) // Day 1 program: early-adopter merchants locked in at flat 1%, regardless of volume tier
   notes                String?
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt

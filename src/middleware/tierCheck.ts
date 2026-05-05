@@ -117,13 +117,15 @@ export async function getMerchantTier(merchantId: string) {
   const monthlyVolume = parseFloat(merchant.monthlyVolumeUsed.toString());
   const volumeTier = getVolumeTier(monthlyVolume);
   const customFee = merchant.customFeePercent ? parseFloat(merchant.customFeePercent.toString()) : null;
-  const currentFeePercent = getTransactionFeePercent(monthlyVolume, customFee);
+  const isDayOne = (merchant as any).isDayOne === true;
+  const currentFeePercent = getTransactionFeePercent(monthlyVolume, customFee, isDayOne);
 
   return {
     plan,
-    volumeTier: volumeTier.name,
+    volumeTier: isDayOne ? 'Day 1' : volumeTier.name,
     currentFeePercent,
     isCustomRate: customFee !== null,
+    isDayOne,
     usage: {
       volume: monthlyVolume,
       transactions: merchant.monthlyTransactions,
