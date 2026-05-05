@@ -10,17 +10,17 @@
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Space Grotesk', system-ui, sans-serif; }
     body {
       background: #f3f4f6;
-      padding: 40px 20px;
+      padding: 80px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 32px;
+      gap: 120px;
     }
     /*
      * 1080×1080 slides — Facebook / Instagram carousel native size.
-     * Open this file in a desktop browser, hit your screenshot tool of choice,
-     * crop each slide one at a time. Or use Cmd+Shift+5 → "Capture Selected Window"
-     * if you make each slide fullscreen via dev-tools first.
+     * Easiest path: click the "Download All" button at top-right, get individual
+     * PNG files. Fallback: screenshot each slide (the 120px gap leaves clean
+     * background between them so cropping is trivial).
      */
     .slide {
       width: 1080px;
@@ -231,67 +231,24 @@
       box-shadow: 4px 4px 0 #fff;
     }
     .toolbar a { color: #00E5FF; }
+    .toolbar button {
+      background: #00E5FF; color: #000; border: 2px solid #fff;
+      font-weight: 700; padding: 6px 12px; cursor: pointer;
+      margin-left: 8px; font-family: inherit; text-transform: uppercase;
+      letter-spacing: 1px; font-size: 13px;
+    }
+    .toolbar button:hover { background: #fff; }
+    .toolbar button:disabled { opacity: 0.5; cursor: wait; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
   <div class="toolbar">
-    6 slides · 1080×1080 · screenshot each · paste in FB carousel
+    4 slides · 1080×1080 · FB carousel native
+    <button id="dlAll" onclick="downloadAll()">Download All</button>
   </div>
 
-  <!-- SLIDE 1 — HOOK -->
-  <div class="slide s1">
-    <div class="slide-num">01 / 06</div>
-    <div class="hero">
-      DESDE<br>
-      <span class="accent">2%</span><br>
-      SIN<br>
-      CHARGEBACKS<br>
-      PAGOS<br>
-      EN <span class="accent">CRIPTO</span>
-    </div>
-    <div class="sub">
-      Una pasarela de pagos en stablecoins<br>
-      para tu negocio.
-    </div>
-    <div class="brand">Stable<span class="dot">·</span>Pay</div>
-    <div class="url">wetakestables.shop</div>
-  </div>
-
-  <!-- SLIDE 2 — PROBLEM (Guatemala-specific) -->
-  <div class="slide s2">
-    <div class="slide-num">02 / 06</div>
-    <div class="heading">
-      Lo que cobra<br>
-      el POS en Guate:
-    </div>
-    <div class="row">
-      <div class="label">NeoNet</div>
-      <div class="cost">4.5%</div>
-      <div class="desc">+ Q20,000 mín/mes</div>
-    </div>
-    <div class="row">
-      <div class="label">Credomatic</div>
-      <div class="cost">4.5%</div>
-      <div class="desc">+ Q20,000 mín/mes</div>
-    </div>
-    <div class="row">
-      <div class="label">Sin historial</div>
-      <div class="cost">6%</div>
-      <div class="desc">tasa de "novato"</div>
-    </div>
-    <div class="row" style="border-bottom: 8px solid #00E5FF; padding-bottom: 28px;">
-      <div class="label" style="color: #00E5FF; -webkit-text-stroke: 1.5px #000;">StablePay</div>
-      <div class="cost" style="color: #16a34a; text-decoration: none;">desde 2%</div>
-      <div class="desc">sin mínimos · baja con volumen</div>
-    </div>
-    <div class="arrow">
-      Hay otra forma <span class="accent">→</span>
-    </div>
-    <div class="brand">Stable<span class="dot">·</span>Pay</div>
-    <div class="url">wetakestables.shop</div>
-  </div>
-
-  <!-- SLIDE 3 — SOLUTION -->
+  <!-- SLIDE 1 — SOLUTION -->
   <div class="slide s3">
     <div class="slide-num">03 / 06</div>
     <div class="flow">
@@ -404,5 +361,34 @@
     </div>
     <div class="brand">Stable<span class="dot">·</span>Pay</div>
   </div>
+
+  <script>
+    async function downloadAll() {
+      const btn = document.getElementById('dlAll');
+      btn.disabled = true;
+      const original = btn.textContent;
+      const slides = document.querySelectorAll('.slide');
+      for (let i = 0; i < slides.length; i++) {
+        btn.textContent = `Rendering ${i + 1}/${slides.length}…`;
+        // Render at 2x for crisp output (final PNG is 2160×2160; FB downsizes cleanly)
+        const canvas = await html2canvas(slides[i], { scale: 2, backgroundColor: null, useCORS: true, logging: false });
+        await new Promise((resolve) => {
+          canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stablepay-slide-${i + 1}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            resolve();
+          }, 'image/png');
+        });
+      }
+      btn.textContent = original;
+      btn.disabled = false;
+    }
+  </script>
 </body>
 </html>
