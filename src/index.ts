@@ -20,6 +20,7 @@ import { treasuryRouter } from './routes/treasury';
 import { paymentLinksRouter } from './routes/paymentLinks';
 import { upgradeRouter } from './routes/upgrade';
 import storesRouter from './routes/stores';
+import cronRouter from './routes/cron';
 import { db } from './config/database';
 import { validateEnv } from './utils/env';
 import { logger } from './utils/logger';
@@ -192,6 +193,7 @@ app.use('/api/treasury', treasuryRouter);
 app.use('/api/payment-links', paymentLinksRouter);
 app.use('/api/upgrade', upgradeRouter);
 app.use('/api/stores', storesRouter);
+app.use('/api/cron', cronRouter);
 app.use('/api', authRouter);
 
 // ─── Legacy v1 redirects (old unprotected routes removed) ──────────────────

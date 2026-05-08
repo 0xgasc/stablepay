@@ -175,6 +175,7 @@ model Merchant {
   stores         Store[]
   auditLogs      AuditLog[]
   paymentLinks   PaymentLink[]
+  merchantAlerts MerchantAlert[]
 
   @@index([plan])
   @@index([networkMode])
@@ -504,6 +505,30 @@ model AdminAction {
   @@index([resource, resourceId])
   @@index([action, createdAt])
   @@map("admin_actions")
+  @@schema("public")
+}
+
+// Outbound merchant alerts — emails we've sent merchants about platform-detected issues
+// (e.g., persistent webhook failures, TLS cert mismatch). Used to enforce per-issue cooldown
+// so we don't spam merchants with the same problem repeatedly.
+model MerchantAlert {
+  id           String   @id @default(cuid())
+  merchantId   String
+  alertClass   String // 'webhook_failure', 'webhook_tls', 'webhook_5xx', 'webhook_timeout', etc.
+  errorPattern String? // Specific error message that triggered this alert (for dedup detail)
+  affectedCount Int    @default(0) // How many failed deliveries triggered this
+  emailSentTo  String // Resolved recipient (merchant.email at send time)
+  subject      String
+  body         String   @db.Text
+  resolved     Boolean  @default(false) // Set true when subsequent deliveries succeed
+  resolvedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  merchant     Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId, alertClass, createdAt])
+  @@index([merchantId, resolved])
+  @@map("merchant_alerts")
   @@schema("public")
 }
 

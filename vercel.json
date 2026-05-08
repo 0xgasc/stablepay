@@ -91,5 +91,11 @@
       "source": "/health/:path*",
       "destination": "/api"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/merchant-alerts",
+      "schedule": "0 * * * *"
+    }
   ]
 }
