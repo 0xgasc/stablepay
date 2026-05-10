@@ -165,7 +165,23 @@ class WebhookService {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Webhook delivery failed', error as Error, { logId, url });
+      // Classify transport-level failures (merchant endpoint drops connection, DNS hiccup,
+      // our 10s abort) as warn instead of error. The retry queue handles recovery and the
+      // merchant alerter will email them after 5+ persistent failures. Sentry shouldn't
+      // page on every individual fetch failure since they're inherent to web webhooks.
+      const isTransient = error instanceof Error && (
+        error.name === 'AbortError' ||
+        /SocketError|other side closed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EHOSTUNREACH|ENOTFOUND|fetch failed|TLS|hostname.*does not match/i
+          .test(error.message + ' ' + ((error as any)?.cause?.message || ''))
+      );
+      if (isTransient) {
+        logger.warn('Webhook delivery transport error — retry queue will recover', {
+          logId, url, errorName: error instanceof Error ? error.name : 'unknown',
+          message: errorMessage.slice(0, 200), event: 'webhook.transport_error',
+        });
+      } else {
+        logger.error('Webhook delivery failed', error as Error, { logId, url });
+      }
 
       // Track failure on merchant
       if (merchantId) {

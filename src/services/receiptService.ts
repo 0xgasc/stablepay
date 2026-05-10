@@ -74,25 +74,47 @@ class ReceiptService {
       return existingReceipt;
     }
 
-    const receiptNumber = await this.generateReceiptNumber(order.merchantId);
     const confirmedTx = order.transactions[0];
 
-    const receipt = await db.receipt.create({
-      data: {
-        orderId,
-        merchantId: order.merchantId,
-        receiptNumber,
-        amount: order.amount,
-        token: order.token,
-        chain: order.chain,
-        txHash: confirmedTx?.txHash || null,
-        merchantName: order.merchant.companyName,
-        customerEmail: order.customerEmail,
-        customerName: order.customerName,
-        emailStatus: 'PENDING',
-        paymentDate: new Date()
+    // generateReceiptNumber reads the latest then increments — when two orders confirm
+    // concurrently, both can pick the same number and the second create() throws P2002
+    // on the receiptNumber unique constraint. Retry on that specific error with a fresh
+    // number; after a few collisions fall back to a timestamp-suffixed number which is
+    // guaranteed unique. Other prisma errors propagate.
+    let receipt: Receipt | null = null;
+    let attempt = 0;
+    while (!receipt) {
+      attempt++;
+      const sequential = await this.generateReceiptNumber(order.merchantId);
+      const receiptNumber = attempt > 3
+        ? `${sequential}-${Date.now().toString(36).slice(-4)}`
+        : sequential;
+      try {
+        receipt = await db.receipt.create({
+          data: {
+            orderId,
+            merchantId: order.merchantId,
+            receiptNumber,
+            amount: order.amount,
+            token: order.token,
+            chain: order.chain,
+            txHash: confirmedTx?.txHash || null,
+            merchantName: order.merchant.companyName,
+            customerEmail: order.customerEmail,
+            customerName: order.customerName,
+            emailStatus: 'PENDING',
+            paymentDate: new Date()
+          }
+        });
+      } catch (err: any) {
+        const isUniqueViolation = err?.code === 'P2002' && (err?.meta?.target?.includes?.('receiptNumber') || /receiptNumber/i.test(JSON.stringify(err?.meta || {})));
+        if (isUniqueViolation && attempt < 6) {
+          logger.warn('Receipt number collision — regenerating', { orderId, attempt, receiptNumber });
+          continue;
+        }
+        throw err;
       }
-    });
+    }
 
     logger.info('Receipt created', {
       receiptId: receipt.id,

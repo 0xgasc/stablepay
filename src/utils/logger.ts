@@ -72,12 +72,26 @@ class Logger {
 
   error(message: string, error?: Error, context?: LogContext) {
     this.log(LogLevel.ERROR, message, context, error);
-    // Mirror to Sentry when configured. Lazy-imported so logger has no hard dep on Sentry
-    // and the import cost is paid once per process.
+    // Mirror to Sentry when configured, BUT demote known-transient infra errors to
+    // warning level so Sentry doesn't keep paging on the same Supabase pool / RPC
+    // hiccups that auto-recover. The retry queue handles them. Real bugs still page.
     try {
       const { reportError, reportMessage } = require('./sentry');
-      if (error) reportError(error, { message, ...context });
-      else reportMessage('error', message, context);
+      const errMsg = (error?.message || '') + ' ' + ((error as any)?.cause?.message || '');
+      const isTransientInfra =
+        // Prisma DB-can't-reach (Supabase recycling, Railway proxy hiccup)
+        /Can't reach database server|Timed out fetching a new connection from the connection pool|connection pool|connection (closed|reset|terminated)/i.test(errMsg) ||
+        // Webhook fetch transport errors (merchant endpoint dropped, our timeout, network)
+        error?.name === 'AbortError' ||
+        /SocketError|other side closed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EHOSTUNREACH|ENOTFOUND|fetch failed/i.test(errMsg);
+      if (isTransientInfra) {
+        // Send as warning, not error — visible in Sentry but won't trigger the high-priority alert path
+        reportMessage('warning', message, { ...context, transient: true, errorClass: error?.name, errorMessage: errMsg.slice(0, 200) });
+      } else if (error) {
+        reportError(error, { message, ...context });
+      } else {
+        reportMessage('error', message, context);
+      }
     } catch { /* sentry not configured / not installed — fine */ }
   }
 

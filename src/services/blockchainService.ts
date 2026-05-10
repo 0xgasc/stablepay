@@ -170,7 +170,11 @@ export class BlockchainService {
             const code = err?.error?.code ?? err?.code;
             const isRateLimit =
               /rate.?limit|too many requests|throttle|-32005|-32016|BAD_DATA/i.test(msg) ||
-              err?.code === 'BAD_DATA';
+              /rate.?limit|too many requests|throttle/i.test(inner) ||
+              err?.code === 'BAD_DATA' ||
+              // batch-rate-limit leaks through as "missing response for request" with the
+              // batch error embedded in the value array
+              /missing response.*-32005|missing response.*rate.?limit|missing response.*batch/i.test(msg);
             // Transient: the RPC fallback rotation can land us on a node whose head is a few
             // blocks behind the head we measured pre-call. eth_getLogs then rejects -32602
             // "block range extends beyond current head". Next tick recomputes currentBlock, the
@@ -179,7 +183,12 @@ export class BlockchainService {
               code === -32602 ||
               /beyond current head|exceeds the maximum|block range/i.test(msg) ||
               /beyond current head|exceeds the maximum|block range/i.test(inner);
-            const transient = isRateLimit || isAheadOfHead;
+            // Generic upstream timeout / 5xx — retried next tick, doesn't lose data
+            const isUpstreamTransient =
+              code === -32002 ||
+              /request timed out|gateway timeout|504|503|502|SERVER_ERROR|UNKNOWN_ERROR/i.test(msg) ||
+              /request timed out|gateway timeout/i.test(inner);
+            const transient = isRateLimit || isAheadOfHead || isUpstreamTransient;
             const ctx = {
               chain,
               contract: (contract as any)?.target || 'unknown',
@@ -187,7 +196,7 @@ export class BlockchainService {
               fromBlock,
               currentBlock,
               event: 'scanner.rpc_query_failed',
-              reason: isRateLimit ? 'rate_limit' : isAheadOfHead ? 'rpc_behind_head' : 'other',
+              reason: isRateLimit ? 'rate_limit' : isAheadOfHead ? 'rpc_behind_head' : isUpstreamTransient ? 'upstream_transient' : 'other',
             };
             if (transient) {
               logger.warn('scanner RPC transient (will retry next tick)', ctx);
