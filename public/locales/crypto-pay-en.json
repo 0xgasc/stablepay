@@ -32,5 +32,15 @@
     "payBtn": "PAY WITH USDC",
     "txStatus": "TRANSACTION STATUS",
     "viewExplorer": "VIEW ON EXPLORER"
+  },
+  "checkout": {
+    "selectNetwork": "Select payment network",
+    "connectWalletTab": "Connect Wallet",
+    "exactAmount": "Exact amount",
+    "completeWithin": "Complete payment within",
+    "connected": "Connected",
+    "disconnectHint": "Disconnect to change network or token",
+    "transactionStatus": "Transaction Status",
+    "stablecoinLabel": "Stablecoin"
   }
 }

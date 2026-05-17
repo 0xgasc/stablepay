@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
 import { getAccountFeatures, getVolumeTier, getTransactionFeePercent, VOLUME_TIERS } from '../config/pricing';
+import { logger } from '../utils/logger';
 
 export interface TierCheckOptions {
   feature: 'refunds' | 'webhooks' | 'customBranding' | 'prioritySupport';
@@ -63,7 +64,7 @@ export function requireTierFeature(options: TierCheckOptions) {
 
       next();
     } catch (error) {
-      console.error('Tier check middleware error:', error);
+      logger.error('Tier check middleware error', error as Error, { event: 'tier_check.error' });
       res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to verify permissions'

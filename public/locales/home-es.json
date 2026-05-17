@@ -114,12 +114,14 @@
       "title": "Seguridad",
       "trustCenter": "Centro de Confianza",
       "practices": "Prácticas de Seguridad",
-      "privacy": "Política de Privacidad"
+      "privacy": "Política de Privacidad",
+      "terms": "Términos de Servicio"
     },
     "contact": {
       "title": "Contacto",
       "security": "Seguridad",
-      "support": "Soporte"
+      "support": "Soporte",
+      "enterprise": "Empresas"
     },
     "copyright": "Desarrollado por G.S © 2025 StablePay. Todos los derechos reservados."
   }
