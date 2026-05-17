@@ -69,6 +69,17 @@
       }
     }
   },
+  "social": {
+    "eyebrow": "Built by shippers, used by shippers",
+    "heading": "In production today",
+    "stats": {
+      "merchants": "Live merchants",
+      "payments": "Confirmed payments",
+      "chains": "Blockchains",
+      "stablecoins": "Stablecoins"
+    },
+    "empty": "More merchant stories coming soon."
+  },
   "pricing": {
     "heroPrefix": "From",
     "tagline": "No subscriptions. No hidden fees.",

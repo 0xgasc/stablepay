@@ -492,6 +492,46 @@
         </div>
     </div>
 
+    <!-- Social Proof Section -->
+    <div class="py-20 bg-black text-white" id="social-proof">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-14">
+                <p class="text-sm font-bold tracking-widest text-cyan-400 uppercase mb-3" data-i18n="social.eyebrow">Built by shippers, used by shippers</p>
+                <h2 class="text-4xl md:text-5xl font-black uppercase mb-2" data-i18n="social.heading">In production today</h2>
+            </div>
+
+            <!-- Live counters -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
+                <div class="text-center border-4 border-white p-6">
+                    <p id="statMerchants" class="text-5xl md:text-6xl font-black text-cyan-400">—</p>
+                    <p class="text-sm font-bold uppercase tracking-wide mt-2 text-gray-400" data-i18n="social.stats.merchants">Live merchants</p>
+                </div>
+                <div class="text-center border-4 border-white p-6">
+                    <p id="statPayments" class="text-5xl md:text-6xl font-black text-cyan-400">—</p>
+                    <p class="text-sm font-bold uppercase tracking-wide mt-2 text-gray-400" data-i18n="social.stats.payments">Confirmed payments</p>
+                </div>
+                <div class="text-center border-4 border-white p-6">
+                    <p class="text-5xl md:text-6xl font-black text-cyan-400">7</p>
+                    <p class="text-sm font-bold uppercase tracking-wide mt-2 text-gray-400" data-i18n="social.stats.chains">Blockchains</p>
+                </div>
+                <div class="text-center border-4 border-white p-6">
+                    <p class="text-5xl md:text-6xl font-black text-cyan-400">3</p>
+                    <p class="text-sm font-bold uppercase tracking-wide mt-2 text-gray-400" data-i18n="social.stats.stablecoins">Stablecoins</p>
+                </div>
+            </div>
+
+            <!-- Testimonial cards. Currently empty templates — fill `window.TESTIMONIALS` below
+                 with real quotes as merchants send them. Cards auto-render from that array. -->
+            <div id="testimonialGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Populated by JS at the bottom of this file -->
+            </div>
+
+            <p id="testimonialsEmpty" class="text-center text-gray-500 italic text-sm mt-8 hidden" data-i18n="social.empty">
+                More merchant stories coming soon.
+            </p>
+        </div>
+    </div>
+
     <!-- Pricing Section -->
     <div class="py-24 bg-gray-100 payment-plan-ref" id="pricing">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -740,6 +780,48 @@
                 }
             });
         });
+
+        // ============= TESTIMONIALS =============
+        // Add real merchant quotes here. Each card shows quote + author + role/company.
+        // Use only what merchants have explicitly given permission for. Empty array = section
+        // shows the "more stories coming soon" note instead of fake-looking placeholder cards.
+        window.TESTIMONIALS = [
+            // Example shape — drop in once merchants reply to your outreach:
+            // { quote: "Switched from Stripe and our checkout abandonment dropped 30%.", author: "Maria L.", role: "Founder, Brand Name" },
+        ];
+
+        (function renderTestimonials() {
+            const grid = document.getElementById('testimonialGrid');
+            const empty = document.getElementById('testimonialsEmpty');
+            if (!grid) return;
+            if (!window.TESTIMONIALS || window.TESTIMONIALS.length === 0) {
+                empty?.classList.remove('hidden');
+                return;
+            }
+            grid.innerHTML = window.TESTIMONIALS.map(t => `
+                <div class="border-4 border-cyan-400 p-6 bg-gray-900">
+                    <p class="text-lg leading-relaxed mb-4">&ldquo;${escapeHtml(t.quote)}&rdquo;</p>
+                    <p class="text-sm font-bold text-cyan-400">${escapeHtml(t.author)}</p>
+                    <p class="text-xs text-gray-400">${escapeHtml(t.role || '')}</p>
+                </div>
+            `).join('');
+            function escapeHtml(s) {
+                return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+            }
+        })();
+
+        // Live platform stats — counts come from /api/embed/stats (cached 5min server-side)
+        (async function loadStats() {
+            try {
+                const res = await fetch('/api/embed/stats');
+                if (!res.ok) return;
+                const data = await res.json();
+                const m = document.getElementById('statMerchants');
+                const p = document.getElementById('statPayments');
+                if (m && typeof data.merchants === 'number') m.textContent = data.merchants.toString();
+                if (p && typeof data.confirmedPayments === 'number') p.textContent = data.confirmedPayments.toString();
+            } catch { /* keep dashes */ }
+        })();
     </script>
 </body>
 </html>

@@ -69,6 +69,17 @@
       }
     }
   },
+  "social": {
+    "eyebrow": "Construit par des builders, utilisé par des builders",
+    "heading": "En production aujourd'hui",
+    "stats": {
+      "merchants": "Marchands actifs",
+      "payments": "Paiements confirmés",
+      "chains": "Blockchains",
+      "stablecoins": "Stablecoins"
+    },
+    "empty": "Plus d'histoires de marchands à venir."
+  },
   "pricing": {
     "heroPrefix": "À partir de",
     "tagline": "Pas d'abonnements. Pas de frais cachés.",

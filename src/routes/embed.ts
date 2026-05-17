@@ -106,6 +106,37 @@ router.get('/balance', async (req, res) => {
   }
 });
 
+/**
+ * Public platform stats — cheap aggregate counts for the marketing site's social-proof
+ * section. No PII, no per-merchant data. Cached 5 min server-side so the landing page can
+ * embed this without worrying about DB cost.
+ */
+let _statsCache: { value: any; expiresAt: number } | null = null;
+router.get('/stats', async (_req, res) => {
+  try {
+    if (_statsCache && _statsCache.expiresAt > Date.now()) {
+      return res.json(_statsCache.value);
+    }
+    const [merchantCount, confirmedOrders, chains] = await Promise.all([
+      db.merchant.count({ where: { isActive: true, isSuspended: false } }),
+      db.order.count({ where: { status: 'CONFIRMED' } }),
+      // 7 chains supported on mainnet (BASE, ETH, POLYGON, ARB, BNB, SOL, TRON)
+      Promise.resolve(7),
+    ]);
+    const value = {
+      merchants: merchantCount,
+      confirmedPayments: confirmedOrders,
+      chains,
+      stablecoins: 3, // USDC, USDT, EURC
+    };
+    _statsCache = { value, expiresAt: Date.now() + 5 * 60 * 1000 };
+    res.json(value);
+  } catch (err) {
+    logger.warn('Public stats failed', { error: (err as Error).message });
+    res.status(503).json({ merchants: null, confirmedPayments: null, chains: 7, stablecoins: 3 });
+  }
+});
+
 router.get('/chains', async (req, res) => {
   try {
     const { merchantId, storeId } = req.query;
