@@ -3968,9 +3968,25 @@ onMounted(() => {
             return false;
         }
 
+        // Per-chain confirmation thresholds + block times — mirrors src/config/chains.ts.
+        // Used to show a "X of Y confs · ~Zs remaining" badge on PENDING orders that already
+        // have a tx detected, so merchants know we've seen the payment and are just waiting
+        // for finality rather than thinking the order is stuck.
+        const CHAIN_CONFIRMS = {
+            BASE_MAINNET:     { confs: 5,  blockSec: 2 },
+            BASE_SEPOLIA:     { confs: 1,  blockSec: 2 },
+            ETHEREUM_MAINNET: { confs: 6,  blockSec: 12 },
+            ETHEREUM_SEPOLIA: { confs: 3,  blockSec: 12 },
+            POLYGON_MAINNET:  { confs: 50, blockSec: 2 },
+            ARBITRUM_MAINNET: { confs: 5,  blockSec: 0.3 },
+            BNB_MAINNET:      { confs: 15, blockSec: 3 },
+            SOLANA_MAINNET:   { confs: 32, blockSec: 0.4 },
+            TRON_MAINNET:     { confs: 19, blockSec: 3 },
+        };
+
         function renderOrdersTable(orders) {
             const tbody = document.getElementById('ordersTableBody');
-            
+
             if (orders.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-12 text-center text-slate-400">No orders found</td></tr>';
                 return;
@@ -4012,6 +4028,24 @@ onMounted(() => {
                             <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
                                 ${order.status}
                             </span>
+                            ${(() => {
+                                // PENDING orders with a transaction record are "in flight": tx detected
+                                // on-chain, waiting for finality. Show progress so merchants know we see it.
+                                if (order.status !== 'PENDING' || !order.transactions || !order.transactions.length) return '';
+                                const tx = order.transactions[0];
+                                const cfg = CHAIN_CONFIRMS[order.chain];
+                                if (!cfg || typeof tx.confirmations !== 'number') return '';
+                                const got = Math.max(0, Math.min(tx.confirmations, cfg.confs));
+                                const remaining = Math.max(0, cfg.confs - got);
+                                const etaSec = Math.ceil(remaining * cfg.blockSec);
+                                const pct = Math.min(100, Math.round((got / cfg.confs) * 100));
+                                return `
+                                    <div class="text-[10px] text-cyan-400 mt-1 font-medium" title="Transaction detected on-chain, awaiting ${cfg.confs} confirmations">
+                                        ${got}/${cfg.confs} confs${etaSec > 0 ? ` · ~${etaSec}s` : ' · ready'}
+                                    </div>
+                                    <div class="w-full h-0.5 bg-slate-800 mt-0.5"><div class="h-full bg-cyan-400 transition-all" style="width:${pct}%"></div></div>
+                                `;
+                            })()}
                             ${order.paymentMethod ? `<div class="text-[9px] text-slate-500 mt-0.5">${order.paymentMethod === 'WALLET_CONNECT' ? 'Wallet' : order.paymentMethod === 'MANUAL_SEND' ? 'Manual' : order.paymentMethod === 'INVOICE' ? 'Invoice' : order.paymentMethod}</div>` : ''}
                         </td>
                         <td class="px-3 py-3 whitespace-nowrap">
