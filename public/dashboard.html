@@ -2892,8 +2892,18 @@ onMounted(() => {
         function updateFeeWalletDisplay() {
             const selectedChain = document.getElementById('feePaymentChain').value;
             const wallet = currentFeeWallets.find(w => w.chain === selectedChain);
-            const walletAddress = wallet ? wallet.address : (currentFeeData?.feeWallet || '-');
-            document.getElementById('feeWalletAddress').textContent = walletAddress;
+            const codeEl = document.getElementById('feeWalletAddress');
+            if (wallet) {
+                codeEl.textContent = wallet.address;
+                codeEl.className = 'text-blue-400 break-all text-sm';
+            } else {
+                // No platform wallet for this chain yet. Tell the merchant which chains DO work
+                // instead of silently showing a dash. They can pay from whichever chain they
+                // already have stablecoins on.
+                const available = currentFeeWallets.map(w => w.chain.replace('_MAINNET', '')).join(', ') || 'BASE, ETHEREUM';
+                codeEl.textContent = `Not available on this chain yet — pay from any of: ${available}`;
+                codeEl.className = 'text-amber-400 break-all text-sm';
+            }
         }
 
         // Copy fee wallet address to clipboard
