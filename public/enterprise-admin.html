@@ -381,6 +381,9 @@
                     <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="agentWallets">
                         Stablo Wallets
                     </button>
+                    <button class="tab-btn border-b-2 border-transparent text-cyan-400 hover:text-cyan-300 hover:border-cyan-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="growth">
+                        Growth Plan
+                    </button>
                 </nav>
             </div>
 
@@ -1261,6 +1264,80 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Growth Plan Tab -->
+            <div id="growthTab" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Growth Plan</h2>
+                        <p class="text-sm text-slate-400 mt-1">Solo-operator accountability tracker. Stablo can read/update these too — ask her "what should I work on?"</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="openAddGrowthTaskModal()" class="text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5">+ Add Task</button>
+                        <button onclick="loadGrowthTasks()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5">Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Progress summary -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-slate-950 border border-slate-800 p-4">
+                        <div class="text-xs text-slate-400 uppercase">Total</div>
+                        <div id="growthCountTotal" class="text-2xl font-bold text-white">—</div>
+                    </div>
+                    <div class="bg-slate-950 border border-cyan-700 p-4">
+                        <div class="text-xs text-cyan-400 uppercase">To-do</div>
+                        <div id="growthCountTodo" class="text-2xl font-bold text-cyan-300">—</div>
+                    </div>
+                    <div class="bg-slate-950 border border-yellow-700 p-4">
+                        <div class="text-xs text-yellow-400 uppercase">Doing</div>
+                        <div id="growthCountDoing" class="text-2xl font-bold text-yellow-300">—</div>
+                    </div>
+                    <div class="bg-slate-950 border border-green-700 p-4">
+                        <div class="text-xs text-green-400 uppercase">Done</div>
+                        <div id="growthCountDone" class="text-2xl font-bold text-green-300">—</div>
+                    </div>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="bg-slate-900 h-2 mb-8">
+                    <div id="growthProgressBar" class="bg-gradient-to-r from-cyan-500 to-green-500 h-full transition-all" style="width: 0%"></div>
+                </div>
+
+                <!-- Task list grouped by week -->
+                <div id="growthTaskGroups" class="space-y-8"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Growth Task Modal -->
+    <div id="growthTaskModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-slate-950 border border-slate-700 p-6 max-w-md w-full mx-4">
+            <h3 class="text-lg font-bold text-white mb-4">Add Growth Task</h3>
+            <div class="space-y-3">
+                <input id="newTaskTitle" type="text" placeholder="Title (e.g., Post on r/argentina)" class="w-full bg-slate-900 border border-slate-700 text-white p-2 text-sm">
+                <textarea id="newTaskDescription" placeholder="Optional notes…" rows="3" class="w-full bg-slate-900 border border-slate-700 text-white p-2 text-sm"></textarea>
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="newTaskCategory" class="w-full bg-slate-900 border border-slate-700 text-white p-2 text-sm">
+                        <option value="setup">Setup</option>
+                        <option value="outreach">Outreach</option>
+                        <option value="content">Content</option>
+                        <option value="partner">Partner</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <select id="newTaskPriority" class="w-full bg-slate-900 border border-slate-700 text-white p-2 text-sm">
+                        <option value="1">1 — Highest</option>
+                        <option value="2">2</option>
+                        <option value="3" selected>3 — Medium</option>
+                        <option value="4">4</option>
+                        <option value="5">5 — Lowest</option>
+                    </select>
+                </div>
+                <input id="newTaskWeek" type="number" placeholder="Week # (optional)" min="1" max="52" class="w-full bg-slate-900 border border-slate-700 text-white p-2 text-sm">
+            </div>
+            <div class="flex justify-end gap-2 mt-5">
+                <button onclick="closeAddGrowthTaskModal()" class="px-4 py-2 text-sm bg-slate-800 text-white">Cancel</button>
+                <button onclick="submitNewGrowthTask()" class="px-4 py-2 text-sm bg-cyan-600 text-white">Create</button>
+            </div>
         </div>
     </div>
 
@@ -1445,6 +1522,7 @@
                 if (tab === 'settings') loadFeeTiers();
                 if (tab === 'receipts') loadReceipts();
                 if (tab === 'agentWallets') loadAgentWallets();
+                if (tab === 'growth') loadGrowthTasks();
             });
         });
 
@@ -3183,6 +3261,172 @@
                 alert('Error: ' + error.message);
             }
         };
+
+        // ===================== GROWTH PLAN =====================
+        // Solo-operator accountability tracker. Reads from /api/v1/admin/growth-tasks.
+        const CATEGORY_LABELS = { setup: 'Setup', outreach: 'Outreach', content: 'Content', partner: 'Partner', custom: 'Custom' };
+        const CATEGORY_COLORS = { setup: 'cyan', outreach: 'amber', content: 'purple', partner: 'green', custom: 'slate' };
+
+        async function loadGrowthTasks() {
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/admin/growth-tasks`, { headers: { 'Authorization': getAuthHeader() } });
+                if (!res.ok) return;
+                const data = await res.json();
+                renderGrowthTasks(data.tasks || []);
+            } catch (err) {
+                console.error('Growth tasks load failed:', err);
+            }
+        }
+
+        function renderGrowthTasks(tasks) {
+            // Counts
+            const counts = { total: tasks.length, todo: 0, doing: 0, done: 0 };
+            tasks.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
+            document.getElementById('growthCountTotal').textContent = counts.total;
+            document.getElementById('growthCountTodo').textContent = counts.todo || 0;
+            document.getElementById('growthCountDoing').textContent = counts.doing || 0;
+            document.getElementById('growthCountDone').textContent = counts.done || 0;
+            const pct = counts.total > 0 ? Math.round(((counts.done || 0) / counts.total) * 100) : 0;
+            document.getElementById('growthProgressBar').style.width = pct + '%';
+
+            // Group by week (null week → "Anytime")
+            const groups = new Map();
+            for (const t of tasks) {
+                if (t.status === 'archived') continue;
+                const key = t.week != null ? `Week ${t.week}` : 'Anytime';
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(t);
+            }
+            // Sort group keys so Week 1, 2... come first, "Anytime" last
+            const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
+                if (a === 'Anytime') return 1;
+                if (b === 'Anytime') return -1;
+                return parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]);
+            });
+
+            const html = sortedKeys.map(weekKey => {
+                const items = groups.get(weekKey);
+                return `
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">${weekKey} <span class="ml-2 text-xs text-slate-500">(${items.filter(t => t.status === 'done').length}/${items.length})</span></h3>
+                        <div class="space-y-2">
+                            ${items.map(t => growthTaskRow(t)).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('growthTaskGroups').innerHTML = html || '<p class="text-center text-slate-500 py-8">No tasks yet. Click + Add Task to create one.</p>';
+        }
+
+        function growthTaskRow(t) {
+            const done = t.status === 'done';
+            const cat = CATEGORY_LABELS[t.category] || t.category;
+            const color = CATEGORY_COLORS[t.category] || 'slate';
+            const priorityBadge = t.priority <= 2 ? `<span class="text-[10px] font-bold text-red-400">HIGH</span>` : '';
+            return `
+                <div class="flex items-start gap-3 p-3 bg-slate-950 border ${done ? 'border-slate-800 opacity-50' : 'border-slate-700'}">
+                    <input type="checkbox" ${done ? 'checked' : ''} onchange="toggleGrowthTask('${t.id}', this.checked)"
+                        class="mt-1 w-5 h-5 cursor-pointer accent-cyan-500">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-medium ${done ? 'line-through text-slate-500' : 'text-white'}">${escapeHtml(t.title)}</span>
+                            <span class="text-[10px] uppercase tracking-wide text-${color}-400 bg-${color}-900/30 px-1.5 py-0.5">${cat}</span>
+                            ${priorityBadge}
+                            ${t.status === 'doing' ? '<span class="text-[10px] uppercase text-yellow-400 bg-yellow-900/30 px-1.5 py-0.5">In progress</span>' : ''}
+                        </div>
+                        ${t.description ? `<p class="text-xs text-slate-400 mt-1">${escapeHtml(t.description)}</p>` : ''}
+                        ${t.notes ? `<p class="text-xs text-cyan-400 mt-1 italic">${escapeHtml(t.notes)}</p>` : ''}
+                        <div class="mt-2 flex items-center gap-3 text-xs">
+                            ${!done ? `<button onclick="setGrowthTaskStatus('${t.id}', 'doing')" class="text-yellow-400 hover:underline">Mark in-progress</button>` : ''}
+                            <button onclick="addGrowthNote('${t.id}')" class="text-slate-400 hover:text-white">+ Note</button>
+                            <button onclick="archiveGrowthTask('${t.id}')" class="text-slate-500 hover:text-red-400">Remove</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        async function toggleGrowthTask(id, done) {
+            try {
+                await fetch(`${API_BASE}/api/v1/admin/growth-tasks/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': getAuthHeader(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: done ? 'done' : 'todo' })
+                });
+                loadGrowthTasks();
+            } catch (err) { console.error(err); }
+        }
+
+        async function setGrowthTaskStatus(id, status) {
+            try {
+                await fetch(`${API_BASE}/api/v1/admin/growth-tasks/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': getAuthHeader(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                loadGrowthTasks();
+            } catch (err) { console.error(err); }
+        }
+
+        async function addGrowthNote(id) {
+            const note = prompt('Add a note to this task:');
+            if (!note) return;
+            try {
+                await fetch(`${API_BASE}/api/v1/admin/growth-tasks/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': getAuthHeader(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes: note })
+                });
+                loadGrowthTasks();
+            } catch (err) { console.error(err); }
+        }
+
+        async function archiveGrowthTask(id) {
+            if (!confirm('Remove this task?')) return;
+            try {
+                await fetch(`${API_BASE}/api/v1/admin/growth-tasks/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': getAuthHeader() }
+                });
+                loadGrowthTasks();
+            } catch (err) { console.error(err); }
+        }
+
+        function openAddGrowthTaskModal() {
+            document.getElementById('newTaskTitle').value = '';
+            document.getElementById('newTaskDescription').value = '';
+            document.getElementById('newTaskCategory').value = 'custom';
+            document.getElementById('newTaskPriority').value = '3';
+            document.getElementById('newTaskWeek').value = '';
+            document.getElementById('growthTaskModal').classList.remove('hidden');
+        }
+        function closeAddGrowthTaskModal() {
+            document.getElementById('growthTaskModal').classList.add('hidden');
+        }
+        async function submitNewGrowthTask() {
+            const title = document.getElementById('newTaskTitle').value.trim();
+            if (!title) return alert('Title is required');
+            const body = {
+                title,
+                description: document.getElementById('newTaskDescription').value.trim() || null,
+                category: document.getElementById('newTaskCategory').value,
+                priority: parseInt(document.getElementById('newTaskPriority').value),
+                week: parseInt(document.getElementById('newTaskWeek').value) || null,
+            };
+            try {
+                await fetch(`${API_BASE}/api/v1/admin/growth-tasks`, {
+                    method: 'POST',
+                    headers: { 'Authorization': getAuthHeader(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                closeAddGrowthTaskModal();
+                loadGrowthTasks();
+            } catch (err) { console.error(err); }
+        }
 
         // i18n functionality
         let currentLang = localStorage.getItem('language') || 'en';

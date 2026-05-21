@@ -44,6 +44,10 @@
       "destination": "/:slug.html"
     },
     {
+      "source": "/vs/stripe",
+      "destination": "/vs-stripe.html"
+    },
+    {
       "source": "/dashboard",
       "destination": "/dashboard.html"
     },

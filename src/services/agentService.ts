@@ -518,6 +518,58 @@ const TOOLS: Anthropic.Tool[] = [
       required: ['storeId', 'chain'],
     },
   },
+  // ─── Growth-plan accountability (admin/operator-facing) ───────────────────────
+  {
+    name: 'list_growth_tasks',
+    description: 'List the operator\'s personal growth-plan tasks (distribution / marketing / outreach items). Filter by status or category. Use this to answer "what should I work on?" type questions, or to see what\'s been completed.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        status: { type: 'string', enum: ['todo', 'doing', 'done', 'archived'], description: 'Filter by status' },
+        category: { type: 'string', enum: ['setup', 'outreach', 'content', 'partner', 'custom'], description: 'Filter by category' },
+      },
+    },
+  },
+  {
+    name: 'complete_growth_task',
+    description: 'Mark a growth task as done. Use when the operator says "I shipped X" or "done with the Twitter post" etc.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        taskId: { type: 'string', description: 'The task id returned by list_growth_tasks' },
+      },
+      required: ['taskId'],
+    },
+  },
+  {
+    name: 'add_growth_task',
+    description: 'Create a new growth-plan task. Use when the operator wants to track a new thing to do.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        title: { type: 'string', description: 'Short task title' },
+        description: { type: 'string', description: 'Optional details' },
+        category: { type: 'string', enum: ['setup', 'outreach', 'content', 'partner', 'custom'] },
+        priority: { type: 'number', description: '1 (highest) to 5 (lowest), default 3' },
+        week: { type: 'number', description: 'Optional week number for ordering' },
+      },
+      required: ['title', 'category'],
+    },
+  },
+  {
+    name: 'update_growth_task',
+    description: 'Update a growth task — change status to doing/todo, add notes, change priority, etc.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        taskId: { type: 'string' },
+        status: { type: 'string', enum: ['todo', 'doing', 'done'] },
+        notes: { type: 'string', description: 'Append-style notes — current progress, blockers, etc.' },
+        priority: { type: 'number' },
+      },
+      required: ['taskId'],
+    },
+  },
 ];
 
 // ─── Tool execution ─────────────────────────────────────────────────────────
@@ -1760,6 +1812,70 @@ async function executeTool(merchantId: string, toolName: string, input: any): Pr
         return JSON.stringify({ success: true });
       } catch (err: any) {
         return JSON.stringify({ error: `Failed to remove wallet override: ${err.message}` });
+      }
+    }
+
+    // ─── Growth tasks (operator accountability tracker) ─────────────────────────
+    case 'list_growth_tasks': {
+      try {
+        const where: any = {};
+        if (input.status) where.status = input.status;
+        if (input.category) where.category = input.category;
+        const tasks = await db.growthTask.findMany({
+          where,
+          orderBy: [{ status: 'asc' }, { priority: 'asc' }, { week: 'asc' }],
+          select: { id: true, title: true, description: true, category: true, week: true, status: true, priority: true, notes: true, completedAt: true },
+          take: 100,
+        });
+        return JSON.stringify({ tasks, count: tasks.length });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Failed to list tasks: ${err.message}` });
+      }
+    }
+
+    case 'complete_growth_task': {
+      try {
+        const task = await db.growthTask.update({
+          where: { id: input.taskId },
+          data: { status: 'done', completedAt: new Date() },
+        });
+        return JSON.stringify({ success: true, task: { id: task.id, title: task.title, status: task.status } });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Failed to complete task: ${err.message}` });
+      }
+    }
+
+    case 'add_growth_task': {
+      try {
+        const task = await db.growthTask.create({
+          data: {
+            title: input.title,
+            description: input.description || null,
+            category: input.category,
+            priority: input.priority ?? 3,
+            week: input.week ?? null,
+          },
+        });
+        return JSON.stringify({ success: true, taskId: task.id, title: task.title });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Failed to add task: ${err.message}` });
+      }
+    }
+
+    case 'update_growth_task': {
+      try {
+        const data: any = {};
+        if (input.status !== undefined) {
+          data.status = input.status;
+          if (input.status === 'done') data.completedAt = new Date();
+          if (input.status === 'todo' || input.status === 'doing') data.completedAt = null;
+        }
+        if (input.notes !== undefined) data.notes = input.notes;
+        if (input.priority !== undefined) data.priority = input.priority;
+        const task = await db.growthTask.update({ where: { id: input.taskId }, data });
+        return JSON.stringify({ success: true, task: { id: task.id, title: task.title, status: task.status } });
+      } catch (err: any) {
+        return JSON.stringify({ error: `Failed to update task: ${err.message}` });
       }
     }
 

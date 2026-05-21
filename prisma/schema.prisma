@@ -486,6 +486,29 @@ model SystemConfig {
   @@schema("public")
 }
 
+// Solo-operator growth tracker. The admin (G) checks these off as they're done.
+// Stablo can read + update these so the AI can act as an accountability layer
+// ("you haven't shipped /vs/stripe yet — here's the next task").
+model GrowthTask {
+  id          String    @id @default(cuid())
+  title       String
+  description String?   @db.Text
+  category    String    // 'setup' | 'outreach' | 'content' | 'partner' | 'custom'
+  week        Int?      // optional ordering: week 1, 2, 3+
+  status      String    @default("todo") // 'todo' | 'doing' | 'done' | 'archived'
+  priority    Int       @default(3) // 1 = highest, 5 = lowest
+  dueDate     DateTime?
+  completedAt DateTime?
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, priority])
+  @@index([category, status])
+  @@map("growth_tasks")
+  @@schema("public")
+}
+
 // Centralized audit log for admin mutations (refund approvals, suspensions, manual confirms, etc.)
 // Every admin write op must emit a row. Queryable for compliance + dispute investigation.
 model AdminAction {

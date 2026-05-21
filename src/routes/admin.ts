@@ -1496,6 +1496,88 @@ router.get('/agent-wallets', requireAdminKey, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// GROWTH TASKS (admin-only personal accountability tracker)
+// ═══════════════════════════════════════════════════════════════════
+
+// GET growth tasks — optionally filtered by status/category
+router.get('/growth-tasks', requireAdminKey, async (req, res) => {
+  try {
+    const { status, category } = req.query;
+    const where: any = {};
+    if (status) where.status = status as string;
+    if (category) where.category = category as string;
+    const tasks = await db.growthTask.findMany({
+      where,
+      orderBy: [{ status: 'asc' }, { priority: 'asc' }, { week: 'asc' }, { createdAt: 'asc' }],
+    });
+    res.json({ tasks, count: tasks.length });
+  } catch (err) {
+    logger.error('GET growth tasks failed', err as Error);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// POST create a new task
+router.post('/growth-tasks', requireAdminKey, async (req, res) => {
+  try {
+    const { title, description, category, week, priority, dueDate } = req.body;
+    if (!title || !category) return res.status(400).json({ error: 'title and category required' });
+    const task = await db.growthTask.create({
+      data: {
+        title,
+        description: description || null,
+        category,
+        week: week ?? null,
+        priority: priority ?? 3,
+        dueDate: dueDate ? new Date(dueDate) : null,
+      },
+    });
+    res.json(task);
+  } catch (err) {
+    logger.error('POST growth task failed', err as Error);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// PATCH update a task — mostly used for marking done, status change, adding notes
+router.patch('/growth-tasks/:id', requireAdminKey, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, category, week, priority, status, notes, dueDate } = req.body;
+    const data: any = {};
+    if (title !== undefined) data.title = title;
+    if (description !== undefined) data.description = description;
+    if (category !== undefined) data.category = category;
+    if (week !== undefined) data.week = week;
+    if (priority !== undefined) data.priority = priority;
+    if (notes !== undefined) data.notes = notes;
+    if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null;
+    if (status !== undefined) {
+      data.status = status;
+      // Stamp completedAt when marking done
+      if (status === 'done') data.completedAt = new Date();
+      // Clear completedAt if un-doing
+      if (status === 'todo' || status === 'doing') data.completedAt = null;
+    }
+    const task = await db.growthTask.update({ where: { id }, data });
+    res.json(task);
+  } catch (err) {
+    logger.error('PATCH growth task failed', err as Error, { taskId: req.params.id });
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// DELETE a task (soft via archive)
+router.delete('/growth-tasks/:id', requireAdminKey, async (req, res) => {
+  try {
+    await db.growthTask.update({ where: { id: req.params.id }, data: { status: 'archived' } });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // FEE RATE MATRIX
 // ═══════════════════════════════════════════════════════════════════
 
