@@ -53,10 +53,17 @@ try {
 const app = express();
 const port = env.PORT || 3000;
 
-// Configure helmet with secure CSP. connectSrc is driven by BASE_URL so deploying
-// to a different domain (staging, white-label, the eventual stablepay.io merchant
-// surface) doesn't break the page's ability to call its own API.
-const PRIMARY_ORIGIN = (process.env.BASE_URL || 'https://wetakestables.shop').replace(/\/+$/, '');
+// Configure helmet with secure CSP. connectSrc was briefly driven by BASE_URL env var,
+// but a malformed env value (trailing whitespace / newline / quote) made helmet throw
+// ERR_INVALID_CHAR on every request and 500'd all of prod (2026-05-22 incident).
+// Sanitize aggressively and validate the URL shape before trusting it; otherwise fall
+// back to the canonical hardcoded origin.
+function safeConnectOrigin(): string {
+  const raw = (process.env.BASE_URL || '').replace(/[\s\r\n\t"'<>]/g, '').replace(/\/+$/, '');
+  if (/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(raw)) return raw;
+  return 'https://wetakestables.shop';
+}
+const PRIMARY_ORIGIN = safeConnectOrigin();
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -76,9 +83,10 @@ app.use(helmet({
 // only when ALLOWED_ORIGINS isn't set — once set, embed sites must be allow-listed
 // explicitly or we'll need a separate /api/embed CORS config.
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .replace(/[\r\n\t"'<>]/g, '')
   .split(',')
   .map((s) => s.trim())
-  .filter(Boolean);
+  .filter((s) => /^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(s));
 if (allowedOrigins.length > 0) {
   app.use(cors({
     origin: (origin, callback) => {

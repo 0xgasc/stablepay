@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { OrderService } from '../services/orderService';
 import { canProcessPayment } from '../config/pricing';
 import { rateLimit } from '../middleware/rateLimit';
+import { idempotency } from '../middleware/idempotency';
 import { requireMerchantAuth, AuthenticatedRequest } from '../middleware/auth';
 import { db } from '../config/database';
 
@@ -31,7 +32,11 @@ router.post('/', rateLimit({
   getMerchantId: async (req) => req.body.merchantId || null,
   limitAnonymous: true,
   anonymousLimit: 10 // 10 orders per hour for unauthenticated requests
-}), async (req, res) => {
+}), idempotency(), async (req, res) => {
+  // Idempotency is opt-in via Idempotency-Key header. When set, the second-arrival
+  // POST returns the first request's exact response so a merchant retrying after a
+  // timeout doesn't create a duplicate order. Header is scoped to merchantId + path
+  // + body-hash so the same key on a different payload is a cache miss.
   try {
     console.log('Creating order with data:', req.body);
     const data = createOrderSchema.parse(req.body);
