@@ -53,7 +53,10 @@ try {
 const app = express();
 const port = env.PORT || 3000;
 
-// Configure helmet with secure CSP
+// Configure helmet with secure CSP. connectSrc is driven by BASE_URL so deploying
+// to a different domain (staging, white-label, the eventual stablepay.io merchant
+// surface) doesn't break the page's ability to call its own API.
+const PRIMARY_ORIGIN = (process.env.BASE_URL || 'https://wetakestables.shop').replace(/\/+$/, '');
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -61,11 +64,34 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://wetakestables.shop"],
+      connectSrc: ["'self'", PRIMARY_ORIGIN],
     },
   },
 }));
-app.use(cors());
+
+// CORS — restrict to a known origin allowlist if ALLOWED_ORIGINS is set, otherwise
+// fall back to wide-open for back-compat. ALLOWED_ORIGINS is comma-separated origins,
+// e.g. "https://wetakestables.shop,https://stablepay.io".
+// Embed widget callers (other merchants' sites) bypass the allowlist via wildcard
+// only when ALLOWED_ORIGINS isn't set — once set, embed sites must be allow-listed
+// explicitly or we'll need a separate /api/embed CORS config.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+if (allowedOrigins.length > 0) {
+  app.use(cors({
+    origin: (origin, callback) => {
+      // Allow same-origin / curl / mobile apps with no Origin header
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`Origin not allowed: ${origin}`));
+    },
+    credentials: true,
+  }));
+} else {
+  app.use(cors());
+}
 app.use(express.json());
 
 // Serve static files from public directory

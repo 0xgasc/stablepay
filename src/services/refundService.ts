@@ -12,7 +12,13 @@ const CHAIN_RPC: Record<string, { rpc: string; tokens: Record<string, string> }>
   BNB_MAINNET: { rpc: process.env.BNB_MAINNET_RPC_URL || 'https://bsc-dataseed.binance.org', tokens: { USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', USDT: '0x55d398326f99059fF775485246999027B3197955' } },
 };
 const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'function transfer(address, uint256) returns (bool)'];
-const ENCRYPTION_KEY = process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
+// Prefer dedicated MANAGED_WALLET_ENCRYPTION_KEY so wallet-key encryption is decoupled
+// from JWT auth secret. Falls back to legacy vars so existing encrypted wallets still
+// decrypt. To rotate: set new var to the same effective value first, then plan a
+// re-encryption migration.
+const ENCRYPTION_KEY = process.env.MANAGED_WALLET_ENCRYPTION_KEY
+  || process.env.JWT_SECRET
+  || process.env.AGENT_WALLET_KEY;
 const AGENT_WALLET_KEY = process.env.AGENT_WALLET_KEY?.trim();
 
 function decryptManagedKey(encrypted: string): string {

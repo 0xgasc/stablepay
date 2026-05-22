@@ -167,7 +167,15 @@ export const CHAIN_CONFIGS: Record<Chain, ChainConfig> = {
   },
   TRON_MAINNET: {
     name: 'TRON',
-    rpcUrl: 'https://api.trongrid.io',
+    rpcUrl: process.env.TRON_MAINNET_RPC_URL || 'https://api.trongrid.io',
+    // TronGrid sometimes throttles or has outages; rotate to public mirrors. Used by
+    // any client that walks rpcFallbacks (currently TRON ops aren't routed through
+    // rpcProvider since TRON isn't EVM, but documented here so a future TRON balance
+    // proxy or scanner has the list ready).
+    rpcFallbacks: [
+      'https://api.tronstack.io',
+      'https://tron-rpc.publicnode.com',
+    ],
     usdcAddress: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8', // TRC-20 USDC (6 decimals)
     paymentAddress: '',
     requiredConfirms: 19,

@@ -34,11 +34,12 @@ export let VOLUME_TIERS = [...DEFAULT_VOLUME_TIERS];
 
 /**
  * Load fee tiers from DB (SystemConfig). Called on startup and when admin updates tiers.
+ * Uses the shared `db` singleton — creating a fresh PrismaClient here was a connection
+ * leak (would eat a pool slot each time it's called, and on serverless that pool is small).
  */
 export async function loadFeeTiersFromDB(): Promise<void> {
   try {
-    const { PrismaClient } = await import('@prisma/client');
-    const db = new PrismaClient();
+    const { db } = await import('../config/database');
     const config = await db.systemConfig.findUnique({ where: { key: 'fee_tiers' } });
     if (config?.value) {
       const parsed = JSON.parse(config.value);
@@ -49,7 +50,6 @@ export async function loadFeeTiersFromDB(): Promise<void> {
         }));
       }
     }
-    await db.$disconnect();
   } catch { /* use defaults */ }
 }
 

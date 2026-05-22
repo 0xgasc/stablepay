@@ -66,11 +66,13 @@ const serializeBigInt = (obj: any): any => {
   ));
 };
 
-// Middleware to check admin key
+// Middleware to check admin key. Auth is HEADER-ONLY — never accept the key from
+// the request body or query string. Body values get logged in request logs / proxies /
+// error tracking, so leaking the key there would be a real risk.
 const requireAdminKey = async (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  const providedKey = req.headers['x-admin-key'] || bearerToken || req.body?.adminKey;
+  const providedKey = req.headers['x-admin-key'] || bearerToken;
 
   const expectedKey = await getAdminKey();
   if (!providedKey || providedKey !== expectedKey) {
@@ -271,7 +273,8 @@ router.post('/', async (req, res) => {
     // check silently 401'd every non-login POST. Await the expected key before comparing.
     const authHeader = req.headers['authorization'] as string | undefined;
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    const providedKey = req.headers['x-admin-key'] || bearerToken || req.body?.adminKey;
+    // Header-only: never accept admin key from req.body (would leak in logs).
+    const providedKey = req.headers['x-admin-key'] || bearerToken;
     const expectedAdminKey = await getAdminKey();
     if (!providedKey || providedKey !== expectedAdminKey) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -1301,7 +1304,10 @@ router.post('/managed-wallets/:walletId/sweep', requireAdminKey, async (req, res
     const { ethers } = await import('ethers');
     const crypto = await import('crypto');
 
-    const ENCRYPTION_KEY = process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
+    // See refundService.ts for the rationale on the dedicated wallet-encryption key.
+    const ENCRYPTION_KEY = process.env.MANAGED_WALLET_ENCRYPTION_KEY
+      || process.env.JWT_SECRET
+      || process.env.AGENT_WALLET_KEY;
     if (!ENCRYPTION_KEY) {
       return res.status(500).json({ error: 'Encryption key not configured' });
     }
