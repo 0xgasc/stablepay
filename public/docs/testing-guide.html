@@ -168,7 +168,7 @@ MERCHANT_TOKEN="78luhzxlf8r2h7aztu15sl"</pre>
 <div class="expect">Status 200, <code>success: true</code>, returns merchantId and token</div>
 
 <h3>3.4 Merchant Profile</h3>
-<pre>curl -s "$API/api/merchant-profile?token=$MERCHANT_TOKEN" | python3 -m json.tool</pre>
+<pre>curl -s "$API/api/merchant-profile" -H "Authorization: Bearer $MERCHANT_TOKEN" | python3 -m json.tool</pre>
 <div class="expect">Full profile with plan, wallets, volume tracking</div>
 
 <!-- ====================== SECTION 4: WALLETS ====================== -->
