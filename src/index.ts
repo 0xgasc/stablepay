@@ -76,30 +76,15 @@ app.use(helmet({
   },
 }));
 
-// CORS — restrict to a known origin allowlist if ALLOWED_ORIGINS is set, otherwise
-// fall back to wide-open for back-compat. ALLOWED_ORIGINS is comma-separated origins,
-// e.g. "https://wetakestables.shop,https://stablepay.io".
-// Embed widget callers (other merchants' sites) bypass the allowlist via wildcard
-// only when ALLOWED_ORIGINS isn't set — once set, embed sites must be allow-listed
-// explicitly or we'll need a separate /api/embed CORS config.
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
-  .replace(/[\r\n\t"'<>]/g, '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter((s) => /^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(s));
-if (allowedOrigins.length > 0) {
-  app.use(cors({
-    origin: (origin, callback) => {
-      // Allow same-origin / curl / mobile apps with no Origin header
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error(`Origin not allowed: ${origin}`));
-    },
-    credentials: true,
-  }));
-} else {
-  app.use(cors());
-}
+// CORS is wide-open — the embed widget product needs to be callable from any merchant
+// domain (unlockriver.com, oneteasetech.com, flirtynlocal.com, etc.). An ALLOWED_ORIGINS
+// allowlist breaks the entire product because we'd need every merchant domain pre-registered.
+//
+// The proper fix is: scope an allowlist to non-embed routes only (auth, admin, dashboard)
+// and keep /api/embed/* wide-open OR validate at request time via merchant.id lookup.
+// Tracked as a security task in the growth plan — not safe to ship without testing
+// against actual merchant integrations.
+app.use(cors());
 app.use(express.json());
 
 // Serve static files from public directory
