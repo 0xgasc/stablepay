@@ -18,16 +18,20 @@ export interface AuthenticatedRequest extends Request {
 
 /**
  * Middleware: require a valid merchant Bearer token.
- * Also supports ?token=X query param for backward compat (dashboard).
+ *
+ * Header-only — we used to accept ?token=X for "backward compat", but query
+ * params leak through referrer headers, browser history, and server access
+ * logs. The dashboard already sends Authorization: Bearer everywhere; the
+ * /login.html?token= handoff stays (that's a client-side URL the page reads
+ * and stores in sessionStorage — never sent to an API as auth).
+ *
  * Attaches req.merchant on success.
  */
 export async function requireMerchantAuth(req: Request, res: Response, next: NextFunction) {
   try {
-    // Extract token from Authorization header or query param
     const authHeader = req.headers.authorization;
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    const queryToken = req.query.token as string | undefined;
-    const token = bearerToken || queryToken;
+    const token = bearerToken;
 
     if (!token) {
       return res.status(401).json({ error: 'Authorization required' });

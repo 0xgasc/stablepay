@@ -48,6 +48,14 @@
       "destination": "/vs-stripe.html"
     },
     {
+      "source": "/vs/coinbase-commerce",
+      "destination": "/vs-coinbase-commerce.html"
+    },
+    {
+      "source": "/vs/coinbase",
+      "destination": "/vs-coinbase-commerce.html"
+    },
+    {
       "source": "/dashboard",
       "destination": "/dashboard.html"
     },

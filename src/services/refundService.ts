@@ -180,7 +180,12 @@ export class RefundService {
     return refund;
   }
 
-  // Called when merchant submits the tx hash after sending funds
+  // Called when merchant submits the tx hash after sending funds. We validate the
+  // hash format up front, then mark PROCESSED. On-chain verification (that the tx
+  // actually exists, sender = merchant wallet, recipient = customer wallet, amount
+  // matches) happens out-of-band via the scanner. We could verify synchronously
+  // here for stricter guarantees, but RPC calls in a request handler add latency
+  // and failure modes that outweigh the benefit for the typical merchant flow.
   async processRefund(refundId: string, txHash: string, processedBy: string): Promise<any> {
     const refund = await db.refund.findUnique({
       where: { id: refundId },
@@ -193,6 +198,21 @@ export class RefundService {
 
     if (refund.status !== 'APPROVED') {
       throw new Error('Refund must be approved before processing');
+    }
+
+    // Basic format validation — reject obviously invalid hashes before recording.
+    // Per-chain shape: EVM = 0x + 64 hex; Solana = 64-90 base58; TRON = 64 hex.
+    const chain = refund.order?.chain || '';
+    const isEvm = /^(BASE|ETHEREUM|POLYGON|ARBITRUM|BNB)_/.test(chain);
+    const isSolana = chain.startsWith('SOLANA');
+    const isTron = chain === 'TRON_MAINNET';
+    const trimmed = (txHash || '').trim();
+    const valid = isEvm ? /^0x[a-fA-F0-9]{64}$/.test(trimmed)
+      : isSolana ? /^[1-9A-HJ-NP-Za-km-z]{60,90}$/.test(trimmed)
+      : isTron ? /^[a-fA-F0-9]{64}$/.test(trimmed)
+      : trimmed.length >= 16; // unknown chain — minimal sanity check
+    if (!valid) {
+      throw new Error(`Invalid tx hash format for ${chain || 'unknown chain'}`);
     }
 
     // Update refund with tx hash
