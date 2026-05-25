@@ -684,13 +684,22 @@ router.post('/order/:orderId/chain', async (req, res) => {
       return res.status(400).json({ error: `No active wallet for ${chain}` });
     }
 
-    // Validate token
+    // Validate token — native tokens (ETH/SOL/BNB/MATIC/ARB) skip supportedTokens check
     const requestedToken = token || order.token || 'USDC';
-    if (!supportedTokens.includes(requestedToken)) {
+    const { NATIVE_TOKENS: NATIVE_SET, getPriceUsd, calcConversionFee, createNativeReceiveWallet } = await import('../services/swapService');
+    const isNativeChainLock = NATIVE_SET.has(requestedToken);
+
+    if (!isNativeChainLock && !supportedTokens.includes(requestedToken)) {
       return res.status(400).json({
         error: 'Token not supported',
         message: `Does not accept ${requestedToken} on ${chain}. Supported: ${supportedTokens.join(', ')}`
       });
+    }
+    if (isNativeChainLock) {
+      const walletRecord = await db.merchantWallet.findFirst({ where: { merchantId: order.merchantId, chain, isActive: true } });
+      if (!walletRecord?.acceptNativeTokens) {
+        return res.status(400).json({ error: 'Native tokens not enabled', message: 'This merchant does not accept ETH/SOL/BNB on this chain.' });
+      }
     }
 
     // Determine final amount: if EURC and amountOverride provided, use the converted amount.
@@ -703,6 +712,42 @@ router.post('/order/:orderId/chain', async (req, res) => {
       const orig = Number(order.amount);
       newMetadata._originalUsdAmount = orig;
       finalAmount = amountOverride.toString();
+    }
+
+    // ── Native token chain-lock: create receive wallet + price snapshot ──
+    let nativeSendAmount: number | undefined;
+    let finalPaymentAddress = walletAddress;
+    const orderExpiry = isNativeChainLock ? 15 * 60 * 1000 : undefined;
+
+    if (isNativeChainLock) {
+      const usdAmt = Number(order.amount);
+      const priceSnapshot = await getPriceUsd(requestedToken);
+      const conversionFee = calcConversionFee(usdAmt, chain);
+      nativeSendAmount = (usdAmt + conversionFee) / priceSnapshot;
+      newMetadata._nativeSendAmount = nativeSendAmount;
+      newMetadata._nativePriceSnapshot = priceSnapshot;
+
+      await db.order.update({
+        where: { id: orderId },
+        data: {
+          chain: chain as any,
+          token: 'USDC',
+          amount: finalAmount,
+          paymentAddress: walletAddress,
+          nativeToken: requestedToken,
+          nativePriceSnapshot: priceSnapshot,
+          conversionFeeAmount: conversionFee,
+          metadata: newMetadata,
+          expiresAt: orderExpiry ? new Date(Date.now() + orderExpiry) : undefined,
+        },
+      });
+
+      const receiveAddress = await createNativeReceiveWallet(orderId, chain);
+      await db.order.update({ where: { id: orderId }, data: { paymentAddress: receiveAddress } });
+      finalPaymentAddress = receiveAddress;
+
+      const newExpiry = orderExpiry ? new Date(Date.now() + orderExpiry).toISOString() : undefined;
+      return res.json({ success: true, chain, token: requestedToken, amount: Number(finalAmount), paymentAddress: finalPaymentAddress, nativeSendAmount, nativeToken: requestedToken, expiresAt: newExpiry });
     }
 
     await db.order.update({

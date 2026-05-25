@@ -3779,10 +3779,89 @@
 
             const nextBtn = document.querySelector('#cpManualStep1 button');
             const origText = nextBtn?.textContent;
-
-            // Don't PATCH the order here — preserve chain-agnostic state on backend.
-            // Just look up the merchant address client-side from availableChains.
             const token = selectedToken || 'USDC';
+            const params = new URLSearchParams(window.location.search);
+
+            // ── Native token: create order eagerly to get NativeReceiveWallet address ──
+            if (NATIVE_TOKENS_SET.has(token)) {
+                if (nextBtn) { nextBtn.disabled = true; nextBtn.textContent = 'GENERATING ADDRESS…'; }
+                try {
+                    let receiveAddress, nativeSendAmt, expiresAt;
+
+                    if (window.currentOrderId && window._chainPending) {
+                        // Chain-agnostic order: PATCH to lock chain and create NativeReceiveWallet
+                        const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ chain: chainKey, token }),
+                        });
+                        const data = await res.json();
+                        if (!data.success) { showError(data.error || 'Failed to lock chain'); if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText; } return; }
+                        receiveAddress = data.paymentAddress;
+                        nativeSendAmt = data.nativeSendAmount;
+                        expiresAt = data.expiresAt;
+                        window._orderChain = chainKey;
+                        window._chainPending = false;
+                    } else {
+                        // Fresh order: create now
+                        const externalId = params.get('externalId') || undefined;
+                        const res = await fetch('/api/embed/checkout', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                merchantId: currentProduct.merchantId,
+                                amount: parseFloat(currentProduct.price),
+                                chain: chainKey,
+                                token,
+                                productName: currentProduct.name,
+                                customerWallet: addr,
+                                externalId,
+                                paymentMethod: 'MANUAL_SEND',
+                                source: 'CHECKOUT_LINK',
+                            }),
+                        });
+                        const data = await res.json();
+                        if (!data.success) { showError(data.error || 'Failed to create payment'); if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText; } return; }
+                        window.currentOrderId = data.order.id;
+                        receiveAddress = data.order.paymentAddress;
+                        nativeSendAmt = data.order.nativeSendAmount;
+                        expiresAt = data.order.expiresAt;
+                    }
+
+                    window.merchantPaymentAddress = receiveAddress;
+                    const nativeToken = CHAIN_NATIVE_TOKEN[chainKey] || token;
+                    const sendAmtStr = nativeSendAmt
+                        ? `${parseFloat(nativeSendAmt).toPrecision(5)} ${nativeToken}`
+                        : nativePriceUsd
+                            ? `${((parseFloat(currentProduct.price) * 1.015) / nativePriceUsd).toPrecision(5)} ${nativeToken}`
+                            : `? ${nativeToken}`;
+
+                    document.getElementById('cpChainName').textContent = (CHAIN_DISPLAY_NAMES[chainKey] || chainKey) + ' (' + nativeToken + ')';
+                    document.getElementById('cpCopyAddress').textContent = receiveAddress || '—';
+                    document.getElementById('cpCopyAmount').textContent = sendAmtStr;
+                    document.getElementById('cpQRAmount').textContent = sendAmtStr;
+                    const nativeEl = document.getElementById('nativeSendAmount');
+                    if (nativeEl && nativeSendAmt) nativeEl.textContent = `${parseFloat(nativeSendAmt).toPrecision(4)} ${nativeToken}`;
+                    if (expiresAt) startNativeExpiryCountdown(new Date(expiresAt).getTime());
+                    window._cpQRContext = { merchantAddr: receiveAddress, chainKey, payAmount: sendAmtStr, token: nativeToken };
+
+                    const solPayToggle = document.getElementById('cpSolanaPayToggle');
+                    if (solPayToggle) solPayToggle.classList.add('hidden');
+                    cpRenderQR(false);
+                    if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText || 'Next'; }
+                    cpLockChainSelectors(true);
+                    cpLockMethodTab(true);
+                    cpSetStep(2);
+                    return;
+                } catch (err) {
+                    console.error('Native order creation failed:', err);
+                    showError('Failed to create payment — please try again');
+                    if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText; }
+                    return;
+                }
+            }
+
+            // ── Stablecoin path ──
             if (window._chainPending) {
                 const mc = (window._availableChains || []).find(c => c.chain === chainKey);
                 if (mc) window.merchantPaymentAddress = mc.address;
@@ -3792,8 +3871,6 @@
                 }
             }
 
-            // Compute display amount: EURC uses converted (€) amount, others use USD price as-is
-            const params = new URLSearchParams(window.location.search);
             const usdAmount = params.get('amount') || (currentProduct?.price?.toString() || '0');
             let payAmount = usdAmount;
             if (token === 'EURC' && displayAmount) payAmount = displayAmount;
@@ -3805,10 +3882,8 @@
             document.getElementById('cpCopyAmount').textContent = payAmount + ' ' + token;
             document.getElementById('cpQRAmount').textContent = payAmount + ' ' + token;
 
-            // Stash for QR regeneration on Solana Pay toggle
             window._cpQRContext = { merchantAddr, chainKey, payAmount, token };
 
-            // Show Solana Pay toggle when chain is Solana
             const config = CHAIN_CONFIG[chainKey];
             const solPayToggle = document.getElementById('cpSolanaPayToggle');
             const solPayCheck = document.getElementById('cpSolanaPayCheck');
@@ -3821,9 +3896,6 @@
             cpRenderQR(false);
 
             if (nextBtn) { nextBtn.disabled = false; nextBtn.textContent = origText || 'Next'; }
-            // Lock chain/token selectors AND the Connect Wallet tab — once they entered a wallet,
-            // switching chain would invalidate the address, and switching tabs loses progress.
-            // Customer must hit Back to change either.
             cpLockChainSelectors(true);
             cpLockMethodTab(true);
             cpSetStep(2);
@@ -4052,15 +4124,18 @@
                     if (data.success && data.order) {
                         window.currentOrderId = data.order.id;
                         window.merchantPaymentAddress = data.order.paymentAddress;
+                        document.getElementById('cpCopyAddress').textContent = data.order.paymentAddress || '—';
                         // Native token order — update send amount and start expiry countdown
-                        if (data.order.nativeToken && data.order.metadata?._nativeSendAmount) {
-                            const sendAmt = data.order.metadata._nativeSendAmount;
+                        const nativeSendAmt = data.order.nativeSendAmount;
+                        if (data.order.nativeToken && nativeSendAmt) {
+                            const nativeToken = data.order.nativeToken;
+                            const sendAmtStr = `${parseFloat(nativeSendAmt).toPrecision(4)} ${nativeToken}`;
                             const nativeEl = document.getElementById('nativeSendAmount');
-                            if (nativeEl) nativeEl.textContent = `${parseFloat(sendAmt).toPrecision(4)} ${data.order.nativeToken}`;
+                            if (nativeEl) nativeEl.textContent = sendAmtStr;
                             const amtEl = document.getElementById('cpCopyAmount');
                             const qrAmtEl = document.getElementById('cpQRAmount');
-                            if (amtEl) amtEl.textContent = `${parseFloat(sendAmt).toPrecision(4)} ${data.order.nativeToken}`;
-                            if (qrAmtEl) qrAmtEl.textContent = `${parseFloat(sendAmt).toPrecision(4)} ${data.order.nativeToken}`;
+                            if (amtEl) amtEl.textContent = sendAmtStr;
+                            if (qrAmtEl) qrAmtEl.textContent = sendAmtStr;
                         }
                         if (data.order.expiresAt && data.order.nativeToken) {
                             startNativeExpiryCountdown(new Date(data.order.expiresAt).getTime());
