@@ -114,15 +114,40 @@ router.get('/', requireAdminKey, rateLimit({
           take: 100,
         });
 
-        // Format orders with fee info for display and serialize BigInt
+        // Format orders with fee info for display and serialize BigInt.
+        // feePercent stays in decimal-fraction form (0.005 = 0.5%); UI handles *100.
         const ordersWithFees = orders.map(order => ({
           ...order,
           amount: Number(order.amount),
-          feePercent: Number(order.feePercent) * 100, // Convert to percentage for display (0.005 -> 0.5%)
+          feePercent: Number(order.feePercent),
           feeAmount: Number(order.feeAmount),
         }));
 
         return res.json({ orders: serializeBigInt(ordersWithFees) });
+
+      case 'stats': {
+        // Aggregate across ALL orders (not just the most-recent 100).
+        // Filterable by merchantId if provided.
+        const where = merchantId && typeof merchantId === 'string' ? { merchantId } : {};
+        const [totalOrders, confirmedAgg, merchantsTotal, merchantsActive] = await Promise.all([
+          db.order.count({ where }),
+          db.order.aggregate({
+            where: { ...where, status: 'CONFIRMED' },
+            _sum: { amount: true, feeAmount: true },
+            _count: { _all: true },
+          }),
+          db.merchant.count(),
+          db.merchant.count({ where: { isActive: true } }),
+        ]);
+        return res.json({
+          totalOrders,
+          confirmedOrders: confirmedAgg._count._all,
+          totalVolume: Number(confirmedAgg._sum.amount || 0),
+          totalFeesEarned: Number(confirmedAgg._sum.feeAmount || 0),
+          totalMerchants: merchantsTotal,
+          activeMerchants: merchantsActive,
+        });
+      }
 
       case 'wallets':
         if (merchantId && typeof merchantId === 'string') {
@@ -149,7 +174,10 @@ router.get('/', requireAdminKey, rateLimit({
         }
 
       case 'merchants':
+        // By default hide soft-deleted merchants (tombstoned email prefix). Pass ?includeDeleted=true to see them.
+        const includeDeleted = req.query.includeDeleted === 'true';
         const merchants = await db.merchant.findMany({
+          where: includeDeleted ? undefined : { email: { not: { startsWith: 'deleted+' } } },
           include: {
             wallets: true,
             _count: {
@@ -236,7 +264,6 @@ router.post('/', async (req, res) => {
           });
         } catch (emailErr) {
           console.error('2FA email send error:', emailErr);
-          // Still return sessionId — for dev/testing, log the code
           console.log(`[2FA] Code for ${adminEmail}: ${code}`);
         }
 
@@ -590,18 +617,38 @@ router.put('/', requireAdminKey, async (req, res) => {
   }
 });
 
-// DELETE merchant
+// DELETE merchant — soft delete (preserves order/refund/wallet history).
+// Set ?hard=true to force a real delete, which fails if any FK references exist.
 router.delete('/', requireAdminKey, async (req, res) => {
   try {
-    const { resource } = req.query;
+    const { resource, hard } = req.query;
     const { merchantId } = req.body;
 
     if (resource === 'merchants' && merchantId) {
-      await db.merchant.delete({
-        where: { id: merchantId as string },
+      const id = merchantId as string;
+
+      if (hard === 'true') {
+        await db.merchant.delete({ where: { id } });
+        return res.json({ success: true, mode: 'hard' });
+      }
+
+      // Soft delete: deactivate + tombstone identifying fields so a new merchant can reuse the email.
+      const existing = await db.merchant.findUnique({ where: { id }, select: { email: true, isActive: true } });
+      if (!existing) return res.status(404).json({ error: 'Merchant not found' });
+
+      // Strip any prior tombstone prefixes so we don't keep nesting on repeated deletes.
+      const cleanEmail = existing.email.replace(/^(deleted\+\d+\+)+/, '');
+      const tombstone = `deleted+${Date.now()}+${cleanEmail}`;
+      await db.merchant.update({
+        where: { id },
+        data: {
+          isActive: false,
+          email: tombstone, // free up email for reuse; original email is preserved as suffix
+        },
       });
 
-      return res.json({ success: true });
+      logger.info('Merchant soft-deleted', { merchantId: id, originalEmail: existing.email, event: 'admin.merchant_deleted' });
+      return res.json({ success: true, mode: 'soft' });
     }
 
     return res.status(400).json({ error: 'Invalid resource or missing merchantId for DELETE' });
@@ -1655,6 +1702,56 @@ router.put('/merchant-fee/:merchantId', requireAdminKey, async (req, res) => {
     res.json({ success: true, merchant: updated });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update merchant fee' });
+  }
+});
+
+// ─── Stablo chat logs ─────────────────────────────────────────────────────
+// GET /api/v1/admin/stablo/chats — recent conversations grouped by order
+router.get('/stablo/chats', requireAdminKey, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    // Get distinct orders that have stablo chats, most recent first
+    const recentOrders = await db.stabloChat.groupBy({
+      by: ['orderId'],
+      orderBy: { _max: { createdAt: 'desc' } },
+      take: limit,
+      skip: offset,
+    });
+
+    if (!recentOrders.length) return res.json({ conversations: [], total: 0 });
+
+    const orderIds = recentOrders.map(r => r.orderId);
+
+    const [chats, orders, total] = await Promise.all([
+      db.stabloChat.findMany({
+        where: { orderId: { in: orderIds } },
+        orderBy: { createdAt: 'asc' },
+      }),
+      db.order.findMany({
+        where: { id: { in: orderIds } },
+        select: { id: true, amount: true, token: true, chain: true, status: true, customerEmail: true, createdAt: true, merchantId: true },
+      }),
+      db.stabloChat.groupBy({ by: ['orderId'] }).then(r => r.length),
+    ]);
+
+    const orderMap = new Map(orders.map(o => [o.id, o]));
+    const chatMap = new Map<string, typeof chats>();
+    for (const msg of chats) {
+      if (!chatMap.has(msg.orderId)) chatMap.set(msg.orderId, []);
+      chatMap.get(msg.orderId)!.push(msg);
+    }
+
+    const conversations = orderIds.map(oid => ({
+      orderId: oid,
+      order: orderMap.get(oid) || null,
+      messages: chatMap.get(oid) || [],
+    }));
+
+    res.json({ conversations, total });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch Stablo chats' });
   }
 });
 

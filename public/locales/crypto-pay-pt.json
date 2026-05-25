@@ -1,46 +1,46 @@
 {
   "title": "Pagamento Cripto - StablePay",
-  "banner": "MODO TESTNET - USANDO BASE SEPOLIA E ETHEREUM SEPOLIA",
-  "backBtn": "VOLTAR À LOJA",
-  "heading": "COMPLETE SUA COMPRA",
-  "subheading": "Pague com USDC na testnet",
+  "banner": "",
+  "backBtn": "Voltar à loja",
+  "heading": "Complete sua compra",
+  "subheading": "Pague em cripto. Sem cartão, sem cadastro.",
   "summary": {
-    "heading": "RESUMO DO PEDIDO",
-    "product": "PRODUTO",
-    "amount": "VALOR"
+    "heading": "Resumo do pedido",
+    "product": "Produto",
+    "amount": "Valor"
   },
   "wallet": {
-    "connect": "CONECTAR CARTEIRA",
-    "connected": "CARTEIRA CONECTADA",
-    "disconnect": "DESCONECTAR",
-    "balances": "SALDO USDC EM TODAS AS CADEIAS",
-    "baseSepolia": "BASE SEPOLIA:",
-    "ethSepolia": "ETHEREUM SEPOLIA:"
+    "connect": "Conectar carteira",
+    "connected": "Carteira conectada",
+    "disconnect": "Desconectar",
+    "balances": "Saldo USDC em todas as cadeias",
+    "baseSepolia": "Base Sepolia:",
+    "ethSepolia": "Ethereum Sepolia:"
   },
   "customer": {
-    "heading": "INFORMAÇÕES DO CLIENTE",
-    "email": "ENDEREÇO DE E-MAIL *",
+    "heading": "Informações do cliente",
+    "email": "Endereço de e-mail *",
     "emailHint": "Enviaremos seu recibo para este endereço",
-    "name": "NOME COMPLETO (OPCIONAL)"
+    "name": "Nome completo (opcional)"
   },
   "payment": {
-    "heading": "SELECIONE A CADEIA DE PAGAMENTO",
-    "baseSepolia": "BASE SEPOLIA",
-    "baseDesc": "Recomendado - Taxas mais baixas",
-    "ethSepolia": "ETHEREUM SEPOLIA",
+    "heading": "Selecione a cadeia de pagamento",
+    "baseSepolia": "Base Sepolia",
+    "baseDesc": "Recomendado — taxas mais baixas",
+    "ethSepolia": "Ethereum Sepolia",
     "ethDesc": "Testnet clássico Ethereum",
-    "payBtn": "PAGAR COM USDC",
-    "txStatus": "STATUS DA TRANSAÇÃO",
-    "viewExplorer": "VER NO EXPLORADOR"
+    "payBtn": "Pagar com USDC",
+    "txStatus": "Status da transação",
+    "viewExplorer": "Ver no explorador"
   },
   "checkout": {
     "selectNetwork": "Selecione a rede de pagamento",
-    "connectWalletTab": "Conectar Carteira",
+    "connectWalletTab": "Conectar carteira",
     "exactAmount": "Valor exato",
     "completeWithin": "Conclua o pagamento em",
     "connected": "Conectado",
     "disconnectHint": "Desconecte para mudar de rede ou token",
-    "transactionStatus": "Status da Transação",
+    "transactionStatus": "Status da transação",
     "stablecoinLabel": "Stablecoin"
   }
 }

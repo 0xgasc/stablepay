@@ -50,11 +50,24 @@ export const CHAIN_NATIVE: Record<string, string> = {
 // ─── Encryption (same as refundService) ──────────────────────────────────────
 const ENC_KEY = process.env.MANAGED_WALLET_ENCRYPTION_KEY || process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
 const AGENT_KEY = process.env.AGENT_WALLET_KEY?.trim();
-const SOL_AGENT_KEY = process.env.SOL_AGENT_KEY?.trim();
+const SOL_AGENT_KEY_RAW = process.env.AGENT_SOLANA_KEY?.trim();
 
 // Solana gas sponsorship: 0.005 SOL covers ATA rent + tx fees with buffer
 const SOL_GAS_THRESHOLD_LAMPORTS = 2_000_000;   // 0.002 SOL
 const SOL_GAS_FUND_LAMPORTS      = 5_000_000;   // 0.005 SOL
+
+// Decode AGENT_SOLANA_KEY — supports JSON array, hex (64/128 chars), or bs58 (same as agentService)
+async function getSolAgentKeypair() {
+  if (!SOL_AGENT_KEY_RAW) throw new Error('AGENT_SOLANA_KEY not configured');
+  if (SOL_AGENT_KEY_RAW.startsWith('[')) {
+    return Keypair.fromSecretKey(new Uint8Array(JSON.parse(SOL_AGENT_KEY_RAW)));
+  }
+  if (SOL_AGENT_KEY_RAW.length === 128 || SOL_AGENT_KEY_RAW.length === 64) {
+    return Keypair.fromSecretKey(new Uint8Array(Buffer.from(SOL_AGENT_KEY_RAW, 'hex')));
+  }
+  const bs58 = await import('bs58');
+  return Keypair.fromSecretKey(bs58.default.decode(SOL_AGENT_KEY_RAW));
+}
 
 function encryptWalletKey(raw: string): string {
   if (!ENC_KEY) throw new Error('No encryption key configured');
@@ -147,15 +160,13 @@ async function ensureGas(address: string, chain: string): Promise<void> {
 }
 
 async function ensureSolGas(receivePubkey: string): Promise<void> {
-  if (!SOL_AGENT_KEY) throw new Error('Cannot sponsor SOL gas — SOL_AGENT_KEY not set');
   const { PublicKey, SystemProgram, Transaction } = await import('@solana/web3.js');
-
   const conn    = new Connection(SOL_RPC, 'confirmed');
   const target  = new PublicKey(receivePubkey);
   const balance = await conn.getBalance(target);
   if (balance >= SOL_GAS_THRESHOLD_LAMPORTS) return;
 
-  const agent = Keypair.fromSecretKey(Buffer.from(SOL_AGENT_KEY, 'hex'));
+  const agent = await getSolAgentKeypair();
   const tx    = new Transaction().add(SystemProgram.transfer({
     fromPubkey: agent.publicKey, toPubkey: target, lamports: SOL_GAS_FUND_LAMPORTS,
   }));
@@ -165,13 +176,13 @@ async function ensureSolGas(receivePubkey: string): Promise<void> {
 }
 
 async function sweepSolDust(receiveKp: any): Promise<void> {
-  if (!SOL_AGENT_KEY) return;
+  if (!SOL_AGENT_KEY_RAW) return;
   try {
-    const { PublicKey, SystemProgram, Transaction } = await import('@solana/web3.js');
+    const { SystemProgram, Transaction } = await import('@solana/web3.js');
     const conn  = new Connection(SOL_RPC, 'confirmed');
-    const agent = Keypair.fromSecretKey(Buffer.from(SOL_AGENT_KEY, 'hex'));
+    const agent = await getSolAgentKeypair();
     const bal   = await conn.getBalance(receiveKp.publicKey);
-    const fee   = 10_000; // ~2x tx fee buffer
+    const fee   = 10_000;
     if (bal <= fee) return;
     const tx = new Transaction().add(SystemProgram.transfer({
       fromPubkey: receiveKp.publicKey, toPubkey: agent.publicKey, lamports: bal - fee,

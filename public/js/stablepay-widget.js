@@ -304,10 +304,11 @@
         .map(c => `<option value="${c}">${CHAINS[c].name}</option>`)
         .join('');
 
+      const merchantBrand = (this.options.merchantName || this.options.productName || 'Checkout').toString();
       return `
         <div class="stablepay-modal">
           <div class="stablepay-header">
-            <div class="stablepay-logo">STABLEPAY</div>
+            <div class="stablepay-logo">${merchantBrand}</div>
             <button class="stablepay-close">&times;</button>
           </div>
           <div class="stablepay-content" id="stablepay-main">

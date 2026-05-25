@@ -1,46 +1,46 @@
 {
   "title": "Crypto Payment - StablePay",
-  "banner": "TESTNET MODE - USING BASE SEPOLIA & ETHEREUM SEPOLIA",
-  "backBtn": "BACK TO STORE",
-  "heading": "COMPLETE YOUR PURCHASE",
-  "subheading": "Pay with USDC on testnet",
+  "banner": "",
+  "backBtn": "Back to store",
+  "heading": "Complete your purchase",
+  "subheading": "Pay with crypto. No card, no signup.",
   "summary": {
-    "heading": "ORDER SUMMARY",
-    "product": "PRODUCT",
-    "amount": "AMOUNT"
+    "heading": "Order summary",
+    "product": "Product",
+    "amount": "Amount"
   },
   "wallet": {
-    "connect": "CONNECT WALLET",
-    "connected": "CONNECTED WALLET",
-    "disconnect": "DISCONNECT",
-    "balances": "USDC BALANCE ON ALL CHAINS",
-    "baseSepolia": "BASE SEPOLIA:",
-    "ethSepolia": "ETHEREUM SEPOLIA:"
+    "connect": "Connect wallet",
+    "connected": "Connected wallet",
+    "disconnect": "Disconnect",
+    "balances": "USDC balance on all chains",
+    "baseSepolia": "Base Sepolia:",
+    "ethSepolia": "Ethereum Sepolia:"
   },
   "customer": {
-    "heading": "CUSTOMER INFORMATION",
-    "email": "EMAIL ADDRESS *",
+    "heading": "Customer information",
+    "email": "Email address *",
     "emailHint": "We'll send your receipt to this address",
-    "name": "FULL NAME (OPTIONAL)"
+    "name": "Full name (optional)"
   },
   "payment": {
-    "heading": "SELECT PAYMENT CHAIN",
-    "baseSepolia": "BASE SEPOLIA",
-    "baseDesc": "Recommended - Lower fees",
-    "ethSepolia": "ETHEREUM SEPOLIA",
+    "heading": "Select payment chain",
+    "baseSepolia": "Base Sepolia",
+    "baseDesc": "Recommended — lower fees",
+    "ethSepolia": "Ethereum Sepolia",
     "ethDesc": "Classic Ethereum testnet",
-    "payBtn": "PAY WITH USDC",
-    "txStatus": "TRANSACTION STATUS",
-    "viewExplorer": "VIEW ON EXPLORER"
+    "payBtn": "Pay with USDC",
+    "txStatus": "Transaction status",
+    "viewExplorer": "View on explorer"
   },
   "checkout": {
     "selectNetwork": "Select payment network",
-    "connectWalletTab": "Connect Wallet",
+    "connectWalletTab": "Connect wallet",
     "exactAmount": "Exact amount",
     "completeWithin": "Complete payment within",
     "connected": "Connected",
     "disconnectHint": "Disconnect to change network or token",
-    "transactionStatus": "Transaction Status",
+    "transactionStatus": "Transaction status",
     "stablecoinLabel": "Stablecoin"
   }
 }

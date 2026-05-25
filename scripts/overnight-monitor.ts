@@ -33,13 +33,14 @@ async function main() {
   const wallets: Record<string, string> = {};
   const lowGas: string[] = [];
   for (const chain of EVM_CHAINS) {
+    const p = new ethers.JsonRpcProvider(chain.rpc);
     try {
-      const p = new ethers.JsonRpcProvider(chain.rpc);
       const bal = await p.getBalance(AGENT_ADDR);
       const eth = Number(ethers.formatEther(bal));
       wallets[chain.key] = `${eth.toFixed(6)} ${chain.native}`;
       if (eth < chain.minOk) lowGas.push(`${chain.key} (${eth.toFixed(6)} < ${chain.minOk} ${chain.native})`);
     } catch { wallets[chain.key] = 'RPC_ERROR'; }
+    finally { p.destroy(); }
   }
   report.agentWallets = wallets;
   report.lowGasAlerts = lowGas;

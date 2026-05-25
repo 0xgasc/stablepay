@@ -1,37 +1,37 @@
 {
   "title": "Paiement Crypto - StablePay",
-  "banner": "MODE TESTNET - UTILISATION DE BASE SEPOLIA ET ETHEREUM SEPOLIA",
-  "backBtn": "RETOUR À LA BOUTIQUE",
-  "heading": "FINALISEZ VOTRE ACHAT",
-  "subheading": "Payez avec USDC sur testnet",
+  "banner": "",
+  "backBtn": "Retour à la boutique",
+  "heading": "Finalisez votre achat",
+  "subheading": "Payez en crypto. Sans carte, sans inscription.",
   "summary": {
-    "heading": "RÉSUMÉ DE COMMANDE",
-    "product": "PRODUIT",
-    "amount": "MONTANT"
+    "heading": "Résumé de commande",
+    "product": "Produit",
+    "amount": "Montant"
   },
   "wallet": {
-    "connect": "CONNECTER LE PORTEFEUILLE",
-    "connected": "PORTEFEUILLE CONNECTÉ",
-    "disconnect": "DÉCONNECTER",
-    "balances": "SOLDE USDC SUR TOUTES LES CHAÎNES",
-    "baseSepolia": "BASE SEPOLIA:",
-    "ethSepolia": "ETHEREUM SEPOLIA:"
+    "connect": "Connecter le portefeuille",
+    "connected": "Portefeuille connecté",
+    "disconnect": "Déconnecter",
+    "balances": "Solde USDC sur toutes les chaînes",
+    "baseSepolia": "Base Sepolia:",
+    "ethSepolia": "Ethereum Sepolia:"
   },
   "customer": {
-    "heading": "INFORMATIONS CLIENT",
-    "email": "ADRESSE E-MAIL *",
+    "heading": "Informations client",
+    "email": "Adresse e-mail *",
     "emailHint": "Nous enverrons votre reçu à cette adresse",
-    "name": "NOM COMPLET (OPTIONNEL)"
+    "name": "Nom complet (optionnel)"
   },
   "payment": {
-    "heading": "SÉLECTIONNER LA CHAÎNE DE PAIEMENT",
-    "baseSepolia": "BASE SEPOLIA",
-    "baseDesc": "Recommandé - Frais plus bas",
-    "ethSepolia": "ETHEREUM SEPOLIA",
+    "heading": "Sélectionner la chaîne de paiement",
+    "baseSepolia": "Base Sepolia",
+    "baseDesc": "Recommandé — frais plus bas",
+    "ethSepolia": "Ethereum Sepolia",
     "ethDesc": "Testnet Ethereum classique",
-    "payBtn": "PAYER AVEC USDC",
-    "txStatus": "STATUT DE TRANSACTION",
-    "viewExplorer": "VOIR SUR L'EXPLORATEUR"
+    "payBtn": "Payer avec USDC",
+    "txStatus": "Statut de transaction",
+    "viewExplorer": "Voir sur l'explorateur"
   },
   "checkout": {
     "selectNetwork": "Choisir le réseau de paiement",

@@ -1,41 +1,41 @@
 {
   "title": "Pago Cripto - StablePay",
-  "banner": "MODO TESTNET - USANDO BASE SEPOLIA Y ETHEREUM SEPOLIA",
-  "backBtn": "VOLVER A LA TIENDA",
-  "heading": "COMPLETA TU COMPRA",
-  "subheading": "Paga con USDC en testnet",
+  "banner": "",
+  "backBtn": "Volver a la tienda",
+  "heading": "Completa tu compra",
+  "subheading": "Paga con cripto. Sin tarjeta, sin registro.",
   "summary": {
-    "heading": "RESUMEN DEL PEDIDO",
-    "product": "PRODUCTO",
-    "amount": "MONTO"
+    "heading": "Resumen del pedido",
+    "product": "Producto",
+    "amount": "Monto"
   },
   "wallet": {
-    "connect": "CONECTAR BILLETERA",
-    "connected": "BILLETERA CONECTADA",
-    "disconnect": "DESCONECTAR",
-    "balances": "SALDO USDC EN TODAS LAS CADENAS",
-    "baseSepolia": "BASE SEPOLIA:",
-    "ethSepolia": "ETHEREUM SEPOLIA:"
+    "connect": "Conectar billetera",
+    "connected": "Billetera conectada",
+    "disconnect": "Desconectar",
+    "balances": "Saldo USDC en todas las cadenas",
+    "baseSepolia": "Base Sepolia:",
+    "ethSepolia": "Ethereum Sepolia:"
   },
   "customer": {
-    "heading": "INFORMACIÓN DEL CLIENTE",
-    "email": "DIRECCIÓN DE CORREO *",
+    "heading": "Información del cliente",
+    "email": "Dirección de correo *",
     "emailHint": "Enviaremos tu recibo a esta dirección",
-    "name": "NOMBRE COMPLETO (OPCIONAL)"
+    "name": "Nombre completo (opcional)"
   },
   "payment": {
-    "heading": "SELECCIONA CADENA DE PAGO",
-    "baseSepolia": "BASE SEPOLIA",
-    "baseDesc": "Recomendado - Tarifas más bajas",
-    "ethSepolia": "ETHEREUM SEPOLIA",
+    "heading": "Selecciona cadena de pago",
+    "baseSepolia": "Base Sepolia",
+    "baseDesc": "Recomendado — tarifas más bajas",
+    "ethSepolia": "Ethereum Sepolia",
     "ethDesc": "Testnet clásico de Ethereum",
-    "payBtn": "PAGAR CON USDC",
-    "txStatus": "ESTADO DE TRANSACCIÓN",
-    "viewExplorer": "VER EN EXPLORADOR"
+    "payBtn": "Pagar con USDC",
+    "txStatus": "Estado de transacción",
+    "viewExplorer": "Ver en explorador"
   },
   "checkout": {
     "selectNetwork": "Selecciona red de pago",
-    "connectWalletTab": "Conectar Billetera",
+    "connectWalletTab": "Conectar billetera",
     "exactAmount": "Monto exacto",
     "completeWithin": "Completa el pago dentro de",
     "connected": "Conectada",

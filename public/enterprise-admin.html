@@ -384,12 +384,32 @@
                     <button class="tab-btn border-b-2 border-transparent text-cyan-400 hover:text-cyan-300 hover:border-cyan-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="growth">
                         Growth Plan
                     </button>
+                    <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="stabloChats">
+                        Stablo Chats
+                    </button>
                 </nav>
             </div>
 
+            <!-- Confirmed Orders Banner -->
+            <div class="bg-gradient-to-r from-emerald-900/40 via-cyan-900/30 to-emerald-900/40 border border-emerald-700 p-4 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-emerald-900/60 border border-emerald-600 flex items-center justify-center flex-shrink-0">
+                        <span class="text-emerald-300 text-lg sm:text-xl font-bold">✓</span>
+                    </div>
+                    <div>
+                        <p class="text-xs sm:text-sm uppercase tracking-wider text-emerald-300 font-medium">Confirmed Orders (all-time)</p>
+                        <p class="text-2xl sm:text-3xl font-extrabold text-white"><span id="bannerConfirmedCount">0</span> orders · <span id="bannerConfirmedVolume" class="text-emerald-300">$0.00</span></p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs uppercase tracking-wider text-emerald-300">Fees Earned</p>
+                    <p class="text-xl sm:text-2xl font-bold text-emerald-300" id="bannerFeesEarned">$0.00</p>
+                </div>
+            </div>
+
             <!-- Stats Overview -->
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-                <div class="bg-slate-950 border border-slate-800 p-6">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-6 mb-8">
+                <div class="bg-slate-950 border border-slate-800 p-4 sm:p-6">
                     <div class="flex items-center">
                         <div class="w-10 h-10 rounded-lg bg-blue-900/30 border border-blue-700 flex items-center justify-center">
                             <div class="w-3 h-3 rounded-full bg-blue-400"></div>
@@ -1384,6 +1404,20 @@
         </div>
     </div>
 
+    <!-- Stablo Chats Tab -->
+    <div id="stabloChatsTab" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h2 class="text-xl font-bold text-white">Stablo Chats</h2>
+                <p class="text-sm text-slate-400 mt-1">Every support conversation customers had while trying to pay.</p>
+            </div>
+            <button onclick="loadStabloChats()" class="px-3 py-1.5 bg-slate-800 text-slate-300 text-sm hover:bg-slate-700">Refresh</button>
+        </div>
+        <div id="stabloChatList" class="space-y-4">
+            <p class="text-slate-500 text-sm">Loading…</p>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.location.origin;
         let merchants = [];
@@ -1523,6 +1557,7 @@
                 if (tab === 'receipts') loadReceipts();
                 if (tab === 'agentWallets') loadAgentWallets();
                 if (tab === 'growth') loadGrowthTasks();
+                if (tab === 'stabloChats') loadStabloChats();
             });
         });
 
@@ -1648,9 +1683,17 @@
                     </td>
                     <td class="px-4 py-3 text-sm text-white whitespace-nowrap">${m.contactName || '—'}</td>
                     <td class="px-4 py-3 whitespace-nowrap">
-                        <span class="px-2 py-0.5 text-xs font-medium plan-${(m.plan || 'starter').toLowerCase()}">
-                            ${m.plan || 'Starter'}
-                        </span>
+                        ${(() => {
+                            // Real effective pricing: customFeePercent > isDayOne (1%) > plan/volume tier.
+                            if (m.customFeePercent != null) {
+                                return `<span class="px-2 py-0.5 text-xs font-bold bg-purple-900/40 text-purple-300 border border-purple-700">Custom ${Number(m.customFeePercent).toFixed(2)}%</span>`;
+                            }
+                            if (m.isDayOne) {
+                                return `<span class="px-2 py-0.5 text-xs font-bold bg-cyan-900/40 text-cyan-300 border border-cyan-700">Day 1 · 1.0%</span>`;
+                            }
+                            const planLabel = m.plan === 'ENTERPRISE' ? 'Enterprise' : m.plan === 'PRO' ? 'Pro' : 'Tiered';
+                            return `<span class="px-2 py-0.5 text-xs font-medium bg-slate-800 text-slate-300">${planLabel}</span>`;
+                        })()}
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap">
                         <span class="px-2 py-0.5 text-xs font-medium status-${m.isActive ? 'active' : 'inactive'}">
@@ -1718,20 +1761,35 @@
             `}).join('');
         }
 
-        // Update stats
-        function updateStats() {
+        // Update stats — fetches all-time aggregates from server (not sliced to 100).
+        async function updateStats() {
             document.getElementById('totalMerchants').textContent = merchants.length;
             document.getElementById('activeMerchants').textContent = merchants.filter(m => m.isActive).length;
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/admin?resource=stats`, { headers: { 'Authorization': getAuthHeader() } });
+                if (res.ok) {
+                    const s = await res.json();
+                    document.getElementById('totalOrders').textContent = s.totalOrders;
+                    document.getElementById('totalVolume').textContent = `$${Number(s.totalVolume || 0).toFixed(2)}`;
+                    document.getElementById('totalFeesEarned').textContent = `$${Number(s.totalFeesEarned || 0).toFixed(2)}`;
+                    if (s.totalMerchants != null) document.getElementById('totalMerchants').textContent = s.totalMerchants;
+                    if (s.activeMerchants != null) document.getElementById('activeMerchants').textContent = s.activeMerchants;
+                    // Banner
+                    const bc = document.getElementById('bannerConfirmedCount');
+                    const bv = document.getElementById('bannerConfirmedVolume');
+                    const bf = document.getElementById('bannerFeesEarned');
+                    if (bc) bc.textContent = s.confirmedOrders || 0;
+                    if (bv) bv.textContent = `$${Number(s.totalVolume || 0).toFixed(2)}`;
+                    if (bf) bf.textContent = `$${Number(s.totalFeesEarned || 0).toFixed(2)}`;
+                    return;
+                }
+            } catch (err) { console.warn('Stats endpoint failed, falling back to slice math:', err); }
+            // Fallback: slice-based (legacy behavior if stats endpoint unavailable)
             document.getElementById('totalOrders').textContent = orders.length;
-
             const confirmedOrders = orders.filter(o => o.status === 'CONFIRMED');
-
-            const totalVolume = confirmedOrders
-                .reduce((sum, o) => sum + parseFloat(o.amount), 0);
+            const totalVolume = confirmedOrders.reduce((sum, o) => sum + parseFloat(o.amount), 0);
             document.getElementById('totalVolume').textContent = `$${totalVolume.toFixed(2)}`;
-
-            const totalFees = confirmedOrders
-                .reduce((sum, o) => sum + parseFloat(o.feeAmount || 0), 0);
+            const totalFees = confirmedOrders.reduce((sum, o) => sum + parseFloat(o.feeAmount || 0), 0);
             document.getElementById('totalFeesEarned').textContent = `$${totalFees.toFixed(2)}`;
         }
 
@@ -3502,6 +3560,51 @@
 
                 localStorage.setItem('dayMode', isDayMode);
             });
+        }
+
+        // ── Stablo Chats ──────────────────────────────────────────────────────
+        async function loadStabloChats() {
+            const el = document.getElementById('stabloChatList');
+            el.innerHTML = '<p class="text-slate-500 text-sm">Loading…</p>';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/admin/stablo/chats?limit=50`, {
+                    headers: { 'Authorization': getAuthHeader() }
+                });
+                const data = await res.json();
+                if (!res.ok) { el.innerHTML = `<p class="text-red-400 text-sm">${data.error || 'Failed to load'}</p>`; return; }
+
+                if (!data.conversations.length) {
+                    el.innerHTML = '<p class="text-slate-500 text-sm">No chats yet — Stablo is waiting for its first customer.</p>';
+                    return;
+                }
+
+                el.innerHTML = data.conversations.map(c => {
+                    const o = c.order;
+                    const statusColor = o?.status === 'CONFIRMED' ? 'text-green-400' : o?.status === 'EXPIRED' ? 'text-slate-500' : 'text-yellow-400';
+                    const msgs = c.messages.map(m => {
+                        const isBot = m.role === 'bot';
+                        const align = isBot ? 'ml-0 mr-8' : 'ml-8 mr-0';
+                        const bg = isBot ? 'bg-slate-800 text-slate-200' : 'bg-blue-900 text-blue-100';
+                        const label = isBot ? 'Stablo' : 'Customer';
+                        const time = new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        return `<div class="${align} ${bg} px-3 py-2 rounded text-xs mb-1">
+                            <span class="font-bold opacity-60">${label} · ${time}</span><br>${m.content}
+                        </div>`;
+                    }).join('');
+
+                    return `<div class="bg-slate-900 border border-slate-800 p-4">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="text-xs text-slate-400 font-mono">${c.orderId}</div>
+                            ${o ? `<div class="text-xs ${statusColor} font-semibold">${o.status} · $${Number(o.amount).toFixed(2)} ${o.token} · ${String(o.chain).replace(/_/g,' ')}</div>` : ''}
+                        </div>
+                        ${o?.customerEmail ? `<div class="text-xs text-slate-500 mb-2">${o.customerEmail}</div>` : ''}
+                        <div class="space-y-1">${msgs}</div>
+                    </div>`;
+                }).join('');
+
+            } catch (e) {
+                el.innerHTML = `<p class="text-red-400 text-sm">Error: ${e.message}</p>`;
+            }
         }
 
         // Initialize

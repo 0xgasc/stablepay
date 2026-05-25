@@ -203,13 +203,15 @@ router.post('/merchant-wallets', requireMerchantAuth, async (req, res) => {
 
     if (wallets.length > 0) {
       await db.merchantWallet.createMany({
-        data: wallets.map((w: { chain: string; address: string; supportedTokens?: string[]; label?: string }) => ({
+        data: wallets.map((w: { chain: string; address: string; supportedTokens?: string[]; label?: string; acceptNativeTokens?: boolean; preferredStablecoin?: string }) => ({
           merchantId,
           chain: w.chain as any,
           address: w.address,
           supportedTokens: w.supportedTokens || ['USDC'],
           label: w.label || null,
-          isActive: true
+          isActive: true,
+          acceptNativeTokens: !!w.acceptNativeTokens,
+          preferredStablecoin: w.preferredStablecoin || 'USDC',
         }))
       });
     }
