@@ -29,11 +29,13 @@ const CHAINS = {
 };
 
 // How much ETH to bridge FROM Base to each destination (in ETH, from-chain units)
+// LiFi routes through Across/Stargate/etc — settles in 1-5 min, not 7 days.
 const BRIDGE_PLAN: Record<string, string> = {
-  ARBITRUM: '0.004',  // → ~0.004 ETH on Arbitrum  (covers ~40 gas sponsorships)
-  POLYGON:  '0.004',  // → ~16+ MATIC on Polygon    (covers ~800 gas sponsorships at 0.02 MATIC each)
-  BNB:      '0.004',  // → ~0.006 BNB on BNB Chain  (covers ~6 gas sponsorships at 0.001 BNB each)
-  // Keep ~0.018 ETH on Base for Base gas sponsorships
+  ARBITRUM: '0.003',  // → ~0.003 ETH  (covers ~30 gas sponsorships at 0.0001 ETH each)
+  POLYGON:  '0.003',  // → ~16+ MATIC  (covers ~800 sponsorships at 0.02 MATIC each)
+  BNB:      '0.003',  // → ~0.006 BNB  (covers ~6 sponsorships at 0.001 BNB each)
+  ETH:      '0.008',  // → ~0.0078 ETH on mainnet (covers ~1 sponsorship; mainnet is expensive)
+  // Keep ~0.013 ETH on Base for Base gas sponsorships (~130 orders)
 };
 
 const NATIVE_ADDR = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';

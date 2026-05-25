@@ -50,6 +50,11 @@ export const CHAIN_NATIVE: Record<string, string> = {
 // ─── Encryption (same as refundService) ──────────────────────────────────────
 const ENC_KEY = process.env.MANAGED_WALLET_ENCRYPTION_KEY || process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
 const AGENT_KEY = process.env.AGENT_WALLET_KEY?.trim();
+const SOL_AGENT_KEY = process.env.SOL_AGENT_KEY?.trim();
+
+// Solana gas sponsorship: 0.005 SOL covers ATA rent + tx fees with buffer
+const SOL_GAS_THRESHOLD_LAMPORTS = 2_000_000;   // 0.002 SOL
+const SOL_GAS_FUND_LAMPORTS      = 5_000_000;   // 0.005 SOL
 
 function encryptWalletKey(raw: string): string {
   if (!ENC_KEY) throw new Error('No encryption key configured');
@@ -139,6 +144,42 @@ async function ensureGas(address: string, chain: string): Promise<void> {
   const fundTx = await agent.sendTransaction({ to: address, value: ethers.parseEther(conf.gasFund) });
   await fundTx.wait();
   logger.info('Gas funded for native receive wallet', { address, chain, amount: conf.gasFund });
+}
+
+async function ensureSolGas(receivePubkey: string): Promise<void> {
+  if (!SOL_AGENT_KEY) throw new Error('Cannot sponsor SOL gas — SOL_AGENT_KEY not set');
+  const { PublicKey, SystemProgram, Transaction } = await import('@solana/web3.js');
+
+  const conn    = new Connection(SOL_RPC, 'confirmed');
+  const target  = new PublicKey(receivePubkey);
+  const balance = await conn.getBalance(target);
+  if (balance >= SOL_GAS_THRESHOLD_LAMPORTS) return;
+
+  const agent = Keypair.fromSecretKey(Buffer.from(SOL_AGENT_KEY, 'hex'));
+  const tx    = new Transaction().add(SystemProgram.transfer({
+    fromPubkey: agent.publicKey, toPubkey: target, lamports: SOL_GAS_FUND_LAMPORTS,
+  }));
+  const sig = await conn.sendTransaction(tx, [agent]);
+  await conn.confirmTransaction(sig, 'confirmed');
+  logger.info('SOL gas funded', { address: receivePubkey, lamports: SOL_GAS_FUND_LAMPORTS });
+}
+
+async function sweepSolDust(receiveKp: any): Promise<void> {
+  if (!SOL_AGENT_KEY) return;
+  try {
+    const { PublicKey, SystemProgram, Transaction } = await import('@solana/web3.js');
+    const conn  = new Connection(SOL_RPC, 'confirmed');
+    const agent = Keypair.fromSecretKey(Buffer.from(SOL_AGENT_KEY, 'hex'));
+    const bal   = await conn.getBalance(receiveKp.publicKey);
+    const fee   = 10_000; // ~2x tx fee buffer
+    if (bal <= fee) return;
+    const tx = new Transaction().add(SystemProgram.transfer({
+      fromPubkey: receiveKp.publicKey, toPubkey: agent.publicKey, lamports: bal - fee,
+    }));
+    const sig = await conn.sendTransaction(tx, [receiveKp]);
+    await conn.confirmTransaction(sig, 'confirmed');
+    logger.info('SOL dust swept to agent', { sig, amount: bal - fee });
+  } catch (e: any) { logger.warn('SOL dust sweep failed (non-critical)', { error: e.message }); }
 }
 
 // ─── LiFi EVM swap ────────────────────────────────────────────────────────────
@@ -302,12 +343,17 @@ export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: 
   let forwardTxHash: string;
 
   if (isSolana) {
-    // Reserve 0.01 SOL for forward tx fees — Jupiter swaps everything else
-    const SOL_GAS_RESERVE = 10_000_000; // lamports
-    const lamports = Math.max(0, Math.round(nativeAmt * 1e9) - SOL_GAS_RESERVE);
-    if (lamports <= 0) throw new Error('SOL amount too small after gas reserve');
+    // Sponsor SOL gas from agent so customer's full SOL → USDC (no reserve eats merchant payout)
+    await ensureSolGas(receiveWallet.address);
+    const lamports = Math.round(nativeAmt * 1e9);
+    if (lamports <= 0) throw new Error('SOL amount is zero');
     ({ txHash: swapTxHash, stableReceived } = await executeJupiterSwap(lamports, targetStable, privKey));
+    // Re-fund gas for forward tx (Jupiter consumes the sponsored SOL)
+    await ensureSolGas(receiveWallet.address);
     forwardTxHash = await forwardSolToMerchant(targetStable, privKey, merchantWallet.address);
+    // Sweep any remaining SOL back to agent
+    const receiveKp = Keypair.fromSecretKey(Buffer.from(privKey, 'hex'));
+    await sweepSolDust(receiveKp);
   } else {
     await ensureGas(receiveWallet.address, chain);
     ({ txHash: swapTxHash, stableReceived } = await executeLiFiSwap(chain, nativeAmt, targetStable, privKey));
