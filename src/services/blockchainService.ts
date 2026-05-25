@@ -419,7 +419,86 @@ export class BlockchainService {
     });
 
     await Promise.all([...evmScans, nonEvmScans]);
+    await timeoutPromise(this.scanNativeTokenOrders(), 30000, 'native token scan')
+      .catch(e => console.error('[scanner] native token scan error:', (e as Error).message));
     await this.expireStaleOrders();
+  }
+
+  async scanNativeTokenOrders(): Promise<void> {
+    // ── EVM native (ETH / BNB / MATIC / ARB) ──────────────────────────────
+    const evmNative = await db.order.findMany({
+      where: {
+        status: 'PENDING',
+        expiresAt: { gt: new Date() },
+        nativeToken: { not: null },
+        chain: { in: ['BASE_MAINNET', 'ETHEREUM_MAINNET', 'POLYGON_MAINNET', 'ARBITRUM_MAINNET', 'BNB_MAINNET'] as any[] },
+      },
+      select: { id: true, paymentAddress: true, amount: true, nativeToken: true, nativePriceSnapshot: true, conversionFeeAmount: true, chain: true },
+    });
+
+    for (const order of evmNative) {
+      try {
+        const { getHealthyProvider } = await import('./rpcProvider');
+        const provider  = await getHealthyProvider(order.chain);
+        const balWei    = await provider.getBalance(order.paymentAddress);
+        const received  = Number(ethers.formatEther(balWei));
+        if (received < 0.000001) continue;
+
+        const price    = Number(order.nativePriceSnapshot ?? 0);
+        const fee      = Number(order.conversionFeeAmount ?? 0);
+        if (price === 0) continue;
+        const expected = (Number(order.amount) + fee) / price;
+        if (Math.abs(received - expected) / expected > 0.03) continue; // ±3% tolerance
+
+        console.log(`[scanner] native ${order.nativeToken} payment detected for order ${order.id}, triggering swap`);
+        await db.order.update({ where: { id: order.id }, data: { nativeTokenAmount: received } });
+
+        const { swapAndForward } = await import('./swapService');
+        const { forwardTxHash } = await swapAndForward(order.id);
+        await this.orderService.confirmOrder(order.id, { txHash: forwardTxHash });
+      } catch (err: any) {
+        console.error(`[scanner] native EVM swap failed for order ${order.id}:`, err.message);
+      }
+    }
+
+    // ── Solana native (SOL) ────────────────────────────────────────────────
+    const solNative = await db.order.findMany({
+      where: {
+        status: 'PENDING',
+        expiresAt: { gt: new Date() },
+        nativeToken: 'SOL',
+        chain: 'SOLANA_MAINNET' as any,
+      },
+      select: { id: true, paymentAddress: true, amount: true, nativePriceSnapshot: true, conversionFeeAmount: true },
+    });
+
+    if (solNative.length === 0) return;
+
+    const { Connection, PublicKey } = await import('@solana/web3.js');
+    const conn = new Connection(process.env.SOLANA_MAINNET_RPC_URL || 'https://api.mainnet-beta.solana.com', 'confirmed');
+
+    for (const order of solNative) {
+      try {
+        const lamports = await conn.getBalance(new PublicKey(order.paymentAddress));
+        const received = lamports / 1e9;
+        if (received < 0.00001) continue;
+
+        const price    = Number(order.nativePriceSnapshot ?? 0);
+        const fee      = Number(order.conversionFeeAmount ?? 0);
+        if (price === 0) continue;
+        const expected = (Number(order.amount) + fee) / price;
+        if (Math.abs(received - expected) / expected > 0.03) continue;
+
+        console.log(`[scanner] native SOL payment detected for order ${order.id}, triggering swap`);
+        await db.order.update({ where: { id: order.id }, data: { nativeTokenAmount: received } });
+
+        const { swapAndForward } = await import('./swapService');
+        const { forwardTxHash } = await swapAndForward(order.id);
+        await this.orderService.confirmOrder(order.id, { txHash: forwardTxHash });
+      } catch (err: any) {
+        console.error(`[scanner] native SOL swap failed for order ${order.id}:`, err.message);
+      }
+    }
   }
 
   private async expireStaleOrders(): Promise<void> {

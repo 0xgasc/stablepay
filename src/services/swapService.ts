@@ -1,0 +1,292 @@
+import { ethers } from 'ethers';
+import { Keypair, Connection, VersionedTransaction } from '@solana/web3.js';
+import crypto from 'crypto';
+import { db } from '../config/database';
+import { logger } from '../utils/logger';
+
+// ─── Chain config ─────────────────────────────────────────────────────────────
+const NATIVE_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+const WRAPPED_SOL    = 'So11111111111111111111111111111111111111112';
+const SOL_RPC        = process.env.SOLANA_MAINNET_RPC_URL || 'https://api.mainnet-beta.solana.com';
+
+const EVM_CHAIN: Record<string, {
+  chainId: number; rpc: string;
+  stables: Record<string, string>;
+  gasThreshold: string; gasFund: string;
+}> = {
+  BASE_MAINNET:     { chainId: 8453,  rpc: 'https://mainnet.base.org',      gasThreshold: '0.0003', gasFund: '0.0005', stables: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42' } },
+  ETHEREUM_MAINNET: { chainId: 1,     rpc: 'https://eth.llamarpc.com',       gasThreshold: '0.003',  gasFund: '0.005',  stables: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7', EURC: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c' } },
+  POLYGON_MAINNET:  { chainId: 137,   rpc: 'https://polygon-rpc.com',        gasThreshold: '0.0003', gasFund: '0.0005', stables: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' } },
+  ARBITRUM_MAINNET: { chainId: 42161, rpc: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arbitrum-one-rpc.publicnode.com', gasThreshold: '0.0003', gasFund: '0.0005', stables: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' } },
+  BNB_MAINNET:      { chainId: 56,    rpc: process.env.BNB_MAINNET_RPC_URL   || 'https://bsc-dataseed.binance.org', gasThreshold: '0.0003', gasFund: '0.0005', stables: { USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', USDT: '0x55d398326f99059fF775485246999027B3197955' } },
+};
+
+// BNB chain stablecoins use 18 decimals; all others use 6
+const stableDecimals = (chain: string) => chain === 'BNB_MAINNET' ? 18 : 6;
+
+const SOL_STABLES: Record<string, string> = {
+  USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+};
+
+const ERC20_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function transfer(address, uint256) returns (bool)',
+];
+
+// Tokens accepted as native input
+export const NATIVE_TOKENS = new Set(['ETH', 'SOL', 'BNB', 'MATIC', 'ARB']);
+
+// Which native token is expected on each chain
+export const CHAIN_NATIVE: Record<string, string> = {
+  BASE_MAINNET: 'ETH', ETHEREUM_MAINNET: 'ETH', ARBITRUM_MAINNET: 'ETH',
+  POLYGON_MAINNET: 'MATIC',
+  BNB_MAINNET: 'BNB',
+  SOLANA_MAINNET: 'SOL',
+};
+
+// ─── Encryption (same as refundService) ──────────────────────────────────────
+const ENC_KEY = process.env.MANAGED_WALLET_ENCRYPTION_KEY || process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
+const AGENT_KEY = process.env.AGENT_WALLET_KEY?.trim();
+
+function encryptWalletKey(raw: string): string {
+  if (!ENC_KEY) throw new Error('No encryption key configured');
+  const iv = crypto.randomBytes(16);
+  const k  = crypto.scryptSync(ENC_KEY, 'salt', 32);
+  const c  = crypto.createCipheriv('aes-256-cbc', k, iv);
+  return iv.toString('hex') + ':' + c.update(raw, 'utf8', 'hex') + c.final('hex');
+}
+
+function decryptWalletKey(encrypted: string): string {
+  if (!ENC_KEY) throw new Error('No encryption key configured');
+  const [ivHex, enc] = encrypted.split(':');
+  const iv = Buffer.from(ivHex, 'hex');
+  const k  = crypto.scryptSync(ENC_KEY, 'salt', 32);
+  const d  = crypto.createDecipheriv('aes-256-cbc', k, iv);
+  return d.update(enc, 'hex', 'utf8') + d.final('utf8');
+}
+
+// ─── Price feed ───────────────────────────────────────────────────────────────
+const GECKO_IDS: Record<string, string> = {
+  ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
+  MATIC: 'matic-network', ARB: 'arbitrum',
+};
+const priceCache = new Map<string, { price: number; ts: number }>();
+
+export async function getPriceUsd(symbol: string): Promise<number> {
+  const hit = priceCache.get(symbol);
+  if (hit && Date.now() - hit.ts < 60_000) return hit.price;
+
+  const id = GECKO_IDS[symbol];
+  if (!id) throw new Error(`Unknown token symbol: ${symbol}`);
+
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`,
+    { signal: AbortSignal.timeout(5_000) },
+  );
+  if (!res.ok) throw new Error(`CoinGecko error ${res.status}`);
+  const data = await res.json() as Record<string, { usd: number }>;
+  const price = data[id]?.usd;
+  if (!price) throw new Error(`No price returned for ${symbol}`);
+
+  priceCache.set(symbol, { price, ts: Date.now() });
+  return price;
+}
+
+// ─── Conversion fee ───────────────────────────────────────────────────────────
+export function calcConversionFee(usdAmount: number, chain: string): number {
+  const pct = usdAmount * 0.015;
+  if (chain === 'ETHEREUM_MAINNET') return Math.max(pct, 5.00); // ETH gas is expensive
+  return Math.max(pct, 0.50); // $0.50 floor everywhere else
+}
+
+// ─── Create per-order receive wallet ─────────────────────────────────────────
+export async function createNativeReceiveWallet(
+  orderId: string,
+  chain: string,
+): Promise<string> {
+  let address: string;
+  let encryptedKey: string;
+
+  const isSolana = chain.startsWith('SOLANA');
+  if (isSolana) {
+    const kp = Keypair.generate();
+    address      = kp.publicKey.toBase58();
+    encryptedKey = encryptWalletKey(Buffer.from(kp.secretKey).toString('hex'));
+  } else {
+    const w      = ethers.Wallet.createRandom();
+    address      = w.address;
+    encryptedKey = encryptWalletKey(w.privateKey);
+  }
+
+  await db.nativeReceiveWallet.create({ data: { orderId, chain, address, encryptedKey } });
+  return address;
+}
+
+// ─── Gas sponsorship (EVM) ────────────────────────────────────────────────────
+async function ensureGas(address: string, chain: string): Promise<void> {
+  const conf = EVM_CHAIN[chain];
+  if (!conf || !AGENT_KEY) throw new Error(`Cannot sponsor gas on ${chain} — AGENT_WALLET_KEY not set`);
+
+  const provider  = new ethers.JsonRpcProvider(conf.rpc);
+  const balance   = await provider.getBalance(address);
+  const threshold = ethers.parseEther(conf.gasThreshold);
+  if (balance >= threshold) return;
+
+  const agent  = new ethers.Wallet(AGENT_KEY, provider);
+  const fundTx = await agent.sendTransaction({ to: address, value: ethers.parseEther(conf.gasFund) });
+  await fundTx.wait();
+  logger.info('Gas funded for native receive wallet', { address, chain, amount: conf.gasFund });
+}
+
+// ─── LiFi EVM swap ────────────────────────────────────────────────────────────
+async function executeLiFiSwap(
+  chain: string, nativeAmount: number, targetStable: string, privKey: string,
+): Promise<{ txHash: string; stableReceived: number }> {
+  const conf     = EVM_CHAIN[chain];
+  if (!conf) throw new Error(`LiFi: unsupported chain ${chain}`);
+  const toToken  = conf.stables[targetStable] ?? conf.stables.USDC;
+  const provider = new ethers.JsonRpcProvider(conf.rpc);
+  const wallet   = new ethers.Wallet(privKey, provider);
+  const amtWei   = ethers.parseEther(nativeAmount.toFixed(18));
+
+  const params = new URLSearchParams({
+    fromChain: String(conf.chainId), toChain: String(conf.chainId),
+    fromToken: NATIVE_ADDRESS, toToken,
+    fromAmount: amtWei.toString(),
+    fromAddress: wallet.address, toAddress: wallet.address,
+    slippage: '0.02', integrator: 'stablepay',
+  });
+
+  const qRes = await fetch(`https://li.quest/v1/quote?${params}`, { signal: AbortSignal.timeout(15_000) });
+  if (!qRes.ok) throw new Error(`LiFi quote failed: ${qRes.status} ${await qRes.text().then(t => t.slice(0, 200))}`);
+  const quote = await qRes.json() as { transactionRequest: { to: string; data: string; value?: string; gasLimit?: string } };
+
+  const tx = await wallet.sendTransaction({
+    to:       quote.transactionRequest.to,
+    data:     quote.transactionRequest.data,
+    value:    BigInt(quote.transactionRequest.value   || 0),
+    gasLimit: quote.transactionRequest.gasLimit ? BigInt(quote.transactionRequest.gasLimit) : undefined,
+  });
+  await tx.wait();
+
+  const dec      = stableDecimals(chain);
+  const contract = new ethers.Contract(toToken, ERC20_ABI, provider);
+  const bal      = await contract.balanceOf(wallet.address);
+  return { txHash: tx.hash, stableReceived: Number(ethers.formatUnits(bal, dec)) };
+}
+
+// ─── Jupiter Solana swap ──────────────────────────────────────────────────────
+async function executeJupiterSwap(
+  lamports: number, targetStable: string, secretHex: string,
+): Promise<{ txHash: string; stableReceived: number }> {
+  const outputMint = SOL_STABLES[targetStable] ?? SOL_STABLES.USDC;
+
+  const qRes = await fetch(
+    `https://quote-api.jup.ag/v6/quote?inputMint=${WRAPPED_SOL}&outputMint=${outputMint}&amount=${lamports}&slippageBps=200`,
+    { signal: AbortSignal.timeout(10_000) },
+  );
+  if (!qRes.ok) throw new Error(`Jupiter quote failed: ${qRes.status}`);
+  const quoteResponse = await qRes.json();
+
+  const keypair = Keypair.fromSecretKey(Buffer.from(secretHex, 'hex'));
+  const sRes    = await fetch('https://quote-api.jup.ag/v6/swap', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quoteResponse, userPublicKey: keypair.publicKey.toBase58(), wrapAndUnwrapSol: true }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!sRes.ok) throw new Error(`Jupiter swap failed: ${sRes.status}`);
+  const { swapTransaction } = await sRes.json() as { swapTransaction: string };
+
+  const conn = new Connection(SOL_RPC, 'confirmed');
+  const vtx  = VersionedTransaction.deserialize(Buffer.from(swapTransaction, 'base64'));
+  vtx.sign([keypair]);
+  const sig  = await conn.sendRawTransaction(vtx.serialize(), { skipPreflight: false });
+  await conn.confirmTransaction(sig, 'confirmed');
+
+  const stableReceived = Number((quoteResponse as any).outAmount) / 1e6;
+  return { txHash: sig, stableReceived };
+}
+
+// ─── Forward stablecoin to merchant (EVM) ────────────────────────────────────
+async function forwardEvmToMerchant(
+  chain: string, targetStable: string, fromPrivKey: string, toAddress: string,
+): Promise<string> {
+  const conf      = EVM_CHAIN[chain];
+  if (!conf) throw new Error(`forwardEvm: unsupported chain ${chain}`);
+  const tokenAddr = conf.stables[targetStable] ?? conf.stables.USDC;
+  const provider  = new ethers.JsonRpcProvider(conf.rpc);
+  const fromWallet = new ethers.Wallet(fromPrivKey, provider);
+  const token      = new ethers.Contract(tokenAddr, ERC20_ABI, fromWallet);
+  const bal        = await token.balanceOf(fromWallet.address);
+  if (bal === BigInt(0)) throw new Error('No stablecoin balance to forward after swap');
+  const tx = await token.transfer(toAddress, bal);
+  await tx.wait();
+  return tx.hash;
+}
+
+// ─── Forward stablecoin to merchant (Solana) ─────────────────────────────────
+async function forwardSolToMerchant(
+  targetStable: string, secretHex: string, toAddress: string,
+): Promise<string> {
+  const { getOrCreateAssociatedTokenAccount, createTransferCheckedInstruction } = await import('@solana/spl-token');
+  const { Transaction, PublicKey } = await import('@solana/web3.js');
+
+  const mint    = new PublicKey(SOL_STABLES[targetStable] ?? SOL_STABLES.USDC);
+  const keypair = Keypair.fromSecretKey(Buffer.from(secretHex, 'hex'));
+  const conn    = new Connection(SOL_RPC, 'confirmed');
+  const toPub   = new PublicKey(toAddress);
+
+  const fromAta = await getOrCreateAssociatedTokenAccount(conn, keypair, mint, keypair.publicKey);
+  const toAta   = await getOrCreateAssociatedTokenAccount(conn, keypair, mint, toPub);
+
+  if (fromAta.amount === BigInt(0)) throw new Error('No stablecoin to forward on Solana');
+  const tx  = new Transaction().add(
+    createTransferCheckedInstruction(fromAta.address, mint, toAta.address, keypair.publicKey, fromAta.amount, 6),
+  );
+  const sig = await conn.sendTransaction(tx, [keypair]);
+  await conn.confirmTransaction(sig, 'confirmed');
+  return sig;
+}
+
+// ─── Main entry: swap native token → stablecoin → merchant ───────────────────
+export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: string }> {
+  const order = await db.order.findUnique({
+    where: { id: orderId },
+    include: { merchant: { select: { id: true } } },
+  });
+  if (!order)              throw new Error(`Order ${orderId} not found`);
+  if (!order.nativeToken)  throw new Error(`Order ${orderId} is not a native token order`);
+
+  const receiveWallet = await db.nativeReceiveWallet.findUnique({ where: { orderId } });
+  if (!receiveWallet) throw new Error(`No receive wallet for order ${orderId}`);
+
+  const chain      = String(order.chain);
+  const isSolana   = chain.startsWith('SOLANA');
+  const privKey    = decryptWalletKey(receiveWallet.encryptedKey);
+  const nativeAmt  = Number(order.nativeTokenAmount ?? 0);
+
+  const merchantWallet = await db.merchantWallet.findFirst({
+    where: { merchantId: order.merchantId!, chain: order.chain, isActive: true },
+  });
+  if (!merchantWallet) throw new Error(`No active merchant wallet for ${chain}`);
+  const targetStable = (merchantWallet as any).preferredStablecoin ?? 'USDC';
+
+  let swapTxHash: string;
+  let stableReceived: number;
+  let forwardTxHash: string;
+
+  if (isSolana) {
+    const lamports = Math.round(nativeAmt * 1e9);
+    ({ txHash: swapTxHash, stableReceived } = await executeJupiterSwap(lamports, targetStable, privKey));
+    forwardTxHash = await forwardSolToMerchant(targetStable, privKey, merchantWallet.address);
+  } else {
+    await ensureGas(receiveWallet.address, chain);
+    ({ txHash: swapTxHash, stableReceived } = await executeLiFiSwap(chain, nativeAmt, targetStable, privKey));
+    forwardTxHash = await forwardEvmToMerchant(chain, targetStable, privKey, merchantWallet.address);
+  }
+
+  logger.info('swapAndForward complete', { orderId, chain, nativeAmt, stableReceived, swapTxHash, forwardTxHash });
+  return { forwardTxHash };
+}

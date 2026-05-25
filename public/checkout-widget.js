@@ -9,6 +9,13 @@
   const STABLEPAY_URL = 'https://wetakestables.shop';
   const WIDGET_VERSION = '3.0.0';
 
+  const NATIVE_TOKENS = new Set(['ETH', 'SOL', 'BNB', 'MATIC', 'ARB']);
+  const CHAIN_NATIVE_TOKEN = {
+    BASE_MAINNET: 'ETH', ETHEREUM_MAINNET: 'ETH', ARBITRUM_MAINNET: 'ARB',
+    POLYGON_MAINNET: 'MATIC', BNB_MAINNET: 'BNB', SOLANA_MAINNET: 'SOL',
+    BASE_SEPOLIA: 'ETH', ETHEREUM_SEPOLIA: 'ETH',
+  };
+
   // Chain configurations (subset for widget)
   // All verified contract addresses from Circle (USDC/EURC) and Tether (USDT)
   const CHAIN_CONFIG = {
@@ -170,6 +177,7 @@
       await this.loadMerchantConfig();
       this.render();
       this.attachEventListeners();
+      window._spWidget = this; // allows onclick handlers in rendered HTML to call setPayMode
     }
 
     injectStyles() {
@@ -247,6 +255,8 @@
               chain: w.chain,
               address: w.address,
               supportedTokens: w.supportedTokens || ['USDC'],
+              acceptNativeTokens: !!w.acceptNativeTokens,
+              preferredStablecoin: w.preferredStablecoin || 'USDC',
               config: CHAIN_CONFIG[w.chain]
             }))
             .sort((a, b) => (chainPriority[a.chain] ?? 99) - (chainPriority[b.chain] ?? 99));
@@ -254,6 +264,9 @@
 
         if (this.merchantChains.length > 0) {
           this.selectedChain = this.merchantChains[0];
+          this.payMode = 'stable'; // 'stable' | 'crypto'
+          this.nativePriceUsd = null;
+          this.nativePricePoller = null;
           this.selectedToken = this.selectedChain.supportedTokens[0] || 'USDC';
         }
 
@@ -348,6 +361,40 @@
 
           <div style="padding: 20px;">
 
+          <!-- Pay mode toggle (only shown when merchant accepts native tokens) -->
+          ${this.merchantChains.some(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]) ? `
+          <div id="sp-pay-mode-toggle" style="display: flex; border: 2px solid var(--sp-border); margin-bottom: 12px;">
+            <button id="sp-mode-stable" type="button" onclick="window._spWidget?.setPayMode('stable')" style="
+              flex: 1; padding: 8px 12px; text-align: left; background: var(--sp-text); color: var(--sp-bg);
+              border: none; cursor: pointer; font-size: 11px; font-weight: 700;
+            ">
+              <span style="display: block;">Stablecoin</span>
+              <span style="font-size: 10px; opacity: 0.6; font-weight: 400;">USDC · USDT · No fee</span>
+            </button>
+            <button id="sp-mode-crypto" type="button" onclick="window._spWidget?.setPayMode('crypto')" style="
+              flex: 1; padding: 8px 12px; text-align: left; background: var(--sp-card); color: var(--sp-muted);
+              border: none; border-left: 2px solid var(--sp-border); cursor: pointer; font-size: 11px; font-weight: 700;
+            ">
+              <span style="display: block;">ETH / SOL / BNB</span>
+              <span style="font-size: 10px; opacity: 0.6; font-weight: 400;">+1.5% conversion fee</span>
+            </button>
+          </div>
+          <!-- Conversion fee banner -->
+          <div id="sp-fee-banner" style="display: none; background: #fefce8; border: 2px solid #facc15; padding: 10px 12px; margin-bottom: 12px; font-size: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+              <div>
+                <strong style="color: #713f12;">1.5% conversion fee</strong>
+                <span style="color: #92400e;"> — You'll send <strong id="sp-native-send-amt">—</strong></span>
+              </div>
+              <button type="button" onclick="window._spWidget?.setPayMode('stable')" style="
+                font-size: 11px; font-weight: 700; text-decoration: underline; color: #713f12;
+                background: none; border: none; cursor: pointer; white-space: nowrap; padding: 0;
+              ">Use USDC →</button>
+            </div>
+            <div id="sp-native-expiry" style="font-size: 10px; color: #92400e; margin-top: 4px;"></div>
+          </div>
+          ` : ''}
+
           <!-- Chain + Token Selection -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
             <div>
@@ -383,7 +430,7 @@
               </div>
             </div>
             <div>
-              <label style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Stablecoin</label>
+              <label id="sp-token-label" style="font-size: 10px; font-weight: 700; color: var(--sp-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Stablecoin</label>
               <div id="sp-token-select-wrapper" style="position: relative;">
                 <button id="sp-token-select-btn" type="button" style="
                   width: 100%; padding: 8px 12px; font-size: 13px; font-weight: 600;
@@ -625,19 +672,115 @@
         USDC: 'https://www.svgrepo.com/show/367255/usdc.svg',
         USDT: 'https://www.svgrepo.com/show/367256/usdt.svg',
         EURC: 'https://coin-images.coingecko.com/coins/images/26045/large/EURC.png',
+        ETH: 'https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg',
+        SOL: 'https://www.svgrepo.com/show/470684/solana.svg',
+        BNB: 'https://www.svgrepo.com/show/366901/bnb.svg',
+        MATIC: 'https://cdn.iconscout.com/icon/premium/png-256-thumb/polygon-matic-icon-svg-download-png-5795452.png?f=webp&w=128',
+        ARB: 'https://arbitrum.io/_next/image?url=%2Fbrandkit%2F1225_Arbitrum_Logomark_OneColorNavy_ClearSpace.png&w=640&q=75',
       };
       return icons[token] || '';
     }
 
     renderTokenOptions() {
       if (!this.selectedChain) return '<option>USDC</option>';
-      const tokenOrder = { USDC: 0, USDT: 1, EURC: 2 };
-      const tokens = [...this.selectedChain.supportedTokens].sort((a, b) => (tokenOrder[a] ?? 99) - (tokenOrder[b] ?? 99));
-      const chainTokens = this.selectedChain.config.tokens;
+      const tokens = this.getTokensForMode();
       return tokens
-        .filter(t => chainTokens[t])
         .map((token, i) => `<option value="${token}" ${i === 0 ? 'selected' : ''}>${token}</option>`)
         .join('');
+    }
+
+    getTokensForMode() {
+      if (!this.selectedChain) return ['USDC'];
+      const nativeToken = CHAIN_NATIVE_TOKEN[this.selectedChain.chain];
+      if (this.payMode === 'crypto' && this.selectedChain.acceptNativeTokens && nativeToken) {
+        return [nativeToken];
+      }
+      const tokenOrder = { USDC: 0, USDT: 1, EURC: 2 };
+      return [...this.selectedChain.supportedTokens]
+        .filter(t => this.selectedChain.config.tokens[t])
+        .sort((a, b) => (tokenOrder[a] ?? 99) - (tokenOrder[b] ?? 99));
+    }
+
+    setPayMode(mode) {
+      this.payMode = mode;
+      // Update toggle button styles
+      const btnStable = this.container.querySelector('#sp-mode-stable');
+      const btnCrypto = this.container.querySelector('#sp-mode-crypto');
+      if (btnStable && btnCrypto) {
+        if (mode === 'stable') {
+          btnStable.style.background = 'var(--sp-text)'; btnStable.style.color = 'var(--sp-bg)';
+          btnCrypto.style.background = 'var(--sp-card)'; btnCrypto.style.color = 'var(--sp-muted)';
+        } else {
+          btnCrypto.style.background = 'var(--sp-text)'; btnCrypto.style.color = 'var(--sp-bg)';
+          btnStable.style.background = 'var(--sp-card)'; btnStable.style.color = 'var(--sp-muted)';
+        }
+      }
+      // Update token label
+      const tokenLabel = this.container.querySelector('#sp-token-label');
+      if (tokenLabel) tokenLabel.textContent = mode === 'stable' ? 'Stablecoin' : 'Crypto token';
+
+      // Filter chain dropdown — hide chains with no native token when in crypto mode
+      const chainDropdown = this.container.querySelector('#sp-chain-dropdown');
+      const chainSelect = this.container.querySelector('#sp-chain-select');
+      if (chainDropdown) {
+        chainDropdown.querySelectorAll('.sp-chain-option').forEach(opt => {
+          const c = opt.dataset.chain;
+          opt.style.display = (mode === 'crypto' && !CHAIN_NATIVE_TOKEN[c]) ? 'none' : '';
+        });
+      }
+      if (chainSelect) {
+        Array.from(chainSelect.options).forEach(opt => {
+          opt.hidden = mode === 'crypto' && !CHAIN_NATIVE_TOKEN[opt.value];
+        });
+      }
+
+      // If current chain has no native token, switch to first supported one
+      let targetChain = this.selectedChain?.chain;
+      if (mode === 'crypto' && !CHAIN_NATIVE_TOKEN[targetChain]) {
+        const fallback = this.merchantChains.find(mc => !!CHAIN_NATIVE_TOKEN[mc.chain]);
+        if (fallback) {
+          targetChain = fallback.chain;
+          const chainBtn = this.container.querySelector('#sp-chain-select-btn');
+          if (chainBtn) {
+            chainBtn.innerHTML = `
+              <img src="${this.getChainIcon(fallback.chain)}" style="width: 18px; height: 18px; border-radius: 50%;" onerror="this.style.display='none'">
+              <span>${fallback.config.chainName}</span>
+              <span style="margin-left: auto; font-size: 10px; opacity: 0.5;">▼</span>
+            `;
+          }
+          if (chainSelect) chainSelect.value = fallback.chain;
+        }
+      }
+
+      // Rebuild token dropdown for new mode
+      this.selectChain(targetChain);
+      // Show/hide fee banner
+      const banner = this.container.querySelector('#sp-fee-banner');
+      if (banner) banner.style.display = (mode === 'crypto') ? 'block' : 'none';
+      // refreshNativePrice is called inside selectChain when payMode === 'crypto'
+    }
+
+    async refreshNativePrice() {
+      const nativeToken = CHAIN_NATIVE_TOKEN[this.selectedChain?.chain];
+      if (!nativeToken) return;
+      try {
+        const res = await fetch(`${STABLEPAY_URL}/api/embed/native-price?token=${nativeToken}`);
+        const data = await res.json();
+        this.nativePriceUsd = data.priceUsd;
+        this.updateNativeSendAmt();
+      } catch (e) {}
+    }
+
+    updateNativeSendAmt() {
+      if (!this.nativePriceUsd || !this.options.amount) return;
+      const usd = parseFloat(this.options.amount);
+      const chain = this.selectedChain?.chain;
+      const pct = usd * 0.015;
+      const fee = (chain === 'ETHEREUM_MAINNET') ? Math.max(pct, 5.00) : Math.max(pct, 0.50);
+      const nativeToken = CHAIN_NATIVE_TOKEN[chain] || this.selectedToken;
+      const sendAmt = (usd + fee) / this.nativePriceUsd;
+      const el = this.container.querySelector('#sp-native-send-amt');
+      if (el) el.textContent = `${sendAmt.toPrecision(4)} ${nativeToken} ($${(usd + fee).toFixed(2)})`;
     }
 
     renderTokenButtons() {
@@ -1105,7 +1248,6 @@
         return;
       }
 
-      // Get merchant wallet for this chain
       const chain = this.selectedChain;
       const walletAddr = chain.address;
 
@@ -1114,13 +1256,115 @@
         return;
       }
 
+      const isNative = this.payMode === 'crypto' && !!CHAIN_NATIVE_TOKEN[chain.chain];
+
+      // ── Native token path: create order eagerly to get fresh receive wallet ──
+      if (isNative) {
+        const nativeToken = CHAIN_NATIVE_TOKEN[chain.chain];
+        const step1 = this.container.querySelector('#sp-send-step1');
+        const step2 = this.container.querySelector('#sp-send-step2');
+        const prevStep1Html = step1?.innerHTML;
+        if (step1) step1.innerHTML = '<div style="text-align:center;padding:16px;font-size:12px;color:var(--sp-muted);">Generating payment address…</div>';
+
+        try {
+          const usdAmount = parseFloat(this.options.amount || 0);
+          const res = await fetch(`${STABLEPAY_URL}/api/embed/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchantId: this.options.merchantId,
+              storeId: this.options.storeId || undefined,
+              amount: usdAmount,
+              chain: chain.chain,
+              token: nativeToken,
+              customerEmail: this.options.customerEmail,
+              productName: this.options.productName,
+              customerWallet: this.connectedWallet || null,
+              paymentMethod: 'MANUAL_SEND',
+              source: 'EMBED_WIDGET',
+            })
+          });
+          const data = await res.json();
+          if (!data.success) {
+            if (step1 && prevStep1Html) step1.innerHTML = prevStep1Html;
+            this.showError(data.error || 'Failed to create payment');
+            return;
+          }
+
+          // Order created — set orderId so "I've sent it" skips re-creation
+          this.currentOrderId = data.order.id;
+          const receiveAddress = data.order.paymentAddress;
+          const nativeSendAmt = data.order.nativeSendAmount;
+          const expiresAt = data.order.expiresAt;
+
+          // Build send amount string
+          const pct = usdAmount * 0.015;
+          const fee = (chain.chain === 'ETHEREUM_MAINNET') ? Math.max(pct, 5.00) : Math.max(pct, 0.50);
+          const fallbackAmt = this.nativePriceUsd ? ((usdAmount + fee) / this.nativePriceUsd).toPrecision(5) : '?';
+          const sendAmtStr = nativeSendAmt
+            ? `${parseFloat(nativeSendAmt).toPrecision(5)} ${nativeToken}`
+            : `${fallbackAmt} ${nativeToken}`;
+
+          if (step1) step1.style.display = 'none';
+          if (step2) step2.style.display = 'block';
+
+          const payAddress = this.container.querySelector('#sp-pay-address');
+          const payAmount = this.container.querySelector('#sp-pay-amount');
+          const sendAmountDisplay = this.container.querySelector('#sp-send-amount-display');
+          if (payAddress) payAddress.textContent = receiveAddress;
+          if (payAmount) payAmount.textContent = sendAmtStr;
+          if (sendAmountDisplay) sendAmountDisplay.textContent = sendAmtStr;
+
+          // Expiry countdown in fee banner
+          if (expiresAt) {
+            const expiryEl = this.container.querySelector('#sp-native-expiry');
+            if (expiryEl) {
+              const expires = new Date(expiresAt);
+              if (this._expiryTick) clearTimeout(this._expiryTick);
+              const tick = () => {
+                const rem = Math.max(0, Math.floor((expires - Date.now()) / 1000));
+                const m = Math.floor(rem / 60), s = rem % 60;
+                expiryEl.textContent = rem > 0
+                  ? `Price locked · ${m}:${s.toString().padStart(2, '0')} remaining`
+                  : 'Price lock expired — start a new payment';
+                if (rem > 0) this._expiryTick = setTimeout(tick, 1000);
+              };
+              tick();
+            }
+          }
+
+          // QR code for receive address
+          const canvas = this.container.querySelector('#sp-qr-canvas');
+          if (canvas) {
+            const waitAndRender = () => {
+              if (typeof QRCode !== 'undefined') {
+                QRCode.toCanvas(canvas, receiveAddress, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, () => {});
+              } else { setTimeout(waitAndRender, 500); }
+            };
+            waitAndRender();
+          }
+
+          // Hide Solana Pay toggle (native SOL, not SPL)
+          const solPayToggle = this.container.querySelector('#sp-solanapay-toggle');
+          if (solPayToggle) solPayToggle.style.display = 'none';
+
+          this.lockSelectors();
+          this.startCountdown();
+          return;
+        } catch (err) {
+          console.error('Failed to create native order:', err);
+          if (step1 && prevStep1Html) step1.innerHTML = prevStep1Html;
+          this.showError('Failed to create payment — please try again');
+          return;
+        }
+      }
+
+      // ── Stablecoin path: store pending payment, create order on "I've sent it" ──
       let amount = parseFloat(this.options.amount || 0);
-      // Convert USD to EUR for EURC payments
       if (this.selectedToken === 'EURC' && this.eurcRate) {
         amount = parseFloat((amount / this.eurcRate).toFixed(2));
       }
 
-      // Store payment details for order creation later (when user clicks "I've sent it")
       this._pendingPayment = {
         merchantId: this.options.merchantId,
         amount,
@@ -1134,13 +1378,11 @@
         walletAddr,
       };
 
-      // Show step 2, hide step 1
       const step1 = this.container.querySelector('#sp-send-step1');
       const step2 = this.container.querySelector('#sp-send-step2');
       if (step1) step1.style.display = 'none';
       if (step2) step2.style.display = 'block';
 
-      // Show address + amount in both views
       const payAddress = this.container.querySelector('#sp-pay-address');
       const payAmount = this.container.querySelector('#sp-pay-amount');
       const sendAmountDisplay = this.container.querySelector('#sp-send-amount-display');
@@ -1148,12 +1390,10 @@
       if (payAmount) payAmount.textContent = `${amount} ${this.selectedToken}`;
       if (sendAmountDisplay) sendAmountDisplay.textContent = `${amount} ${this.selectedToken}`;
 
-      // Generate QR code
       const canvas = this.container.querySelector('#sp-qr-canvas');
       const chainConfig = this.selectedChain?.config;
       const tokenConfig = chainConfig?.tokens?.[this.selectedToken];
 
-      // Show Solana Pay toggle only for Solana
       const solPayToggle = this.container.querySelector('#sp-solanapay-toggle');
       const solPayCheck = this.container.querySelector('#sp-solanapay-check');
       if (solPayToggle) solPayToggle.style.display = chainConfig?.type === 'solana' ? 'block' : 'none';
@@ -1169,7 +1409,6 @@
         });
       };
 
-      // Render QR (default: raw address)
       if (canvas) {
         const waitAndRender = () => {
           if (typeof QRCode !== 'undefined') { generateQR(false); } else { setTimeout(waitAndRender, 500); }
@@ -1177,19 +1416,13 @@
         waitAndRender();
       }
 
-      // Solana Pay toggle handler
       if (solPayCheck) {
         solPayCheck.checked = false;
         solPayCheck.onchange = () => generateQR(solPayCheck.checked);
       }
 
-      // Lock chain + token selectors during payment
       this.lockSelectors();
-
-      // Start 5-minute countdown timer
       this.startCountdown();
-
-      // Polling starts when user clicks "I've sent it" — handled in initManualPaymentFlows
     }
 
     startCountdown() {
@@ -1416,7 +1649,8 @@
     selectChain(chainKey) {
       const prevType = this.selectedChain?.config?.type;
       this.selectedChain = this.merchantChains.find(mc => mc.chain === chainKey);
-      this.selectedToken = this.selectedChain?.supportedTokens[0] || 'USDC';
+      const tokens = this.getTokensForMode();
+      this.selectedToken = tokens[0] || 'USDC';
 
       // Update token dropdown options (hidden select + custom dropdown)
       const tokenSelect = this.container.querySelector('#sp-token-select');
@@ -1434,8 +1668,7 @@
         `;
       }
       if (tokenDropdown && this.selectedChain) {
-        tokenDropdown.innerHTML = this.selectedChain.supportedTokens
-          .filter(t => this.selectedChain.config.tokens[t])
+        tokenDropdown.innerHTML = tokens
           .map(token => `
             <div class="sp-token-option" data-token="${token}" style="
               padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--sp-text);
@@ -1481,6 +1714,9 @@
       // Re-check balance for new chain/token
       if (this.connectedWallet) this.checkTokenBalance();
       else this.updatePayButton();
+
+      // Refresh native price when chain changes in crypto mode
+      if (this.payMode === 'crypto') this.refreshNativePrice();
     }
 
     selectToken(token) {

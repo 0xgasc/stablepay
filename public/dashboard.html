@@ -4357,6 +4357,9 @@ onMounted(() => {
                 const addrPlaceholder = network.id.includes('SOLANA') ? 'Solana address (base58)' : network.id.includes('TRON') ? 'TRON address (T...)' : '0x... EVM address';
 
                 const walletLabel = wallet?.label || '';
+                const acceptNative = wallet ? !!wallet.acceptNativeTokens : true; // default opt-in
+                const preferredStable = wallet?.preferredStablecoin || 'USDC';
+                const chainNativeToken = { BASE_MAINNET:'ETH', ETHEREUM_MAINNET:'ETH', ARBITRUM_MAINNET:'ARB', POLYGON_MAINNET:'MATIC', BNB_MAINNET:'BNB', SOLANA_MAINNET:'SOL' }[network.id] || null;
                 return `
                     <div class="bg-slate-950 border p-4 ${isEnabled ? 'border-green-700' : 'border-slate-800'} hover:border-slate-600 transition">
                         <div class="flex items-center gap-3">
@@ -4416,6 +4419,30 @@ onMounted(() => {
                                     `).join('')}
                                 </div>
                             </div>
+                            ${chainNativeToken ? `
+                            <div class="pt-3 border-t border-slate-800 mt-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div>
+                                        <label class="text-xs text-slate-300 font-medium block">Accept ${chainNativeToken} (native token)</label>
+                                        <p class="text-[10px] text-slate-500 mt-0.5">Customer pays 1.5% conversion fee. You always receive stablecoin.</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                        <input type="checkbox"
+                                               class="native-toggle sr-only peer"
+                                               data-chain="${network.id}"
+                                               ${acceptNative ? 'checked' : ''}>
+                                        <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-yellow-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <label class="text-xs text-slate-400 shrink-0">Deliver payments as:</label>
+                                    <select class="preferred-stable text-xs bg-slate-900 border border-slate-700 text-slate-300 rounded px-2 py-1 focus:border-blue-500"
+                                            data-chain="${network.id}">
+                                        ${['USDC','USDT','EURC'].map(s => `<option value="${s}" ${preferredStable===s?'selected':''}>${s}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -4456,11 +4483,15 @@ onMounted(() => {
 
                     if (address) {
                         const labelInput = document.querySelector(`input[data-wallet-label="${chain}"]`);
+                        const nativeToggle = document.querySelector(`input.native-toggle[data-chain="${chain}"]`);
+                        const preferredStableEl = document.querySelector(`select.preferred-stable[data-chain="${chain}"]`);
                         wallets.push({
                             chain,
                             address,
                             label: labelInput?.value?.trim() || null,
-                            supportedTokens: selectedTokens.length > 0 ? selectedTokens : ['USDC']
+                            supportedTokens: selectedTokens.length > 0 ? selectedTokens : ['USDC'],
+                            acceptNativeTokens: nativeToggle ? nativeToggle.checked : false,
+                            preferredStablecoin: preferredStableEl?.value || 'USDC',
                         });
                     }
                 }

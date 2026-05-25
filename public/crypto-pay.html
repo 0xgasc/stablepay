@@ -8,6 +8,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#FFFFFF">
     <title data-i18n="title">Crypto Payment - StablePay</title>
+    <link id="favicon" rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="/favicon.svg">
     <script src="/js/lang.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
@@ -87,6 +89,173 @@
         body.night-mode .shadow-brutal {
             box-shadow: 8px 8px 0px #fff !important;
         }
+        /* === Dark mode overrides for light-pastel panels ===
+           Without these, light backgrounds stay light while the body inverts text to white,
+           creating unreadable light-on-light combos. Each rule preserves the semantic color. */
+
+        /* Yellow "Use this network" badge → dark amber with warm amber text */
+        body.night-mode #cpNetworkBadge {
+            background: #3a2f0d !important;
+            border-color: #FFE082 !important;
+        }
+        body.night-mode #cpNetworkBadge p,
+        body.night-mode #cpNetworkBadge #cpChainName {
+            color: #FFE082 !important;
+        }
+        body.night-mode #cpNetworkBadge .text-base,
+        body.night-mode #cpNetworkBadge .text-lg {
+            color: #FFF59D !important;
+        }
+
+        /* Light-blue info/status panel (#E3F2FD) → deep navy with cyan text */
+        body.night-mode [style*="#E3F2FD"] {
+            background: #0a1f33 !important;
+        }
+        body.night-mode [style*="#E3F2FD"] * {
+            color: #7FDBFF !important;
+        }
+
+        /* Error panel (#FFE5E5) → deep maroon with salmon text */
+        body.night-mode [style*="#FFE5E5"] {
+            background: #3a0d0d !important;
+        }
+        body.night-mode [style*="#FFE5E5"] * {
+            color: #FF9B9B !important;
+        }
+
+        /* Success summary panel (#F0FFF0) → deep forest with mint text */
+        body.night-mode [style*="#F0FFF0"] {
+            background: #0d2a14 !important;
+        }
+        body.night-mode [style*="#F0FFF0"] * {
+            color: #A8E6B4 !important;
+        }
+
+        /* "Back to store" white button (#FFF) on success screen → dark with white text */
+        body.night-mode [style*="background: #FFF;"],
+        body.night-mode [style*="background:#FFF;"],
+        body.night-mode [style*="background: #fff;"] {
+            background: #1a1a1a !important;
+        }
+
+        /* Solana Pay QR purple chip (#4FC3F7) — already readable; leave alone */
+
+        /* Light-gray helper panels (Tailwind bg-gray-50) → mid-dark gray with light text */
+        body.night-mode .bg-gray-50 {
+            background: #222 !important;
+        }
+        body.night-mode .bg-gray-50,
+        body.night-mode .bg-gray-50 * {
+            color: #e0e0e0 !important;
+        }
+        body.night-mode .bg-gray-50 strong { color: #fff !important; }
+        body.night-mode .bg-gray-50 .text-black { color: #fff !important; }
+
+        /* "How does this work?" helper — lowkey collapsible. Closed by default.
+           Uses native <details>/<summary> so it's accessible + works without JS. */
+        details.cp-help {
+            border-top: 1px dashed #999;
+            margin-top: 16px;
+            padding-top: 12px;
+        }
+        details.cp-help > summary {
+            list-style: none;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 0;
+            user-select: none;
+        }
+        details.cp-help > summary::-webkit-details-marker { display: none; }
+        details.cp-help > summary::after {
+            content: '+';
+            margin-left: auto;
+            font-size: 16px;
+            font-weight: 700;
+            color: #999;
+            transition: transform .15s;
+        }
+        details.cp-help[open] > summary::after { content: '−'; }
+        details.cp-help > summary:hover { color: #000; }
+        details.cp-help[open] > summary { color: #000; margin-bottom: 8px; }
+        body.night-mode details.cp-help > summary { color: #aaa; }
+        body.night-mode details.cp-help > summary:hover,
+        body.night-mode details.cp-help[open] > summary { color: #fff; }
+        body.night-mode details.cp-help { border-top-color: #444; }
+        .cp-help-body {
+            font-size: 13px;
+            line-height: 1.55;
+            color: #444;
+            padding: 4px 0;
+        }
+        body.night-mode .cp-help-body { color: #bbb; }
+        .cp-help-body ol {
+            margin: 0;
+            padding-left: 0;
+            list-style: none;
+            counter-reset: step;
+        }
+        .cp-help-body ol li {
+            counter-increment: step;
+            padding: 4px 0 4px 28px;
+            position: relative;
+        }
+        .cp-help-body ol li::before {
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 4px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            background: #000;
+            color: #fff;
+            border-radius: 50%;
+        }
+        body.night-mode .cp-help-body ol li::before { background: #fff; color: #000; }
+        .cp-help-body strong { color: #000; }
+        body.night-mode .cp-help-body strong { color: #fff; }
+        .cp-help-foot {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px dashed #ccc;
+            font-size: 12px;
+            color: #666;
+        }
+        body.night-mode .cp-help-foot { color: #aaa; border-top-color: #444; }
+        .cp-help-foot a { color: inherit; font-weight: 600; text-decoration: underline; }
+
+        /* Form inputs in dark mode — text-mode browser default is white-on-light which clashes */
+        body.night-mode input[type="text"],
+        body.night-mode input[type="email"],
+        body.night-mode input[type="number"],
+        body.night-mode textarea {
+            background: #1a1a1a !important;
+            color: #fff !important;
+            border-color: #fff !important;
+        }
+        body.night-mode input::placeholder,
+        body.night-mode textarea::placeholder {
+            color: #888 !important;
+        }
+
+        /* Dropdown hover state (bg-gray-100 / hover:bg-gray-100) */
+        body.night-mode .hover\:bg-gray-100:hover,
+        body.night-mode .bg-gray-100 {
+            background: #2a2a2a !important;
+        }
+
+        /* Border between dropdown items (border-gray-200) */
+        body.night-mode .border-gray-200 {
+            border-color: #333 !important;
+        }
         .brutal-border {
             border: 4px solid #000;
         }
@@ -95,9 +264,8 @@
         }
         .btn-brutal {
             border: 4px solid #000;
-            text-transform: uppercase;
             font-weight: 700;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.01em;
             transition: all 0.2s;
         }
         .btn-brutal:hover {
@@ -226,12 +394,30 @@
                 font-size: 1.25rem;
             }
 
-            /* Full-width modal on mobile */
-            #walletModal > div:nth-child(2) {
-                margin: 16px;
-                max-height: calc(100vh - 32px);
+            /* Full-width modals on mobile (wallet selection + how-it-works) */
+            #walletModal > div:nth-child(2),
+            #howItWorksModal > div:nth-child(2) {
+                margin: 12px;
+                max-height: calc(100vh - 24px);
                 overflow-y: auto;
+                padding: 16px !important;
             }
+            #howItWorksModal h3 { font-size: 1.05rem; }
+
+            /* "How it works" button — make it 44px+ tap target */
+            #cpHowItWorksBtn {
+                padding: 8px 14px;
+                font-size: 14px;
+            }
+
+            /* Tighten cp-help body inside payment cards on mobile so it doesn't dwarf the CTAs */
+            .cp-help-body { font-size: 13px; }
+            .cp-help-body ol li { padding-left: 26px; }
+            .cp-help-body ol li::before { width: 18px; height: 18px; line-height: 18px; font-size: 10px; }
+
+            /* Tabs stay readable when both fit on one row */
+            #methodTabManual, #methodTabWallet,
+            #cpHIWTabManual, #cpHIWTabWallet { font-size: 12px; padding: 10px 8px; }
 
             /* Larger wallet options for touch */
             #walletOptions button {
@@ -341,6 +527,67 @@
             70%  { box-shadow: 0 0 0 10px rgba(79, 195, 247, 0); }
             100% { box-shadow: 0 0 0 0   rgba(79, 195, 247, 0); }
         }
+
+        /* ── Stablo chat widget ── */
+        #stabloBtn {
+            position: fixed; bottom: 20px; right: 20px; z-index: 999;
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 16px; font-size: 13px; font-weight: 800;
+            background: #00E5FF; color: #000; border: 3px solid #000;
+            box-shadow: 3px 3px 0 #000; cursor: pointer; white-space: nowrap;
+            transition: transform .1s, box-shadow .1s;
+        }
+        #stabloBtn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #000; }
+        #stabloBtn:active { transform: translate(1px,1px); box-shadow: 2px 2px 0 #000; }
+        #stabloPanel {
+            position: fixed; bottom: 76px; right: 20px; z-index: 999;
+            width: 320px; max-height: 420px;
+            background: #fff; border: 3px solid #000; box-shadow: 4px 4px 0 #000;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        #stabloPanel.hidden { display: none; }
+        #stabloHeader {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; border-bottom: 2px solid #000;
+            background: #00E5FF; font-weight: 800; font-size: 13px;
+        }
+        #stabloClose { font-size: 20px; cursor: pointer; line-height: 1; font-weight: 900; }
+        #stabloMessages {
+            flex: 1; overflow-y: auto; padding: 12px; display: flex;
+            flex-direction: column; gap: 8px; font-size: 13px;
+        }
+        .stablo-msg { max-width: 85%; padding: 8px 11px; line-height: 1.45; }
+        .stablo-msg.bot { background: #f3f3f3; border: 2px solid #000; align-self: flex-start; }
+        .stablo-msg.user { background: #00E5FF; border: 2px solid #000; align-self: flex-end; }
+        .stablo-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 8px; }
+        .stablo-chip {
+            font-size: 11px; font-weight: 700; padding: 5px 9px;
+            border: 2px solid #000; background: #fff; cursor: pointer;
+        }
+        .stablo-chip:hover { background: #f3f3f3; }
+        #stabloInputRow {
+            display: flex; border-top: 2px solid #000;
+        }
+        #stabloInput {
+            flex: 1; padding: 9px 11px; border: none; outline: none;
+            font-size: 13px; font-family: inherit;
+        }
+        #stabloSend {
+            padding: 9px 14px; font-weight: 800; font-size: 13px;
+            background: #000; color: #00E5FF; border: none; cursor: pointer;
+        }
+        body.night-mode #stabloPanel { background: #1a1a1a; border-color: #444; box-shadow: 4px 4px 0 #444; }
+        body.night-mode #stabloHeader { background: #005f6b; border-color: #444; color: #fff; }
+        body.night-mode .stablo-msg.bot { background: #2a2a2a; border-color: #444; color: #ddd; }
+        body.night-mode .stablo-msg.user { background: #005f6b; border-color: #444; color: #fff; }
+        body.night-mode .stablo-chip { background: #2a2a2a; border-color: #555; color: #ccc; }
+        body.night-mode .stablo-chip:hover { background: #333; }
+        body.night-mode #stabloInput { background: #1a1a1a; color: #eee; }
+        body.night-mode #stabloInputRow { border-color: #444; }
+        @media (max-width: 640px) {
+            #stabloPanel { width: calc(100vw - 24px); right: 12px; bottom: 72px; }
+            #stabloBtn { right: 12px; bottom: 12px; }
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -348,9 +595,9 @@
     <nav class="mc-nav border-b-4 border-black">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-20">
-                <a href="/" id="mcBrand" class="flex items-center gap-3 text-3xl font-bold tracking-tight mc-brand-text" style="text-transform: uppercase; text-decoration: none;">
+                <a href="/" id="mcBrand" class="flex items-center gap-3 text-3xl font-bold tracking-tight mc-brand-text" style="text-decoration: none;">
                     <img id="mcLogo" class="mc-logo hidden" alt="" />
-                    <span id="mcBrandName">STABLEPAY</span>
+                    <span id="mcBrandName">Checkout</span>
                 </a>
                 <div class="flex items-center gap-4">
                     <!-- Language Selector -->
@@ -372,7 +619,7 @@
     <div class="container mx-auto px-4 py-8 max-w-2xl">
         <!-- Back + Cancel buttons (always visible top of page) -->
         <div class="mb-6 flex items-center justify-between gap-3">
-            <button id="backBtn" onclick="goBack()" class="font-bold flex items-center tracking-wide btn-brutal px-4 py-2 mc-accent-bg" style="text-transform: uppercase;" data-i18n="backBtn">
+            <button id="backBtn" onclick="goBack()" class="font-bold flex items-center tracking-wide btn-brutal px-4 py-2 mc-accent-bg" data-i18n="backBtn">
                 BACK TO STORE
             </button>
             <button id="cpTopCancelBtn" onclick="cpCancelOrder()"
@@ -383,24 +630,31 @@
         </div>
 
         <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold mb-3 text-black tracking-tight" style="text-transform: uppercase;" data-i18n="heading">COMPLETE YOUR PURCHASE</h1>
-            <p class="text-gray-700" data-i18n="subheading">Pay with USDC on testnet</p>
+            <h1 class="text-4xl font-bold mb-3 text-black tracking-tight" data-i18n="heading">Complete your purchase</h1>
+            <p class="text-gray-700" data-i18n="subheading">Pay with crypto. No card, no signup.</p>
+            <p class="text-xs text-gray-500 mt-1">You'll need USDC already in a wallet app to complete this payment.</p>
+            <button id="cpHowItWorksBtn" onclick="cpOpenHowItWorks()"
+                    class="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-black hover:underline"
+                    title="See how to pay with crypto">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full border-2 border-black text-[11px] font-extrabold">?</span>
+                How it works
+            </button>
         </div>
 
         <!-- Product Summary -->
         <div id="productSummary" class="bg-white border-4 border-black p-6 shadow-brutal mb-6">
-            <h2 class="text-2xl font-bold mb-4 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="summary.heading">ORDER SUMMARY</h2>
+            <h2 class="text-2xl font-bold mb-4 text-black tracking-wide" data-i18n="summary.heading">Order summary</h2>
             <div class="space-y-4">
                 <div class="flex justify-between pb-3 border-b-4 border-black">
-                    <span class="text-gray-700 font-bold tracking-wide" style="text-transform: uppercase;" data-i18n="summary.product">PRODUCT</span>
+                    <span class="text-gray-500 font-medium text-sm" data-i18n="summary.product">Product</span>
                     <span id="productName" class="text-black font-bold text-right">Loading...</span>
                 </div>
                 <div id="summaryChainRow" class="flex justify-between pb-3 border-b-4 border-black hidden">
-                    <span class="text-gray-700 font-bold tracking-wide" style="text-transform: uppercase;">NETWORK</span>
+                    <span class="text-gray-500 font-medium text-sm">Network</span>
                     <span id="summaryChainName" class="text-black font-bold">—</span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-gray-700 font-bold tracking-wide" style="text-transform: uppercase;" data-i18n="summary.amount">AMOUNT</span>
+                    <span class="text-gray-500 font-medium text-sm" data-i18n="summary.amount">Amount</span>
                     <span id="productPrice" class="text-black font-bold" style="color: #00E5FF;">Loading...</span>
                 </div>
             </div>
@@ -416,15 +670,30 @@
             </div>
         </div>
 
+        <!-- Native Token Conversion Fee Banner (shown when native token selected) -->
+        <div id="nativeFeeBanner" class="hidden bg-yellow-50 border-4 border-yellow-400 p-3 shadow-brutal mb-4">
+            <div class="flex items-start justify-between gap-2">
+                <div>
+                    <p class="text-sm font-bold text-yellow-900">1.5% conversion fee applies</p>
+                    <p class="text-xs text-yellow-800 mt-0.5">
+                        You'll send <strong id="nativeSendAmount">—</strong>.
+                        <span id="nativePriceUpdated" class="text-yellow-600 text-[10px]"></span>
+                    </p>
+                </div>
+                <button onclick="switchToStablecoin()" class="text-xs font-bold underline text-yellow-900 whitespace-nowrap mt-0.5 cursor-pointer">Use USDC instead →</button>
+            </div>
+            <p class="text-[10px] text-yellow-700 mt-1.5">Use USDC/USDT to skip this fee. <span id="nativeOrderExpiry" class="font-bold"></span></p>
+        </div>
+
         <!-- Payment Method Tabs -->
         <div class="bg-white border-4 border-black shadow-brutal mb-6 overflow-hidden">
             <div class="flex border-b-4 border-black">
-                <button id="methodTabWallet" onclick="switchPayMethod('wallet')" class="flex-1 px-4 py-3 font-bold text-sm text-black tracking-wide mc-accent-bg" style="text-transform: uppercase;" data-i18n="checkout.connectWalletTab">Connect Wallet</button>
-                <button id="methodTabManual" onclick="switchPayMethod('manual')" class="flex-1 px-4 py-3 font-bold text-sm text-gray-500 tracking-wide border-l-4 border-black" style="text-transform: uppercase;">Send Manually</button>
+                <button id="methodTabManual" onclick="switchPayMethod('manual')" class="flex-1 px-4 py-3 font-bold text-sm text-black mc-accent-bg">Send manually</button>
+                <button id="methodTabWallet" onclick="switchPayMethod('wallet')" class="flex-1 px-4 py-3 font-bold text-sm text-gray-500 border-l-4 border-black" data-i18n="checkout.connectWalletTab">Connect wallet</button>
             </div>
 
             <!-- Tab: Manual Send (3-step flow matching widget) -->
-            <div id="payMethodManual" class="hidden p-6">
+            <div id="payMethodManual" class="p-6">
 
                 <!-- Step indicator -->
                 <div class="flex items-center justify-center gap-2 mb-4">
@@ -438,7 +707,7 @@
                 <!-- STEP 1: Enter wallet address -->
                 <div id="cpManualStep1">
                     <div class="flex items-center gap-2 mb-1">
-                        <p class="text-sm font-bold text-black" style="text-transform: uppercase;">Your Wallet Address</p>
+                        <p class="text-sm font-bold text-black">Your wallet address</p>
                         <button type="button" onclick="cpToggleWalletHelp()" title="How to find your wallet address" style="width:18px;height:18px;min-width:18px;min-height:18px;border-radius:50%;border:2px solid #94a3b8;color:#64748b;font-size:11px;font-weight:700;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;background:transparent;cursor:pointer;">?</button>
                     </div>
                     <p class="text-xs text-gray-600 mb-3">Paste the wallet address you'll send from. We use it to match your payment.</p>
@@ -459,15 +728,13 @@
                                    onkeydown="if(event.key==='Enter'){event.preventDefault();cpManualStep1Next();}" />
                             <button id="cpPasteBtn" type="button" onclick="cpPasteSenderWallet()"
                                     title="Paste from clipboard"
-                                    class="shrink-0 px-3 py-3 text-xs font-bold border-2 border-black bg-white text-black hover:bg-gray-100 active:bg-gray-200 flex items-center gap-1.5 whitespace-nowrap transition-colors"
-                                    style="text-transform: uppercase;">
+                                    class="shrink-0 px-3 py-3 text-xs font-bold border-2 border-black bg-white text-black hover:bg-gray-100 active:bg-gray-200 flex items-center gap-1.5 whitespace-nowrap transition-colors">
                                 <svg id="cpPasteSparkle" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.5l1.6 5.9 5.9 1.6-5.9 1.6L12 16.5l-1.6-5.9L4.5 9l5.9-1.6z"/><path d="M19 14l.7 2.3 2.3.7-2.3.7L19 20l-.7-2.3-2.3-.7 2.3-.7z" opacity=".7"/></svg>
                                 <span>Paste</span>
                             </button>
                         </div>
                         <button onclick="cpManualStep1Next()"
-                                class="w-full px-4 py-3 font-bold text-sm text-black border-2 border-black mc-accent-bg"
-                                style="text-transform: uppercase;">Next</button>
+                                class="w-full px-4 py-3 font-bold text-sm text-black border-2 border-black mc-accent-bg">Next</button>
                     </div>
                     <p id="cpStep1Error" class="text-xs text-red-600 mt-2 hidden"></p>
                 </div>
@@ -475,16 +742,16 @@
                 <!-- STEP 2: QR + address + amount + "I sent it" -->
                 <div id="cpManualStep2" class="hidden">
                     <!-- Chain warning -->
-                    <div class="border-4 border-black p-3 mb-4" style="background: #FFF9C4;">
-                        <p class="text-[10px] font-bold text-gray-700 mb-1" style="text-transform: uppercase; letter-spacing: 1px;">Send on this network only</p>
+                    <div id="cpNetworkBadge" class="border-4 border-black p-3 mb-4" style="background: #FFF9C4;">
+                        <p class="text-[10px] font-bold text-gray-700 mb-1" style="text-transform: uppercase; letter-spacing: 1px;">Use this network in your wallet</p>
                         <p class="text-base sm:text-lg font-bold text-black break-words" id="cpChainName">—</p>
-                        <p class="text-[11px] text-gray-700 mt-1 leading-tight">Sending on the wrong network will result in lost funds.</p>
+                        <p class="text-[11px] text-gray-700 mt-1 leading-tight">Make sure your wallet is set to this network before sending. The page will detect your payment automatically.</p>
                     </div>
 
                     <!-- Toggle QR/Address -->
                     <div class="flex border-2 border-black mb-3">
-                        <button id="cpToggleQR" onclick="cpToggleView('qr')" class="flex-1 py-2 text-xs font-bold mc-accent-bg" style="text-transform: uppercase;">QR Code</button>
-                        <button id="cpToggleAddr" onclick="cpToggleView('addr')" class="flex-1 py-2 text-xs font-bold bg-white text-gray-500 border-l-2 border-black" style="text-transform: uppercase;">Copy Address</button>
+                        <button id="cpToggleQR" onclick="cpToggleView('qr')" class="flex-1 py-2 text-xs font-bold mc-accent-bg">QR code</button>
+                        <button id="cpToggleAddr" onclick="cpToggleView('addr')" class="flex-1 py-2 text-xs font-bold bg-white text-gray-500 border-l-2 border-black">Copy address</button>
                     </div>
 
                     <!-- QR view (default) -->
@@ -530,9 +797,8 @@
 
                     <!-- I've sent button -->
                     <button id="cpSentBtn" onclick="cpManualStep2Done()"
-                            class="w-full px-6 py-3 font-bold text-black border-4 border-black btn-brutal mc-accent-bg"
-                            style="text-transform: uppercase;">
-                        I've Sent the Payment
+                            class="w-full px-6 py-3 font-bold text-black border-4 border-black btn-brutal mc-accent-bg">
+                        I've sent the payment
                     </button>
                     <button onclick="cpManualBack()" class="w-full text-xs text-gray-500 underline mt-2">
                         ← Change wallet, network, or token
@@ -540,6 +806,27 @@
                     <button onclick="cpCancelOrder()" class="w-full text-xs text-red-500 hover:text-red-700 underline mt-2">
                         Cancel payment
                     </button>
+
+                    <!-- Helper: how to send crypto manually. Default closed. Video swap-in later. -->
+                    <details class="cp-help">
+                        <summary>How do I send? (need USDC in a wallet first)</summary>
+                        <div class="cp-help-body">
+                            <p style="margin-bottom:8px;font-size:12px;color:#666;">No crypto yet? Buy USDC on <a href="https://www.coinbase.com/price/usd-coin" target="_blank" rel="noopener" style="font-weight:600;text-decoration:underline;">Coinbase</a> or <a href="https://www.binance.com/en/buy-sell-crypto" target="_blank" rel="noopener" style="font-weight:600;text-decoration:underline;">Binance</a> first, then come back.</p>
+                            <ol>
+                                <li>Open your wallet app (<strong>Phantom</strong>, <strong>MetaMask</strong>, <strong>Trust Wallet</strong>, <strong>Coinbase Wallet</strong>…).</li>
+                                <li>Switch your wallet to the network shown in the yellow box above.</li>
+                                <li>Tap <strong>Send</strong>, paste the address shown, enter the exact amount.</li>
+                                <li>Confirm in your wallet. We detect your payment in under a minute — usually within seconds.</li>
+                            </ol>
+                            <!-- Optional video slot (drop a 30s screen recording here later) -->
+                            <div id="cpManualHelpVideo" class="hidden mt-3">
+                                <video src="/help/manual-send.mp4" poster="/help/manual-send.jpg" muted autoplay loop playsinline class="w-full border-2 border-black"></video>
+                            </div>
+                            <div class="cp-help-foot">
+                                No wallet yet? <a href="https://phantom.app/download" target="_blank" rel="noopener">Get Phantom</a> · <a href="https://metamask.io/download/" target="_blank" rel="noopener">Get MetaMask</a>
+                            </div>
+                        </div>
+                    </details>
                 </div>
 
                 <!-- STEP 3: Listening / verifying -->
@@ -575,13 +862,33 @@
             </div>
 
             <!-- Tab: Connect Wallet -->
-            <div id="payMethodWallet" class="p-6">
+            <div id="payMethodWallet" class="hidden p-6">
                 <!-- Before connect: just the connect button -->
                 <div id="connectWalletBtn" class="text-center">
                     <p class="text-sm text-gray-600 mb-3">Pick your network above, then connect to pay in one click.</p>
-                    <button id="connectBtn" class="w-full px-6 py-4 font-bold tracking-wide btn-brutal text-black mc-accent-bg" style="text-transform: uppercase;" data-i18n="wallet.connect">
-                        CONNECT WALLET
+                    <button id="connectBtn" class="w-full px-6 py-4 font-bold tracking-wide btn-brutal text-black mc-accent-bg" data-i18n="wallet.connect">
+                        Connect wallet
                     </button>
+
+                    <!-- Helper: how Connect Wallet works. Default closed. Video swap-in later. -->
+                    <details class="cp-help text-left">
+                        <summary>How does Connect Wallet work?</summary>
+                        <div class="cp-help-body">
+                            <ol>
+                                <li>Click <strong>Connect wallet</strong>. Your wallet extension or app pops up.</li>
+                                <li>Pick your wallet (<strong>MetaMask</strong>, <strong>Phantom</strong>, <strong>Rainbow</strong>…) and approve the connection.</li>
+                                <li>Make sure your wallet is on the network shown above. Click <strong>Pay</strong>.</li>
+                                <li>Confirm the transaction in your wallet. We detect it automatically.</li>
+                            </ol>
+                            <!-- Optional video slot (drop a 30s screen recording here later) -->
+                            <div id="cpConnectHelpVideo" class="hidden mt-3">
+                                <video src="/help/connect-wallet.mp4" poster="/help/connect-wallet.jpg" muted autoplay loop playsinline class="w-full border-2 border-black"></video>
+                            </div>
+                            <div class="cp-help-foot">
+                                No wallet yet? <a href="https://metamask.io/download/" target="_blank" rel="noopener">Get MetaMask</a> · <a href="https://phantom.app/download" target="_blank" rel="noopener">Get Phantom</a>
+                            </div>
+                        </div>
+                    </details>
                 </div>
 
                 <!-- After connect: wallet info + pay button -->
@@ -592,7 +899,7 @@
                             <p class="font-mono text-sm text-black font-bold truncate" id="walletAddress"></p>
                             <p class="text-xs text-gray-500 mt-1" data-i18n="checkout.disconnectHint">Disconnect to change network or token</p>
                         </div>
-                        <button id="disconnectBtn" class="px-3 py-2 font-bold text-xs btn-brutal text-black ml-3" style="background: #FF6B6B; text-transform: uppercase;">
+                        <button id="disconnectBtn" class="px-3 py-2 font-bold text-xs btn-brutal text-black ml-3" style="background: #FF6B6B;">
                             Disconnect
                         </button>
                     </div>
@@ -600,15 +907,14 @@
                     <button
                         id="payBtn"
                         class="w-full px-6 py-4 font-bold tracking-wide btn-brutal mc-accent-bg disabled:opacity-50 disabled:cursor-not-allowed"
-                        style="text-transform: uppercase;"
                         disabled
                         data-i18n="payment.payBtn"
                     >
-                        PAY WITH USDC
+                        Pay with USDC
                     </button>
 
                     <div id="txStatus" class="hidden mt-4 p-4 border-4 border-black" style="background: #E3F2FD;">
-                        <p class="text-sm font-bold mb-2 text-black tracking-wide" style="text-transform: uppercase;" data-i18n="checkout.transactionStatus">Transaction Status</p>
+                        <p class="text-sm font-bold mb-2 text-black" data-i18n="checkout.transactionStatus">Transaction status</p>
                         <p id="txMessage" class="text-sm text-black font-bold"></p>
                         <a id="txLink" href="#" target="_blank" class="text-black font-bold text-sm mt-2 inline-block hidden underline">
                             View on Explorer
@@ -641,7 +947,7 @@
         <!-- Payment Success Screen (shown after successful payment) -->
         <div id="paymentSuccessScreen" class="hidden bg-white border-4 border-black p-8 shadow-brutal text-center">
             <div class="text-6xl mb-4">✅</div>
-            <h2 class="text-3xl font-bold text-black mb-2" style="text-transform: uppercase;">PAYMENT SUCCESSFUL!</h2>
+            <h2 class="text-3xl font-bold text-black mb-2">Payment successful</h2>
             <p class="text-gray-700 mb-6">Your transaction has been confirmed on the blockchain.</p>
 
             <div class="border-4 border-black p-4 mb-6 text-left" style="background: #F0FFF0;">
@@ -661,8 +967,8 @@
 
             <a id="successTxLink" href="#" target="_blank"
                class="block w-full px-6 py-4 font-bold tracking-wide btn-brutal text-black mb-4"
-               style="text-transform: uppercase; background: #E3F2FD; text-decoration: none;">
-                VIEW TRANSACTION ON EXPLORER →
+               style="background: #E3F2FD; text-decoration: none;">
+                View transaction on explorer →
             </a>
 
             <span id="receiptBtnSlot"></span>
@@ -671,15 +977,72 @@
             <div class="flex gap-4">
                 <button onclick="buyAgain()"
                         class="flex-1 px-6 py-4 font-bold tracking-wide btn-brutal text-black"
-                        style="text-transform: uppercase; background: #00E5FF;">
-                    BUY AGAIN
+                        style="background: #00E5FF;">
+                    Buy again
                 </button>
                 <button onclick="goBack()"
                         class="flex-1 px-6 py-4 font-bold tracking-wide btn-brutal text-black"
-                        style="text-transform: uppercase; background: #FFF;">
-                    BACK TO STORE
+                        style="background: #FFF;">
+                    Back to store
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- "How it works" Modal — top-level help, covers BOTH manual + wallet flows -->
+    <div id="howItWorksModal" class="hidden fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+        <div class="absolute inset-0 bg-black bg-opacity-50" onclick="cpCloseHowItWorks()"></div>
+        <div class="relative bg-white border-4 border-black shadow-brutal p-6 max-w-xl w-full my-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-black">How does this work?</h3>
+                <button onclick="cpCloseHowItWorks()" class="text-black font-bold text-2xl hover:text-gray-600 leading-none" aria-label="Close">&times;</button>
+            </div>
+
+            <!-- Tabs inside modal -->
+            <div class="flex border-2 border-black mb-4">
+                <button id="cpHIWTabManual" onclick="cpHIWSwitchTab('manual')" class="flex-1 py-2 text-xs font-bold mc-accent-bg">Send manually</button>
+                <button id="cpHIWTabWallet" onclick="cpHIWSwitchTab('wallet')" class="flex-1 py-2 text-xs font-bold bg-white text-gray-500 border-l-2 border-black">Connect wallet</button>
+            </div>
+
+            <!-- Connect Wallet flow (hidden by default, Manual is the primary) -->
+            <div id="cpHIWBodyWallet" class="hidden">
+                <p class="text-sm text-gray-600 mb-3">You'll need a browser wallet (MetaMask, Phantom, Rainbow…) with USDC already funded. Don't have one? <a href="https://metamask.io/download/" target="_blank" rel="noopener" class="font-semibold underline">Get MetaMask</a> and buy USDC inside the app.</p>
+                <div class="cp-help-body">
+                    <ol>
+                        <li>Click <strong>Connect wallet</strong> on the checkout page. Your wallet extension pops up.</li>
+                        <li>Pick your wallet (<strong>MetaMask</strong>, <strong>Phantom</strong>, <strong>Rainbow</strong>…) and approve.</li>
+                        <li>Make sure your wallet is on the network shown. Click <strong>Pay</strong>.</li>
+                        <li>Confirm in your wallet. We detect the payment in seconds.</li>
+                    </ol>
+                    <div id="cpHIWWalletVideo" class="hidden mt-3">
+                        <video src="/help/connect-wallet.mp4" poster="/help/connect-wallet.jpg" muted autoplay loop playsinline class="w-full border-2 border-black"></video>
+                    </div>
+                    <div class="cp-help-foot">
+                        No wallet yet? <a href="https://metamask.io/download/" target="_blank" rel="noopener">Get MetaMask</a> · <a href="https://phantom.app/download" target="_blank" rel="noopener">Get Phantom</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manual Send flow (visible by default — primary path) -->
+            <div id="cpHIWBodyManual">
+                <p class="text-sm text-gray-600 mb-3">You'll need USDC already in a wallet app (Phantom, Coinbase Wallet, Trust Wallet…). Don't have any yet? Buy it on <a href="https://www.coinbase.com/price/usd-coin" target="_blank" rel="noopener" class="font-semibold underline">Coinbase</a>, <a href="https://www.binance.com/en/buy-sell-crypto" target="_blank" rel="noopener" class="font-semibold underline">Binance</a>, or <a href="https://www.kraken.com/buy-crypto" target="_blank" rel="noopener" class="font-semibold underline">Kraken</a>, then come back.</p>
+                <div class="cp-help-body">
+                    <ol>
+                        <li>Open your wallet app (<strong>Phantom</strong>, <strong>MetaMask</strong>, <strong>Trust Wallet</strong>, <strong>Coinbase Wallet</strong>…).</li>
+                        <li>Switch your wallet to the network shown on the checkout page.</li>
+                        <li>Tap <strong>Send</strong>, paste the address, enter the exact amount.</li>
+                        <li>Confirm. We detect the payment in under a minute.</li>
+                    </ol>
+                    <div id="cpHIWManualVideo" class="hidden mt-3">
+                        <video src="/help/manual-send.mp4" poster="/help/manual-send.jpg" muted autoplay loop playsinline class="w-full border-2 border-black"></video>
+                    </div>
+                    <div class="cp-help-foot">
+                        No wallet yet? <a href="https://phantom.app/download" target="_blank" rel="noopener">Get Phantom</a> · <a href="https://metamask.io/download/" target="_blank" rel="noopener">Get MetaMask</a>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="cpCloseHowItWorks()" class="w-full mt-5 px-4 py-2 font-bold text-sm text-black border-2 border-black mc-accent-bg">Got it</button>
         </div>
     </div>
 
@@ -688,7 +1051,7 @@
         <div class="absolute inset-0 bg-black bg-opacity-50" onclick="closeWalletModal()"></div>
         <div class="relative bg-white border-4 border-black shadow-brutal p-6 max-w-md w-full mx-4">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold text-black tracking-wide" style="text-transform: uppercase;">SELECT WALLET</h3>
+                <h3 class="text-xl font-bold text-black tracking-wide">Select your wallet</h3>
                 <button onclick="closeWalletModal()" class="text-black font-bold text-2xl hover:text-gray-600">&times;</button>
             </div>
             <div id="walletOptions" class="space-y-3">
@@ -700,10 +1063,77 @@
 
     <!-- Powered by footer (hidden if merchant on GROWTH+ has hideFooter set) -->
     <div id="mcFooter" class="mc-footer">
-        Secured by <a href="https://wetakestables.shop" target="_blank">StablePay</a>
+        Secured by StablePay · Payment goes directly to the merchant's wallet
     </div>
 
     <script>
+        // Funnel telemetry — fire-and-forget. Never blocks or throws into the checkout flow.
+        // Endpoint validates event names server-side; this just calls it.
+        function trackFunnel(event, data) {
+            try {
+                const orderId = window.currentOrderId;
+                if (!orderId) return; // no order yet — skip
+                // Use sendBeacon when possible (survives page unload) else fetch with keepalive.
+                const body = JSON.stringify({ orderId, event, data: data || undefined });
+                if (navigator.sendBeacon) {
+                    const blob = new Blob([body], { type: 'application/json' });
+                    navigator.sendBeacon('/api/embed/funnel', blob);
+                } else {
+                    fetch('/api/embed/funnel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body,
+                        keepalive: true,
+                    }).catch(() => {});
+                }
+            } catch (_) { /* never break checkout */ }
+        }
+        window.addEventListener('pagehide', () => trackFunnel('page_left'));
+        // Track when customers open the "how does this work?" helpers — tells us if they're useful.
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('details.cp-help').forEach((d) => {
+                d.addEventListener('toggle', () => {
+                    if (!d.open) return;
+                    const inManual = !!d.closest('#payMethodManual');
+                    trackFunnel(inManual ? 'help_opened_manual' : 'help_opened_wallet');
+                });
+            });
+        });
+
+        // Top-bar "How it works" modal — discoverable before customer picks a flow.
+        function cpOpenHowItWorks() {
+            const modal = document.getElementById('howItWorksModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            // Default tab matches their current selection (manual vs wallet), if known.
+            const manualVisible = !document.getElementById('payMethodManual')?.classList.contains('hidden');
+            cpHIWSwitchTab(manualVisible ? 'manual' : 'wallet');
+            trackFunnel(manualVisible ? 'help_opened_manual' : 'help_opened_wallet', { source: 'topbar' });
+        }
+        function cpCloseHowItWorks() {
+            document.getElementById('howItWorksModal')?.classList.add('hidden');
+        }
+        function cpHIWSwitchTab(which) {
+            const walletTab = document.getElementById('cpHIWTabWallet');
+            const manualTab = document.getElementById('cpHIWTabManual');
+            const walletBody = document.getElementById('cpHIWBodyWallet');
+            const manualBody = document.getElementById('cpHIWBodyManual');
+            if (!walletTab || !manualTab || !walletBody || !manualBody) return;
+            if (which === 'manual') {
+                manualTab.classList.add('mc-accent-bg'); manualTab.classList.remove('bg-white', 'text-gray-500');
+                walletTab.classList.remove('mc-accent-bg'); walletTab.classList.add('bg-white', 'text-gray-500');
+                manualBody.classList.remove('hidden'); walletBody.classList.add('hidden');
+            } else {
+                walletTab.classList.add('mc-accent-bg'); walletTab.classList.remove('bg-white', 'text-gray-500');
+                manualTab.classList.remove('mc-accent-bg'); manualTab.classList.add('bg-white', 'text-gray-500');
+                walletBody.classList.remove('hidden'); manualBody.classList.add('hidden');
+            }
+        }
+        // ESC closes the modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') cpCloseHowItWorks();
+        });
+
         // All supported chain configurations with multi-token support
         const CHAIN_CONFIG = {
             // ========== EVM TESTNETS ==========
@@ -1242,41 +1672,55 @@
         // Connect EVM wallet (MetaMask, etc.)
         async function connectEVMWallet(wallet) {
             selectedWalletProvider = wallet.provider;
+            trackFunnel('wallet_connect_click', { wallet: wallet.rdns || wallet.name, type: 'evm' });
 
-            const accounts = await wallet.provider.request({
-                method: 'eth_requestAccounts'
-            });
+            try {
+                const accounts = await wallet.provider.request({
+                    method: 'eth_requestAccounts'
+                });
 
-            if (!accounts || accounts.length === 0) {
-                throw new Error('No accounts found. Please unlock your wallet.');
+                if (!accounts || accounts.length === 0) {
+                    throw new Error('No accounts found. Please unlock your wallet.');
+                }
+
+                provider = new ethers.BrowserProvider(wallet.provider);
+                signer = await provider.getSigner();
+                connectedAddress = await signer.getAddress();
+                connectedWalletType = 'evm';
+                console.log('Connected EVM address:', connectedAddress);
+                trackFunnel('wallet_connected', { type: 'evm' });
+
+                updateWalletUI(connectedAddress, 'evm');
+                await updateTokenBalances();
+            } catch (err) {
+                trackFunnel('wallet_connect_failed', { type: 'evm', error: (err && err.message) ? err.message.slice(0, 120) : 'unknown' });
+                throw err;
             }
-
-            provider = new ethers.BrowserProvider(wallet.provider);
-            signer = await provider.getSigner();
-            connectedAddress = await signer.getAddress();
-            connectedWalletType = 'evm';
-            console.log('Connected EVM address:', connectedAddress);
-
-            updateWalletUI(connectedAddress, 'evm');
-            await updateTokenBalances();
         }
 
         // Connect Solana wallet (Phantom, etc.)
         async function connectSolanaWallet(wallet) {
             solanaWallet = wallet.provider;
+            trackFunnel('wallet_connect_click', { wallet: wallet.rdns || wallet.name, type: 'solana' });
 
-            // Request connection
-            const response = await wallet.provider.connect();
-            connectedAddress = response.publicKey.toString();
-            connectedWalletType = 'solana';
-            console.log('Connected Solana address:', connectedAddress);
+            try {
+                // Request connection
+                const response = await wallet.provider.connect();
+                connectedAddress = response.publicKey.toString();
+                connectedWalletType = 'solana';
+                console.log('Connected Solana address:', connectedAddress);
+                trackFunnel('wallet_connected', { type: 'solana' });
 
-            // Initialize Solana connection
-            const chainConfig = CHAIN_CONFIG[selectedChainKey] || CHAIN_CONFIG['SOLANA_DEVNET'];
-            solanaConnection = new solanaWeb3.Connection(chainConfig.rpcUrls[0], 'confirmed');
+                // Initialize Solana connection
+                const chainConfig = CHAIN_CONFIG[selectedChainKey] || CHAIN_CONFIG['SOLANA_DEVNET'];
+                solanaConnection = new solanaWeb3.Connection(chainConfig.rpcUrls[0], 'confirmed');
 
-            updateWalletUI(connectedAddress, 'solana');
-            await updateTokenBalances();
+                updateWalletUI(connectedAddress, 'solana');
+                await updateTokenBalances();
+            } catch (err) {
+                trackFunnel('wallet_connect_failed', { type: 'solana', error: (err && err.message) ? err.message.slice(0, 120) : 'unknown' });
+                throw err;
+            }
         }
 
         // Update wallet UI after connection
@@ -1431,6 +1875,9 @@
                 logo.src = cfg.logoUrl;
                 logo.alt = brand || 'Logo';
                 logo.classList.remove('hidden');
+                // Swap browser tab favicon to merchant logo so the tab reads as their checkout, not ours.
+                const favicon = document.getElementById('favicon');
+                if (favicon) favicon.href = cfg.logoUrl;
             }
 
             // Header background + text color
@@ -1514,6 +1961,7 @@
                     // Store payment address for use later
                     window.merchantPaymentAddress = orderData.paymentAddress;
                     window.currentOrderId = orderIdParam;
+                    trackFunnel('merchant_loaded', { chain: orderData.chain, token: orderData.token, amount: orderData.amount });
 
                     document.getElementById('productName').textContent = currentProduct.name;
                     document.getElementById('productPrice').textContent = `$${currentProduct.price.toFixed(2)} ${orderData.token || 'USDC'}`;
@@ -1562,6 +2010,8 @@
                             chain: w.chain,
                             address: w.address,
                             supportedTokens: w.supportedTokens || ['USDC'],
+                            acceptNativeTokens: !!w.acceptNativeTokens,
+                            preferredStablecoin: w.preferredStablecoin || 'USDC',
                         }));
                         // Stash for client-side address lookup (avoids premature backend PATCH)
                         window._availableChains = merchantChains;
@@ -1581,7 +2031,10 @@
                         const paymentSection = document.getElementById('paymentSection');
                         if (paymentSection) paymentSection.classList.add('hidden');
                         const topSelector = document.getElementById('chainSelectorTop');
-                        if (topSelector) topSelector.classList.add('hidden');
+                        if (topSelector) {
+                            topSelector.classList.add('hidden');
+                            topSelector.dataset.lockedHidden = '1'; // chain-locked: never re-show
+                        }
 
                         // Show chain in Order Summary
                         const chainRow = document.getElementById('summaryChainRow');
@@ -1670,13 +2123,15 @@
                 updateBackButtonLabel();
 
                 if (merchantData.wallets && merchantData.wallets.length > 0) {
-                    // Only show chains the merchant has configured
+                    // Only show chains the merchant has configured (already filtered by isActive server-side)
                     merchantChains = merchantData.wallets
-                        .filter(w => w.isActive && CHAIN_CONFIG[w.chain])
+                        .filter(w => CHAIN_CONFIG[w.chain])
                         .map(w => ({
                             chain: w.chain,
                             address: w.address,
-                            supportedTokens: w.supportedTokens || ['USDC']
+                            supportedTokens: w.supportedTokens || ['USDC'],
+                            acceptNativeTokens: !!w.acceptNativeTokens,
+                            preferredStablecoin: w.preferredStablecoin || 'USDC',
                         }));
                     console.log('Loaded merchant chains with tokens:', merchantChains);
 
@@ -1717,6 +2172,44 @@
             }
         }
 
+        // ── Pay mode: 'stable' (default) or 'crypto' ──────────────────────────────
+        let payMode = 'stable';
+
+        function setPayMode(mode) {
+            payMode = mode;
+
+            // Update toggle button styles
+            const btnStable = document.getElementById('modeStable');
+            const btnCrypto = document.getElementById('modeCrypto');
+            if (btnStable && btnCrypto) {
+                if (mode === 'stable') {
+                    btnStable.classList.add('bg-black', 'text-white');
+                    btnStable.classList.remove('bg-white', 'text-gray-500');
+                    btnCrypto.classList.add('bg-white', 'text-gray-500');
+                    btnCrypto.classList.remove('bg-black', 'text-white');
+                } else {
+                    btnCrypto.classList.add('bg-black', 'text-white');
+                    btnCrypto.classList.remove('bg-white', 'text-gray-500');
+                    btnStable.classList.add('bg-white', 'text-gray-500');
+                    btnStable.classList.remove('bg-black', 'text-white');
+                }
+            }
+
+            // Update token label
+            const tokenLabel = document.getElementById('cpTokenLabel');
+            if (tokenLabel) tokenLabel.textContent = mode === 'stable' ? 'Stablecoin' : 'Crypto token';
+
+            // Re-populate token dropdown for current chain
+            if (selectedChainKey) cpRenderTokensForChain(selectedChainKey);
+
+            // Show/hide fee banner
+            const banner = document.getElementById('nativeFeeBanner');
+            if (banner) banner.classList.toggle('hidden', mode === 'stable');
+
+            // Telemetry
+            trackFunnel(mode === 'stable' ? 'pay_mode_stable' : 'pay_mode_crypto');
+        }
+
         // Render chain options based on merchant's configured wallets
         // Renders into the TOP container (above payment tabs) so customer picks chain first
         function renderChainOptions() {
@@ -1728,19 +2221,33 @@
             if (!container) return;
 
             if (merchantChains.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-4 text-gray-500">
-                        No payment chains available
-                    </div>
-                `;
+                container.innerHTML = `<div class="text-center py-4 text-gray-500">No payment chains available</div>`;
                 return;
             }
 
-            // Build chain dropdown with icons (matches widget style)
+            // Check if ANY chain on this merchant accepts native tokens
+            const anyNative = merchantChains.some(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
+
             container.innerHTML = `
+                ${anyNative ? `
+                <!-- Pay mode toggle -->
+                <div class="flex border-2 border-black mb-4">
+                    <button id="modeStable" type="button" onclick="setPayMode('stable')"
+                            class="flex-1 py-2.5 px-3 text-left bg-black text-white transition-colors">
+                        <span class="text-xs font-bold block">Stablecoin</span>
+                        <span class="text-[10px] opacity-70">USDC · USDT · No fee</span>
+                    </button>
+                    <button id="modeCrypto" type="button" onclick="setPayMode('crypto')"
+                            class="flex-1 py-2.5 px-3 text-left bg-white text-gray-500 border-l-2 border-black transition-colors">
+                        <span class="text-xs font-bold block">ETH / SOL / BNB</span>
+                        <span class="text-[10px] opacity-70">+1.5% conversion fee</span>
+                    </button>
+                </div>
+                ` : ''}
+                <!-- Chain + Token selectors -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-2" style="text-transform: uppercase; letter-spacing: 1px;">Network</label>
+                        <label class="block text-xs font-bold text-gray-600 mb-2" style="text-transform:uppercase;letter-spacing:1px;">Network</label>
                         <div class="relative">
                             <button type="button" id="cpChainBtn" onclick="cpToggleChainDropdown()"
                                     class="w-full px-3 py-3 border-2 border-black bg-white text-left flex items-center gap-2 cursor-pointer">
@@ -1761,7 +2268,7 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-2" style="text-transform: uppercase; letter-spacing: 1px;" data-i18n="checkout.stablecoinLabel">Stablecoin</label>
+                        <label id="cpTokenLabel" class="block text-xs font-bold text-gray-600 mb-2" style="text-transform:uppercase;letter-spacing:1px;">Stablecoin</label>
                         <div class="relative">
                             <button type="button" id="cpTokenBtn" onclick="cpToggleTokenDropdown()"
                                     class="w-full px-3 py-3 border-2 border-black bg-white text-left flex items-center gap-2 cursor-pointer">
@@ -1796,14 +2303,27 @@
             };
             return icons[chain] || '';
         }
+        const NATIVE_TOKENS_SET = new Set(['ETH', 'SOL', 'BNB', 'MATIC', 'ARB']);
         function getTokenIcon(token) {
             const icons = {
                 USDC: 'https://www.svgrepo.com/show/367255/usdc.svg',
                 USDT: 'https://www.svgrepo.com/show/367256/usdt.svg',
                 EURC: 'https://coin-images.coingecko.com/coins/images/26045/large/EURC.png',
+                ETH: 'https://www.svgrepo.com/show/428658/ethereum-crypto-cryptocurrency-2.svg',
+                SOL: 'https://www.svgrepo.com/show/470684/solana.svg',
+                BNB: 'https://www.svgrepo.com/show/366901/bnb.svg',
+                MATIC: 'https://cdn.iconscout.com/icon/premium/png-256-thumb/polygon-matic-icon-svg-download-png-5795452.png?f=webp&w=128',
+                ARB: 'https://arbitrum.io/_next/image?url=%2Fbrandkit%2F1225_Arbitrum_Logomark_OneColorNavy_ClearSpace.png&w=640&q=75',
             };
             return icons[token] || '';
         }
+
+        // Chain → native token symbol
+        const CHAIN_NATIVE_TOKEN = {
+            BASE_MAINNET: 'ETH', ETHEREUM_MAINNET: 'ETH', ARBITRUM_MAINNET: 'ARB',
+            POLYGON_MAINNET: 'MATIC', BNB_MAINNET: 'BNB', SOLANA_MAINNET: 'SOL',
+            BASE_SEPOLIA: 'ETH', ETHEREUM_SEPOLIA: 'ETH',
+        };
         function cpToggleChainDropdown() {
             const btn = document.getElementById('cpChainBtn');
             if (btn?.disabled) return; // locked while wallet connected
@@ -1833,26 +2353,67 @@
         function cpRenderTokensForChain(chainKey) {
             const mc = merchantChains.find(m => m.chain === chainKey);
             if (!mc) return;
-            const supported = mc.supportedTokens || ['USDC'];
+            const stableTokens = mc.supportedTokens?.length ? mc.supportedTokens : ['USDC'];
+            const nativeToken = CHAIN_NATIVE_TOKEN[chainKey];
+            const nativeAvailable = !!(mc.acceptNativeTokens && nativeToken);
+
+            // Filter token list based on current pay mode
+            const tokens = (payMode === 'crypto' && nativeAvailable)
+                ? [nativeToken]
+                : stableTokens;
+
             const dropdown = document.getElementById('cpTokenDropdown');
             if (!dropdown) return;
-            dropdown.innerHTML = supported.map(t => `
+            dropdown.innerHTML = tokens.map(t => `
                 <div onclick="selectToken('${chainKey}', '${t}'); cpToggleTokenDropdown();"
                      class="px-3 py-2 cursor-pointer flex items-center gap-2 hover:bg-gray-100 border-b border-gray-200">
                     <img src="${getTokenIcon(t)}" class="w-5 h-5 rounded-full" onerror="this.style.display='none'">
                     <span class="text-sm font-bold text-black">${t}</span>
-                </div>
-            `).join('');
-            // Default to first supported token
-            const defaultToken = supported[0];
+                </div>`).join('');
+
+            // If crypto mode but this chain has no native token, fall back to stable mode
+            if (payMode === 'crypto' && !nativeAvailable) {
+                const defaultToken = stableTokens[0];
+                const btnIcon = document.getElementById('cpTokenBtnIcon');
+                const btnName = document.getElementById('cpTokenBtnName');
+                if (btnIcon) btnIcon.src = getTokenIcon(defaultToken);
+                if (btnName) btnName.textContent = defaultToken;
+                selectedToken = defaultToken;
+                return;
+            }
+
+            const defaultToken = tokens[0];
             const btnIcon = document.getElementById('cpTokenBtnIcon');
             const btnName = document.getElementById('cpTokenBtnName');
             if (btnIcon) btnIcon.src = getTokenIcon(defaultToken);
             if (btnName) btnName.textContent = defaultToken;
             selectedToken = defaultToken;
+
+            // Auto-trigger selectToken to update banner + price poller
+            selectToken(chainKey, defaultToken);
         }
 
         // Select a chain
+        // Keep the Order Summary card in sync with the live chain/token selection.
+        // Without this, the summary keeps showing the order's seed values forever and looks broken.
+        function updateOrderSummary() {
+            const chainRow = document.getElementById('summaryChainRow');
+            const chainLabel = document.getElementById('summaryChainName');
+            if (chainRow && chainLabel && selectedChainKey) {
+                chainLabel.textContent = CHAIN_CONFIG[selectedChainKey]?.chainName || selectedChainKey;
+                chainRow.classList.remove('hidden');
+            }
+            const priceEl = document.getElementById('productPrice');
+            if (priceEl && currentProduct) {
+                const token = selectedToken || 'USDC';
+                if (token === 'EURC' && typeof displayAmount !== 'undefined' && displayAmount) {
+                    priceEl.textContent = `€${displayAmount} EURC (≈$${currentProduct.price} USD)`;
+                } else {
+                    priceEl.textContent = `$${Number(currentProduct.price).toFixed(2)} ${token}`;
+                }
+            }
+        }
+
         function selectChain(chainKey) {
             // If chain changed AND we don't have a chain-pending order, drop the previous order
             // so the customer creates a fresh one on the new chain. For chain-agnostic orders
@@ -1920,6 +2481,7 @@
             // Update pay button state + re-check balance for new chain
             updatePayButtonState();
             if (connectedAddress) cpCheckBalance();
+            updateOrderSummary();
 
             console.log('Selected chain:', chainKey);
         }
@@ -1949,6 +2511,84 @@
             }
         }
 
+        // --- Native token state ---
+        let nativePriceUsd = null;
+        let nativePricePoller = null;
+        let nativeOrderExpiryAt = null;
+        let nativeExpiryTimer = null;
+
+        function calcConversionFee(usdAmount, chainKey) {
+            const pct = usdAmount * 0.015;
+            return chainKey === 'ETHEREUM_MAINNET' ? Math.max(pct, 5.00) : Math.max(pct, 0.50);
+        }
+
+        function updateNativeSendAmount() {
+            if (!currentProduct || !nativePriceUsd) return;
+            const usd = parseFloat(currentProduct.price);
+            const fee = calcConversionFee(usd, selectedChainKey);
+            const sendAmt = (usd + fee) / nativePriceUsd;
+            const banner = document.getElementById('nativeFeeBanner');
+            const sendEl = document.getElementById('nativeSendAmount');
+            const updEl = document.getElementById('nativePriceUpdated');
+            if (NATIVE_TOKENS_SET.has(selectedToken)) {
+                if (banner) banner.classList.remove('hidden');
+                if (sendEl) sendEl.textContent = `${sendAmt.toPrecision(4)} ${selectedToken} ($${(usd + fee).toFixed(2)})`;
+                if (updEl) updEl.textContent = `@ $${nativePriceUsd.toFixed(2)}`;
+                // also update the QR/address amount if on step 2
+                const amtEl = document.getElementById('cpCopyAmount');
+                const qrAmtEl = document.getElementById('cpQRAmount');
+                if (amtEl) amtEl.textContent = `${sendAmt.toPrecision(4)} ${selectedToken}`;
+                if (qrAmtEl) qrAmtEl.textContent = `${sendAmt.toPrecision(4)} ${selectedToken}`;
+            } else {
+                if (banner) banner.classList.add('hidden');
+            }
+        }
+
+        async function refreshNativePrice(tokenSymbol) {
+            try {
+                const res = await fetch(`/api/embed/native-price?token=${tokenSymbol}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                nativePriceUsd = data.priceUsd;
+                updateNativeSendAmount();
+            } catch (e) { /* silent */ }
+        }
+
+        function startNativePricePoller(tokenSymbol) {
+            stopNativePricePoller();
+            refreshNativePrice(tokenSymbol);
+            nativePricePoller = setInterval(() => refreshNativePrice(tokenSymbol), 30000);
+        }
+
+        function stopNativePricePoller() {
+            if (nativePricePoller) { clearInterval(nativePricePoller); nativePricePoller = null; }
+        }
+
+        function startNativeExpiryCountdown(expiresAt) {
+            if (nativeExpiryTimer) clearInterval(nativeExpiryTimer);
+            const el = document.getElementById('nativeOrderExpiry');
+            function tick() {
+                const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+                if (!el) return;
+                if (remaining <= 0) {
+                    el.textContent = 'Order expired — price is stale.';
+                    el.style.color = '#dc2626';
+                    clearInterval(nativeExpiryTimer);
+                    return;
+                }
+                const m = Math.floor(remaining / 60), s = remaining % 60;
+                el.textContent = `Price locked for ${m}:${String(s).padStart(2,'0')}`;
+            }
+            tick();
+            nativeExpiryTimer = setInterval(tick, 1000);
+        }
+
+        function switchToStablecoin() {
+            stopNativePricePoller();
+            setPayMode('stable');
+            trackFunnel('pay_mode_stable_via_banner');
+        }
+
         // Select a token
         async function selectToken(chainKey, tokenSymbol) {
             selectedToken = tokenSymbol;
@@ -1966,18 +2606,36 @@
             // Update pay button text (respect merchant's custom buttonText if set)
             const payBtn = document.getElementById('payBtn');
             if (payBtn) {
-                payBtn.textContent = window._mcCustomButtonText || `PAY WITH ${tokenSymbol}`;
+                payBtn.textContent = window._mcCustomButtonText || `Pay with ${tokenSymbol}`;
             }
 
+            trackFunnel('token_selected', { token: tokenSymbol, chain: chainKey });
+
+            // Handle native token — show banner, start price poller
+            if (NATIVE_TOKENS_SET.has(tokenSymbol)) {
+                startNativePricePoller(tokenSymbol);
+                const banner = document.getElementById('nativeFeeBanner');
+                if (banner) banner.classList.remove('hidden');
+                if (currentProduct) {
+                    document.getElementById('productPrice').textContent = `$${currentProduct.price} USD (+ 1.5% fee)`;
+                    displayAmount = currentProduct.price;
+                }
+                updateOrderSummary();
             // Handle EUR conversion for EURC
-            if (tokenSymbol === 'EURC' && currentProduct) {
+            } else if (tokenSymbol === 'EURC' && currentProduct) {
+                stopNativePricePoller();
+                document.getElementById('nativeFeeBanner')?.classList.add('hidden');
                 const rate = await getEURRate();
                 displayAmount = (parseFloat(currentProduct.price) * rate).toFixed(2);
                 document.getElementById('productPrice').textContent = `€${displayAmount} EURC (≈$${currentProduct.price} USD)`;
                 console.log(`Converted $${currentProduct.price} to €${displayAmount} EURC at rate ${rate}`);
+                updateOrderSummary();
             } else if (currentProduct) {
+                stopNativePricePoller();
+                document.getElementById('nativeFeeBanner')?.classList.add('hidden');
                 displayAmount = currentProduct.price;
                 document.getElementById('productPrice').textContent = `$${currentProduct.price} ${tokenSymbol}`;
+                updateOrderSummary();
             }
 
             // If customer is on step 2 of manual flow, update the amount display live
@@ -2250,6 +2908,7 @@
 
         // Create order and initiate payment
         async function initiatePayment() {
+            trackFunnel('pay_click');
             if (!connectedAddress || !currentProduct) {
                 showError('Please connect wallet first');
                 return;
@@ -2761,8 +3420,8 @@
                 document.getElementById('historyBtnSlot').innerHTML = `<a href="/history?wallet=${encodeURIComponent(historyWallet)}" target="_blank"
                     aria-label="View payment history for this wallet"
                     class="block w-full px-6 py-3 font-bold tracking-wide text-gray-500 mb-4 text-center"
-                    style="text-transform: uppercase; text-decoration: none; font-size: 12px; border: 3px solid #e2e8f0;">
-                    Payment History
+                    style="text-decoration: none; font-size: 12px; border: 3px solid #e2e8f0;">
+                    Payment history
                 </a>`;
             }
 
@@ -2772,8 +3431,8 @@
                 document.getElementById('receiptBtnSlot').innerHTML = `<a href="/receipt/${encodeURIComponent(orderId)}" target="_blank"
                     aria-label="View receipt for this payment"
                     class="block w-full px-6 py-4 font-bold tracking-wide btn-brutal text-white mb-4"
-                    style="text-transform: uppercase; background: #000; text-decoration: none;">
-                    VIEW RECEIPT
+                    style="background: #000; text-decoration: none;">
+                    View receipt
                 </a>`;
             }
 
@@ -2966,6 +3625,7 @@
             if (method === 'wallet' && document.getElementById('methodTabWallet')?.dataset.cpLocked) {
                 return;
             }
+            trackFunnel(method === 'wallet' ? 'wallet_tab_active' : 'manual_tab_switch');
             document.getElementById('payMethodWallet').style.display = method === 'wallet' ? 'block' : 'none';
             document.getElementById('payMethodManual').style.display = method === 'manual' ? 'block' : 'none';
 
@@ -3167,6 +3827,14 @@
             cpLockChainSelectors(true);
             cpLockMethodTab(true);
             cpSetStep(2);
+            // Hide the big chain selector card + the Wallet/Manual tab bar at step 2 to shorten the page.
+            // cpManualBack() restores them (unless the order is chain-locked, in which case the selector
+            // was hidden permanently at load time and tagged with dataset.lockedHidden).
+            // IMPORTANT: hide only the tab-bar row (parent of the tab buttons), NOT the outer
+            // .shadow-brutal container — that container also holds payMethodManual which has the step 2 UI.
+            document.getElementById('chainSelectorTop')?.classList.add('hidden');
+            const tabBarRow = document.getElementById('methodTabWallet')?.parentElement;
+            if (tabBarRow) tabBarRow.classList.add('hidden');
             cpStartCountdown();
         }
 
@@ -3298,6 +3966,15 @@
             if (!connectedAddress) cpLockChainSelectors(false);
             // Unlock the Connect Wallet tab — they're free to switch payment methods now.
             cpLockMethodTab(false);
+            // Restore the chain selector + tab bar that step 2 hides. Skip the selector for
+            // chain-locked orders (dataset.lockedHidden is set by the chain-locked load path).
+            const topSelector = document.getElementById('chainSelectorTop');
+            if (topSelector && topSelector.dataset.lockedHidden !== '1') {
+                topSelector.classList.remove('hidden');
+            }
+            // Only re-show the tab bar row (not the whole .shadow-brutal container — which already stayed visible).
+            const tabBarRowBack = document.getElementById('methodTabWallet')?.parentElement;
+            if (tabBarRowBack) tabBarRowBack.classList.remove('hidden');
             // Don't clear currentOrderId — order persists, we just reset UI
             cpSetStep(1);
         }
@@ -3375,6 +4052,19 @@
                     if (data.success && data.order) {
                         window.currentOrderId = data.order.id;
                         window.merchantPaymentAddress = data.order.paymentAddress;
+                        // Native token order — update send amount and start expiry countdown
+                        if (data.order.nativeToken && data.order.metadata?._nativeSendAmount) {
+                            const sendAmt = data.order.metadata._nativeSendAmount;
+                            const nativeEl = document.getElementById('nativeSendAmount');
+                            if (nativeEl) nativeEl.textContent = `${parseFloat(sendAmt).toPrecision(4)} ${data.order.nativeToken}`;
+                            const amtEl = document.getElementById('cpCopyAmount');
+                            const qrAmtEl = document.getElementById('cpQRAmount');
+                            if (amtEl) amtEl.textContent = `${parseFloat(sendAmt).toPrecision(4)} ${data.order.nativeToken}`;
+                            if (qrAmtEl) qrAmtEl.textContent = `${parseFloat(sendAmt).toPrecision(4)} ${data.order.nativeToken}`;
+                        }
+                        if (data.order.expiresAt && data.order.nativeToken) {
+                            startNativeExpiryCountdown(new Date(data.order.expiresAt).getTime());
+                        }
                     } else {
                         sentBtn.disabled = false;
                         sentBtn.textContent = "I've Sent the Payment";
@@ -3601,6 +4291,7 @@
             navigator.clipboard.writeText(addr);
             event.target.textContent = 'COPIED!';
             setTimeout(() => event.target.textContent = 'COPY', 1500);
+            trackFunnel('address_copied');
         }
 
         function copyPayAmount() {
@@ -3722,6 +4413,95 @@
                     nightIcon.setAttribute('data-i18n', isNightMode ? 'nav.day' : 'nav.night');
                 });
         });
+    </script>
+
+    <!-- Stablo support chat widget -->
+    <button id="stabloBtn" onclick="stabloToggle()" aria-label="Chat with Stablo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        Need help?
+    </button>
+
+    <div id="stabloPanel" class="hidden">
+        <div id="stabloHeader">
+            <span>Stablo — payment help</span>
+            <span id="stabloClose" onclick="stabloToggle()">×</span>
+        </div>
+        <div id="stabloMessages">
+            <div class="stablo-msg bot">Hey! I'm Stablo. Having trouble paying? Ask me anything — I'll help you through it.</div>
+        </div>
+        <div class="stablo-chips" id="stabloChips">
+            <button class="stablo-chip" onclick="stabloSendQuick('Is this safe?')">Is this safe?</button>
+            <button class="stablo-chip" onclick="stabloSendQuick('Will I get a receipt?')">Receipt?</button>
+            <button class="stablo-chip" onclick="stabloSendQuick('What crypto do you accept?')">What crypto?</button>
+            <button class="stablo-chip" onclick="stabloSendQuick('My payment isn\'t going through')">Payment stuck</button>
+        </div>
+        <div id="stabloInputRow">
+            <input id="stabloInput" type="text" placeholder="Ask anything…" maxlength="500"
+                onkeydown="if(event.key==='Enter')stabloSend()" />
+            <button id="stabloSend" onclick="stabloSend()">→</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            let stabloOpen = false;
+            let stabloLoading = false;
+
+            window.stabloToggle = function() {
+                stabloOpen = !stabloOpen;
+                document.getElementById('stabloPanel').classList.toggle('hidden', !stabloOpen);
+                if (stabloOpen) document.getElementById('stabloInput').focus();
+            };
+
+            window.stabloSendQuick = function(text) {
+                document.getElementById('stabloChips').style.display = 'none';
+                stabloPost(text);
+            };
+
+            window.stabloSend = function() {
+                const input = document.getElementById('stabloInput');
+                const text = input.value.trim();
+                if (!text || stabloLoading) return;
+                input.value = '';
+                document.getElementById('stabloChips').style.display = 'none';
+                stabloPost(text);
+            };
+
+            function stabloPost(text) {
+                if (stabloLoading) return;
+                stabloLoading = true;
+
+                const msgs = document.getElementById('stabloMessages');
+                const userEl = document.createElement('div');
+                userEl.className = 'stablo-msg user';
+                userEl.textContent = text;
+                msgs.appendChild(userEl);
+
+                const loadEl = document.createElement('div');
+                loadEl.className = 'stablo-msg bot';
+                loadEl.textContent = '…';
+                msgs.appendChild(loadEl);
+                msgs.scrollTop = msgs.scrollHeight;
+
+                // Get orderId from URL
+                const orderId = new URLSearchParams(window.location.search).get('orderId') || '';
+
+                fetch('/api/embed/support', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId, message: text }),
+                })
+                .then(r => r.json())
+                .then(data => {
+                    loadEl.textContent = data.reply || 'Something went wrong — try refreshing.';
+                    msgs.scrollTop = msgs.scrollHeight;
+                })
+                .catch(() => {
+                    loadEl.textContent = 'Network error. Try again in a second.';
+                })
+                .finally(() => { stabloLoading = false; });
+            }
+        })();
     </script>
 </body>
 </html>

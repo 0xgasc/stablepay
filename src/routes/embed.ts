@@ -27,7 +27,7 @@ const checkoutSchema = z.object({
   storeId: z.string().optional(),  // Scope order to a merchant's sub-brand for webhook/branding isolation
   amount: z.number().positive(),
   chain: z.string().min(1).optional(),  // Optional: omit to let customer pick from merchant's active chains
-  token: z.enum(['USDC', 'USDT', 'EURC']).default('USDC'),
+  token: z.enum(['USDC', 'USDT', 'EURC', 'ETH', 'SOL', 'BNB', 'MATIC', 'ARB']).default('USDC'),
   customerEmail: z.string().email().optional().or(z.literal('')),
   customerName: z.string().optional(),
   customerWallet: z.string().optional(),  // Customer's wallet for precise FROM matching
@@ -153,7 +153,7 @@ router.get('/chains', async (req, res) => {
         wallets: {
           where: { isActive: true },
           orderBy: { priority: 'asc' },
-          select: { chain: true, address: true, supportedTokens: true }
+          select: { chain: true, address: true, supportedTokens: true, acceptNativeTokens: true, preferredStablecoin: true }
         }
       }
     });
@@ -191,7 +191,7 @@ router.get('/chains', async (req, res) => {
       });
       if (store && store.merchantId === merchantId && !store.isArchived) {
         const byChain = new Map(merchant.wallets.map(w => [w.chain, w]));
-        for (const sw of store.wallets) byChain.set(sw.chain, sw as any);
+        for (const sw of (store as any).wallets || []) byChain.set(sw.chain, sw);
         finalWallets = Array.from(byChain.values());
         // Store branding fully REPLACES merchant branding
         storeBranding = {
@@ -390,12 +390,39 @@ router.post('/checkout', rateLimit({
       paymentAddress = resolution.address;
     }
 
+    // ─── Native token path (ETH/SOL/BNB/MATIC/ARB) ──────────────────────────
+    const { NATIVE_TOKENS, getPriceUsd, calcConversionFee, createNativeReceiveWallet } = await import('../services/swapService');
+    const isNative = NATIVE_TOKENS.has(data.token);
+    let nativePriceSnapshot: number | undefined;
+    let conversionFeeAmount: number | undefined;
+    let nativeSendAmount: number | undefined;
+    let orderExpiry = 30 * 60 * 1000; // 30 min default
+
+    if (isNative) {
+      if (!data.chain) {
+        return res.status(400).json({ error: 'chain is required for native token orders' });
+      }
+      const walletConfig = wallet as any;
+      if (!walletConfig.acceptNativeTokens) {
+        return res.status(400).json({
+          error: 'Native tokens not enabled',
+          message: 'This merchant does not accept ETH/SOL/BNB on this chain. Please use USDC.',
+        });
+      }
+      nativePriceSnapshot = await getPriceUsd(data.token);
+      conversionFeeAmount = calcConversionFee(data.amount, data.chain);
+      nativeSendAmount    = (data.amount + conversionFeeAmount) / nativePriceSnapshot;
+      finalMetadata._nativeSendAmount   = nativeSendAmount;
+      finalMetadata._nativePriceSnapshot = nativePriceSnapshot;
+      orderExpiry = 15 * 60 * 1000; // 15 min — price snapshot goes stale
+    }
+
     const order = await db.order.create({
       data: {
         merchantId: data.merchantId,
         storeId: resolvedStoreId,
         amount: data.amount,
-        token: data.token,
+        token: isNative ? 'USDC' : data.token, // order amount always tracks USD/stablecoin value
         chain: resolvedChain,
         customerEmail: data.customerEmail || null,
         customerName: data.customerName || data.productName || null,
@@ -405,10 +432,21 @@ router.post('/checkout', rateLimit({
         source: data.source || 'EMBED_WIDGET',
         externalId: data.externalId || null,
         metadata: Object.keys(finalMetadata).length > 0 ? finalMetadata : undefined,
+        nativeToken:          isNative ? data.token : undefined,
+        nativePriceSnapshot:  nativePriceSnapshot,
+        conversionFeeAmount:  conversionFeeAmount,
         status: 'PENDING',
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000)
+        expiresAt: new Date(Date.now() + orderExpiry),
       }
     });
+
+    // For native token orders: create a fresh receive wallet + set it as the payment address
+    let finalPaymentAddress = order.paymentAddress;
+    if (isNative) {
+      const receiveAddress = await createNativeReceiveWallet(order.id, String(resolvedChain));
+      await db.order.update({ where: { id: order.id }, data: { paymentAddress: receiveAddress } });
+      finalPaymentAddress = receiveAddress;
+    }
 
     // Rewind scanner for this chain — payment may have landed before order was created
     // (deferred order creation means tx often arrives before we start watching)
@@ -459,8 +497,10 @@ router.post('/checkout', rateLimit({
         amount: Number(order.amount),
         token: order.token,
         chain: order.chain,
-        paymentAddress: order.paymentAddress,
+        paymentAddress: finalPaymentAddress,
         expiresAt: order.expiresAt.toISOString(),
+        nativeSendAmount: nativeSendAmount ?? null,
+        nativeToken: isNative ? data.token : null,
       }
     });
   } catch (error) {
@@ -536,7 +576,7 @@ router.get('/order/:orderId', async (req, res) => {
       const wallets = await db.merchantWallet.findMany({
         where: { merchantId: order.merchantId, isActive: true },
         orderBy: { priority: 'asc' },
-        select: { chain: true, address: true, supportedTokens: true },
+        select: { chain: true, address: true, supportedTokens: true, acceptNativeTokens: true, preferredStablecoin: true },
       });
       availableChains = wallets;
     }
@@ -1063,6 +1103,180 @@ router.get('/widget-config', async (req, res) => {
   } catch (error) {
     console.error('Get widget config error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Funnel telemetry — fire-and-forget event capture from checkout page.
+ * Appends events to order.metadata.funnel; bounded at 50 events per order to keep payloads sane.
+ * Public — no auth. Whitelists event names so attackers can't write arbitrary garbage.
+ */
+const ALLOWED_FUNNEL_EVENTS = new Set([
+  'page_view',
+  'merchant_loaded',
+  'chains_loaded',
+  'chain_selected',
+  'wallet_tab_active',
+  'wallet_detected',
+  'wallet_connect_click',
+  'wallet_connected',
+  'wallet_connect_failed',
+  'pay_click',
+  'pay_signed',
+  'pay_failed',
+  'manual_tab_switch',
+  'address_copied',
+  'qr_shown',
+  'tx_received',
+  'tx_confirmed',
+  'order_expired',
+  'page_left',
+  'error_shown',
+  'help_opened_manual',
+  'help_opened_wallet',
+  'pay_mode_stable',
+  'pay_mode_crypto',
+  'pay_mode_stable_via_banner',
+  'token_selected',
+]);
+
+router.post('/funnel', async (req, res) => {
+  try {
+    const { orderId, event, data } = req.body || {};
+    if (!orderId || typeof orderId !== 'string') return res.status(400).json({ error: 'orderId required' });
+    if (!event || !ALLOWED_FUNNEL_EVENTS.has(event)) return res.status(400).json({ error: 'invalid event' });
+
+    const order = await db.order.findUnique({ where: { id: orderId }, select: { metadata: true } });
+    if (!order) return res.status(404).json({ error: 'order not found' });
+
+    const meta = (order.metadata as any) || {};
+    const funnel: any[] = Array.isArray(meta.funnel) ? meta.funnel : [];
+    funnel.push({
+      event,
+      ts: new Date().toISOString(),
+      ...(data && typeof data === 'object' ? { data } : {}),
+    });
+    // Keep last 50 to bound row size
+    const bounded = funnel.slice(-50);
+
+    await db.order.update({
+      where: { id: orderId },
+      data: { metadata: { ...meta, funnel: bounded } },
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    // Telemetry must never break checkout — swallow errors and return 200.
+    console.warn('Funnel event failed:', err instanceof Error ? err.message : err);
+    res.json({ ok: false });
+  }
+});
+
+// ─── Native token price feed (public, cached) ────────────────────────────────
+router.get('/native-price', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token || typeof token !== 'string') return res.status(400).json({ error: 'token required' });
+    const { NATIVE_TOKENS, getPriceUsd } = await import('../services/swapService');
+    if (!NATIVE_TOKENS.has(token.toUpperCase())) return res.status(400).json({ error: 'unsupported token' });
+    const priceUsd = await getPriceUsd(token.toUpperCase());
+    res.json({ token: token.toUpperCase(), priceUsd, updatedAt: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: 'Price unavailable' });
+  }
+});
+
+// ─── Stablo customer support chat ────────────────────────────────────────────
+// Public, order-scoped. Rate-limited in memory (good enough for serverless).
+const stabloRateMap = new Map<string, { count: number; resetAt: number }>();
+
+router.post('/support', async (req, res) => {
+  try {
+    const { orderId, message } = req.body || {};
+    if (!orderId || typeof orderId !== 'string') return res.status(400).json({ error: 'orderId required' });
+    if (!message || typeof message !== 'string' || !message.trim()) return res.status(400).json({ error: 'message required' });
+    if (message.length > 500) return res.status(400).json({ error: 'Message too long' });
+
+    // Rate limit: 20 msgs per orderId per hour
+    const now = Date.now();
+    const rl = stabloRateMap.get(orderId);
+    if (rl && rl.resetAt > now && rl.count >= 20) {
+      return res.json({ reply: "You've sent a lot of messages — take a breath and try again in a bit. If you're really stuck, contact the store directly." });
+    }
+    if (!rl || rl.resetAt <= now) {
+      stabloRateMap.set(orderId, { count: 1, resetAt: now + 60 * 60 * 1000 });
+    } else {
+      rl.count++;
+    }
+
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      select: { amount: true, token: true, chain: true, status: true, expiresAt: true, nativeToken: true },
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const expiresIn = order.expiresAt
+      ? Math.max(0, Math.round((new Date(order.expiresAt).getTime() - now) / 60000))
+      : null;
+
+    const isNativeOrder = order.nativeToken != null;
+    const systemPrompt = `You are Stablo, StablePay's payment assistant. Friendly, confident, and to the point. Max 2 sentences per reply.
+
+THIS ORDER: $${Number(order.amount).toFixed(2)} — paying with ${order.nativeToken || order.token} on ${String(order.chain).replace(/_/g, ' ')} — status: ${order.status}${expiresIn !== null ? `, expires in ${expiresIn} min` : ''}.${isNativeOrder ? `\nThis is a NATIVE TOKEN order: customer sends ${order.nativeToken}, which is automatically swapped to ${(order as any).nativeReceiveWallet ? 'stablecoin' : 'USDC'} — they absorb a 1.5% conversion fee.` : ''}
+
+KNOW THESE ANSWERS COLD:
+
+Is it safe?
+"Yes — your payment goes directly to the merchant on-chain. StablePay never holds your funds permanently, and every transaction is verifiable on the blockchain."
+
+Will I get a receipt?
+"Yes — as soon as your payment confirms, a receipt is emailed to the address you entered. Usually arrives within a minute."
+
+What crypto do you accept?
+"We accept USDC, USDT, and EURC on Base, Ethereum, Polygon, Arbitrum, BNB Chain, and Solana. You can also pay with ETH, SOL, BNB, MATIC, or ARB — we automatically convert them for you (a 1.5% fee applies)."
+
+Can I pay with ETH / SOL / BNB / other native coins?
+"Yes — select ETH, SOL, or BNB in the token selector and we'll handle the conversion automatically. A 1.5% conversion fee applies; use USDC to skip it."
+
+I'm paying with ${isNativeOrder ? order.nativeToken : 'native token'} — what happens?
+"You send ${isNativeOrder ? order.nativeToken : 'the native token'} to the address shown; we automatically swap it to a stablecoin and deliver it to the merchant. The price is locked for 15 minutes — complete your payment before it expires."
+
+How long does it take?
+"Usually under 60 seconds on Base or Polygon. Ethereum can take 2–5 minutes. ${isNativeOrder ? 'Native token orders add ~10–30 seconds for the on-chain swap.' : ''}"
+
+What if it doesn't confirm?
+"Make sure you sent to the exact address shown and the exact amount. If it's been over 5 minutes, paste your transaction ID in the 'Still waiting?' box — we'll look it up."
+
+MORE RULES:
+- If they don't have any crypto: tell them to buy USDC on Coinbase, Binance, or Kraken, then come back. Avoid recommending direct ETH purchases — stablecoins are simpler.
+- Refunds or delivery issues: tell them to contact the store directly — you only handle the payment.
+- Never reveal fees, internal systems, swap providers, or backend details.
+- If the order is expired: tell them to go back and start a new checkout — expired orders cannot be paid.`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 150,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: message.trim() }],
+    });
+
+    const reply = response.content[0]?.type === 'text' ? response.content[0].text : "Sorry, I couldn't process that. Try refreshing the page.";
+
+    // Persist both turns — fire and forget, never block the response
+    db.stabloChat.createMany({
+      data: [
+        { orderId, role: 'user', content: message.trim() },
+        { orderId, role: 'bot', content: reply },
+      ],
+    }).catch(e => console.warn('Stablo persist failed:', e instanceof Error ? e.message : e));
+
+    res.json({ reply });
+  } catch (err) {
+    console.error('Stablo support error:', err instanceof Error ? err.message : err);
+    res.json({ reply: "Something went wrong on my end. Try refreshing — the payment page is still live." });
   }
 });
 
