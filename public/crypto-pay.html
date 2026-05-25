@@ -2406,7 +2406,10 @@
             const priceEl = document.getElementById('productPrice');
             if (priceEl && currentProduct) {
                 const token = selectedToken || 'USDC';
-                if (token === 'EURC' && typeof displayAmount !== 'undefined' && displayAmount) {
+                if (NATIVE_TOKENS_SET.has(token)) {
+                    // Native token: already set by selectToken, don't overwrite with "$19.99 ETH"
+                    return;
+                } else if (token === 'EURC' && typeof displayAmount !== 'undefined' && displayAmount) {
                     priceEl.textContent = `€${displayAmount} EURC (≈$${currentProduct.price} USD)`;
                 } else {
                     priceEl.textContent = `$${Number(currentProduct.price).toFixed(2)} ${token}`;
@@ -2617,7 +2620,10 @@
                 const banner = document.getElementById('nativeFeeBanner');
                 if (banner) banner.classList.remove('hidden');
                 if (currentProduct) {
-                    document.getElementById('productPrice').textContent = `$${currentProduct.price} USD (+ 1.5% fee)`;
+                    const usd = parseFloat(currentProduct.price);
+                    const pct = usd * 0.015;
+                    const fee = (selectedChainKey === 'ETHEREUM_MAINNET') ? Math.max(pct, 5.00) : Math.max(pct, 0.50);
+                    document.getElementById('productPrice').textContent = `$${usd.toFixed(2)} + $${fee.toFixed(2)} fee`;
                     displayAmount = currentProduct.price;
                 }
                 updateOrderSummary();
