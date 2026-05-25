@@ -776,7 +776,7 @@
       const usd = parseFloat(this.options.amount);
       const chain = this.selectedChain?.chain;
       const pct = usd * 0.015;
-      const fee = (chain === 'ETHEREUM_MAINNET') ? Math.max(pct, 5.00) : Math.max(pct, 0.50);
+      const fee = (chain === 'ETHEREUM_MAINNET') ? Math.max(pct, 1.00) : Math.max(pct, 0.50);
       const nativeToken = CHAIN_NATIVE_TOKEN[chain] || this.selectedToken;
       const sendAmt = (usd + fee) / this.nativePriceUsd;
       const el = this.container.querySelector('#sp-native-send-amt');
@@ -1299,7 +1299,7 @@
 
           // Build send amount string
           const pct = usdAmount * 0.015;
-          const fee = (chain.chain === 'ETHEREUM_MAINNET') ? Math.max(pct, 5.00) : Math.max(pct, 0.50);
+          const fee = (chain.chain === 'ETHEREUM_MAINNET') ? Math.max(pct, 1.00) : Math.max(pct, 0.50);
           const fallbackAmt = this.nativePriceUsd ? ((usdAmount + fee) / this.nativePriceUsd).toPrecision(5) : '?';
           const sendAmtStr = nativeSendAmt
             ? `${parseFloat(nativeSendAmt).toPrecision(5)} ${nativeToken}`

@@ -116,7 +116,7 @@ export async function getPriceUsd(symbol: string): Promise<number> {
 // ─── Conversion fee ───────────────────────────────────────────────────────────
 export function calcConversionFee(usdAmount: number, chain: string): number {
   const pct = usdAmount * 0.015;
-  if (chain === 'ETHEREUM_MAINNET') return Math.max(pct, 5.00); // ETH gas is expensive
+  if (chain === 'ETHEREUM_MAINNET') return Math.max(pct, 1.00); // Verified $0.35 typical cost post-blob upgrade; 3x buffer
   return Math.max(pct, 0.50); // $0.50 floor everywhere else
 }
 

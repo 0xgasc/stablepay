@@ -2522,7 +2522,7 @@
 
         function calcConversionFee(usdAmount, chainKey) {
             const pct = usdAmount * 0.015;
-            return chainKey === 'ETHEREUM_MAINNET' ? Math.max(pct, 5.00) : Math.max(pct, 0.50);
+            return chainKey === 'ETHEREUM_MAINNET' ? Math.max(pct, 1.00) : Math.max(pct, 0.50);
         }
 
         function updateNativeSendAmount() {
@@ -2622,7 +2622,7 @@
                 if (currentProduct) {
                     const usd = parseFloat(currentProduct.price);
                     const pct = usd * 0.015;
-                    const fee = (selectedChainKey === 'ETHEREUM_MAINNET') ? Math.max(pct, 5.00) : Math.max(pct, 0.50);
+                    const fee = (selectedChainKey === 'ETHEREUM_MAINNET') ? Math.max(pct, 1.00) : Math.max(pct, 0.50);
                     document.getElementById('productPrice').textContent = `$${usd.toFixed(2)} + $${fee.toFixed(2)} fee`;
                     displayAmount = currentProduct.price;
                 }
