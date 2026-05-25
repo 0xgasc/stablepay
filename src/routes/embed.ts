@@ -327,7 +327,9 @@ router.post('/checkout', rateLimit({
     }
 
     // Enforce token only when chain is locked (chain-agnostic orders re-validate at chain selection)
-    if (!chainAgnostic) {
+    // Native tokens (ETH/SOL/BNB/MATIC/ARB) bypass this check — they're validated in the native token path below
+    const NATIVE_TOKEN_SET = new Set(['ETH', 'SOL', 'BNB', 'MATIC', 'ARB']);
+    if (!chainAgnostic && !NATIVE_TOKEN_SET.has(data.token)) {
       const supportedTokens = (wallet.supportedTokens && wallet.supportedTokens.length > 0)
         ? wallet.supportedTokens
         : ['USDC'];
