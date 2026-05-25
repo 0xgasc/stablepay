@@ -387,6 +387,12 @@
                     <button class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-300 hover:border-slate-800 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="stabloChats">
                         Stablo Chats
                     </button>
+                    <button class="tab-btn border-b-2 border-transparent text-orange-400 hover:text-orange-300 hover:border-orange-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="funnel">
+                        Conversion Funnel
+                    </button>
+                    <button class="tab-btn border-b-2 border-transparent text-orange-400 hover:text-orange-300 hover:border-orange-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="nativeActivity">
+                        Native Tokens
+                    </button>
                 </nav>
             </div>
 
@@ -1418,6 +1424,56 @@
         </div>
     </div>
 
+    <!-- Conversion Funnel Tab -->
+    <div id="funnelTab" class="tab-content hidden">
+        <div class="bg-slate-950 border border-orange-900/40 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Conversion Funnel</h2>
+                    <p class="text-sm text-slate-400 mt-1">PENDING → CONFIRMED rate by merchant & chain. Surfaces where customers are dropping off.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="funnelDays" onchange="loadFunnel()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-white text-sm">
+                        <option value="1">Last 24h</option>
+                        <option value="7" selected>Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                    </select>
+                    <button onclick="loadFunnel()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Refresh</button>
+                </div>
+            </div>
+            <div id="funnelSummary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+            <div id="funnelTable" class="overflow-x-auto">
+                <div class="text-slate-400 text-sm py-12 text-center">Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Native Token Activity Tab -->
+    <div id="nativeActivityTab" class="tab-content hidden">
+        <div class="bg-slate-950 border border-orange-900/40 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Native Token Activity</h2>
+                    <p class="text-sm text-slate-400 mt-1">ETH/SOL/BNB/MATIC orders → USDC swap pipeline status.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="nativeDays" onchange="loadNativeActivity()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-white text-sm">
+                        <option value="1">Last 24h</option>
+                        <option value="7">Last 7 days</option>
+                        <option value="14" selected>Last 14 days</option>
+                        <option value="30">Last 30 days</option>
+                    </select>
+                    <button onclick="loadNativeActivity()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Refresh</button>
+                </div>
+            </div>
+            <div id="nativeSummary" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
+            <div id="nativeOrdersTable" class="overflow-x-auto">
+                <div class="text-slate-400 text-sm py-12 text-center">Loading…</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.location.origin;
         let merchants = [];
@@ -1558,8 +1614,134 @@
                 if (tab === 'agentWallets') loadAgentWallets();
                 if (tab === 'growth') loadGrowthTasks();
                 if (tab === 'stabloChats') loadStabloChats();
+                if (tab === 'funnel') loadFunnel();
+                if (tab === 'nativeActivity') loadNativeActivity();
             });
         });
+
+        // ─── Conversion Funnel ─────────────────────────────────────────
+        async function loadFunnel() {
+            const days = document.getElementById('funnelDays').value;
+            const table = document.getElementById('funnelTable');
+            const summary = document.getElementById('funnelSummary');
+            table.innerHTML = '<div class="text-slate-400 text-sm py-12 text-center">Loading…</div>';
+            try {
+                const r = await fetch(`${API_BASE}/api/v1/admin/funnel?days=${days}`, { headers: { 'Authorization': getAuthHeader() } });
+                const data = await r.json();
+                if (!data.rows) { table.innerHTML = '<div class="text-red-400 text-sm py-12 text-center">Failed to load.</div>'; return; }
+
+                // Aggregate totals
+                const totals = data.rows.reduce((acc, r) => {
+                    acc.total += r.total; acc.confirmed += r.confirmed; acc.expired += r.expired;
+                    acc.volume += r.volume; return acc;
+                }, { total: 0, confirmed: 0, expired: 0, volume: 0 });
+                const overallRate = totals.total > 0 ? (totals.confirmed / totals.total * 100).toFixed(1) : '0.0';
+
+                summary.innerHTML = `
+                    <div class="bg-black border border-slate-800 p-4"><div class="text-xs text-slate-500 uppercase">Attempts</div><div class="text-2xl font-bold text-white">${totals.total}</div></div>
+                    <div class="bg-black border border-emerald-800 p-4"><div class="text-xs text-emerald-500 uppercase">Confirmed</div><div class="text-2xl font-bold text-emerald-400">${totals.confirmed}</div></div>
+                    <div class="bg-black border border-red-800 p-4"><div class="text-xs text-red-500 uppercase">Expired</div><div class="text-2xl font-bold text-red-400">${totals.expired}</div></div>
+                    <div class="bg-black border ${overallRate >= 50 ? 'border-emerald-800' : overallRate >= 20 ? 'border-yellow-800' : 'border-red-800'} p-4"><div class="text-xs text-slate-500 uppercase">Conversion</div><div class="text-2xl font-bold ${overallRate >= 50 ? 'text-emerald-400' : overallRate >= 20 ? 'text-yellow-400' : 'text-red-400'}">${overallRate}%</div></div>
+                `;
+
+                if (data.rows.length === 0) {
+                    table.innerHTML = '<div class="text-slate-400 text-sm py-12 text-center">No orders in this window.</div>';
+                    return;
+                }
+
+                table.innerHTML = `
+                    <table class="w-full text-sm">
+                        <thead class="text-xs text-slate-500 uppercase border-b border-slate-800">
+                            <tr><th class="text-left py-3 px-2">Merchant</th><th class="text-left py-3 px-2">Chain</th><th class="text-right py-3 px-2">Attempts</th><th class="text-right py-3 px-2">Confirmed</th><th class="text-right py-3 px-2">Expired</th><th class="text-right py-3 px-2">Cancelled</th><th class="text-right py-3 px-2">Pending</th><th class="text-right py-3 px-2">Volume</th><th class="text-right py-3 px-2">Rate</th></tr>
+                        </thead>
+                        <tbody>
+                            ${data.rows.map(r => {
+                                const rate = r.conversionPct.toFixed(1);
+                                const rateClass = r.conversionPct >= 50 ? 'text-emerald-400' : r.conversionPct >= 20 ? 'text-yellow-400' : 'text-red-400';
+                                const rowClass = r.conversionPct === 0 && r.total >= 5 ? 'bg-red-950/20' : '';
+                                return `<tr class="border-b border-slate-900 ${rowClass}">
+                                    <td class="py-2 px-2 text-white font-medium">${r.companyName}<div class="text-xs text-slate-500">${r.email}</div></td>
+                                    <td class="py-2 px-2 text-slate-300">${r.chain.replace('_MAINNET', '').replace('_SEPOLIA', ' SEP')}</td>
+                                    <td class="py-2 px-2 text-right text-slate-300">${r.total}</td>
+                                    <td class="py-2 px-2 text-right text-emerald-400">${r.confirmed}</td>
+                                    <td class="py-2 px-2 text-right text-red-400">${r.expired}</td>
+                                    <td class="py-2 px-2 text-right text-slate-500">${r.cancelled}</td>
+                                    <td class="py-2 px-2 text-right text-yellow-400">${r.pending}</td>
+                                    <td class="py-2 px-2 text-right text-slate-300">$${r.volume.toFixed(2)}</td>
+                                    <td class="py-2 px-2 text-right font-bold ${rateClass}">${rate}%</td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) { table.innerHTML = `<div class="text-red-400 text-sm py-12 text-center">Error: ${e.message}</div>`; }
+        }
+
+        // ─── Native Token Activity ─────────────────────────────────────
+        async function loadNativeActivity() {
+            const days = document.getElementById('nativeDays').value;
+            const table = document.getElementById('nativeOrdersTable');
+            const summary = document.getElementById('nativeSummary');
+            table.innerHTML = '<div class="text-slate-400 text-sm py-12 text-center">Loading…</div>';
+            try {
+                const r = await fetch(`${API_BASE}/api/v1/admin/native-activity?days=${days}`, { headers: { 'Authorization': getAuthHeader() } });
+                const data = await r.json();
+                if (!data.orders) { table.innerHTML = '<div class="text-red-400 text-sm py-12 text-center">Failed to load.</div>'; return; }
+
+                const s = data.byStatus || {};
+                summary.innerHTML = `
+                    <div class="bg-black border border-slate-800 p-4"><div class="text-xs text-slate-500 uppercase">Total</div><div class="text-2xl font-bold text-white">${data.total}</div></div>
+                    <div class="bg-black border border-yellow-800 p-4"><div class="text-xs text-yellow-500 uppercase">Pending</div><div class="text-2xl font-bold text-yellow-400">${s.PENDING ?? 0}</div></div>
+                    <div class="bg-black border border-cyan-800 p-4"><div class="text-xs text-cyan-500 uppercase">Processing</div><div class="text-2xl font-bold text-cyan-400">${s.PROCESSING ?? 0}</div></div>
+                    <div class="bg-black border border-emerald-800 p-4"><div class="text-xs text-emerald-500 uppercase">Confirmed</div><div class="text-2xl font-bold text-emerald-400">${s.CONFIRMED ?? 0}</div></div>
+                    <div class="bg-black border border-red-800 p-4"><div class="text-xs text-red-500 uppercase">Expired</div><div class="text-2xl font-bold text-red-400">${s.EXPIRED ?? 0}</div></div>
+                `;
+
+                if (data.orders.length === 0) {
+                    table.innerHTML = '<div class="text-slate-400 text-sm py-12 text-center">No native token orders in this window.</div>';
+                    return;
+                }
+
+                table.innerHTML = `
+                    <table class="w-full text-xs">
+                        <thead class="text-slate-500 uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="text-left py-3 px-2">Created</th>
+                                <th class="text-left py-3 px-2">Merchant</th>
+                                <th class="text-left py-3 px-2">Chain</th>
+                                <th class="text-left py-3 px-2">Token</th>
+                                <th class="text-right py-3 px-2">USD</th>
+                                <th class="text-right py-3 px-2">Native Amt</th>
+                                <th class="text-right py-3 px-2">Fee</th>
+                                <th class="text-left py-3 px-2">Status</th>
+                                <th class="text-left py-3 px-2">Receive Addr</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.orders.map(o => {
+                                const statusColor = {
+                                    CONFIRMED: 'text-emerald-400', PROCESSING: 'text-cyan-400',
+                                    PENDING: 'text-yellow-400', EXPIRED: 'text-red-400',
+                                    CANCELLED: 'text-slate-500', REFUNDED: 'text-purple-400',
+                                }[o.status] || 'text-white';
+                                const created = new Date(o.createdAt).toISOString().slice(5, 16).replace('T', ' ');
+                                return `<tr class="border-b border-slate-900 hover:bg-slate-900/50">
+                                    <td class="py-2 px-2 text-slate-400">${created}</td>
+                                    <td class="py-2 px-2 text-white">${o.merchant?.companyName ?? '—'}</td>
+                                    <td class="py-2 px-2 text-slate-300">${o.chain.replace('_MAINNET', '')}</td>
+                                    <td class="py-2 px-2 text-cyan-400 font-bold">${o.nativeToken}</td>
+                                    <td class="py-2 px-2 text-right text-slate-300">$${o.amount.toFixed(2)}</td>
+                                    <td class="py-2 px-2 text-right text-slate-400">${o.nativeTokenAmount ? o.nativeTokenAmount.toFixed(6) : '—'}</td>
+                                    <td class="py-2 px-2 text-right text-slate-400">${o.conversionFeeAmount ? '$' + o.conversionFeeAmount.toFixed(2) : '—'}</td>
+                                    <td class="py-2 px-2 font-bold ${statusColor}">${o.status}</td>
+                                    <td class="py-2 px-2 text-slate-500 font-mono text-[10px]">${o.paymentAddress?.slice(0, 10)}…</td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) { table.innerHTML = `<div class="text-red-400 text-sm py-12 text-center">Error: ${e.message}</div>`; }
+        }
 
         // Load dashboard data
         // Fee tier matrix

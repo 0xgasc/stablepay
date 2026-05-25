@@ -1755,4 +1755,114 @@ router.get('/stablo/chats', requireAdminKey, async (req, res) => {
   }
 });
 
+// ─── Conversion Funnel & Native Token Activity ─────────────────────────────
+// GET /api/v1/admin/funnel?days=7 — order conversion breakdown by merchant + chain
+router.get('/funnel', requireAdminKey, async (req, res) => {
+  try {
+    const days = Math.min(Math.max(parseInt(req.query.days as string) || 7, 1), 90);
+    const since = new Date(Date.now() - days * 86_400_000);
+
+    // Aggregate orders by merchant, chain, status
+    const rows = await db.order.groupBy({
+      by: ['merchantId', 'chain', 'status'],
+      where: { createdAt: { gte: since } },
+      _count: { _all: true },
+      _sum: { amount: true },
+    });
+
+    // Pull merchant names
+    const merchantIds = [...new Set(rows.map(r => r.merchantId).filter((x): x is string => !!x))];
+    const merchants = await db.merchant.findMany({
+      where: { id: { in: merchantIds } },
+      select: { id: true, companyName: true, email: true },
+    });
+    const mMap = new Map(merchants.map(m => [m.id, m]));
+
+    // Pivot: { merchantId, chain } → { confirmed, expired, cancelled, pending, ... }
+    type Key = string;
+    const pivot = new Map<Key, { merchantId: string | null; chain: string; companyName: string; email: string; counts: Record<string, number>; volume: number }>();
+    for (const r of rows) {
+      const key = `${r.merchantId}|${r.chain}`;
+      if (!pivot.has(key)) {
+        const m = r.merchantId ? mMap.get(r.merchantId) : null;
+        pivot.set(key, {
+          merchantId: r.merchantId, chain: r.chain,
+          companyName: m?.companyName ?? 'DEMO/Unknown',
+          email:       m?.email ?? '—',
+          counts: {}, volume: 0,
+        });
+      }
+      const cell = pivot.get(key)!;
+      cell.counts[r.status] = r._count._all;
+      if (r.status === 'CONFIRMED') cell.volume = Number(r._sum.amount ?? 0);
+    }
+
+    // Compute conversion rate and sort by total volume of attempts
+    const result = [...pivot.values()].map(r => {
+      const total     = Object.values(r.counts).reduce((s, n) => s + n, 0);
+      const confirmed = r.counts.CONFIRMED ?? 0;
+      const expired   = r.counts.EXPIRED   ?? 0;
+      const cancelled = r.counts.CANCELLED ?? 0;
+      const pending   = r.counts.PENDING   ?? 0;
+      const processing= r.counts.PROCESSING?? 0;
+      const conversionPct = total > 0 ? (confirmed / total) * 100 : 0;
+      return { ...r, total, confirmed, expired, cancelled, pending, processing, conversionPct };
+    }).sort((a, b) => b.total - a.total);
+
+    res.json({ since: since.toISOString(), days, rows: result });
+  } catch (error) {
+    logger.error('funnel endpoint error', error as Error, {});
+    res.status(500).json({ error: 'Failed to compute funnel' });
+  }
+});
+
+// GET /api/v1/admin/native-activity?days=14 — native token order timeline
+router.get('/native-activity', requireAdminKey, async (req, res) => {
+  try {
+    const days = Math.min(Math.max(parseInt(req.query.days as string) || 14, 1), 90);
+    const since = new Date(Date.now() - days * 86_400_000);
+
+    const orders = await db.order.findMany({
+      where: { nativeToken: { not: null }, createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: {
+        id: true, status: true, chain: true, nativeToken: true,
+        amount: true, conversionFeeAmount: true, nativePriceSnapshot: true,
+        nativeTokenAmount: true, paymentAddress: true,
+        createdAt: true, updatedAt: true, expiresAt: true,
+        merchantId: true,
+      },
+    });
+
+    const merchantIds = [...new Set(orders.map(o => o.merchantId).filter((x): x is string => !!x))];
+    const merchants = await db.merchant.findMany({
+      where: { id: { in: merchantIds } },
+      select: { id: true, companyName: true, email: true },
+    });
+    const mMap = new Map(merchants.map(m => [m.id, m]));
+
+    // Aggregate stats
+    const byStatus: Record<string, number> = {};
+    for (const o of orders) byStatus[o.status] = (byStatus[o.status] ?? 0) + 1;
+
+    res.json({
+      days, since: since.toISOString(),
+      total: orders.length,
+      byStatus,
+      orders: orders.map(o => ({
+        ...o,
+        merchant: o.merchantId ? mMap.get(o.merchantId) ?? null : null,
+        amount: Number(o.amount),
+        conversionFeeAmount: o.conversionFeeAmount ? Number(o.conversionFeeAmount) : null,
+        nativePriceSnapshot: o.nativePriceSnapshot ? Number(o.nativePriceSnapshot) : null,
+        nativeTokenAmount:   o.nativeTokenAmount   ? Number(o.nativeTokenAmount)   : null,
+      })),
+    });
+  } catch (error) {
+    logger.error('native-activity endpoint error', error as Error, {});
+    res.status(500).json({ error: 'Failed to fetch native activity' });
+  }
+});
+
 export const adminRouter = router;
