@@ -284,6 +284,8 @@ export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: 
   } else {
     await ensureGas(receiveWallet.address, chain);
     ({ txHash: swapTxHash, stableReceived } = await executeLiFiSwap(chain, nativeAmt, targetStable, privKey));
+    // After swap, ETH balance is 0 — fund gas for the ERC-20 forward tx
+    await ensureGas(receiveWallet.address, chain);
     forwardTxHash = await forwardEvmToMerchant(chain, targetStable, privKey, merchantWallet.address);
   }
 
