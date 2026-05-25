@@ -30,6 +30,7 @@ enum Chain {
 
 enum OrderStatus {
   PENDING
+  PROCESSING
   CONFIRMED
   REFUNDED
   EXPIRED

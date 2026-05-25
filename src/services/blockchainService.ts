@@ -454,10 +454,18 @@ export class BlockchainService {
         await db.order.update({ where: { id: order.id }, data: { nativeTokenAmount: received } });
 
         const { swapAndForward } = await import('./swapService');
-        const { forwardTxHash } = await swapAndForward(order.id);
-        await this.orderService.confirmOrder(order.id, { txHash: forwardTxHash });
+        try {
+          const { forwardTxHash } = await swapAndForward(order.id);
+          await this.orderService.confirmOrder(order.id, { txHash: forwardTxHash });
+        } catch (swapErr: any) {
+          console.error(`[scanner] native EVM swap failed for order ${order.id}:`, swapErr.message);
+          // Revert PROCESSING → PENDING so the next scan retries (unless it was a double-process skip)
+          if (!swapErr.message.includes('already processing')) {
+            await db.order.updateMany({ where: { id: order.id, status: 'PROCESSING' }, data: { status: 'PENDING' } });
+          }
+        }
       } catch (err: any) {
-        console.error(`[scanner] native EVM swap failed for order ${order.id}:`, err.message);
+        console.error(`[scanner] native EVM scan error for order ${order.id}:`, err.message);
       }
     }
 
@@ -493,10 +501,17 @@ export class BlockchainService {
         await db.order.update({ where: { id: order.id }, data: { nativeTokenAmount: received } });
 
         const { swapAndForward } = await import('./swapService');
-        const { forwardTxHash } = await swapAndForward(order.id);
-        await this.orderService.confirmOrder(order.id, { txHash: forwardTxHash });
+        try {
+          const { forwardTxHash } = await swapAndForward(order.id);
+          await this.orderService.confirmOrder(order.id, { txHash: forwardTxHash });
+        } catch (swapErr: any) {
+          console.error(`[scanner] native SOL swap failed for order ${order.id}:`, swapErr.message);
+          if (!swapErr.message.includes('already processing')) {
+            await db.order.updateMany({ where: { id: order.id, status: 'PROCESSING' }, data: { status: 'PENDING' } });
+          }
+        }
       } catch (err: any) {
-        console.error(`[scanner] native SOL swap failed for order ${order.id}:`, err.message);
+        console.error(`[scanner] native SOL scan error for order ${order.id}:`, err.message);
       }
     }
   }

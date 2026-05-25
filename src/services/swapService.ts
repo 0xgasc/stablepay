@@ -14,11 +14,12 @@ const EVM_CHAIN: Record<string, {
   stables: Record<string, string>;
   gasThreshold: string; gasFund: string;
 }> = {
-  BASE_MAINNET:     { chainId: 8453,  rpc: 'https://mainnet.base.org',      gasThreshold: '0.0003', gasFund: '0.0005', stables: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42' } },
-  ETHEREUM_MAINNET: { chainId: 1,     rpc: 'https://eth.llamarpc.com',       gasThreshold: '0.003',  gasFund: '0.005',  stables: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7', EURC: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c' } },
-  POLYGON_MAINNET:  { chainId: 137,   rpc: 'https://polygon-rpc.com',        gasThreshold: '0.0003', gasFund: '0.0005', stables: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' } },
-  ARBITRUM_MAINNET: { chainId: 42161, rpc: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arbitrum-one-rpc.publicnode.com', gasThreshold: '0.0003', gasFund: '0.0005', stables: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' } },
-  BNB_MAINNET:      { chainId: 56,    rpc: process.env.BNB_MAINNET_RPC_URL   || 'https://bsc-dataseed.binance.org', gasThreshold: '0.0003', gasFund: '0.0005', stables: { USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', USDT: '0x55d398326f99059fF775485246999027B3197955' } },
+  // gasFund: only enough for one ERC-20 transfer — swept back after use
+  BASE_MAINNET:     { chainId: 8453,  rpc: 'https://mainnet.base.org',      gasThreshold: '0.00005', gasFund: '0.0001', stables: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42' } },
+  ETHEREUM_MAINNET: { chainId: 1,     rpc: 'https://eth.llamarpc.com',       gasThreshold: '0.003',   gasFund: '0.005',  stables: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7', EURC: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c' } },
+  POLYGON_MAINNET:  { chainId: 137,   rpc: 'https://polygon-rpc.com',        gasThreshold: '0.00005', gasFund: '0.0001', stables: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' } },
+  ARBITRUM_MAINNET: { chainId: 42161, rpc: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arbitrum-one-rpc.publicnode.com', gasThreshold: '0.00005', gasFund: '0.0001', stables: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' } },
+  BNB_MAINNET:      { chainId: 56,    rpc: process.env.BNB_MAINNET_RPC_URL   || 'https://bsc-dataseed.binance.org', gasThreshold: '0.00005', gasFund: '0.0001', stables: { USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', USDT: '0x55d398326f99059fF775485246999027B3197955' } },
 };
 
 // BNB chain stablecoins use 18 decimals; all others use 6
@@ -223,6 +224,21 @@ async function forwardEvmToMerchant(
   if (bal === BigInt(0)) throw new Error('No stablecoin balance to forward after swap');
   const tx = await token.transfer(toAddress, bal);
   await tx.wait();
+
+  // Sweep leftover gas dust back to agent wallet so it's not stranded
+  if (AGENT_KEY) {
+    try {
+      const dust = await provider.getBalance(fromWallet.address);
+      const feeData = await provider.getFeeData();
+      const gasPrice = feeData.gasPrice ?? ethers.parseUnits('1', 'gwei');
+      const sweepGasCost = gasPrice * BigInt(21_000) * BigInt(2); // 2x buffer
+      if (dust > sweepGasCost) {
+        const sweepTx = await fromWallet.sendTransaction({ to: new ethers.Wallet(AGENT_KEY).address, value: dust - sweepGasCost });
+        await sweepTx.wait();
+      }
+    } catch { /* non-critical — dust stays, not worth failing the order */ }
+  }
+
   return tx.hash;
 }
 
@@ -252,20 +268,27 @@ async function forwardSolToMerchant(
 
 // ─── Main entry: swap native token → stablecoin → merchant ───────────────────
 export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: string }> {
+  // Atomically mark as PROCESSING to prevent double-execution across scanner cycles
+  const claimed = await db.order.updateMany({
+    where: { id: orderId, status: 'PENDING' },
+    data:  { status: 'PROCESSING' },
+  });
+  if (claimed.count === 0) throw new Error(`Order ${orderId} already processing or not pending`);
+
   const order = await db.order.findUnique({
     where: { id: orderId },
     include: { merchant: { select: { id: true } } },
   });
-  if (!order)              throw new Error(`Order ${orderId} not found`);
-  if (!order.nativeToken)  throw new Error(`Order ${orderId} is not a native token order`);
+  if (!order)             throw new Error(`Order ${orderId} not found`);
+  if (!order.nativeToken) throw new Error(`Order ${orderId} is not a native token order`);
 
   const receiveWallet = await db.nativeReceiveWallet.findUnique({ where: { orderId } });
   if (!receiveWallet) throw new Error(`No receive wallet for order ${orderId}`);
 
-  const chain      = String(order.chain);
-  const isSolana   = chain.startsWith('SOLANA');
-  const privKey    = decryptWalletKey(receiveWallet.encryptedKey);
-  const nativeAmt  = Number(order.nativeTokenAmount ?? 0);
+  const chain     = String(order.chain);
+  const isSolana  = chain.startsWith('SOLANA');
+  const privKey   = decryptWalletKey(receiveWallet.encryptedKey);
+  const nativeAmt = Number(order.nativeTokenAmount ?? 0);
 
   const merchantWallet = await db.merchantWallet.findFirst({
     where: { merchantId: order.merchantId!, chain: order.chain, isActive: true },
@@ -278,13 +301,16 @@ export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: 
   let forwardTxHash: string;
 
   if (isSolana) {
-    const lamports = Math.round(nativeAmt * 1e9);
+    // Reserve 0.01 SOL for forward tx fees — Jupiter swaps everything else
+    const SOL_GAS_RESERVE = 10_000_000; // lamports
+    const lamports = Math.max(0, Math.round(nativeAmt * 1e9) - SOL_GAS_RESERVE);
+    if (lamports <= 0) throw new Error('SOL amount too small after gas reserve');
     ({ txHash: swapTxHash, stableReceived } = await executeJupiterSwap(lamports, targetStable, privKey));
     forwardTxHash = await forwardSolToMerchant(targetStable, privKey, merchantWallet.address);
   } else {
     await ensureGas(receiveWallet.address, chain);
     ({ txHash: swapTxHash, stableReceived } = await executeLiFiSwap(chain, nativeAmt, targetStable, privKey));
-    // After swap, ETH balance is 0 — fund gas for the ERC-20 forward tx
+    // After swap, native balance is 0 — fund gas for the ERC-20 forward tx
     await ensureGas(receiveWallet.address, chain);
     forwardTxHash = await forwardEvmToMerchant(chain, targetStable, privKey, merchantWallet.address);
   }
