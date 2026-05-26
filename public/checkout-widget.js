@@ -171,7 +171,32 @@
       // Anonymous session ID for telemetry — persists for this widget instance
       this._sessionId = (window.crypto?.randomUUID?.() || `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
 
+      // A/B variant — sticky per widget instance (sessionStorage scoped to host page).
+      // ?sp_variant= URL param wins for QA. Default 50/50 deterministic hash.
+      this._variant = this._assignVariant();
+      this._wizardState = { hasWallet: null, payType: null, method: null, step: 1, done: false };
+
       this.init();
+    }
+
+    _assignVariant() {
+      try {
+        const url = new URL(window.location.href);
+        const override = url.searchParams.get('sp_variant');
+        if (override === 'guided' || override === 'control') {
+          sessionStorage.setItem('sp_widget_variant', override);
+          return override;
+        }
+        const cached = sessionStorage.getItem('sp_widget_variant');
+        if (cached === 'guided' || cached === 'control') return cached;
+        let h = 0;
+        for (let i = 0; i < this._sessionId.length; i++) h = ((h << 5) - h + this._sessionId.charCodeAt(i)) | 0;
+        const v = Math.abs(h) % 2 === 0 ? 'control' : 'guided';
+        sessionStorage.setItem('sp_widget_variant', v);
+        return v;
+      } catch {
+        return 'control';
+      }
     }
 
     // Telemetry — fire-and-forget, never throws, never blocks
@@ -196,10 +221,139 @@
       this.injectStyles();
       this.renderLoading();
       await this.loadMerchantConfig();
+
+      // A/B: render wizard first when assigned to 'guided'. On completion the wizard
+      // calls _wizardComplete() which sets payMode + method and calls this.render().
+      window._spWidget = this;
+      this._track('VARIANT_ASSIGNED', { variant: this._variant });
+      this._track('WIDGET_OPENED', { amount: this.options.amount, productName: this.options.productName, variant: this._variant });
+
+      if (this._variant === 'guided' && !this._wizardState.done) {
+        this._renderWizard();
+        this.attachWizardListeners();
+        return;
+      }
       this.render();
       this.attachEventListeners();
-      window._spWidget = this; // allows onclick handlers in rendered HTML to call setPayMode
-      this._track('WIDGET_OPENED', { amount: this.options.amount, productName: this.options.productName });
+    }
+
+    // ─── A/B WIZARD (widget variant) ─────────────────────────────────────
+    _renderWizard() {
+      const isDark = this.options.theme === 'dark';
+      const accent = this.options.accentColor;
+      const brutal = this.options.borderStyle === 'brutal';
+      this.container.innerHTML = `
+        <div class="sp-widget sp-wiz ${this.options.theme}" style="
+          background: ${isDark ? '#1a1a1a' : '#fff'};
+          color: ${isDark ? '#fff' : '#000'};
+          ${brutal ? 'border: 4px solid #000; box-shadow: 8px 8px 0 #000;' : 'border: 1px solid #e5e7eb; border-radius: 12px;'}
+          padding: 24px 20px;
+          font-family: ${this.options.fontFamily || "'Space Grotesk', -apple-system, system-ui, sans-serif"};
+        ">
+          <div style="text-align: center; margin-bottom: 16px;">
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: ${isDark ? '#888' : '#666'}; font-weight: 700;">Quick setup</div>
+            <div id="sp-wiz-step-label" style="font-size: 11px; color: ${isDark ? '#666' : '#999'}; margin-top: 2px;">Step 1 of 3</div>
+          </div>
+          <div id="sp-wiz-body"></div>
+          <div style="text-align: center; margin-top: 16px;">
+            <button id="sp-wiz-skip" style="background: none; border: none; color: ${isDark ? '#666' : '#999'}; font-size: 11px; text-decoration: underline; cursor: pointer; padding: 4px;">Skip — show all options</button>
+          </div>
+        </div>`;
+      this._wizGoStep(1);
+    }
+
+    _wizStepHTML(step) {
+      const isDark = this.options.theme === 'dark';
+      const accent = this.options.accentColor;
+      const usd = parseFloat(this.options.amount || 0).toFixed(2);
+      const primaryBtnStyle = `width:100%;padding:14px 12px;background:${accent};color:#000;border:3px solid #000;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;`;
+      const secondaryBtnStyle = `width:100%;padding:14px 12px;background:${isDark ? '#2a2a2a' : '#fff'};color:${isDark ? '#fff' : '#000'};border:3px solid ${isDark ? '#666' : '#000'};font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;margin-top:10px;`;
+      const subStyle = `font-size:11px;color:${isDark ? '#999' : '#666'};font-weight:400;margin-top:2px;`;
+      switch (String(step)) {
+        case '1':
+          return `
+            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">Pay $${usd} with crypto</h2>
+            <p style="font-size:13px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 20px;">Do you have a crypto wallet?</p>
+            <button class="sp-wiz-ans" data-key="hasWallet" data-value="yes" style="${primaryBtnStyle}"><span>Yes — I'm ready</span><span>→</span></button>
+            <button class="sp-wiz-ans" data-key="hasWallet" data-value="no" style="${secondaryBtnStyle}"><span>Not yet — help me</span><span>→</span></button>`;
+        case '1b':
+          return `
+            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">Pick a wallet</h2>
+            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">All free. Download, fund, come back.</p>
+            <a href="https://phantom.app/" target="_blank" rel="noopener" style="${secondaryBtnStyle};margin-top:0;text-decoration:none;"><span><span style="display:block">Phantom</span><span style="${subStyle}">Best for Solana (cheapest)</span></span><span>↗</span></a>
+            <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">Coinbase Wallet</span><span style="${subStyle}">Trusted multi-chain wallet</span></span><span>↗</span></a>
+            <a href="https://metamask.io/download/" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">MetaMask</span><span style="${subStyle}">Standard for Ethereum</span></span><span>↗</span></a>
+            <button class="sp-wiz-goto" data-step="2" style="${primaryBtnStyle};margin-top:14px;"><span>I'm back — let's pay</span><span>→</span></button>`;
+        case '2':
+          return `
+            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">How do you want to pay?</h2>
+            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">Both end up as USDC for the merchant.</p>
+            <button class="sp-wiz-ans" data-key="payType" data-value="stable" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Stablecoin (USDC/USDT)</span><span style="${subStyle}">No extra conversion fee</span></span><span>→</span></button>
+            <button class="sp-wiz-ans" data-key="payType" data-value="native" style="${secondaryBtnStyle};"><span><span style="display:block">Native crypto (ETH / SOL / BNB)</span><span style="${subStyle}">+1.5% fee, auto-swapped for you</span></span><span>→</span></button>`;
+        case '3':
+          return `
+            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">How will you send it?</h2>
+            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">Same outcome either way.</p>
+            <button class="sp-wiz-ans" data-key="method" data-value="wallet" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Connect my wallet</span><span style="${subStyle}">One click in MetaMask / Phantom</span></span><span>→</span></button>
+            <button class="sp-wiz-ans" data-key="method" data-value="manual" style="${secondaryBtnStyle};"><span><span style="display:block">Send manually</span><span style="${subStyle}">Copy address or scan QR</span></span><span>→</span></button>`;
+        default: return '';
+      }
+    }
+
+    _wizGoStep(step) {
+      this._wizardState.step = step;
+      const body = this.container.querySelector('#sp-wiz-body');
+      const label = this.container.querySelector('#sp-wiz-step-label');
+      if (body) body.innerHTML = this._wizStepHTML(step);
+      if (label) {
+        const labels = { 1: 'Step 1 of 3', '1b': 'Setup wallet', 2: 'Step 2 of 3', 3: 'Step 3 of 3' };
+        label.textContent = labels[step] || '';
+      }
+      // Rebind handlers for newly-rendered buttons
+      this.container.querySelectorAll('.sp-wiz-ans').forEach(btn => {
+        btn.addEventListener('click', () => this._wizAnswer(btn.dataset.key, btn.dataset.value));
+      });
+      this.container.querySelectorAll('.sp-wiz-goto').forEach(btn => {
+        btn.addEventListener('click', () => this._wizGoStep(btn.dataset.step));
+      });
+      this._track('WIZARD_STEP_VIEWED', { step: String(step) });
+    }
+
+    attachWizardListeners() {
+      const skip = this.container.querySelector('#sp-wiz-skip');
+      if (skip) skip.addEventListener('click', () => this._wizSkip());
+    }
+
+    _wizAnswer(key, value) {
+      this._wizardState[key] = value;
+      this._track('WIZARD_ANSWER', { key, value, step: String(this._wizardState.step) });
+      if (key === 'hasWallet') return this._wizGoStep(value === 'no' ? '1b' : 2);
+      if (key === 'payType')   return this._wizGoStep(3);
+      if (key === 'method')    return this._wizComplete();
+    }
+
+    _wizSkip() {
+      this._track('WIZARD_SKIPPED', { step: String(this._wizardState.step) });
+      this._wizardState.done = true;
+      this.render();
+      this.attachEventListeners();
+    }
+
+    _wizComplete() {
+      this._track('WIZARD_COMPLETED', this._wizardState);
+      this._wizardState.done = true;
+      // Apply answers as widget state — must happen BEFORE first render
+      if (this._wizardState.payType === 'native') this.payMode = 'crypto';
+      else if (this._wizardState.payType === 'stable') this.payMode = 'stable';
+      // method (wallet vs manual) is handled by the existing tab toggles after render
+      const targetTab = this._wizardState.method === 'wallet' ? 'wallet' : 'manual';
+      this.render();
+      this.attachEventListeners();
+      // Switch the method tab after render
+      const tabBtn = this.container.querySelector(targetTab === 'wallet' ? '#sp-method-wallet-tab, [data-method="wallet"]' : '#sp-method-manual-tab, [data-method="manual"]');
+      if (tabBtn && typeof tabBtn.click === 'function') {
+        try { tabBtn.click(); } catch {}
+      }
     }
 
     injectStyles() {

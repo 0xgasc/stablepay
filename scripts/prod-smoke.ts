@@ -296,7 +296,10 @@ async function main() {
     if (!text.includes('processConnectedNativePayment')) throw new Error('native pay function missing');
     if (!text.includes('pollOrderUntilTerminal')) throw new Error('polling helper missing');
     if (!text.includes('_track')) throw new Error('telemetry helper missing');
-    return `${(text.length / 1024).toFixed(1)}kb, native + telemetry live`;
+    if (!text.includes('_assignVariant')) throw new Error('A/B variant assignment missing');
+    if (!text.includes('_renderWizard'))  throw new Error('wizard render missing');
+    if (!text.includes('_wizComplete'))   throw new Error('wizard completion missing');
+    return `${(text.length / 1024).toFixed(1)}kb, native + telemetry + A/B wizard live`;
   });
 
   await check('GET /enterprise-admin.html', async () => {
