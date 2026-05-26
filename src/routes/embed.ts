@@ -205,13 +205,21 @@ router.get('/chains', async (req, res) => {
       }
     }
 
+    // Default ordering: SOLANA_MAINNET first (cheap + fast), then preserve priority order.
+    // Customer can still pick any other chain — this just changes which appears first.
+    const orderedWallets = [...finalWallets].sort((a, b) => {
+      if (a.chain === 'SOLANA_MAINNET' && b.chain !== 'SOLANA_MAINNET') return -1;
+      if (b.chain === 'SOLANA_MAINNET' && a.chain !== 'SOLANA_MAINNET') return 1;
+      return 0;
+    });
+
     res.json({
       merchantId,
       storeId: storeId || null,
       merchantName: storeBranding?.displayName || merchant.companyName,
       merchantWebsite: (storeId ? (await db.store.findUnique({ where: { id: storeId as string }, select: { website: true } }))?.website : null) || merchant.website || null,
-      chains: finalWallets.map(w => w.chain),
-      wallets: finalWallets,
+      chains: orderedWallets.map(w => w.chain),
+      wallets: orderedWallets,
       widgetConfig: storeBranding || widgetConfig,
     });
   } catch (error) {
@@ -316,7 +324,12 @@ router.post('/checkout', rateLimit({
       }
     }
 
-    const wallet = merchant.wallets[0];
+    // For chain-agnostic orders, prefer SOLANA_MAINNET as the placeholder chain when available.
+    // Solana is cheap + fast, so it's the best default if the customer doesn't explicitly pick.
+    // The customer can still switch to any merchant-supported chain via PATCH /order/:id/chain.
+    const wallet = chainAgnostic
+      ? (merchant.wallets.find(w => w.chain === 'SOLANA_MAINNET') ?? merchant.wallets[0])
+      : merchant.wallets[0];
     if (!wallet) {
       return res.status(400).json({
         error: 'No wallet configured',
