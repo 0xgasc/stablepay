@@ -399,6 +399,9 @@
                     <button class="tab-btn border-b-2 border-transparent text-purple-400 hover:text-purple-300 hover:border-purple-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="emailLogs">
                         Email Logs
                     </button>
+                    <button class="tab-btn border-b-2 border-transparent text-red-400 hover:text-red-300 hover:border-red-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="stranded">
+                        Stranded Funds
+                    </button>
                 </nav>
             </div>
 
@@ -1520,6 +1523,22 @@
         </div>
     </div>
 
+    <!-- Stranded Funds Tab -->
+    <div id="strandedTab" class="tab-content hidden">
+        <div class="bg-slate-950 border border-red-900/40 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Stranded Native Token Funds</h2>
+                    <p class="text-sm text-slate-400 mt-1">NativeReceiveWallets with on-chain balance but order is not CONFIRMED. Force-swap (process the payment) or Refund (send back to customer).</p>
+                </div>
+                <button onclick="loadStranded()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Scan (slow)</button>
+            </div>
+            <div id="strandedTable" class="overflow-x-auto">
+                <div class="text-slate-400 text-sm py-12 text-center">Click "Scan" to start — checks balance on every recent NativeReceiveWallet.</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Native Token Activity Tab -->
     <div id="nativeActivityTab" class="tab-content hidden">
         <div class="bg-slate-950 border border-orange-900/40 p-6">
@@ -1689,8 +1708,80 @@
                 if (tab === 'nativeActivity') loadNativeActivity();
                 if (tab === 'widgetEvents') loadWidgetEvents();
                 if (tab === 'emailLogs') loadEmailLogs();
+                // Stranded scan is slow — only run when user clicks the button, not on tab activation
             });
         });
+
+        // ─── Stranded Funds ──────────────────────────────────────────
+        async function loadStranded() {
+            const table = document.getElementById('strandedTable');
+            table.innerHTML = '<div class="text-slate-400 text-sm py-12 text-center">Scanning all NativeReceiveWallets… this can take 30-60s.</div>';
+            try {
+                const r = await fetch(`${API_BASE}/api/v1/admin/stranded-funds`, { headers: { 'Authorization': getAuthHeader() } });
+                const d = await r.json();
+                if (!d.stranded) { table.innerHTML = '<div class="text-red-400 py-12 text-center">Scan failed.</div>'; return; }
+                if (d.stranded.length === 0) { table.innerHTML = '<div class="text-emerald-400 py-12 text-center">No stranded funds — everything reconciled.</div>'; return; }
+
+                table.innerHTML = `
+                    <div class="mb-4 text-sm text-yellow-400">⚠ ${d.stranded.length} wallet(s) holding funds with non-CONFIRMED orders.</div>
+                    <table class="w-full text-xs">
+                        <thead class="text-slate-500 uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="text-left py-3 px-2">Order</th>
+                                <th class="text-left py-3 px-2">Status</th>
+                                <th class="text-left py-3 px-2">Chain</th>
+                                <th class="text-right py-3 px-2">USD</th>
+                                <th class="text-right py-3 px-2">Balance</th>
+                                <th class="text-right py-3 px-2">Expected</th>
+                                <th class="text-left py-3 px-2">Customer</th>
+                                <th class="text-left py-3 px-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${d.stranded.map(s => `<tr class="border-b border-slate-900 hover:bg-slate-900/50">
+                                <td class="py-2 px-2 font-mono text-[10px] text-slate-400">${s.orderId.slice(-10)}</td>
+                                <td class="py-2 px-2 font-bold ${s.orderStatus === 'EXPIRED' ? 'text-red-400' : s.orderStatus === 'PROCESSING' ? 'text-cyan-400' : 'text-yellow-400'}">${s.orderStatus}</td>
+                                <td class="py-2 px-2 text-slate-300">${s.chain.replace('_MAINNET', '')}</td>
+                                <td class="py-2 px-2 text-right text-slate-300">$${s.amount.toFixed(2)}</td>
+                                <td class="py-2 px-2 text-right text-emerald-400 font-bold">${s.balance.toFixed(6)} ${s.nativeToken}</td>
+                                <td class="py-2 px-2 text-right text-slate-500">${s.expectedAmt ? s.expectedAmt.toFixed(6) : '—'}</td>
+                                <td class="py-2 px-2 text-slate-400 text-[10px]">${s.customerEmail || '—'}<br>${(s.customerWallet || '').slice(0, 10) || '—'}</td>
+                                <td class="py-2 px-2 space-x-2 whitespace-nowrap">
+                                    <button onclick="forceSwap('${s.orderId}')" class="px-2 py-1 bg-emerald-700 hover:bg-emerald-600 text-white text-[10px]">Force Swap</button>
+                                    <button onclick="refundNative('${s.orderId}', '${s.customerWallet || ''}')" class="px-2 py-1 bg-red-700 hover:bg-red-600 text-white text-[10px]">Refund</button>
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) { table.innerHTML = `<div class="text-red-400 py-12 text-center">Error: ${e.message}</div>`; }
+        }
+
+        async function forceSwap(orderId) {
+            if (!confirm(`Force swap + forward for order ${orderId.slice(-8)}? This will swap any native balance to USDC and forward to the merchant.`)) return;
+            try {
+                const r = await fetch(`${API_BASE}/api/v1/admin/orders/${orderId}/force-swap`, { method: 'POST', headers: { 'Authorization': getAuthHeader() } });
+                const d = await r.json();
+                if (d.success) { alert(`Swap+forward complete!\n\nTx: ${d.txHash}`); loadStranded(); }
+                else alert(`Failed: ${d.error || 'unknown'}`);
+            } catch (e) { alert(`Error: ${e.message}`); }
+        }
+
+        async function refundNative(orderId, suggestedAddr) {
+            const dest = prompt(`Refund native balance back to which address?`, suggestedAddr || '');
+            if (!dest) return;
+            if (!confirm(`Send native balance from order ${orderId.slice(-8)} back to ${dest}?\n\nThis is irreversible.`)) return;
+            try {
+                const r = await fetch(`${API_BASE}/api/v1/admin/orders/${orderId}/refund-native`, {
+                    method: 'POST',
+                    headers: { 'Authorization': getAuthHeader(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ destinationAddress: dest }),
+                });
+                const d = await r.json();
+                if (d.success) { alert(`Refund sent!\n\nTx: ${d.txHash}`); loadStranded(); }
+                else alert(`Failed: ${d.error || 'unknown'}`);
+            } catch (e) { alert(`Error: ${e.message}`); }
+        }
 
         // ─── Widget Events ─────────────────────────────────────────────
         async function loadWidgetEvents() {

@@ -31,6 +31,7 @@ export interface HealthReport {
     rpc: ComponentHealth;
     webhookQueue: ComponentHealth;
     webhookDelivery: ComponentHealth;
+    agentGas: ComponentHealth;
   };
 }
 
@@ -156,17 +157,79 @@ async function checkWebhookDelivery(): Promise<ComponentHealth> {
   }
 }
 
+async function checkAgentGas(): Promise<ComponentHealth> {
+  try {
+    const { ethers } = await import('ethers');
+    const AGENT_ADDR = process.env.AGENT_WALLET_ADDRESS?.trim();
+    if (!AGENT_ADDR) return { status: 'warning', message: 'AGENT_WALLET_ADDRESS not set' };
+
+    // Min native balance per chain to cover ~10 swaps + forwards (so we get paged before the wallet drains)
+    const CHAINS = [
+      { key: 'BASE_MAINNET',     rpc: 'https://mainnet.base.org',                  min: 0.001,  native: 'ETH'   },
+      { key: 'ETHEREUM_MAINNET', rpc: 'https://ethereum-rpc.publicnode.com',        min: 0.05,   native: 'ETH'   },
+      { key: 'POLYGON_MAINNET',  rpc: 'https://polygon-bor-rpc.publicnode.com',     min: 0.2,    native: 'MATIC' },
+      { key: 'ARBITRUM_MAINNET', rpc: 'https://arbitrum-one-rpc.publicnode.com',    min: 0.001,  native: 'ETH'   },
+      { key: 'BNB_MAINNET',      rpc: 'https://bsc-dataseed.binance.org',            min: 0.01,   native: 'BNB'   },
+    ];
+
+    const balances: Record<string, { balance: number; min: number; native: string; ok: boolean }> = {};
+    const lowList: string[] = [];
+    const emptyList: string[] = [];
+
+    await Promise.all(CHAINS.map(async (c) => {
+      try {
+        const p = new ethers.JsonRpcProvider(c.rpc);
+        const bal = await p.getBalance(AGENT_ADDR);
+        const v = Number(ethers.formatEther(bal));
+        balances[c.key] = { balance: Number(v.toFixed(6)), min: c.min, native: c.native, ok: v >= c.min };
+        if (v === 0) emptyList.push(c.key);
+        else if (v < c.min) lowList.push(c.key);
+        p.destroy();
+      } catch { balances[c.key] = { balance: -1, min: c.min, native: c.native, ok: false }; }
+    }));
+
+    // Check Solana agent too
+    try {
+      const SOL_ADDR = process.env.AGENT_SOLANA_ADDRESS?.trim();
+      if (SOL_ADDR) {
+        const r = await fetch('https://api.mainnet-beta.solana.com', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [SOL_ADDR] }),
+          signal: AbortSignal.timeout(5_000),
+        });
+        const j = await r.json() as any;
+        const lamports = j?.result?.value ?? 0;
+        const sol = lamports / 1e9;
+        balances['SOLANA_MAINNET'] = { balance: Number(sol.toFixed(6)), min: 0.05, native: 'SOL', ok: sol >= 0.05 };
+        if (sol === 0) emptyList.push('SOLANA_MAINNET');
+        else if (sol < 0.05) lowList.push('SOLANA_MAINNET');
+      }
+    } catch { /* skip */ }
+
+    if (emptyList.length > 0) {
+      return { status: 'down', message: `agent wallet EMPTY on ${emptyList.length} chain(s): ${emptyList.join(', ')}`, details: balances as any };
+    }
+    if (lowList.length > 0) {
+      return { status: 'warning', message: `agent wallet LOW on ${lowList.length} chain(s): ${lowList.join(', ')}`, details: balances as any };
+    }
+    return { status: 'ok', details: balances as any };
+  } catch (err: any) {
+    return { status: 'warning', message: `agent gas check failed: ${String(err?.message || err).slice(0, 200)}` };
+  }
+}
+
 export async function runHealthCheck(): Promise<HealthReport> {
   const t0 = Date.now();
-  const [database, scanner, rpc, webhookQueue, webhookDelivery] = await Promise.all([
+  const [database, scanner, rpc, webhookQueue, webhookDelivery, agentGas] = await Promise.all([
     checkDatabase(),
     checkScanner(),
     checkRpc(),
     checkWebhookQueue(),
     checkWebhookDelivery(),
+    checkAgentGas(),
   ]);
   // Overall status = worst component status. "down" wins over "warning" wins over "ok".
-  const components = { database, scanner, rpc, webhookQueue, webhookDelivery };
+  const components = { database, scanner, rpc, webhookQueue, webhookDelivery, agentGas };
   const statuses = Object.values(components).map(c => c.status);
   const overall: Status = statuses.includes('down') ? 'down' : statuses.includes('warning') ? 'warning' : 'ok';
   return {

@@ -1936,4 +1936,181 @@ router.get('/email-logs', requireAdminKey, async (req, res) => {
   }
 });
 
+// ─── Stranded Native-Token Funds ──────────────────────────────────────────
+// Lists NativeReceiveWallets whose order is not CONFIRMED but on-chain balance > 0.
+// Slow endpoint (one RPC call per wallet) — bounded to recent 7 days.
+router.get('/stranded-funds', requireAdminKey, async (_req, res) => {
+  try {
+    const since = new Date(Date.now() - 7 * 86400_000);
+    const wallets = await db.nativeReceiveWallet.findMany({
+      where: { createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { order: { select: { id: true, status: true, chain: true, nativeToken: true, amount: true, customerEmail: true, customerName: true, customerWallet: true, merchantId: true, createdAt: true, expiresAt: true, paymentAddress: true, nativeTokenAmount: true, nativePriceSnapshot: true, conversionFeeAmount: true } } },
+    });
+
+    const { ethers } = await import('ethers');
+    const RPC: Record<string, string> = {
+      BASE_MAINNET:     'https://mainnet.base.org',
+      ETHEREUM_MAINNET: 'https://ethereum-rpc.publicnode.com',
+      POLYGON_MAINNET:  'https://polygon-bor-rpc.publicnode.com',
+      ARBITRUM_MAINNET: 'https://arbitrum-one-rpc.publicnode.com',
+      BNB_MAINNET:      'https://bsc-dataseed.binance.org',
+    };
+
+    const rows = await Promise.all(wallets.map(async (w) => {
+      const chain = w.chain;
+      let balance = 0;
+      try {
+        if (chain.startsWith('SOLANA')) {
+          const r = await fetch('https://api.mainnet-beta.solana.com', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [w.address] }),
+            signal: AbortSignal.timeout(5_000),
+          });
+          const j = await r.json() as any;
+          balance = (j?.result?.value ?? 0) / 1e9;
+        } else if (RPC[chain]) {
+          const p = new ethers.JsonRpcProvider(RPC[chain]);
+          const wei = await p.getBalance(w.address);
+          balance = Number(ethers.formatEther(wei));
+          p.destroy();
+        }
+      } catch { /* RPC error → skip */ }
+      return { wallet: w, balance };
+    }));
+
+    // Only return ones with real funds (above dust) AND not CONFIRMED
+    const stranded = rows.filter(r => r.balance > 0.0001 && r.wallet.order.status !== 'CONFIRMED');
+
+    res.json({
+      total: stranded.length,
+      stranded: stranded.map(r => ({
+        orderId:    r.wallet.order.id,
+        address:    r.wallet.address,
+        chain:      r.wallet.chain,
+        balance:    r.balance,
+        nativeToken: r.wallet.order.nativeToken,
+        orderStatus: r.wallet.order.status,
+        amount:      Number(r.wallet.order.amount),
+        expectedAmt: r.wallet.order.nativeTokenAmount ? Number(r.wallet.order.nativeTokenAmount) : null,
+        customerEmail: r.wallet.order.customerEmail,
+        customerWallet: r.wallet.order.customerWallet,
+        createdAt:   r.wallet.createdAt,
+        expiresAt:   r.wallet.order.expiresAt,
+      })),
+    });
+  } catch (error) {
+    logger.error('stranded-funds endpoint', error as Error, {});
+    res.status(500).json({ error: 'Failed to scan stranded funds' });
+  }
+});
+
+// Force-trigger swap + forward for a specific order (admin override; bypasses scanner timing).
+router.post('/orders/:orderId/force-swap', requireAdminKey, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await db.order.findUnique({ where: { id: orderId } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!order.nativeToken) return res.status(400).json({ error: 'Not a native token order' });
+
+    // Allow force-swap even for EXPIRED orders (admin override for late payments)
+    if (!['PENDING', 'EXPIRED', 'PROCESSING'].includes(order.status)) {
+      return res.status(400).json({ error: `Cannot force-swap order in status ${order.status}` });
+    }
+    // Re-mark as PENDING so swapAndForward's PROCESSING claim succeeds
+    if (order.status !== 'PENDING') {
+      await db.order.update({ where: { id: orderId }, data: { status: 'PENDING' } });
+    }
+    const { swapAndForward } = await import('../services/swapService');
+    const result = await swapAndForward(orderId);
+
+    // Mark CONFIRMED
+    const { OrderService } = await import('../services/orderService');
+    await new OrderService().confirmOrder(orderId, { txHash: result.forwardTxHash });
+
+    logger.security('Admin force-swap', { orderId, txHash: result.forwardTxHash, event: 'admin.force_swap' });
+    res.json({ success: true, txHash: result.forwardTxHash });
+  } catch (error: any) {
+    logger.error('force-swap', error as Error, {});
+    res.status(500).json({ error: error.message || 'Force swap failed' });
+  }
+});
+
+// Refund customer's native token from the NativeReceiveWallet back to a destination address.
+// Sweeps everything (minus tx fee) — used when swap is impossible (e.g. token de-listed, customer requested cancellation).
+router.post('/orders/:orderId/refund-native', requireAdminKey, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { destinationAddress } = req.body || {};
+    if (!destinationAddress || typeof destinationAddress !== 'string') {
+      return res.status(400).json({ error: 'destinationAddress required' });
+    }
+
+    const order = await db.order.findUnique({ where: { id: orderId } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!order.nativeToken) return res.status(400).json({ error: 'Not a native token order' });
+
+    const wallet = await db.nativeReceiveWallet.findUnique({ where: { orderId } });
+    if (!wallet) return res.status(404).json({ error: 'No receive wallet found' });
+
+    // Decrypt the receive wallet key — same crypto pattern as swapService
+    const ENC_KEY = process.env.MANAGED_WALLET_ENCRYPTION_KEY || process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
+    if (!ENC_KEY) return res.status(500).json({ error: 'Encryption key not configured' });
+    const crypto = await import('crypto');
+    const [ivHex, encrypted] = wallet.encryptedKey.split(':');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', crypto.createHash('sha256').update(ENC_KEY).digest(), Buffer.from(ivHex, 'hex'));
+    const privKey = Buffer.concat([decipher.update(Buffer.from(encrypted, 'hex')), decipher.final()]).toString('utf8');
+
+    const chain = String(order.chain);
+    let txHash = '';
+
+    if (chain.startsWith('SOLANA')) {
+      const { Connection, Keypair, SystemProgram, Transaction, PublicKey } = await import('@solana/web3.js');
+      const conn = new Connection(process.env.SOLANA_MAINNET_RPC_URL || 'https://api.mainnet-beta.solana.com', 'confirmed');
+      const kp   = Keypair.fromSecretKey(Buffer.from(privKey, 'hex'));
+      const bal  = await conn.getBalance(kp.publicKey);
+      const fee  = 10_000;
+      if (bal <= fee) return res.status(400).json({ error: 'No funds to refund' });
+      const tx = new Transaction().add(SystemProgram.transfer({
+        fromPubkey: kp.publicKey, toPubkey: new PublicKey(destinationAddress), lamports: bal - fee,
+      }));
+      txHash = await conn.sendTransaction(tx, [kp]);
+      await conn.confirmTransaction(txHash, 'confirmed');
+    } else {
+      const { ethers } = await import('ethers');
+      const RPC: Record<string, string> = {
+        BASE_MAINNET:     'https://mainnet.base.org',
+        ETHEREUM_MAINNET: 'https://ethereum-rpc.publicnode.com',
+        POLYGON_MAINNET:  'https://polygon-bor-rpc.publicnode.com',
+        ARBITRUM_MAINNET: 'https://arbitrum-one-rpc.publicnode.com',
+        BNB_MAINNET:      'https://bsc-dataseed.binance.org',
+      };
+      const provider = new ethers.JsonRpcProvider(RPC[chain]);
+      const signer   = new ethers.Wallet(privKey, provider);
+      const bal      = await provider.getBalance(signer.address);
+      const feeData  = await provider.getFeeData();
+      const gasPrice = feeData.gasPrice ?? ethers.parseUnits('1', 'gwei');
+      const gasCost  = gasPrice * BigInt(21_000) * BigInt(2);
+      if (bal <= gasCost) {
+        provider.destroy();
+        return res.status(400).json({ error: 'Not enough funds to cover refund gas' });
+      }
+      const tx = await signer.sendTransaction({ to: destinationAddress, value: bal - gasCost });
+      await tx.wait();
+      txHash = tx.hash;
+      provider.destroy();
+    }
+
+    // Mark order as REFUNDED
+    await db.order.update({ where: { id: orderId }, data: { status: 'REFUNDED' } });
+
+    logger.security('Admin native refund', { orderId, destinationAddress, txHash, event: 'admin.native_refund' });
+    res.json({ success: true, txHash });
+  } catch (error: any) {
+    logger.error('refund-native', error as Error, {});
+    res.status(500).json({ error: error.message || 'Refund failed' });
+  }
+});
+
 export const adminRouter = router;

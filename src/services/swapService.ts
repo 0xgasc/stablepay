@@ -153,10 +153,23 @@ async function ensureGas(address: string, chain: string): Promise<void> {
   const threshold = ethers.parseEther(conf.gasThreshold);
   if (balance >= threshold) return;
 
+  // Dynamic gas fund — scale by current gas price vs baseline (1 gwei on L2, 10 gwei on mainnet).
+  // Caps at 5x baseline so a one-off spike doesn't drain the agent.
+  let fundAmt = Number(conf.gasFund);
+  try {
+    const feeData = await provider.getFeeData();
+    if (feeData.gasPrice) {
+      const currentGwei = Number(ethers.formatUnits(feeData.gasPrice, 'gwei'));
+      const baseline = chain === 'ETHEREUM_MAINNET' ? 10 : 1;
+      const scale = Math.min(5, Math.max(1, currentGwei / baseline));
+      fundAmt = Number(conf.gasFund) * scale;
+    }
+  } catch { /* fall back to static */ }
+
   const agent  = new ethers.Wallet(AGENT_KEY, provider);
-  const fundTx = await agent.sendTransaction({ to: address, value: ethers.parseEther(conf.gasFund) });
+  const fundTx = await agent.sendTransaction({ to: address, value: ethers.parseEther(fundAmt.toFixed(18)) });
   await fundTx.wait();
-  logger.info('Gas funded for native receive wallet', { address, chain, amount: conf.gasFund });
+  logger.info('Gas funded for native receive wallet', { address, chain, amount: fundAmt.toFixed(6) });
 }
 
 async function ensureSolGas(receivePubkey: string): Promise<void> {
