@@ -166,8 +166,27 @@ async function ensureGas(address: string, chain: string): Promise<void> {
     }
   } catch { /* fall back to static */ }
 
+  // Self-bootstrap path: if agent is empty (e.g. first order on a chain we never funded),
+  // proceed anyway. The receive wallet has the customer's deposit, which usually has
+  // enough native to cover swap + forward gas at L2 gas prices. The forward sweep then
+  // seeds the agent for next time. Only fail if BOTH wallets are empty.
   const agent  = new ethers.Wallet(AGENT_KEY, provider);
-  const fundTx = await agent.sendTransaction({ to: address, value: ethers.parseEther(fundAmt.toFixed(18)) });
+  const agentBalance = await provider.getBalance(agent.address);
+  const fundWei = ethers.parseEther(fundAmt.toFixed(18));
+
+  if (agentBalance < fundWei) {
+    if (balance > 0n) {
+      logger.warn('Agent empty/low — attempting self-bootstrap with receive wallet native', {
+        address, chain,
+        receiveBal: ethers.formatEther(balance),
+        agentBal:   ethers.formatEther(agentBalance),
+      });
+      return; // proceed; tx will succeed if customer over-sent enough to cover gas
+    }
+    throw new Error(`Agent + receive wallet both empty on ${chain} — cannot proceed`);
+  }
+
+  const fundTx = await agent.sendTransaction({ to: address, value: fundWei });
   await fundTx.wait();
   logger.info('Gas funded for native receive wallet', { address, chain, amount: fundAmt.toFixed(6) });
 }
