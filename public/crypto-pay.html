@@ -591,7 +591,7 @@
     </style>
 </head>
 <body class="min-h-screen">
-    <!-- Navigation — slimmer than before (h-12, smaller logo/toggles) -->
+    <!-- Navigation — slim, just merchant brand. Language + night mode removed per merchant feedback. -->
     <nav class="mc-nav border-b-2 border-black">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-12">
@@ -599,19 +599,6 @@
                     <img id="mcLogo" class="mc-logo hidden" alt="" style="max-height: 24px;" />
                     <span id="mcBrandName">Checkout</span>
                 </a>
-                <div class="flex items-center gap-2">
-                    <!-- Language Selector -->
-                    <select id="languageSelector" class="px-2 py-1 bg-white text-black font-bold text-xs border border-black">
-                        <option value="en">EN</option>
-                        <option value="es">ES</option>
-                        <option value="fr">FR</option>
-                        <option value="pt">PT</option>
-                    </select>
-                    <!-- Night Mode Toggle -->
-                    <button id="nightModeToggle" class="px-2 py-1 bg-white text-black font-bold text-xs border-2 border-black">
-                        <span class="night-icon" data-i18n="nav.night">NIGHT</span>
-                    </button>
-                </div>
             </div>
         </div>
     </nav>
@@ -1900,10 +1887,7 @@
                 if (payBtn) payBtn.textContent = cfg.buttonText;
             }
 
-            // Theme: default to merchant's preference if customer hasn't manually toggled
-            if (cfg.theme === 'dark' && !localStorage.getItem('nightModeManual')) {
-                document.body.classList.add('night-mode');
-            }
+            // Night mode removed — ignore merchant theme.dark preference on the checkout page.
 
             // Hide footer (already plan-gated server-side)
             if (cfg.hideFooter === true) {
@@ -4446,50 +4430,13 @@
             });
         }
 
-        // Language selector
-        document.getElementById('languageSelector').addEventListener('change', (e) => {
-            currentLang = e.target.value;
-            localStorage.setItem('language', currentLang);
-            if (window.SP_LANG) window.SP_LANG.setLang(currentLang);
-            loadTranslations(currentLang);
-        });
-
-        // Set initial language
-        document.getElementById('languageSelector').value = currentLang;
+        // Load translations once based on browser locale (no selector — merchants asked for it removed).
+        // We still load translations so any merchants with saved language preference continue to see it.
         loadTranslations(currentLang);
-
-        // Night mode toggle
-        const nightModeToggle = document.getElementById('nightModeToggle');
-        const nightIcon = document.querySelector('.night-icon');
-
-        // Check for saved night mode preference
-        if (localStorage.getItem('nightMode') === 'true') {
-            document.body.classList.add('night-mode');
-            const currentLang = localStorage.getItem('language') || 'en';
-            fetch(`/locales/${currentLang}.json`)
-                .then(res => res.json())
-                .then(translations => {
-                    nightIcon.textContent = translations.nav.day;
-                    nightIcon.setAttribute('data-i18n', 'nav.day');
-                });
-        }
-
-        nightModeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('night-mode');
-            const isNightMode = document.body.classList.contains('night-mode');
-            localStorage.setItem('nightMode', isNightMode);
-            // Mark as manually toggled so applyBranding() doesn't override on reload
-            localStorage.setItem('nightModeManual', '1');
-
-            // Update translation
-            const currentLang = localStorage.getItem('language') || 'en';
-            fetch(`/locales/${currentLang}.json`)
-                .then(res => res.json())
-                .then(translations => {
-                    nightIcon.textContent = isNightMode ? translations.nav.day : translations.nav.night;
-                    nightIcon.setAttribute('data-i18n', isNightMode ? 'nav.day' : 'nav.night');
-                });
-        });
+        // Night mode removed per merchant feedback. Force-clear any leftover state from prior visits.
+        document.body.classList.remove('night-mode');
+        localStorage.removeItem('nightMode');
+        localStorage.removeItem('nightModeManual');
     </script>
 
     <!-- Stablo support chat widget -->

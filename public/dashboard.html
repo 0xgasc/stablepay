@@ -6561,11 +6561,12 @@ onMounted(() => {
             }
 
             const chainList = document.getElementById('testStoreChainList');
-            chainList.innerHTML = merchantWallets
+            const intro = `<p class="text-xs text-slate-400 mb-2">Select which chains this test store should accept (pick at least one — nothing pre-selected so you choose deliberately):</p>`;
+            chainList.innerHTML = intro + merchantWallets
                 .filter(w => w.isActive)
                 .map(w => `
                     <label class="flex items-center gap-3 p-3 bg-slate-800 hover:bg-slate-700 cursor-pointer">
-                        <input type="checkbox" name="testStoreChain" value="${w.chain}" checked
+                        <input type="checkbox" name="testStoreChain" value="${w.chain}"
                                class="w-4 h-4 accent-blue-500">
                         <div class="flex-1">
                             <div class="text-white text-sm font-medium">${CHAIN_DISPLAY_NAMES[w.chain] || w.chain}</div>
@@ -6607,11 +6608,12 @@ onMounted(() => {
             }
 
             const chainList = document.getElementById('checkoutChainList');
-            chainList.innerHTML = merchantWallets
+            const intro = `<p class="text-xs text-slate-400 mb-2">Select chains for this checkout link (pick at least one — nothing pre-selected so you choose deliberately):</p>`;
+            chainList.innerHTML = intro + merchantWallets
                 .filter(w => w.isActive)
                 .map(w => `
                     <label class="flex items-center gap-3 p-2 bg-slate-800 hover:bg-slate-700 cursor-pointer">
-                        <input type="checkbox" name="checkoutChain" value="${w.chain}" checked
+                        <input type="checkbox" name="checkoutChain" value="${w.chain}"
                                class="w-4 h-4 accent-blue-500">
                         <span class="text-white text-sm">${CHAIN_DISPLAY_NAMES[w.chain] || w.chain}</span>
                     </label>
