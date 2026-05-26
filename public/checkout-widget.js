@@ -2613,7 +2613,8 @@
         try {
           const r = await fetch(`${STABLEPAY_URL}/api/embed/order/${orderId}`);
           const d = await r.json();
-          const status = d?.order?.status;
+          // GET /api/embed/order/:id returns order fields FLAT at top level (not under d.order).
+          const status = d?.status;
           if (status === 'CONFIRMED') {
             this.showSuccess({ txHash, status: 'CONFIRMED' });
             if (this.options.onSuccess) this.options.onSuccess({ orderId, txHash, amount: parseFloat(this.options.amount), token: this.selectedToken });
