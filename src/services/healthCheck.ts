@@ -206,11 +206,12 @@ async function checkAgentGas(): Promise<ComponentHealth> {
       }
     } catch { /* skip */ }
 
-    if (emptyList.length > 0) {
-      return { status: 'down', message: `agent wallet EMPTY on ${emptyList.length} chain(s): ${emptyList.join(', ')}`, details: balances as any };
-    }
-    if (lowList.length > 0) {
-      return { status: 'warning', message: `agent wallet LOW on ${lowList.length} chain(s): ${lowList.join(', ')}`, details: balances as any };
+    // Self-bootstrap (since 2026-05-26): empty agent doesn't break orders — the customer's
+    // deposit covers gas for the first order, and the sweep seeds the agent. So 'empty' is
+    // only a warning, not down. Real outages surface via the swap_failed webhook + Stranded Funds.
+    if (emptyList.length > 0 || lowList.length > 0) {
+      const allFlagged = [...emptyList, ...lowList];
+      return { status: 'warning', message: `agent wallet empty/low on ${allFlagged.length} chain(s): ${allFlagged.join(', ')}`, details: balances as any };
     }
     return { status: 'ok', details: balances as any };
   } catch (err: any) {
