@@ -1245,6 +1245,12 @@ const ALLOWED_WIDGET_EVENTS = new Set([
   'WALLET_CONNECTED',
   'WALLET_DISCONNECTED',
   'WIDGET_CLOSED',
+  // A/B test events for the guided checkout variant
+  'VARIANT_ASSIGNED',
+  'WIZARD_STEP_VIEWED',
+  'WIZARD_ANSWER',
+  'WIZARD_COMPLETED',
+  'WIZARD_SKIPPED',
 ]);
 
 router.post('/event', async (req, res) => {

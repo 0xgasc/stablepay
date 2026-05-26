@@ -402,6 +402,9 @@
                     <button class="tab-btn border-b-2 border-transparent text-red-400 hover:text-red-300 hover:border-red-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="stranded">
                         Stranded Funds
                     </button>
+                    <button class="tab-btn border-b-2 border-transparent text-pink-400 hover:text-pink-300 hover:border-pink-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="abResults">
+                        A/B Results
+                    </button>
                 </nav>
             </div>
 
@@ -1523,6 +1526,30 @@
         </div>
     </div>
 
+    <!-- A/B Results Tab -->
+    <div id="abResultsTab" class="tab-content hidden">
+        <div class="bg-slate-950 border border-pink-900/40 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white">A/B Test — Guided Wizard vs Control</h2>
+                    <p class="text-sm text-slate-400 mt-1">Compares conversion rate (PAY_CLICKED or NATIVE_TX_BROADCAST per session) between variants. Variant is 50/50 deterministic per sessionId.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="abDays" onchange="loadABResults()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-white text-sm">
+                        <option value="1">Last 24h</option>
+                        <option value="7" selected>Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                    </select>
+                    <button onclick="loadABResults()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Refresh</button>
+                </div>
+            </div>
+            <div id="abSummary" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="text-slate-400 text-sm py-12 text-center md:col-span-2">Loading…</div>
+            </div>
+            <div id="abVerdict" class="mt-6 hidden p-4 border-2 border-pink-800 bg-pink-950/20"></div>
+        </div>
+    </div>
+
     <!-- Stranded Funds Tab -->
     <div id="strandedTab" class="tab-content hidden">
         <div class="bg-slate-950 border border-red-900/40 p-6">
@@ -1708,9 +1735,65 @@
                 if (tab === 'nativeActivity') loadNativeActivity();
                 if (tab === 'widgetEvents') loadWidgetEvents();
                 if (tab === 'emailLogs') loadEmailLogs();
+                if (tab === 'abResults') loadABResults();
                 // Stranded scan is slow — only run when user clicks the button, not on tab activation
             });
         });
+
+        // ─── A/B Results ───────────────────────────────────────────────
+        async function loadABResults() {
+            const days = document.getElementById('abDays').value;
+            const summary = document.getElementById('abSummary');
+            const verdict = document.getElementById('abVerdict');
+            summary.innerHTML = '<div class="text-slate-400 text-sm py-12 text-center md:col-span-2">Loading…</div>';
+            verdict.classList.add('hidden');
+            try {
+                const r = await fetch(`${API_BASE}/api/v1/admin/ab-results?days=${days}`, { headers: { 'Authorization': getAuthHeader() } });
+                const d = await r.json();
+                if (!d.variants) { summary.innerHTML = '<div class="text-red-400 py-12 text-center md:col-span-2">Failed.</div>'; return; }
+
+                const c = d.variants.control, g = d.variants.guided;
+                const card = (title, colorClass, body) => `
+                    <div class="bg-black border-2 ${colorClass} p-5">
+                        <div class="text-xs uppercase tracking-wider text-slate-500 mb-1">${title}</div>
+                        ${body}
+                    </div>`;
+
+                const controlBody = `
+                    <div class="text-3xl font-bold text-white mb-2">${c.conversionPct}%</div>
+                    <div class="text-xs text-slate-400">
+                        ${c.converted} converted / ${c.total} sessions
+                    </div>`;
+
+                const guidedBody = `
+                    <div class="text-3xl font-bold text-white mb-2">${g.conversionPct}%</div>
+                    <div class="text-xs text-slate-400 mb-2">
+                        ${g.converted} converted / ${g.total} sessions
+                    </div>
+                    <div class="text-[11px] text-pink-400 mt-2 pt-2 border-t border-slate-800">
+                        Wizard completed: ${g.wizardCompletionPct}% · Skipped: ${g.skipPct}%
+                    </div>`;
+
+                summary.innerHTML =
+                    card('Variant A — Control (current UI)', 'border-slate-700', controlBody) +
+                    card('Variant B — Guided Wizard',        'border-pink-700',   guidedBody);
+
+                // Verdict
+                if (d.totalSessions < 20) {
+                    verdict.classList.remove('hidden');
+                    verdict.innerHTML = '<div class="text-yellow-400 text-sm">⚠ Only ' + d.totalSessions + ' sessions tracked. Need ≥20 for any meaningful signal, ideally 100+.</div>';
+                } else {
+                    const lift = g.conversionPct - c.conversionPct;
+                    const winner = lift > 0 ? 'Guided' : lift < 0 ? 'Control' : 'tied';
+                    verdict.classList.remove('hidden');
+                    const liftStr = lift > 0 ? '+' + lift.toFixed(2) : lift.toFixed(2);
+                    verdict.innerHTML = `
+                        <div class="text-pink-400 font-bold text-sm">Winner so far: ${winner}</div>
+                        <div class="text-slate-400 text-xs mt-1">Lift: ${liftStr} percentage points · Total sessions: ${d.totalSessions}</div>
+                        ${d.totalSessions < 200 ? '<div class="text-yellow-500 text-[11px] mt-1">Confidence: low — keep collecting.</div>' : ''}`;
+                }
+            } catch (e) { summary.innerHTML = `<div class="text-red-400 py-12 text-center md:col-span-2">Error: ${e.message}</div>`; }
+        }
 
         // ─── Stranded Funds ──────────────────────────────────────────
         async function loadStranded() {

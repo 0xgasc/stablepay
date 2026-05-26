@@ -2113,4 +2113,68 @@ router.post('/orders/:orderId/refund-native', requireAdminKey, async (req, res) 
   }
 });
 
+// ─── A/B test results: conversion rate by variant ─────────────────────────
+// Aggregates WidgetEvent rows: for each session, find the assigned variant and
+// whether the session ever fired a terminal action (PAY_CLICKED or NATIVE_TX_BROADCAST).
+// Returns sessions per variant + conversion rate.
+router.get('/ab-results', requireAdminKey, async (req, res) => {
+  try {
+    const days = Math.min(Math.max(parseInt(req.query.days as string) || 7, 1), 30);
+    const since = new Date(Date.now() - days * 86_400_000);
+
+    // Pull every event in window — we'll bucket per session in JS to keep query simple.
+    const events = await db.widgetEvent.findMany({
+      where: { createdAt: { gte: since } },
+      select: { sessionId: true, action: true, details: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const TERMINAL_ACTIONS = new Set(['PAY_CLICKED', 'NATIVE_TX_BROADCAST']);
+    const WIZARD_ACTIONS   = new Set(['WIZARD_STEP_VIEWED', 'WIZARD_ANSWER', 'WIZARD_COMPLETED', 'WIZARD_SKIPPED']);
+
+    type Sess = { variant: string | null; opened: boolean; converted: boolean; wizardCompleted: boolean; wizardSkipped: boolean };
+    const sessions = new Map<string, Sess>();
+    for (const e of events) {
+      const s = sessions.get(e.sessionId) ?? { variant: null, opened: false, converted: false, wizardCompleted: false, wizardSkipped: false };
+      if (e.action === 'VARIANT_ASSIGNED') {
+        s.variant = (e.details as any)?.variant ?? s.variant;
+      }
+      if (e.action === 'WIDGET_OPENED') s.opened = true;
+      if (TERMINAL_ACTIONS.has(e.action)) s.converted = true;
+      if (e.action === 'WIZARD_COMPLETED') s.wizardCompleted = true;
+      if (e.action === 'WIZARD_SKIPPED')   s.wizardSkipped = true;
+      sessions.set(e.sessionId, s);
+    }
+
+    const buckets = { control: { total: 0, converted: 0 }, guided: { total: 0, converted: 0, wizardCompleted: 0, wizardSkipped: 0 } };
+    for (const s of sessions.values()) {
+      if (s.variant === 'control')  { buckets.control.total++; if (s.converted) buckets.control.converted++; }
+      else if (s.variant === 'guided') {
+        buckets.guided.total++;
+        if (s.converted) buckets.guided.converted++;
+        if (s.wizardCompleted) buckets.guided.wizardCompleted++;
+        if (s.wizardSkipped)   buckets.guided.wizardSkipped++;
+      }
+    }
+
+    const pct = (n: number, d: number) => d > 0 ? +(100 * n / d).toFixed(2) : 0;
+    res.json({
+      days, since: since.toISOString(),
+      totalSessions: sessions.size,
+      variants: {
+        control: { ...buckets.control, conversionPct: pct(buckets.control.converted, buckets.control.total) },
+        guided:  {
+          ...buckets.guided,
+          conversionPct: pct(buckets.guided.converted, buckets.guided.total),
+          wizardCompletionPct: pct(buckets.guided.wizardCompleted, buckets.guided.total),
+          skipPct: pct(buckets.guided.wizardSkipped, buckets.guided.total),
+        },
+      },
+    });
+  } catch (error) {
+    logger.error('ab-results endpoint', error as Error, {});
+    res.status(500).json({ error: 'Failed to compute A/B results' });
+  }
+});
+
 export const adminRouter = router;

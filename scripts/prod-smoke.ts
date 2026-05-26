@@ -125,6 +125,21 @@ async function main() {
     return 'silent drop';
   });
 
+  // Wizard A/B telemetry event types must be accepted
+  for (const action of ['VARIANT_ASSIGNED', 'WIZARD_STEP_VIEWED', 'WIZARD_ANSWER', 'WIZARD_COMPLETED', 'WIZARD_SKIPPED']) {
+    await check(`POST /api/embed/event (${action})`, async () => {
+      const d = await fetchJSON(`${BASE}/api/embed/event`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: `smoke-wiz-${Date.now()}`, action,
+          merchantId: KNOWN_MERCHANT_ID, details: { variant: 'guided', step: '1' },
+        }),
+      });
+      if (d.ok !== true) throw new Error(`expected ok=true, got ${JSON.stringify(d)}`);
+      return 'accepted';
+    });
+  }
+
   // Create a chain-agnostic order (then cancel it)
   let testOrderId: string | null = null;
   await check('POST /api/embed/checkout (chain-agnostic)', async () => {
@@ -259,7 +274,11 @@ async function main() {
     if (text.includes('languageSelector"')) throw new Error('language selector still in HTML');
     if (text.includes('nightModeToggle"')) throw new Error('night mode toggle still in HTML');
     if (!text.includes('SELECT PAYMENT NETWORK') && !text.includes('Select payment network')) throw new Error('checkout UI missing');
-    return `${(text.length / 1024).toFixed(1)}kb, redesign live`;
+    // A/B wizard markers
+    if (!text.includes('id="cpWizard"'))       throw new Error('wizard overlay missing');
+    if (!text.includes('cpAssignVariant'))     throw new Error('A/B routing JS missing');
+    if (!text.includes('WIZARD_STEP_VIEWED'))  throw new Error('wizard event tracking missing');
+    return `${(text.length / 1024).toFixed(1)}kb, redesign + A/B wizard live`;
   });
 
   await check('GET /dashboard.html', async () => {
@@ -287,6 +306,7 @@ async function main() {
     if (!text.includes('Stranded Funds')) throw new Error('stranded tab missing');
     if (!text.includes('Widget Events')) throw new Error('widget events tab missing');
     if (!text.includes('Email Logs')) throw new Error('email logs tab missing');
+    if (!text.includes('A/B Results')) throw new Error('A/B Results tab missing');
     return 'all new tabs present';
   });
 

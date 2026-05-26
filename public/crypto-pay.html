@@ -591,6 +591,143 @@
     </style>
 </head>
 <body class="min-h-screen">
+    <!-- ─── GUIDED WIZARD OVERLAY (A/B variant=guided) ──────────────────────
+         Renders fullscreen when sessionStorage.sp_variant === 'guided'.
+         Each step fires WIZARD_* telemetry. On completion, sets page state
+         (mode + method) and hides itself; existing payment workflow proceeds. -->
+    <div id="cpWizard" class="hidden fixed inset-0 z-[1000] bg-white flex items-center justify-center p-4 overflow-y-auto">
+        <div class="w-full max-w-md mx-auto">
+            <div class="text-center mb-6">
+                <div class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-1">Quick setup</div>
+                <div id="cpWizStepLabel" class="text-xs text-gray-400">Step 1 of 3</div>
+            </div>
+
+            <!-- Step 1: Has wallet? -->
+            <div data-wizstep="1" class="cp-wizstep">
+                <h2 class="text-2xl font-bold text-black mb-2 text-center">Pay with crypto</h2>
+                <p class="text-sm text-gray-600 mb-8 text-center">Do you already have a crypto wallet?</p>
+                <div class="space-y-3">
+                    <button onclick="cpWizAnswer('hasWallet', 'yes')"
+                            class="w-full py-4 px-4 bg-black text-white font-bold text-base border-4 border-black hover:bg-gray-900 transition flex items-center justify-between"
+                            style="background: #00E5FF; color: #000;">
+                        <span>Yes — I'm ready to pay</span>
+                        <span class="text-xl">→</span>
+                    </button>
+                    <button onclick="cpWizAnswer('hasWallet', 'no')"
+                            class="w-full py-4 px-4 bg-white text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition flex items-center justify-between">
+                        <span>Not yet — help me set one up</span>
+                        <span class="text-xl">→</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 1.5: Wallet onboarding (shown only if hasWallet=no) -->
+            <div data-wizstep="1b" class="cp-wizstep hidden">
+                <h2 class="text-2xl font-bold text-black mb-2 text-center">Pick a wallet</h2>
+                <p class="text-sm text-gray-600 mb-6 text-center">All free. Download, create an account, and add some crypto. Then come back here.</p>
+                <div class="space-y-3 mb-6">
+                    <a href="https://phantom.app/" target="_blank" rel="noopener"
+                       class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-bold">Phantom</div>
+                                <div class="text-xs text-gray-500 font-normal">Best for Solana — fastest + cheapest</div>
+                            </div>
+                            <span class="text-gray-400">↗</span>
+                        </div>
+                    </a>
+                    <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener"
+                       class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-bold">Coinbase Wallet</div>
+                                <div class="text-xs text-gray-500 font-normal">Trusted brand · supports most chains</div>
+                            </div>
+                            <span class="text-gray-400">↗</span>
+                        </div>
+                    </a>
+                    <a href="https://metamask.io/download/" target="_blank" rel="noopener"
+                       class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-bold">MetaMask</div>
+                                <div class="text-xs text-gray-500 font-normal">Industry standard for Ethereum</div>
+                            </div>
+                            <span class="text-gray-400">↗</span>
+                        </div>
+                    </a>
+                </div>
+                <button onclick="cpWizGoStep(2)"
+                        class="w-full py-4 px-4 font-bold text-base border-4 border-black hover:bg-gray-900 transition"
+                        style="background: #00E5FF; color: #000;">
+                    I'm back — let's pay →
+                </button>
+            </div>
+
+            <!-- Step 2: Stablecoin or native crypto? -->
+            <div data-wizstep="2" class="cp-wizstep hidden">
+                <h2 class="text-2xl font-bold text-black mb-2 text-center">How do you want to pay?</h2>
+                <p class="text-sm text-gray-600 mb-8 text-center">Stablecoins are pegged to $1. Native crypto auto-converts with a small fee.</p>
+                <div class="space-y-3">
+                    <button onclick="cpWizAnswer('payType', 'stable')"
+                            class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-bold">Stablecoin <span class="text-xs text-gray-500 font-normal">(USDC / USDT / EURC)</span></div>
+                                <div class="text-xs text-gray-500 font-normal mt-0.5">No extra conversion fee</div>
+                            </div>
+                            <span class="text-xl">→</span>
+                        </div>
+                    </button>
+                    <button onclick="cpWizAnswer('payType', 'native')"
+                            class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-bold">Native crypto <span class="text-xs text-gray-500 font-normal">(ETH / SOL / BNB)</span></div>
+                                <div class="text-xs text-gray-500 font-normal mt-0.5">+1.5% conversion fee · we auto-swap to USDC</div>
+                            </div>
+                            <span class="text-xl">→</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: Connect or manual? -->
+            <div data-wizstep="3" class="cp-wizstep hidden">
+                <h2 class="text-2xl font-bold text-black mb-2 text-center">How will you send it?</h2>
+                <p class="text-sm text-gray-600 mb-8 text-center">Either way the merchant gets paid the same.</p>
+                <div class="space-y-3">
+                    <button onclick="cpWizAnswer('method', 'wallet')"
+                            class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-bold">Connect my wallet</div>
+                                <div class="text-xs text-gray-500 font-normal mt-0.5">One click in MetaMask / Phantom / Coinbase</div>
+                            </div>
+                            <span class="text-xl">→</span>
+                        </div>
+                    </button>
+                    <button onclick="cpWizAnswer('method', 'manual')"
+                            class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-bold">Send manually</div>
+                                <div class="text-xs text-gray-500 font-normal mt-0.5">Copy address / scan QR code from your wallet</div>
+                            </div>
+                            <span class="text-xl">→</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Skip option (small, low-friction escape hatch) -->
+            <div class="text-center mt-6">
+                <button onclick="cpWizSkip()" class="text-xs text-gray-400 hover:text-gray-600 underline">
+                    Skip — show me all options at once
+                </button>
+            </div>
+        </div>
+    </div>
     <!-- Navigation — slim, just merchant brand. Language + night mode removed per merchant feedback. -->
     <nav class="mc-nav border-b-2 border-black">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1072,6 +1209,124 @@
             } catch (_) { /* never break checkout */ }
         }
         window.addEventListener('pagehide', () => trackFunnel('page_left'));
+
+        // ═══ A/B TEST: GUIDED WIZARD VARIANT ═══════════════════════════
+        // Splits sessions 50/50 → 'control' (current UI) or 'guided' (wizard).
+        // Assignment is deterministic per sessionId, persisted to sessionStorage
+        // so refresh/back doesn't reshuffle. Each wizard interaction fires a
+        // session-level WidgetEvent via /api/embed/event for funnel analysis.
+
+        function cpSessionId() {
+            let id = sessionStorage.getItem('sp_sid');
+            if (!id) {
+                id = (crypto?.randomUUID?.() || `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
+                sessionStorage.setItem('sp_sid', id);
+            }
+            return id;
+        }
+
+        function cpAssignVariant() {
+            // Honor explicit URL override for QA: ?variant=guided or ?variant=control
+            const url = new URL(window.location.href);
+            const override = url.searchParams.get('variant');
+            if (override === 'guided' || override === 'control') {
+                sessionStorage.setItem('sp_variant', override);
+                return override;
+            }
+            // Cached assignment (sticky per session)
+            const cached = sessionStorage.getItem('sp_variant');
+            if (cached === 'guided' || cached === 'control') return cached;
+            // Deterministic 50/50 hash of sessionId
+            const sid = cpSessionId();
+            let hash = 0;
+            for (let i = 0; i < sid.length; i++) hash = ((hash << 5) - hash + sid.charCodeAt(i)) | 0;
+            const variant = (Math.abs(hash) % 2 === 0) ? 'control' : 'guided';
+            sessionStorage.setItem('sp_variant', variant);
+            return variant;
+        }
+
+        // Wrapper for /api/embed/event — wizard events, fire-and-forget
+        function cpWizTrack(action, details) {
+            try {
+                const body = JSON.stringify({
+                    sessionId: cpSessionId(),
+                    action,
+                    merchantId: window.currentMerchantId || null,
+                    orderId:    window.currentOrderId   || null,
+                    details:    details || {},
+                });
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon('/api/embed/event', new Blob([body], { type: 'application/json' }));
+                } else {
+                    fetch('/api/embed/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+                }
+            } catch (_) { /* never break checkout */ }
+        }
+
+        // Wizard state machine
+        const cpWizState = { hasWallet: null, payType: null, method: null, step: 1 };
+
+        function cpWizGoStep(step) {
+            cpWizState.step = step;
+            document.querySelectorAll('.cp-wizstep').forEach(el => el.classList.add('hidden'));
+            const target = document.querySelector(`[data-wizstep="${step}"]`);
+            if (target) target.classList.remove('hidden');
+            const labels = { 1: 'Step 1 of 3', '1b': 'Setup wallet', 2: 'Step 2 of 3', 3: 'Step 3 of 3' };
+            const lbl = document.getElementById('cpWizStepLabel');
+            if (lbl) lbl.textContent = labels[step] || '';
+            cpWizTrack('WIZARD_STEP_VIEWED', { step: String(step) });
+        }
+
+        function cpWizAnswer(key, value) {
+            cpWizState[key] = value;
+            cpWizTrack('WIZARD_ANSWER', { key, value, step: String(cpWizState.step) });
+            if (key === 'hasWallet') {
+                if (value === 'no') return cpWizGoStep('1b');
+                return cpWizGoStep(2);
+            }
+            if (key === 'payType') return cpWizGoStep(3);
+            if (key === 'method')  return cpWizComplete();
+        }
+
+        function cpWizSkip() {
+            cpWizTrack('WIZARD_SKIPPED', { step: String(cpWizState.step) });
+            document.getElementById('cpWizard')?.classList.add('hidden');
+        }
+
+        function cpWizComplete() {
+            cpWizTrack('WIZARD_COMPLETED', {
+                hasWallet: cpWizState.hasWallet,
+                payType:   cpWizState.payType,
+                method:    cpWizState.method,
+            });
+            // Apply answers to page state
+            try {
+                if (cpWizState.payType === 'native' && typeof setPayMode === 'function') setPayMode('crypto');
+                else if (cpWizState.payType === 'stable' && typeof setPayMode === 'function') setPayMode('stable');
+                if (cpWizState.method === 'wallet' && typeof switchPayMethod === 'function') switchPayMethod('wallet');
+                else if (cpWizState.method === 'manual' && typeof switchPayMethod === 'function') switchPayMethod('manual');
+            } catch (e) { console.warn('Wizard state apply failed:', e); }
+            // Hide wizard, reveal main page
+            document.getElementById('cpWizard')?.classList.add('hidden');
+        }
+
+        // Init on DOM ready — once we have the variant decided, show wizard if guided.
+        (function cpInitVariant() {
+            const variant = cpAssignVariant();
+            cpWizTrack('VARIANT_ASSIGNED', { variant });
+            if (variant === 'guided') {
+                // Defer until DOM ready so the wizard div is in the tree
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        document.getElementById('cpWizard')?.classList.remove('hidden');
+                        cpWizGoStep(1);
+                    });
+                } else {
+                    document.getElementById('cpWizard')?.classList.remove('hidden');
+                    cpWizGoStep(1);
+                }
+            }
+        })();
         // Track when customers open the "how does this work?" helpers — tells us if they're useful.
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('details.cp-help').forEach((d) => {
