@@ -1865,4 +1865,75 @@ router.get('/native-activity', requireAdminKey, async (req, res) => {
   }
 });
 
+// ─── Widget Events (session-level telemetry) ──────────────────────────────
+router.get('/widget-events', requireAdminKey, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 200, 1000);
+    const action = (req.query.action as string) || undefined;
+    const merchantId = (req.query.merchantId as string) || undefined;
+    const hours = parseInt(req.query.hours as string) || 24;
+
+    const where: any = { createdAt: { gte: new Date(Date.now() - hours * 3600_000) } };
+    if (action) where.action = action;
+    if (merchantId) where.merchantId = merchantId;
+
+    const events = await db.widgetEvent.findMany({
+      where, orderBy: { createdAt: 'desc' }, take: limit,
+    });
+
+    // Aggregate by action
+    const counts: Record<string, number> = {};
+    const allCounts = await db.widgetEvent.groupBy({
+      by: ['action'],
+      where: { createdAt: { gte: new Date(Date.now() - hours * 3600_000) } },
+      _count: true,
+    });
+    for (const r of allCounts) counts[r.action] = r._count;
+
+    // Pull merchant names
+    const mids = [...new Set(events.map(e => e.merchantId).filter((x): x is string => !!x))];
+    const ms = mids.length > 0
+      ? await db.merchant.findMany({ where: { id: { in: mids } }, select: { id: true, companyName: true } })
+      : [];
+    const mMap = new Map(ms.map(m => [m.id, m.companyName]));
+
+    res.json({
+      hours, counts,
+      events: events.map(e => ({ ...e, merchantName: e.merchantId ? mMap.get(e.merchantId) ?? null : null })),
+    });
+  } catch (error) {
+    logger.error('widget-events endpoint', error as Error, {});
+    res.status(500).json({ error: 'Failed to load events' });
+  }
+});
+
+// ─── Email Logs ───────────────────────────────────────────────────────────
+router.get('/email-logs', requireAdminKey, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+    const status = (req.query.status as string) || undefined;
+    const days = parseInt(req.query.days as string) || 30;
+
+    const where: any = { createdAt: { gte: new Date(Date.now() - days * 86400_000) } };
+    if (status) where.status = status;
+
+    const [logs, summary] = await Promise.all([
+      db.emailLog.findMany({ where, orderBy: { createdAt: 'desc' }, take: limit }),
+      db.emailLog.groupBy({
+        by: ['status'],
+        where: { createdAt: { gte: new Date(Date.now() - days * 86400_000) } },
+        _count: true,
+      }),
+    ]);
+
+    const counts: Record<string, number> = {};
+    for (const r of summary) counts[r.status] = r._count;
+
+    res.json({ days, counts, logs });
+  } catch (error) {
+    logger.error('email-logs endpoint', error as Error, {});
+    res.status(500).json({ error: 'Failed to load logs' });
+  }
+});
+
 export const adminRouter = router;

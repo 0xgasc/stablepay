@@ -4,10 +4,37 @@ import { pdfService } from './pdfService';
 import { logger } from '../utils/logger';
 
 // Initialize Resend client (will be null if no API key)
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const rawResend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const BASE_URL = (process.env.BASE_URL || 'https://wetakestables.shop').trim();
 const FROM_EMAIL = (process.env.FROM_EMAIL || 'StablePay <hello@wetakestables.shop>').trim();
+
+// Wrap Resend so every send is logged to email_logs table.
+// Same interface as `resend.emails.send(...)`, but persists outcome.
+const resend = rawResend ? {
+  emails: {
+    async send(args: Parameters<typeof rawResend.emails.send>[0]) {
+      const result = await rawResend.emails.send(args as any);
+      try {
+        await db.emailLog.create({
+          data: {
+            toAddress: Array.isArray((args as any).to) ? (args as any).to.join(',') : String((args as any).to),
+            fromAddress: String((args as any).from || FROM_EMAIL),
+            subject: String((args as any).subject || ''),
+            template: (args as any).template ?? null,
+            status:   result.error ? 'FAILED' : 'SENT',
+            resendId: result.data?.id ?? null,
+            errorMsg: result.error ? String((result.error as any).message || result.error) : null,
+            metadata: { hasHtml: !!(args as any).html, hasText: !!(args as any).text },
+          },
+        });
+      } catch (logErr) {
+        logger.warn('Failed to log email send', { err: (logErr as Error).message });
+      }
+      return result;
+    },
+  },
+} : null;
 
 class EmailService {
   /**

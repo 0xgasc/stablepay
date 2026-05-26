@@ -1219,6 +1219,47 @@ router.post('/funnel', async (req, res) => {
   }
 });
 
+// ─── Session-level widget telemetry (no orderId required) ─────────────────
+// Captures pre-order funnel: which chains/tokens viewed, mode switches, drop-offs.
+const ALLOWED_WIDGET_EVENTS = new Set([
+  'WIDGET_OPENED',
+  'CHAIN_SELECTED',
+  'TOKEN_SELECTED',
+  'MODE_SWITCHED',
+  'PAY_CLICKED',
+  'PAYMENT_FAILED',
+  'NATIVE_TX_BROADCAST',
+  'WALLET_CONNECTED',
+  'WALLET_DISCONNECTED',
+  'WIDGET_CLOSED',
+]);
+
+router.post('/event', async (req, res) => {
+  try {
+    const { sessionId, action, merchantId, orderId, details } = req.body || {};
+    if (!sessionId || typeof sessionId !== 'string' || sessionId.length > 64) return res.json({ ok: false });
+    if (!action || !ALLOWED_WIDGET_EVENTS.has(action)) return res.json({ ok: false });
+
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket?.remoteAddress || null;
+    const userAgent = (req.headers['user-agent'] as string)?.slice(0, 300) ?? null;
+    const safeDetails = (details && typeof details === 'object') ? details : {};
+
+    await db.widgetEvent.create({
+      data: {
+        sessionId, action,
+        merchantId: merchantId && typeof merchantId === 'string' ? merchantId : null,
+        orderId:    orderId    && typeof orderId    === 'string' ? orderId    : null,
+        details: safeDetails, ip, userAgent,
+      },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    // Telemetry must never break checkout
+    console.warn('Widget event failed:', err instanceof Error ? err.message : err);
+    res.json({ ok: false });
+  }
+});
+
 // ─── Native token price feed (public, cached) ────────────────────────────────
 router.get('/native-price', async (req, res) => {
   try {

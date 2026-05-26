@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sober Brutalism — Local Preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg: #FAFAF7;             /* warm off-white (was #FFF) */
+      --ink: #111;                /* near-black (was pure #000) */
+      --muted: #6B6B6B;
+      --line: #111;
+      --accent: #00C4D4;          /* slightly desaturated cyan (was #00E5FF) */
+      --accent-text: #000;
+      --paper: #FFFFFF;
+      --warn-bg: #FFF6D1;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      padding: 24px 16px;
+      min-height: 100vh;
+    }
+
+    /* CORE: sobered brutalism */
+    .b-border  { border: 2px solid var(--line); }          /* was 4px */
+    .b-shadow  { box-shadow: 4px 4px 0 var(--line); }      /* was 8px 8px */
+    .b-shadow-sm { box-shadow: 2px 2px 0 var(--line); }
+    .btn {
+      border: 2px solid var(--line);                         /* was 4px */
+      font-weight: 600;                                       /* was 700 */
+      letter-spacing: 0.01em;                                 /* was 0.05em */
+      padding: 12px 18px;
+      background: var(--paper);
+      cursor: pointer;
+      transition: transform .12s, box-shadow .12s;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    .btn:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--line); }
+    .btn-primary { background: var(--accent); color: var(--accent-text); }
+    .btn-block { width: 100%; }
+
+    h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 4px; }   /* was uppercase 4xl */
+    h2 { font-size: 17px; font-weight: 600; margin: 0 0 12px; }                          /* was uppercase 2xl */
+    .eyebrow { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .sub { color: var(--muted); font-size: 14px; }
+
+    /* layout */
+    .container { max-width: 480px; margin: 0 auto; }
+    .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.005em; }
+    .nav-actions { display: flex; gap: 8px; }
+    .nav-btn { font-size: 12px; padding: 6px 10px; }
+
+    .card { background: var(--paper); border: 2px solid var(--line); padding: 20px; margin-bottom: 14px; box-shadow: 4px 4px 0 var(--line); }
+    .row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; }
+    .row + .row { border-top: 1px dashed #ddd; }
+    .label { color: var(--muted); font-size: 13px; }
+    .value { font-weight: 600; }
+    .price { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+
+    .tabs { display: flex; border: 2px solid var(--line); margin-bottom: 14px; background: var(--paper); }
+    .tab { flex: 1; padding: 10px 12px; font-weight: 500; font-size: 13px; background: var(--paper); cursor: pointer; border: 0; font-family: inherit; }
+    .tab.active { background: var(--accent); color: var(--accent-text); }
+    .tab + .tab { border-left: 2px solid var(--line); }
+
+    .chain-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .chain { border: 2px solid var(--line); background: var(--paper); padding: 10px 8px; font-size: 13px; cursor: pointer; text-align: center; font-weight: 500; }
+    .chain.selected { background: var(--accent); color: var(--accent-text); box-shadow: 2px 2px 0 var(--line); }
+
+    .warn { background: var(--warn-bg); border: 2px solid var(--line); padding: 10px 12px; font-size: 13px; }
+    .warn .eyebrow { display: block; margin-bottom: 4px; }
+    .warn p { margin: 0; color: #333; }
+
+    .wallet-list { display: grid; gap: 8px; margin-top: 10px; }
+    .wallet { display: flex; align-items: center; gap: 10px; padding: 12px; border: 2px solid var(--line); background: var(--paper); cursor: pointer; font-weight: 500; font-size: 14px; }
+    .wallet:hover { box-shadow: 2px 2px 0 var(--line); transform: translate(1px, 1px); }
+    .wallet-icon { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; font-size: 16px; background: #f3f3f3; }
+
+    .footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px dashed #ccc; }
+
+    /* Helper: side-by-side comparison */
+    .compare { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 1100px; margin: 0 auto; }
+    @media (min-width: 980px) { .compare { grid-template-columns: 1fr 1fr; } }
+    .compare h3 { margin: 0 0 12px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+
+    /* OLD-style replica for left column (current production look) */
+    .old-side .card-old { background: #fff; border: 4px solid #000; box-shadow: 8px 8px 0 #000; padding: 24px; margin-bottom: 16px; }
+    .old-side .btn-old { width: 100%; background: #00E5FF; color: #000; border: 4px solid #000; padding: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; font-size: 14px; }
+    .old-side h1.old { font-weight: 800; font-size: 32px; text-transform: uppercase; letter-spacing: -0.02em; margin: 0 0 8px; }
+    .old-side .warn-old { background: #FFF9C4; border: 4px solid #000; padding: 12px; font-size: 11px; font-weight: 700; }
+    .old-side .tabs-old { display: flex; border: 4px solid #000; margin-bottom: 16px; }
+    .old-side .tab-old { flex: 1; padding: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; background: #fff; cursor: pointer; border: 0; font-family: inherit; font-size: 13px; }
+    .old-side .tab-old.active { background: #00E5FF; }
+    .old-side .tab-old + .tab-old { border-left: 4px solid #000; }
+  </style>
+</head>
+<body>
+  <div class="compare">
+
+    <!-- LEFT: current production look -->
+    <div class="old-side">
+      <h3>← current (heavy)</h3>
+      <div style="background:#fff; padding: 20px; border: 4px solid #000; box-shadow: 8px 8px 0 #000;">
+        <div style="display:flex; justify-content:space-between; margin-bottom: 16px;">
+          <span style="font-weight:800; font-size:18px; letter-spacing:-0.02em; text-transform:uppercase;">OneTease</span>
+          <button style="border: 3px solid #000; background:#fff; padding: 4px 10px; font-weight:800; text-transform:uppercase; font-size:11px;">Night</button>
+        </div>
+        <h1 class="old">Complete Your Purchase</h1>
+        <p style="color:#555; font-weight:600;">Pay with crypto. No card, no signup.</p>
+
+        <div class="card-old" style="margin-top:18px;">
+          <h2 style="font-weight:800; text-transform:uppercase; font-size:18px; margin:0 0 12px;">Order Summary</h2>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="text-transform:uppercase; font-weight:700; color:#555; font-size:11px;">Product</span><span style="font-weight:800;">Tip Gabriel</span></div>
+          <div style="display:flex; justify-content:space-between;"><span style="text-transform:uppercase; font-weight:700; color:#555; font-size:11px;">Amount</span><span style="font-weight:800; color:#00B4C5;">$5.00 USDC</span></div>
+        </div>
+
+        <div class="tabs-old">
+          <button class="tab-old active">Connect Wallet</button>
+          <button class="tab-old">Send Manually</button>
+        </div>
+
+        <div class="warn-old" style="margin-bottom:16px;">
+          <div style="text-transform:uppercase; font-size:10px; letter-spacing:0.08em; margin-bottom:4px;">Use this network in your wallet</div>
+          <div style="font-weight:800; font-size:16px;">Base Mainnet</div>
+        </div>
+
+        <button class="btn-old">Connect Wallet</button>
+
+        <div style="text-align:center; color:#666; font-size:11px; margin-top:18px;">Secured by StablePay</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: sober brutalism -->
+    <div>
+      <h3>→ sober (proposed)</h3>
+      <div class="container">
+        <div class="nav">
+          <div class="brand">OneTease</div>
+          <div class="nav-actions">
+            <button class="btn nav-btn">Night</button>
+            <button class="btn nav-btn">Back</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h1>Complete your purchase</h1>
+          <p class="sub">Pay with crypto. No card, no signup.</p>
+        </div>
+
+        <div class="card">
+          <h2>Order summary</h2>
+          <div class="row"><span class="label">Product</span><span class="value">Tip Gabriel</span></div>
+          <div class="row"><span class="label">Amount</span><span class="price value">$5.00 USDC</span></div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active">Connect wallet</button>
+          <button class="tab">Send manually</button>
+        </div>
+
+        <div class="card" style="padding: 16px;">
+          <span class="eyebrow">Network</span>
+          <div class="chain-grid">
+            <div class="chain selected">Base</div>
+            <div class="chain">Ethereum</div>
+            <div class="chain">Solana</div>
+            <div class="chain">Polygon</div>
+            <div class="chain">Arbitrum</div>
+            <div class="chain">BNB</div>
+          </div>
+        </div>
+
+        <div class="warn" style="margin-bottom: 14px;">
+          <span class="eyebrow">Use this network in your wallet</span>
+          <p style="font-weight:600; margin: 2px 0 6px;">Base Mainnet</p>
+          <p>Your wallet must be set to Base before sending. We'll detect your payment automatically.</p>
+        </div>
+
+        <div class="card" style="padding: 14px; margin-bottom: 14px;">
+          <span class="eyebrow">Choose your wallet</span>
+          <div class="wallet-list">
+            <div class="wallet"><div class="wallet-icon">🦊</div>MetaMask</div>
+            <div class="wallet"><div class="wallet-icon">👻</div>Phantom</div>
+            <div class="wallet"><div class="wallet-icon">🌈</div>Rainbow</div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block">Connect wallet</button>
+
+        <p class="sub" style="text-align:center; margin-top: 12px; font-size: 12px;">Don't have a wallet? <a href="#" style="color:var(--ink); font-weight:600;">Get MetaMask →</a></p>
+
+        <div class="footer">
+          Secured by StablePay · Payment goes directly to the merchant's wallet
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

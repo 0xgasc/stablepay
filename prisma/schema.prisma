@@ -818,6 +818,44 @@ model AuditLog {
   @@schema("public")
 }
 
+model WidgetEvent {
+  id         String   @id @default(cuid())
+  sessionId  String
+  orderId    String?
+  merchantId String?
+  action     String   // WIDGET_OPENED, CHAIN_SELECTED, TOKEN_SELECTED, MODE_SWITCHED, PAY_CLICKED, PAYMENT_FAILED, NATIVE_TX_BROADCAST, etc.
+  details    Json
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+  @@index([merchantId, action, createdAt])
+  @@index([action, createdAt])
+  @@map("widget_events")
+  @@schema("public")
+}
+
+model EmailLog {
+  id          String   @id @default(cuid())
+  toAddress   String
+  fromAddress String
+  subject     String
+  template    String?
+  status      String   // SENT, FAILED, BOUNCED
+  resendId    String?
+  errorMsg    String?
+  merchantId  String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([toAddress, createdAt])
+  @@index([merchantId, createdAt])
+  @@index([status, createdAt])
+  @@map("email_logs")
+  @@schema("public")
+}
+
 model NativeReceiveWallet {
   id           String   @id @default(cuid())
   orderId      String   @unique

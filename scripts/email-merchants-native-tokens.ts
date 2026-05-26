@@ -95,12 +95,22 @@ async function main() {
   let sent = 0, failed = 0;
   for (const m of merchants) {
     try {
-      const { error } = await resend!.emails.send({
+      const { data, error } = await resend!.emails.send({
         from: FROM_EMAIL, to: m.email, subject: SUBJECT, html: htmlBody(m.contactName),
+      });
+      await db.emailLog.create({
+        data: {
+          toAddress: m.email, fromAddress: FROM_EMAIL, subject: SUBJECT,
+          template: 'native_tokens_announcement',
+          status: error ? 'FAILED' : 'SENT',
+          resendId: data?.id ?? null,
+          errorMsg: error ? String(error.message) : null,
+          merchantId: m.id,
+        },
       });
       if (error) { console.error(`  ✗ ${m.email} — ${error.message}`); failed++; }
       else        { console.log(`  ✓ ${m.email}`); sent++; }
-      await new Promise(r => setTimeout(r, 250)); // 4 req/sec rate limit
+      await new Promise(r => setTimeout(r, 250));
     } catch (e: any) { console.error(`  ✗ ${m.email} — ${e.message}`); failed++; }
   }
 

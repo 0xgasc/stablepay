@@ -168,7 +168,28 @@
       this.connectedWallet = null;
       this.provider = null;
 
+      // Anonymous session ID for telemetry — persists for this widget instance
+      this._sessionId = (window.crypto?.randomUUID?.() || `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
+
       this.init();
+    }
+
+    // Telemetry — fire-and-forget, never throws, never blocks
+    _track(action, details) {
+      try {
+        fetch(`${STABLEPAY_URL}/api/embed/event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: this._sessionId,
+            action,
+            merchantId: this.options.merchantId || null,
+            orderId:    this.currentOrderId   || null,
+            details:    details || {},
+          }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch { /* swallow */ }
     }
 
     async init() {
@@ -178,6 +199,7 @@
       this.render();
       this.attachEventListeners();
       window._spWidget = this; // allows onclick handlers in rendered HTML to call setPayMode
+      this._track('WIDGET_OPENED', { amount: this.options.amount, productName: this.options.productName });
     }
 
     injectStyles() {
@@ -702,7 +724,9 @@
     }
 
     setPayMode(mode) {
+      const prev = this.payMode;
       this.payMode = mode;
+      if (prev !== mode) this._track('MODE_SWITCHED', { from: prev, to: mode });
       // Update toggle button styles
       const btnStable = this.container.querySelector('#sp-mode-stable');
       const btnCrypto = this.container.querySelector('#sp-mode-crypto');
@@ -923,6 +947,7 @@
 
           if (addr) {
             this.connectedWallet = addr;
+            this._track('WALLET_CONNECTED', { walletPrefix: addr.slice(0, 6), chain: this.selectedChain?.chain });
             const shortAddr = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
             const step1 = this.container.querySelector('#sp-send-step1');
 
@@ -1648,9 +1673,11 @@
 
     selectChain(chainKey) {
       const prevType = this.selectedChain?.config?.type;
+      const prevChain = this.selectedChain?.chain;
       this.selectedChain = this.merchantChains.find(mc => mc.chain === chainKey);
       const tokens = this.getTokensForMode();
       this.selectedToken = tokens[0] || 'USDC';
+      if (prevChain !== chainKey) this._track('CHAIN_SELECTED', { chain: chainKey, mode: this.payMode });
 
       // Update token dropdown options (hidden select + custom dropdown)
       const tokenSelect = this.container.querySelector('#sp-token-select');
@@ -1720,7 +1747,9 @@
     }
 
     selectToken(token) {
+      const prev = this.selectedToken;
       this.selectedToken = token;
+      if (prev !== token) this._track('TOKEN_SELECTED', { token, chain: this.selectedChain?.chain, mode: this.payMode });
 
       // EURC needs USD → EUR conversion
       if (token === 'EURC') {
@@ -2091,7 +2120,7 @@
             return;
           }
           payBtn.disabled = false;
-          payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken} (${balance.toFixed(2)} available)`;
+          payBtn.textContent = `Pay $${amt.toFixed(2)} in ${this.selectedToken} (${balance.toFixed(2)} available)`;
           payBtn.style.background = '#00E5FF';
           payBtn.style.color = '#000';
         } else {
@@ -2105,7 +2134,15 @@
 
     _enablePayBtn(payBtn, amt) {
       payBtn.disabled = false;
-      payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken}`;
+      if (NATIVE_TOKENS.has(this.selectedToken) && this.nativePriceUsd) {
+        const chain = this.selectedChain?.chain;
+        const pct = amt * 0.015;
+        const fee = (chain === 'ETHEREUM_MAINNET') ? Math.max(pct, 1.00) : Math.max(pct, 0.50);
+        const nativeAmt = (amt + fee) / this.nativePriceUsd;
+        payBtn.textContent = `Pay ${nativeAmt.toPrecision(4)} ${this.selectedToken}`;
+      } else {
+        payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken}`;
+      }
       payBtn.style.background = '#00E5FF';
       payBtn.style.color = '#000';
     }
@@ -2188,8 +2225,20 @@
       const payBtn = this.container.querySelector('#sp-pay-btn');
       if (!payBtn || !this.connectedWallet || !this.selectedChain) return;
 
+      this._track('PAY_CLICKED', { chain: this.selectedChain.chain, token: this.selectedToken, mode: this.payMode });
+
       payBtn.disabled = true;
       payBtn.innerHTML = '<span class="sp-spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; margin-right: 8px;"></span>Processing...';
+
+      // Native token + connected wallet: create order to get receive wallet, then send native tx
+      if (NATIVE_TOKENS.has(this.selectedToken)) {
+        try {
+          await this.processConnectedNativePayment();
+        } catch (err) {
+          this._handlePayError(err);
+        }
+        return;
+      }
 
       try {
         const chainConfig = this.selectedChain.config;
@@ -2237,19 +2286,101 @@
           await this.processEVMPayment(tokenConfig, recipientAddress, amount);
         }
       } catch (error) {
-        console.error('Payment failed:', error);
-        const msg = error.message || '';
-        if (msg.includes('user rejected') || msg.includes('User denied') || error.code === 'ACTION_REJECTED') {
-          this.showError('Transaction cancelled');
-        } else if (msg.includes('transfer amount exceeds balance') || msg.includes('exceeds balance')) {
-          this.showError(`Insufficient ${this.selectedToken} balance on ${this.selectedChain?.config?.chainName || 'this chain'}`);
-        } else if (msg.includes('switch') || msg.includes('chain')) {
-          this.showError('Please switch to ' + (this.selectedChain?.config?.chainName || 'the correct network') + ' in your wallet');
-        } else {
-          this.showError('Payment failed. Please try again.');
-        }
-        this.updatePayButton();
+        this._handlePayError(error);
       }
+    }
+
+    _handlePayError(error) {
+      console.error('Payment failed:', error);
+      const msg = error.message || '';
+      this._track('PAYMENT_FAILED', { chain: this.selectedChain?.chain, token: this.selectedToken, error: msg.slice(0, 200), code: error.code || null });
+      if (msg.includes('user rejected') || msg.includes('User denied') || error.code === 'ACTION_REJECTED') {
+        this.showError('Transaction cancelled');
+      } else if (msg.includes('insufficient funds') || msg.includes('exceeds balance') || msg.includes('insufficient balance')) {
+        this.showError(`Insufficient ${this.selectedToken} balance on ${this.selectedChain?.config?.chainName || 'this chain'}`);
+      } else if (msg.includes('switch') || msg.includes('chain')) {
+        this.showError('Please switch to ' + (this.selectedChain?.config?.chainName || 'the correct network') + ' in your wallet');
+      } else {
+        this.showError(msg || 'Payment failed. Please try again.');
+      }
+      this.updatePayButton();
+    }
+
+    async processConnectedNativePayment() {
+      const chainConfig = this.selectedChain.config;
+      const usdAmount = parseFloat(this.options.amount || 0);
+
+      // Step 1: Create order eagerly to get NativeReceiveWallet
+      if (!this.currentOrderId) {
+        const res = await fetch(`${STABLEPAY_URL}/api/embed/checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchantId: this.options.merchantId,
+            storeId: this.options.storeId || undefined,
+            amount: usdAmount,
+            chain: this.selectedChain.chain,
+            token: this.selectedToken,
+            customerEmail: this.options.customerEmail,
+            externalId: this.options.externalId,
+            metadata: this.options.metadata,
+            customerWallet: this.connectedWallet,
+            productName: this.options.productName,
+            paymentMethod: 'CONNECTED_WALLET',
+            source: 'EMBED_WIDGET',
+          })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to create payment');
+        this.currentOrderId  = data.order.id;
+        this._receiveAddress = data.order.paymentAddress;
+        this._nativeSendAmt  = data.order.nativeSendAmount;
+      }
+
+      const receiveAddress = this._receiveAddress;
+      const nativeSendAmt  = this._nativeSendAmt;
+      if (!receiveAddress || !nativeSendAmt) throw new Error('Missing receive address or amount');
+
+      // Step 2: Load ethers, switch chain
+      if (!window.ethers) await this.loadScript('https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js');
+      const ethers = window.ethers;
+
+      if (chainConfig.chainId) {
+        try {
+          await this.provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainConfig.chainId }] });
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            await this.provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{ chainId: chainConfig.chainId, chainName: chainConfig.chainName, rpcUrls: chainConfig.rpcUrls, blockExplorerUrls: chainConfig.blockExplorerUrls }]
+            });
+          } else { throw new Error('Please switch to ' + chainConfig.chainName + ' in your wallet'); }
+        }
+      }
+
+      // Step 3: Native send from connected wallet → NativeReceiveWallet
+      const provider = new ethers.BrowserProvider(this.provider);
+      const signer   = await provider.getSigner();
+      const valueWei = ethers.parseEther(String(nativeSendAmt));
+
+      console.log(`[StablePay] Native send: ${nativeSendAmt} ${this.selectedToken} → ${receiveAddress}`);
+      const tx = await signer.sendTransaction({ to: receiveAddress, value: valueWei });
+      this._track('NATIVE_TX_BROADCAST', { chain: this.selectedChain.chain, token: this.selectedToken, txHash: tx.hash, amount: nativeSendAmt });
+      this.showProcessing(tx.hash);
+
+      const receipt = await tx.wait();
+      if (receipt.status !== 1) throw new Error('Transaction failed');
+
+      // Step 4: Submit txHash so backend verifies + swaps faster than scanner pickup
+      try {
+        await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}/tx`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ txHash: tx.hash }),
+        });
+      } catch (e) { console.warn('TX submit failed (scanner will catch):', e); }
+
+      this.showSuccess({ txHash: tx.hash, status: 'PROCESSING' });
+      if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: tx.hash, amount: usdAmount, token: this.selectedToken });
     }
 
     async processEVMPayment(tokenConfig, recipient, amount) {

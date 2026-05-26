@@ -393,6 +393,12 @@
                     <button class="tab-btn border-b-2 border-transparent text-orange-400 hover:text-orange-300 hover:border-orange-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="nativeActivity">
                         Native Tokens
                     </button>
+                    <button class="tab-btn border-b-2 border-transparent text-purple-400 hover:text-purple-300 hover:border-purple-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="widgetEvents">
+                        Widget Events
+                    </button>
+                    <button class="tab-btn border-b-2 border-transparent text-purple-400 hover:text-purple-300 hover:border-purple-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="emailLogs">
+                        Email Logs
+                    </button>
                 </nav>
             </div>
 
@@ -1449,6 +1455,71 @@
         </div>
     </div>
 
+    <!-- Widget Events Tab -->
+    <div id="widgetEventsTab" class="tab-content hidden">
+        <div class="bg-slate-950 border border-purple-900/40 p-6">
+            <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Widget Telemetry</h2>
+                    <p class="text-sm text-slate-400 mt-1">Session-level widget events — what customers interact with, where they drop off.</p>
+                </div>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <select id="weHours" onchange="loadWidgetEvents()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-white text-sm">
+                        <option value="1">Last hour</option>
+                        <option value="24" selected>Last 24h</option>
+                        <option value="168">Last 7 days</option>
+                    </select>
+                    <select id="weAction" onchange="loadWidgetEvents()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-white text-sm">
+                        <option value="">All actions</option>
+                        <option>WIDGET_OPENED</option>
+                        <option>CHAIN_SELECTED</option>
+                        <option>TOKEN_SELECTED</option>
+                        <option>MODE_SWITCHED</option>
+                        <option>WALLET_CONNECTED</option>
+                        <option>PAY_CLICKED</option>
+                        <option>PAYMENT_FAILED</option>
+                        <option>NATIVE_TX_BROADCAST</option>
+                    </select>
+                    <button onclick="loadWidgetEvents()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Refresh</button>
+                </div>
+            </div>
+            <div id="weSummary" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 mb-6"></div>
+            <div id="weTable" class="overflow-x-auto">
+                <div class="text-slate-400 text-sm py-12 text-center">Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Logs Tab -->
+    <div id="emailLogsTab" class="tab-content hidden">
+        <div class="bg-slate-950 border border-purple-900/40 p-6">
+            <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Email Logs</h2>
+                    <p class="text-sm text-slate-400 mt-1">All emails sent via Resend — verification, receipts, announcements, alerts.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="elDays" onchange="loadEmailLogs()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-white text-sm">
+                        <option value="1">Last 24h</option>
+                        <option value="7" selected>Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                    </select>
+                    <select id="elStatus" onchange="loadEmailLogs()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-white text-sm">
+                        <option value="">All statuses</option>
+                        <option>SENT</option>
+                        <option>FAILED</option>
+                        <option>BOUNCED</option>
+                    </select>
+                    <button onclick="loadEmailLogs()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">Refresh</button>
+                </div>
+            </div>
+            <div id="elSummary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+            <div id="elTable" class="overflow-x-auto">
+                <div class="text-slate-400 text-sm py-12 text-center">Loading…</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Native Token Activity Tab -->
     <div id="nativeActivityTab" class="tab-content hidden">
         <div class="bg-slate-950 border border-orange-900/40 p-6">
@@ -1616,8 +1687,112 @@
                 if (tab === 'stabloChats') loadStabloChats();
                 if (tab === 'funnel') loadFunnel();
                 if (tab === 'nativeActivity') loadNativeActivity();
+                if (tab === 'widgetEvents') loadWidgetEvents();
+                if (tab === 'emailLogs') loadEmailLogs();
             });
         });
+
+        // ─── Widget Events ─────────────────────────────────────────────
+        async function loadWidgetEvents() {
+            const hours = document.getElementById('weHours').value;
+            const action = document.getElementById('weAction').value;
+            const summary = document.getElementById('weSummary');
+            const table = document.getElementById('weTable');
+            table.innerHTML = '<div class="text-slate-400 text-sm py-12 text-center">Loading…</div>';
+            try {
+                const params = new URLSearchParams({ hours });
+                if (action) params.set('action', action);
+                const r = await fetch(`${API_BASE}/api/v1/admin/widget-events?${params}`, { headers: { 'Authorization': getAuthHeader() } });
+                const d = await r.json();
+                if (!d.events) { table.innerHTML = '<div class="text-red-400 py-12 text-center">Failed.</div>'; return; }
+
+                summary.innerHTML = Object.entries(d.counts || {}).sort((a, b) => b[1] - a[1]).map(([a, n]) =>
+                    `<div class="bg-black border border-slate-800 p-3"><div class="text-[10px] text-slate-500 uppercase">${a.replace(/_/g, ' ')}</div><div class="text-lg font-bold text-purple-300">${n}</div></div>`
+                ).join('') || '<div class="text-slate-500 col-span-full text-sm">No events.</div>';
+
+                if (d.events.length === 0) { table.innerHTML = '<div class="text-slate-400 py-12 text-center">No events in window.</div>'; return; }
+
+                table.innerHTML = `
+                    <table class="w-full text-xs">
+                        <thead class="text-slate-500 uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="text-left py-3 px-2">When</th>
+                                <th class="text-left py-3 px-2">Action</th>
+                                <th class="text-left py-3 px-2">Merchant</th>
+                                <th class="text-left py-3 px-2">Session</th>
+                                <th class="text-left py-3 px-2">Order</th>
+                                <th class="text-left py-3 px-2">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${d.events.map(e => `<tr class="border-b border-slate-900 hover:bg-slate-900/50">
+                                <td class="py-2 px-2 text-slate-400">${new Date(e.createdAt).toISOString().slice(5, 16).replace('T', ' ')}</td>
+                                <td class="py-2 px-2 font-bold ${e.action === 'PAYMENT_FAILED' ? 'text-red-400' : e.action === 'NATIVE_TX_BROADCAST' ? 'text-emerald-400' : 'text-purple-300'}">${e.action}</td>
+                                <td class="py-2 px-2 text-white">${e.merchantName || '—'}</td>
+                                <td class="py-2 px-2 text-slate-500 font-mono">${e.sessionId.slice(0, 8)}</td>
+                                <td class="py-2 px-2 text-slate-500 font-mono">${e.orderId ? e.orderId.slice(-8) : '—'}</td>
+                                <td class="py-2 px-2 text-slate-400 font-mono text-[10px]">${JSON.stringify(e.details || {}).slice(0, 80)}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) { table.innerHTML = `<div class="text-red-400 py-12 text-center">Error: ${e.message}</div>`; }
+        }
+
+        // ─── Email Logs ────────────────────────────────────────────────
+        async function loadEmailLogs() {
+            const days = document.getElementById('elDays').value;
+            const status = document.getElementById('elStatus').value;
+            const summary = document.getElementById('elSummary');
+            const table = document.getElementById('elTable');
+            table.innerHTML = '<div class="text-slate-400 text-sm py-12 text-center">Loading…</div>';
+            try {
+                const params = new URLSearchParams({ days });
+                if (status) params.set('status', status);
+                const r = await fetch(`${API_BASE}/api/v1/admin/email-logs?${params}`, { headers: { 'Authorization': getAuthHeader() } });
+                const d = await r.json();
+                if (!d.logs) { table.innerHTML = '<div class="text-red-400 py-12 text-center">Failed.</div>'; return; }
+
+                summary.innerHTML = `
+                    <div class="bg-black border border-slate-800 p-4"><div class="text-xs text-slate-500 uppercase">Total</div><div class="text-2xl font-bold text-white">${d.logs.length}</div></div>
+                    <div class="bg-black border border-emerald-800 p-4"><div class="text-xs text-emerald-500 uppercase">Sent</div><div class="text-2xl font-bold text-emerald-400">${d.counts.SENT ?? 0}</div></div>
+                    <div class="bg-black border border-red-800 p-4"><div class="text-xs text-red-500 uppercase">Failed</div><div class="text-2xl font-bold text-red-400">${d.counts.FAILED ?? 0}</div></div>
+                    <div class="bg-black border border-yellow-800 p-4"><div class="text-xs text-yellow-500 uppercase">Bounced</div><div class="text-2xl font-bold text-yellow-400">${d.counts.BOUNCED ?? 0}</div></div>
+                `;
+
+                if (d.logs.length === 0) { table.innerHTML = '<div class="text-slate-400 py-12 text-center">No emails in window.</div>'; return; }
+
+                table.innerHTML = `
+                    <table class="w-full text-xs">
+                        <thead class="text-slate-500 uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="text-left py-3 px-2">Sent</th>
+                                <th class="text-left py-3 px-2">To</th>
+                                <th class="text-left py-3 px-2">Subject</th>
+                                <th class="text-left py-3 px-2">Template</th>
+                                <th class="text-left py-3 px-2">Status</th>
+                                <th class="text-left py-3 px-2">Resend ID</th>
+                                <th class="text-left py-3 px-2">Error</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${d.logs.map(l => {
+                                const statusColor = { SENT: 'text-emerald-400', FAILED: 'text-red-400', BOUNCED: 'text-yellow-400' }[l.status] || 'text-white';
+                                return `<tr class="border-b border-slate-900 hover:bg-slate-900/50">
+                                    <td class="py-2 px-2 text-slate-400">${new Date(l.createdAt).toISOString().slice(5, 16).replace('T', ' ')}</td>
+                                    <td class="py-2 px-2 text-white">${l.toAddress}</td>
+                                    <td class="py-2 px-2 text-slate-300">${(l.subject || '').slice(0, 50)}</td>
+                                    <td class="py-2 px-2 text-purple-400">${l.template || '—'}</td>
+                                    <td class="py-2 px-2 font-bold ${statusColor}">${l.status}</td>
+                                    <td class="py-2 px-2 text-slate-500 font-mono">${(l.resendId || '').slice(0, 16)}</td>
+                                    <td class="py-2 px-2 text-red-400 text-[10px]">${l.errorMsg || ''}</td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) { table.innerHTML = `<div class="text-red-400 py-12 text-center">Error: ${e.message}</div>`; }
+        }
 
         // ─── Conversion Funnel ─────────────────────────────────────────
         async function loadFunnel() {
