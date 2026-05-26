@@ -333,6 +333,13 @@ async function forwardSolToMerchant(
 }
 
 // ─── Main entry: swap native token → stablecoin → merchant ───────────────────
+//
+// Design: swap ONLY the amount needed to cover merchant's USD payout.
+// The conversion fee portion stays as native and is swept back to the agent —
+// the agent's gas tank is self-refunded by its own activity.
+//
+// Stale price guard: if order is >5 min old, re-fetch price and recompute swap split.
+// On swap failure: fire 'order.swap_failed' webhook so merchant + admin know.
 export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: string }> {
   // Atomically mark as PROCESSING to prevent double-execution across scanner cycles
   const claimed = await db.order.updateMany({
@@ -362,30 +369,64 @@ export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: 
   if (!merchantWallet) throw new Error(`No active merchant wallet for ${chain}`);
   const targetStable = (merchantWallet as any).preferredStablecoin ?? 'USDC';
 
+  // Stale-price guard: re-quote if snapshot >5 min old
+  const orderAgeMin = (Date.now() - order.createdAt.getTime()) / 60_000;
+  let nativePrice = Number(order.nativePriceSnapshot ?? 0);
+  if (orderAgeMin > 5) {
+    try {
+      const fresh = await getPriceUsd(order.nativeToken);
+      logger.info('Refreshed stale price snapshot', { orderId, ageMin: orderAgeMin.toFixed(1), oldPrice: nativePrice, newPrice: fresh });
+      nativePrice = fresh;
+    } catch (e) { logger.warn('Stale price re-quote failed, using snapshot', { orderId, error: (e as Error).message }); }
+  }
+  if (nativePrice <= 0) throw new Error('Invalid native price for swap split');
+
+  // Split: swap ONLY merchant_amount_usd worth (with 1% slippage buffer); rest stays as native fee
+  const merchantUsd        = Number(order.amount);
+  const slippageBuffer     = 1.01;
+  const swapNativeTarget   = Math.min(nativeAmt, (merchantUsd * slippageBuffer) / nativePrice);
+  const retainedNative     = nativeAmt - swapNativeTarget;
+
+  logger.info('swapAndForward split', { orderId, nativeAmt, swapNativeTarget, retainedNative, merchantUsd, nativePrice });
+
   let swapTxHash: string;
   let stableReceived: number;
   let forwardTxHash: string;
 
-  if (isSolana) {
-    // Sponsor SOL gas from agent so customer's full SOL → USDC (no reserve eats merchant payout)
-    await ensureSolGas(receiveWallet.address);
-    const lamports = Math.round(nativeAmt * 1e9);
-    if (lamports <= 0) throw new Error('SOL amount is zero');
-    ({ txHash: swapTxHash, stableReceived } = await executeJupiterSwap(lamports, targetStable, privKey));
-    // Re-fund gas for forward tx (Jupiter consumes the sponsored SOL)
-    await ensureSolGas(receiveWallet.address);
-    forwardTxHash = await forwardSolToMerchant(targetStable, privKey, merchantWallet.address);
-    // Sweep any remaining SOL back to agent
-    const receiveKp = Keypair.fromSecretKey(Buffer.from(privKey, 'hex'));
-    await sweepSolDust(receiveKp);
-  } else {
-    await ensureGas(receiveWallet.address, chain);
-    ({ txHash: swapTxHash, stableReceived } = await executeLiFiSwap(chain, nativeAmt, targetStable, privKey));
-    // After swap, native balance is 0 — fund gas for the ERC-20 forward tx
-    await ensureGas(receiveWallet.address, chain);
-    forwardTxHash = await forwardEvmToMerchant(chain, targetStable, privKey, merchantWallet.address);
+  try {
+    if (isSolana) {
+      await ensureSolGas(receiveWallet.address);
+      const lamports = Math.round(swapNativeTarget * 1e9);
+      if (lamports <= 0) throw new Error('SOL swap amount is zero');
+      ({ txHash: swapTxHash, stableReceived } = await executeJupiterSwap(lamports, targetStable, privKey));
+      await ensureSolGas(receiveWallet.address);
+      forwardTxHash = await forwardSolToMerchant(targetStable, privKey, merchantWallet.address);
+      // Sweep retained native SOL back to agent (this is our retained fee)
+      const receiveKp = Keypair.fromSecretKey(Buffer.from(privKey, 'hex'));
+      await sweepSolDust(receiveKp);
+    } else {
+      await ensureGas(receiveWallet.address, chain);
+      ({ txHash: swapTxHash, stableReceived } = await executeLiFiSwap(chain, swapNativeTarget, targetStable, privKey));
+      // After swap, native balance is whatever wasn't swapped + leftover gas; ensureGas tops up for ERC-20 forward
+      await ensureGas(receiveWallet.address, chain);
+      forwardTxHash = await forwardEvmToMerchant(chain, targetStable, privKey, merchantWallet.address);
+      // The forwardEvmToMerchant already sweeps remaining native back to agent (the retained native fee)
+    }
+  } catch (swapErr) {
+    // Fire merchant webhook so they know the payment came in but couldn't be processed
+    try {
+      const { webhookService } = await import('./webhookService');
+      if (order.merchantId) {
+        webhookService.sendWebhook(order.merchantId, 'order.swap_failed', {
+          orderId, chain, nativeToken: order.nativeToken,
+          nativeAmountReceived: nativeAmt, error: (swapErr as Error).message,
+          paymentAddress: order.paymentAddress,
+        }).catch(() => {});
+      }
+    } catch { /* webhook is best-effort */ }
+    throw swapErr;
   }
 
-  logger.info('swapAndForward complete', { orderId, chain, nativeAmt, stableReceived, swapTxHash, forwardTxHash });
+  logger.info('swapAndForward complete', { orderId, chain, nativeAmt, swapNativeTarget, retainedNative, stableReceived, swapTxHash, forwardTxHash });
   return { forwardTxHash };
 }

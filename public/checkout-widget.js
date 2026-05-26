@@ -2366,12 +2366,13 @@
       console.log(`[StablePay] Native send: ${nativeSendAmt} ${this.selectedToken} → ${receiveAddress}`);
       const tx = await signer.sendTransaction({ to: receiveAddress, value: valueWei });
       this._track('NATIVE_TX_BROADCAST', { chain: this.selectedChain.chain, token: this.selectedToken, txHash: tx.hash, amount: nativeSendAmt });
-      this.showProcessing(tx.hash);
+      this.showProcessing(tx.hash, 'Confirming Payment...');
 
       const receipt = await tx.wait();
       if (receipt.status !== 1) throw new Error('Transaction failed');
 
-      // Step 4: Submit txHash so backend verifies + swaps faster than scanner pickup
+      // Tx mined — now backend swap kicks in. Update UI + submit hash for fast pickup.
+      this.showProcessing(tx.hash, 'Converting to USDC...');
       try {
         await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}/tx`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2379,8 +2380,8 @@
         });
       } catch (e) { console.warn('TX submit failed (scanner will catch):', e); }
 
-      this.showSuccess({ txHash: tx.hash, status: 'PROCESSING' });
-      if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: tx.hash, amount: usdAmount, token: this.selectedToken });
+      // Poll until CONFIRMED (scanner picks up native deposit → swap → forward → confirm)
+      await this.pollOrderUntilTerminal(this.currentOrderId, tx.hash, { timeoutSec: 240 });
     }
 
     async processEVMPayment(tokenConfig, recipient, amount) {
@@ -2572,9 +2573,15 @@
       });
     }
 
-    showProcessing(txHash) {
+    showProcessing(txHash, stage) {
       const shortHash = `${txHash.slice(0, 10)}...${txHash.slice(-8)}`;
       const explorer = this.selectedChain.config.blockExplorerUrls?.[0];
+      const label = stage || 'Confirming Payment...';
+      const subLabel = stage === 'Converting to USDC...'
+        ? 'Your payment was received. Auto-swapping to stablecoin now…'
+        : stage === 'Almost done...'
+          ? 'Forwarding to merchant…'
+          : '';
 
       this.container.querySelector('.sp-widget').innerHTML = `
         <div style="text-align: center; padding: 32px;">
@@ -2586,13 +2593,47 @@
             margin: 0 auto 16px;
           "></div>
           <div style="font-size: 18px; font-weight: 600; color: var(--sp-text); margin-bottom: 8px;">
-            Confirming Payment...
+            ${label}
           </div>
+          ${subLabel ? `<div style="font-size: 12px; color: var(--sp-muted); margin-bottom: 12px;">${subLabel}</div>` : ''}
           <div style="font-size: 13px; color: var(--sp-muted); font-family: monospace;">
             ${explorer ? `<a href="${explorer}/tx/${txHash}" target="_blank" style="color: var(--sp-accent);">${shortHash}</a>` : shortHash}
           </div>
         </div>
       `;
+    }
+
+    // Poll the order until CONFIRMED, REFUNDED, or timeout. Transitions UI through stages.
+    async pollOrderUntilTerminal(orderId, txHash, opts) {
+      const maxMs = (opts?.timeoutSec ?? 240) * 1000;
+      const start = Date.now();
+      const isNative = NATIVE_TOKENS.has(this.selectedToken);
+      let lastStage = '';
+      while (Date.now() - start < maxMs) {
+        try {
+          const r = await fetch(`${STABLEPAY_URL}/api/embed/order/${orderId}`);
+          const d = await r.json();
+          const status = d?.order?.status;
+          if (status === 'CONFIRMED') {
+            this.showSuccess({ txHash, status: 'CONFIRMED' });
+            if (this.options.onSuccess) this.options.onSuccess({ orderId, txHash, amount: parseFloat(this.options.amount), token: this.selectedToken });
+            return;
+          }
+          if (status === 'REFUNDED' || status === 'CANCELLED') {
+            this.showError(`Order was ${status.toLowerCase()}.`);
+            return;
+          }
+          // Transition stage UI for native: PROCESSING means swap is running
+          if (isNative && status === 'PROCESSING' && lastStage !== 'Converting to USDC...') {
+            this.showProcessing(txHash, 'Converting to USDC...');
+            lastStage = 'Converting to USDC...';
+          }
+        } catch { /* keep polling */ }
+        await new Promise(r => setTimeout(r, 3000));
+      }
+      // Timeout — order should land eventually, but stop polling
+      this.showSuccess({ txHash, status: 'PROCESSING' });
+      if (this.options.onSuccess) this.options.onSuccess({ orderId, txHash, amount: parseFloat(this.options.amount), token: this.selectedToken });
     }
 
     showSuccess(txHashOrData) {
