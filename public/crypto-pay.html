@@ -599,32 +599,17 @@
         <div class="w-full max-w-md mx-auto">
             <div class="text-center mb-6">
                 <div class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-1">Quick setup</div>
-                <div id="cpWizStepLabel" class="text-xs text-gray-400">Step 1 of 3</div>
+                <div id="cpWizStepLabel" class="text-xs text-gray-400">Step 1 of 2</div>
             </div>
 
-            <!-- Step 1: Has wallet? -->
-            <div data-wizstep="1" class="cp-wizstep">
-                <h2 class="text-2xl font-bold text-black mb-2 text-center">Pay with crypto</h2>
-                <p class="text-sm text-gray-600 mb-8 text-center">Do you already have a crypto wallet?</p>
-                <div class="space-y-3">
-                    <button onclick="cpWizAnswer('hasWallet', 'yes')"
-                            class="w-full py-4 px-4 bg-black text-white font-bold text-base border-4 border-black hover:bg-gray-900 transition flex items-center justify-between"
-                            style="background: #00E5FF; color: #000;">
-                        <span>Yes — I'm ready to pay</span>
-                        <span class="text-xl">→</span>
-                    </button>
-                    <button onclick="cpWizAnswer('hasWallet', 'no')"
-                            class="w-full py-4 px-4 bg-white text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition flex items-center justify-between">
-                        <span>Not yet — help me set one up</span>
-                        <span class="text-xl">→</span>
-                    </button>
-                </div>
-            </div>
+            <!-- (Removed step 1 "have wallet?" — 60% mid-wizard abandonment told us
+                 it's unnecessary friction. Onboarding is still reachable via the
+                 footer link at the bottom of step 1.) -->
 
-            <!-- Step 1.5: Wallet onboarding (shown only if hasWallet=no) -->
+            <!-- Wallet onboarding (reachable via the footer link in step 1) -->
             <div data-wizstep="1b" class="cp-wizstep hidden">
-                <h2 class="text-2xl font-bold text-black mb-2 text-center">Pick a wallet</h2>
-                <p class="text-sm text-gray-600 mb-6 text-center">All free. Download, create an account, and add some crypto. Then come back here.</p>
+                <h2 class="text-2xl font-bold text-black mb-2 text-center">Need a wallet first?</h2>
+                <p class="text-sm text-gray-600 mb-6 text-center">All free. Download, create an account, add some crypto, then come back here.</p>
                 <div class="space-y-3 mb-6">
                     <a href="https://phantom.app/" target="_blank" rel="noopener"
                        class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
@@ -657,15 +642,15 @@
                         </div>
                     </a>
                 </div>
-                <button onclick="cpWizGoStep(2)"
+                <button onclick="cpWizGoStep(1)"
                         class="w-full py-4 px-4 font-bold text-base border-4 border-black hover:bg-gray-900 transition"
                         style="background: #00E5FF; color: #000;">
                     I'm back — let's pay →
                 </button>
             </div>
 
-            <!-- Step 2: Stablecoin or native crypto? -->
-            <div data-wizstep="2" class="cp-wizstep hidden">
+            <!-- Step 1 (was step 2): Stablecoin or native crypto? -->
+            <div data-wizstep="1" class="cp-wizstep">
                 <h2 class="text-2xl font-bold text-black mb-2 text-center">How do you want to pay?</h2>
                 <p class="text-sm text-gray-600 mb-8 text-center">Stablecoins are pegged to $1. Native crypto auto-converts with a small fee.</p>
                 <div class="space-y-3">
@@ -692,8 +677,8 @@
                 </div>
             </div>
 
-            <!-- Step 3: Connect or manual? -->
-            <div data-wizstep="3" class="cp-wizstep hidden">
+            <!-- Step 2 (was step 3): Connect or manual? -->
+            <div data-wizstep="2" class="cp-wizstep hidden">
                 <h2 class="text-2xl font-bold text-black mb-2 text-center">How will you send it?</h2>
                 <p class="text-sm text-gray-600 mb-8 text-center">Either way the merchant gets paid the same.</p>
                 <div class="space-y-3">
@@ -720,10 +705,13 @@
                 </div>
             </div>
 
-            <!-- Skip option (small, low-friction escape hatch) -->
-            <div class="text-center mt-6">
-                <button onclick="cpWizSkip()" class="text-xs text-gray-400 hover:text-gray-600 underline">
+            <!-- Skip + wallet help links -->
+            <div class="text-center mt-6 space-y-2">
+                <button onclick="cpWizSkip()" class="text-xs text-gray-400 hover:text-gray-600 underline block mx-auto">
                     Skip — show me all options at once
+                </button>
+                <button onclick="cpWizGoStep('1b')" class="text-xs text-gray-400 hover:text-gray-600 underline block mx-auto">
+                    Don't have a wallet yet?
                 </button>
             </div>
         </div>
@@ -1272,7 +1260,7 @@
             document.querySelectorAll('.cp-wizstep').forEach(el => el.classList.add('hidden'));
             const target = document.querySelector(`[data-wizstep="${step}"]`);
             if (target) target.classList.remove('hidden');
-            const labels = { 1: 'Step 1 of 3', '1b': 'Setup wallet', 2: 'Step 2 of 3', 3: 'Step 3 of 3' };
+            const labels = { 1: 'Step 1 of 2', '1b': 'Setup wallet', 2: 'Step 2 of 2' };
             const lbl = document.getElementById('cpWizStepLabel');
             if (lbl) lbl.textContent = labels[step] || '';
             cpWizTrack('WIZARD_STEP_VIEWED', { step: String(step) });
@@ -1281,11 +1269,7 @@
         function cpWizAnswer(key, value) {
             cpWizState[key] = value;
             cpWizTrack('WIZARD_ANSWER', { key, value, step: String(cpWizState.step) });
-            if (key === 'hasWallet') {
-                if (value === 'no') return cpWizGoStep('1b');
-                return cpWizGoStep(2);
-            }
-            if (key === 'payType') return cpWizGoStep(3);
+            if (key === 'payType') return cpWizGoStep(2);
             if (key === 'method')  return cpWizComplete();
         }
 

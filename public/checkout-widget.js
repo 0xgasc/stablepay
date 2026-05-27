@@ -269,7 +269,7 @@
         ">
           <div style="text-align: center; margin-bottom: 16px;">
             <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: ${isDark ? '#888' : '#666'}; font-weight: 700;">Quick setup</div>
-            <div id="sp-wiz-step-label" style="font-size: 11px; color: ${isDark ? '#666' : '#999'}; margin-top: 2px;">Step 1 of 3</div>
+            <div id="sp-wiz-step-label" style="font-size: 11px; color: ${isDark ? '#666' : '#999'}; margin-top: 2px;">Step 1 of 2</div>
           </div>
           <div id="sp-wiz-body"></div>
           <div style="text-align: center; margin-top: 16px;">
@@ -289,10 +289,11 @@
       switch (String(step)) {
         case '1':
           return `
-            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">Pay $${usd} with crypto</h2>
-            <p style="font-size:13px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 20px;">Do you have a crypto wallet?</p>
-            <button class="sp-wiz-ans" data-key="hasWallet" data-value="yes" style="${primaryBtnStyle}"><span>Yes — I'm ready</span><span>→</span></button>
-            <button class="sp-wiz-ans" data-key="hasWallet" data-value="no" style="${secondaryBtnStyle}"><span>Not yet — help me</span><span>→</span></button>`;
+            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">How do you want to pay?</h2>
+            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">Both end up as USDC for the merchant.</p>
+            <button class="sp-wiz-ans" data-key="payType" data-value="stable" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Stablecoin (USDC/USDT)</span><span style="${subStyle}">No extra conversion fee</span></span><span>→</span></button>
+            <button class="sp-wiz-ans" data-key="payType" data-value="native" style="${secondaryBtnStyle};"><span><span style="display:block">Native crypto (ETH / SOL / BNB)</span><span style="${subStyle}">+1.5% fee, auto-swapped for you</span></span><span>→</span></button>
+            <div style="text-align:center;margin-top:14px;"><button class="sp-wiz-goto" data-step="1b" style="background:none;border:none;color:${isDark ? '#666' : '#999'};font-size:11px;text-decoration:underline;cursor:pointer;">Don't have a wallet yet?</button></div>`;
         case '1b':
           return `
             <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">Pick a wallet</h2>
@@ -300,14 +301,8 @@
             <a href="https://phantom.app/" target="_blank" rel="noopener" style="${secondaryBtnStyle};margin-top:0;text-decoration:none;"><span><span style="display:block">Phantom</span><span style="${subStyle}">Best for Solana (cheapest)</span></span><span>↗</span></a>
             <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">Coinbase Wallet</span><span style="${subStyle}">Trusted multi-chain wallet</span></span><span>↗</span></a>
             <a href="https://metamask.io/download/" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">MetaMask</span><span style="${subStyle}">Standard for Ethereum</span></span><span>↗</span></a>
-            <button class="sp-wiz-goto" data-step="2" style="${primaryBtnStyle};margin-top:14px;"><span>I'm back — let's pay</span><span>→</span></button>`;
+            <button class="sp-wiz-goto" data-step="1" style="${primaryBtnStyle};margin-top:14px;"><span>I'm back — let's pay</span><span>→</span></button>`;
         case '2':
-          return `
-            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">How do you want to pay?</h2>
-            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">Both end up as USDC for the merchant.</p>
-            <button class="sp-wiz-ans" data-key="payType" data-value="stable" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Stablecoin (USDC/USDT)</span><span style="${subStyle}">No extra conversion fee</span></span><span>→</span></button>
-            <button class="sp-wiz-ans" data-key="payType" data-value="native" style="${secondaryBtnStyle};"><span><span style="display:block">Native crypto (ETH / SOL / BNB)</span><span style="${subStyle}">+1.5% fee, auto-swapped for you</span></span><span>→</span></button>`;
-        case '3':
           return `
             <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">How will you send it?</h2>
             <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">Same outcome either way.</p>
@@ -323,7 +318,7 @@
       const label = this.container.querySelector('#sp-wiz-step-label');
       if (body) body.innerHTML = this._wizStepHTML(step);
       if (label) {
-        const labels = { 1: 'Step 1 of 3', '1b': 'Setup wallet', 2: 'Step 2 of 3', 3: 'Step 3 of 3' };
+        const labels = { 1: 'Step 1 of 2', '1b': 'Setup wallet', 2: 'Step 2 of 2' };
         label.textContent = labels[step] || '';
       }
       // Rebind handlers for newly-rendered buttons
@@ -344,9 +339,8 @@
     _wizAnswer(key, value) {
       this._wizardState[key] = value;
       this._track('WIZARD_ANSWER', { key, value, step: String(this._wizardState.step) });
-      if (key === 'hasWallet') return this._wizGoStep(value === 'no' ? '1b' : 2);
-      if (key === 'payType')   return this._wizGoStep(3);
-      if (key === 'method')    return this._wizComplete();
+      if (key === 'payType') return this._wizGoStep(2);
+      if (key === 'method')  return this._wizComplete();
     }
 
     _wizSkip() {
