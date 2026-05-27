@@ -171,10 +171,9 @@
       // Anonymous session ID for telemetry — persists for this widget instance
       this._sessionId = (window.crypto?.randomUUID?.() || `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
 
-      // A/B variant — sticky per widget instance (sessionStorage scoped to host page).
-      // ?sp_variant= URL param wins for QA. Default 50/50 deterministic hash.
+      // Wizard is default for all sessions. ?sp_variant=control override for QA only.
       this._variant = this._assignVariant();
-      this._wizardState = { hasWallet: null, payType: null, method: null, step: 1, done: false };
+      this._wizardState = { payType: null, method: null, step: 1, done: false };
 
       this.init();
     }
@@ -183,19 +182,14 @@
       try {
         const url = new URL(window.location.href);
         const override = url.searchParams.get('sp_variant');
-        if (override === 'guided' || override === 'control') {
-          sessionStorage.setItem('sp_widget_variant', override);
-          return override;
+        if (override === 'control') {
+          sessionStorage.setItem('sp_widget_variant', 'control');
+          return 'control';
         }
-        const cached = sessionStorage.getItem('sp_widget_variant');
-        if (cached === 'guided' || cached === 'control') return cached;
-        let h = 0;
-        for (let i = 0; i < this._sessionId.length; i++) h = ((h << 5) - h + this._sessionId.charCodeAt(i)) | 0;
-        const v = Math.abs(h) % 2 === 0 ? 'control' : 'guided';
-        sessionStorage.setItem('sp_widget_variant', v);
-        return v;
+        sessionStorage.setItem('sp_widget_variant', 'guided');
+        return 'guided';
       } catch {
-        return 'control';
+        return 'guided';
       }
     }
 
