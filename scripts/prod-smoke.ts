@@ -81,6 +81,13 @@ async function main() {
     return `${d.chains.length} chains, Solana first ✓`;
   });
 
+  await check('GET /api/embed/diagnostics/funnel (public)', async () => {
+    const d = await fetchJSON(`${BASE}/api/embed/diagnostics/funnel?hours=12`);
+    if (typeof d.windowHours !== 'number') throw new Error('windowHours missing');
+    if (!d.orders || !d.events || !d.ab) throw new Error('missing top-level sections');
+    return `window=${d.windowHours}h, merchants=${Object.keys(d.orders.byMerchant).length}, abSessions=${d.ab.control.total + d.ab.guided.total}`;
+  });
+
   await check('GET /api/embed/native-price?token=ETH', async () => {
     const d = await fetchJSON(`${BASE}/api/embed/native-price?token=ETH`);
     if (!d.priceUsd || typeof d.priceUsd !== 'number') throw new Error('priceUsd missing/wrong type');
@@ -313,7 +320,7 @@ async function main() {
     if (r.status !== 200) throw new Error(`status ${r.status}`);
     const text = await r.text();
     if (!text.includes('Stranded Funds')) throw new Error('stranded tab missing');
-    if (!text.includes('Widget Events')) throw new Error('widget events tab missing');
+    if (!text.includes('Customer Funnel')) throw new Error('customer funnel tab missing');
     if (!text.includes('Email Logs')) throw new Error('email logs tab missing');
     if (!text.includes('A/B Results')) throw new Error('A/B Results tab missing');
     return 'all new tabs present';

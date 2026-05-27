@@ -1289,6 +1289,98 @@ router.post('/event', async (req, res) => {
   }
 });
 
+// ─── Public funnel diagnostics ────────────────────────────────────────────
+// Aggregate-only — no PII, no secrets. Used by the morning remote-agent dump.
+// Returns: order conversion by merchant, event counts by action + surface, wizard stats.
+router.get('/diagnostics/funnel', async (req, res) => {
+  try {
+    const hours = Math.min(Math.max(parseInt(req.query.hours as string) || 12, 1), 168);
+    const since = new Date(Date.now() - hours * 3600_000);
+
+    // Order conversion per merchant (by company name only — no emails/IDs leaked)
+    const orderRows = await db.order.groupBy({
+      by: ['merchantId', 'status'],
+      where: { createdAt: { gte: since } },
+      _count: true,
+    });
+    const merchantIds = [...new Set(orderRows.map(r => r.merchantId).filter((x): x is string => !!x))];
+    const merchants = merchantIds.length > 0
+      ? await db.merchant.findMany({ where: { id: { in: merchantIds } }, select: { id: true, companyName: true } })
+      : [];
+    const nameByMid = new Map(merchants.map(m => [m.id, m.companyName]));
+
+    const byMerchant: Record<string, Record<string, number>> = {};
+    for (const r of orderRows) {
+      const name = r.merchantId ? (nameByMid.get(r.merchantId) ?? 'unknown') : 'demo';
+      byMerchant[name] = byMerchant[name] ?? {};
+      byMerchant[name][r.status] = r._count;
+    }
+
+    // Event counts by action (last N hours)
+    const eventRows = await db.widgetEvent.groupBy({
+      by: ['action'], where: { createdAt: { gte: since } }, _count: true,
+    });
+    const eventsByAction: Record<string, number> = {};
+    for (const r of eventRows) eventsByAction[r.action] = r._count;
+
+    // Event counts grouped by surface (extract from details JSON)
+    const allEvents = await db.widgetEvent.findMany({
+      where: { createdAt: { gte: since } },
+      select: { action: true, details: true, sessionId: true },
+    });
+    const bySurface = { page: 0, widget: 0, unknown: 0 };
+    const sessionsBySurface = { page: new Set<string>(), widget: new Set<string>() };
+    for (const e of allEvents) {
+      const surface = (e.details as any)?.surface;
+      if (surface === 'page')   { bySurface.page++;   sessionsBySurface.page.add(e.sessionId); }
+      else if (surface === 'widget') { bySurface.widget++; sessionsBySurface.widget.add(e.sessionId); }
+      else bySurface.unknown++;
+    }
+
+    // Wizard funnel: per-session bucketing
+    type Sess = { variant: string | null; stepsViewed: number; answered: boolean; completed: boolean; skipped: boolean; surface: string | null; converted: boolean };
+    const sessions = new Map<string, Sess>();
+    for (const e of allEvents) {
+      const s = sessions.get(e.sessionId) ?? { variant: null, stepsViewed: 0, answered: false, completed: false, skipped: false, surface: null, converted: false };
+      const d = (e.details as any) ?? {};
+      if (d.surface && !s.surface) s.surface = d.surface;
+      if (e.action === 'VARIANT_ASSIGNED' && d.variant) s.variant = d.variant;
+      if (e.action === 'WIZARD_STEP_VIEWED') s.stepsViewed++;
+      if (e.action === 'WIZARD_ANSWER') s.answered = true;
+      if (e.action === 'WIZARD_COMPLETED') s.completed = true;
+      if (e.action === 'WIZARD_SKIPPED') s.skipped = true;
+      if (e.action === 'PAY_CLICKED' || e.action === 'NATIVE_TX_BROADCAST') s.converted = true;
+      sessions.set(e.sessionId, s);
+    }
+    const ab = {
+      control: { total: 0, converted: 0 },
+      guided:  { total: 0, converted: 0, completed: 0, skipped: 0, abandonedMidWizard: 0 },
+    };
+    for (const s of sessions.values()) {
+      if (s.variant === 'control') { ab.control.total++; if (s.converted) ab.control.converted++; }
+      else if (s.variant === 'guided') {
+        ab.guided.total++;
+        if (s.converted) ab.guided.converted++;
+        if (s.completed) ab.guided.completed++;
+        if (s.skipped)   ab.guided.skipped++;
+        if (s.stepsViewed > 0 && !s.completed && !s.skipped) ab.guided.abandonedMidWizard++;
+      }
+    }
+
+    res.json({
+      windowHours: hours,
+      since: since.toISOString(),
+      checkedAt: new Date().toISOString(),
+      orders: { byMerchant },
+      events: { byAction: eventsByAction, bySurface, uniqueSessions: { page: sessionsBySurface.page.size, widget: sessionsBySurface.widget.size } },
+      ab,
+    });
+  } catch (error) {
+    console.error('Diagnostics endpoint error:', error);
+    res.status(500).json({ error: 'Failed to compute diagnostics' });
+  }
+});
+
 // ─── Native token price feed (public, cached) ────────────────────────────────
 router.get('/native-price', async (req, res) => {
   try {
