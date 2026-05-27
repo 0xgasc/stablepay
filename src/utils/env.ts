@@ -29,7 +29,10 @@ const envSchema = z.object({
   ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY must be at least 32 characters').optional(),
 
   // Admin authentication (required for production)
-  ADMIN_EMAIL: z.string().email('ADMIN_EMAIL must be a valid email').optional(),
+  // ADMIN_EMAIL is informational only — relaxed from strict email validation because a
+  // malformed value (e.g. quoted, trailing whitespace, accidental concatenation) was
+  // causing /api/health to 500. Downstream consumers handle bad values gracefully.
+  ADMIN_EMAIL: z.string().optional().transform(v => v?.trim() || undefined),
   ADMIN_PASSWORD: z.string().min(8, 'ADMIN_PASSWORD must be at least 8 characters').optional(),
   ADMIN_API_TOKEN: z.string().min(32, 'ADMIN_API_TOKEN must be at least 32 characters for security').optional(),
 
