@@ -1245,7 +1245,8 @@
             return variant;
         }
 
-        // Wrapper for /api/embed/event — wizard events, fire-and-forget
+        // Wrapper for /api/embed/event — wizard events, fire-and-forget.
+        // Auto-tags every event with surface='page' so admin can distinguish from widget.
         function cpWizTrack(action, details) {
             try {
                 const body = JSON.stringify({
@@ -1253,7 +1254,7 @@
                     action,
                     merchantId: window.currentMerchantId || null,
                     orderId:    window.currentOrderId   || null,
-                    details:    details || {},
+                    details:    Object.assign({ surface: 'page' }, details || {}),
                 });
                 if (navigator.sendBeacon) {
                     navigator.sendBeacon('/api/embed/event', new Blob([body], { type: 'application/json' }));
@@ -1291,6 +1292,7 @@
         function cpWizSkip() {
             cpWizTrack('WIZARD_SKIPPED', { step: String(cpWizState.step) });
             document.getElementById('cpWizard')?.classList.add('hidden');
+            try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
         }
 
         function cpWizComplete() {
@@ -1308,6 +1310,13 @@
             } catch (e) { console.warn('Wizard state apply failed:', e); }
             // Hide wizard, reveal main page
             document.getElementById('cpWizard')?.classList.add('hidden');
+            // Persist done flag so refresh mid-payment doesn't re-show the wizard.
+            try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
+        }
+
+        function cpWizDoneKey() {
+            const orderId = new URLSearchParams(window.location.search).get('orderId') || 'no_order';
+            return `sp_wiz_done_${orderId}`;
         }
 
         // Page visibility (proxy for "tab switched / window minimized")
@@ -1323,7 +1332,9 @@
         (function cpInitVariant() {
             const variant = cpAssignVariant();
             cpWizTrack('VARIANT_ASSIGNED', { variant });
-            if (variant === 'guided') {
+            // Mid-tx safety: if wizard was already completed/skipped for this order in this session, don't re-show.
+            const alreadyDone = (() => { try { return sessionStorage.getItem(cpWizDoneKey()) === '1'; } catch { return false; } })();
+            if (variant === 'guided' && !alreadyDone) {
                 // Defer until DOM ready so the wizard div is in the tree
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', () => {

@@ -394,7 +394,7 @@
                         Native Tokens
                     </button>
                     <button class="tab-btn border-b-2 border-transparent text-purple-400 hover:text-purple-300 hover:border-purple-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="widgetEvents">
-                        Widget Events
+                        Customer Funnel
                     </button>
                     <button class="tab-btn border-b-2 border-transparent text-purple-400 hover:text-purple-300 hover:border-purple-700 py-4 px-1 text-sm font-medium whitespace-nowrap flex-shrink-0" data-tab="emailLogs">
                         Email Logs
@@ -1461,13 +1461,13 @@
         </div>
     </div>
 
-    <!-- Widget Events Tab -->
+    <!-- Customer Funnel Tab -->
     <div id="widgetEventsTab" class="tab-content hidden">
         <div class="bg-slate-950 border border-purple-900/40 p-6">
             <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
                 <div>
-                    <h2 class="text-xl font-bold text-white">Widget Telemetry</h2>
-                    <p class="text-sm text-slate-400 mt-1">Session-level widget events — what customers interact with, where they drop off.</p>
+                    <h2 class="text-xl font-bold text-white">Customer Funnel Events</h2>
+                    <p class="text-sm text-slate-400 mt-1">Session-level events from BOTH surfaces (embed widget + payment page). Use the surface column to distinguish.</p>
                 </div>
                 <div class="flex items-center gap-3 flex-wrap">
                     <select id="weHours" onchange="loadWidgetEvents()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 text-white text-sm">
@@ -1866,7 +1866,7 @@
             } catch (e) { alert(`Error: ${e.message}`); }
         }
 
-        // ─── Widget Events ─────────────────────────────────────────────
+        // ─── Customer Funnel ─────────────────────────────────────────────
         async function loadWidgetEvents() {
             const hours = document.getElementById('weHours').value;
             const action = document.getElementById('weAction').value;
@@ -1891,6 +1891,7 @@
                         <thead class="text-slate-500 uppercase border-b border-slate-800">
                             <tr>
                                 <th class="text-left py-3 px-2">When</th>
+                                <th class="text-left py-3 px-2">Surface</th>
                                 <th class="text-left py-3 px-2">Action</th>
                                 <th class="text-left py-3 px-2">Merchant</th>
                                 <th class="text-left py-3 px-2">Session</th>
@@ -1899,14 +1900,20 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${d.events.map(e => `<tr class="border-b border-slate-900 hover:bg-slate-900/50">
+                            ${d.events.map(e => {
+                                const surface = (e.details && e.details.surface) || (e.userAgent && e.userAgent.includes('Mozilla') ? '?' : '?');
+                                const surfaceLbl = surface === 'page' ? 'page' : surface === 'widget' ? 'widget' : '—';
+                                const surfaceColor = surface === 'page' ? 'text-cyan-400' : surface === 'widget' ? 'text-pink-400' : 'text-slate-500';
+                                return `<tr class="border-b border-slate-900 hover:bg-slate-900/50">
                                 <td class="py-2 px-2 text-slate-400">${new Date(e.createdAt).toISOString().slice(5, 16).replace('T', ' ')}</td>
-                                <td class="py-2 px-2 font-bold ${e.action === 'PAYMENT_FAILED' ? 'text-red-400' : e.action === 'NATIVE_TX_BROADCAST' ? 'text-emerald-400' : 'text-purple-300'}">${e.action}</td>
+                                <td class="py-2 px-2 ${surfaceColor} text-[10px] uppercase">${surfaceLbl}</td>
+                                <td class="py-2 px-2 font-bold ${e.action === 'PAYMENT_FAILED' || e.action === 'TX_REJECTED' ? 'text-red-400' : e.action === 'NATIVE_TX_BROADCAST' ? 'text-emerald-400' : 'text-purple-300'}">${e.action}</td>
                                 <td class="py-2 px-2 text-white">${e.merchantName || '—'}</td>
                                 <td class="py-2 px-2 text-slate-500 font-mono">${e.sessionId.slice(0, 8)}</td>
                                 <td class="py-2 px-2 text-slate-500 font-mono">${e.orderId ? e.orderId.slice(-8) : '—'}</td>
                                 <td class="py-2 px-2 text-slate-400 font-mono text-[10px]">${JSON.stringify(e.details || {}).slice(0, 80)}</td>
-                            </tr>`).join('')}
+                            </tr>`;
+                            }).join('')}
                         </tbody>
                     </table>
                 `;

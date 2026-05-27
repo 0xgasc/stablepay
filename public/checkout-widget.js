@@ -199,7 +199,8 @@
       }
     }
 
-    // Telemetry — fire-and-forget, never throws, never blocks
+    // Telemetry — fire-and-forget, never throws, never blocks.
+    // Auto-tags every event with surface='widget' so admin can distinguish from page.
     _track(action, details) {
       try {
         fetch(`${STABLEPAY_URL}/api/embed/event`, {
@@ -210,7 +211,7 @@
             action,
             merchantId: this.options.merchantId || null,
             orderId:    this.currentOrderId   || null,
-            details:    details || {},
+            details:    Object.assign({ surface: 'widget' }, details || {}),
           }),
           keepalive: true,
         }).catch(() => {});
@@ -238,7 +239,13 @@
         });
       }
 
-      if (this._variant === 'guided' && !this._wizardState.done) {
+      // Mid-tx safety: if the wizard was already completed/skipped in this session, don't re-show on refresh.
+      const wizDoneKey = `sp_widget_wiz_done_${this.options.merchantId || 'any'}`;
+      let alreadyDone = false;
+      try { alreadyDone = sessionStorage.getItem(wizDoneKey) === '1'; } catch {}
+      this._wizDoneKey = wizDoneKey;
+
+      if (this._variant === 'guided' && !this._wizardState.done && !alreadyDone) {
         this._renderWizard();
         this.attachWizardListeners();
         return;
@@ -345,6 +352,7 @@
     _wizSkip() {
       this._track('WIZARD_SKIPPED', { step: String(this._wizardState.step) });
       this._wizardState.done = true;
+      try { if (this._wizDoneKey) sessionStorage.setItem(this._wizDoneKey, '1'); } catch {}
       this.render();
       this.attachEventListeners();
     }
@@ -352,6 +360,7 @@
     _wizComplete() {
       this._track('WIZARD_COMPLETED', this._wizardState);
       this._wizardState.done = true;
+      try { if (this._wizDoneKey) sessionStorage.setItem(this._wizDoneKey, '1'); } catch {}
       // Apply answers as widget state — must happen BEFORE first render
       if (this._wizardState.payType === 'native') this.payMode = 'crypto';
       else if (this._wizardState.payType === 'stable') this.payMode = 'stable';
