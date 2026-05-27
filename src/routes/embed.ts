@@ -1251,6 +1251,16 @@ const ALLOWED_WIDGET_EVENTS = new Set([
   'WIZARD_ANSWER',
   'WIZARD_COMPLETED',
   'WIZARD_SKIPPED',
+  // Funnel drop-off pinpointing — added to close visibility gaps
+  'MANUAL_PAY_VIEWED',       // QR / receive address screen displayed
+  'WALLET_CONNECT_OPENED',    // customer clicked Connect Wallet
+  'WALLET_CONNECT_FAILED',    // wallet refused / rejected / timed out
+  'INSUFFICIENT_BALANCE',     // we showed "not enough X" message
+  'TX_REJECTED',              // user rejected the tx in their wallet popup
+  'ADDRESS_COPIED',           // customer copied the receive address (intent signal)
+  'CANCEL_CLICKED',           // customer clicked Cancel Payment
+  'BACK_CLICKED',             // customer clicked Back to merchant
+  'PAGE_HIDDEN',              // browser tab became hidden (proxy for distraction/abandonment)
 ]);
 
 router.post('/event', async (req, res) => {

@@ -228,6 +228,16 @@
       this._track('VARIANT_ASSIGNED', { variant: this._variant });
       this._track('WIDGET_OPENED', { amount: this.options.amount, productName: this.options.productName, variant: this._variant });
 
+      // Track page-hidden as a proxy for distraction/tab-switch abandonment
+      if (!this._visibilityHandlerAttached) {
+        this._visibilityHandlerAttached = true;
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            this._track('PAGE_HIDDEN', { chain: this.selectedChain?.chain, token: this.selectedToken, mode: this.payMode });
+          }
+        });
+      }
+
       if (this._variant === 'guided' && !this._wizardState.done) {
         this._renderWizard();
         this.attachWizardListeners();
@@ -1288,7 +1298,12 @@
       this.container.addEventListener('click', (e) => {
         if (e.target.id === 'sp-copy-addr-btn') {
           const addr = this.container.querySelector('#sp-pay-address')?.textContent;
-          if (addr) { navigator.clipboard.writeText(addr); e.target.textContent = 'COPIED!'; setTimeout(() => e.target.textContent = 'COPY', 1500); }
+          if (addr) {
+            navigator.clipboard.writeText(addr);
+            e.target.textContent = 'COPIED!';
+            this._track('ADDRESS_COPIED', { chain: this.selectedChain?.chain });
+            setTimeout(() => e.target.textContent = 'COPY', 1500);
+          }
         }
         if (e.target.id === 'sp-copy-amt-btn') {
           const amt = this.container.querySelector('#sp-pay-amount')?.textContent;
@@ -1422,6 +1437,7 @@
     }
 
     async showManualPaymentDetails(method) {
+      this._track('MANUAL_PAY_VIEWED', { method, chain: this.selectedChain?.chain, token: this.selectedToken, mode: this.payMode });
       if (!this.selectedChain) {
         this.showError('Please select a chain first');
         return;
@@ -1942,6 +1958,7 @@
     }
 
     async connectWallet() {
+      this._track('WALLET_CONNECT_OPENED', { chain: this.selectedChain?.chain, token: this.selectedToken });
       const chainConfig = this.selectedChain?.config;
       if (!chainConfig) return;
 
@@ -2269,6 +2286,7 @@
           if (balance < amt) {
             payBtn.disabled = true;
             payBtn.textContent = `Insufficient ${this.selectedToken} (${balance.toFixed(2)} available)`;
+            this._track('INSUFFICIENT_BALANCE', { chain: this.selectedChain?.chain, token: this.selectedToken, balance, needed: amt });
             payBtn.style.background = '#ef4444';
             payBtn.style.color = '#fff';
             return;
@@ -2447,7 +2465,16 @@
     _handlePayError(error) {
       console.error('Payment failed:', error);
       const msg = error.message || '';
-      this._track('PAYMENT_FAILED', { chain: this.selectedChain?.chain, token: this.selectedToken, error: msg.slice(0, 200), code: error.code || null });
+      // Distinguish "user rejected" (TX_REJECTED) from real failures (PAYMENT_FAILED)
+      if (msg.includes('user rejected') || msg.includes('User denied') || error.code === 'ACTION_REJECTED' || error.code === 4001) {
+        this._track('TX_REJECTED', { chain: this.selectedChain?.chain, token: this.selectedToken, msg: msg.slice(0, 200) });
+      } else if (msg.includes('insufficient funds') || msg.includes('exceeds balance')) {
+        this._track('INSUFFICIENT_BALANCE', { chain: this.selectedChain?.chain, token: this.selectedToken, msg: msg.slice(0, 200) });
+      } else if (msg.includes('switch') || msg.includes('chain')) {
+        this._track('WALLET_CONNECT_FAILED', { reason: 'wrong_chain', chain: this.selectedChain?.chain, msg: msg.slice(0, 200) });
+      } else {
+        this._track('PAYMENT_FAILED', { chain: this.selectedChain?.chain, token: this.selectedToken, error: msg.slice(0, 200), code: error.code || null });
+      }
       if (msg.includes('user rejected') || msg.includes('User denied') || error.code === 'ACTION_REJECTED') {
         this.showError('Transaction cancelled');
       } else if (msg.includes('insufficient funds') || msg.includes('exceeds balance') || msg.includes('insufficient balance')) {

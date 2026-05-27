@@ -125,8 +125,14 @@ async function main() {
     return 'silent drop';
   });
 
-  // Wizard A/B telemetry event types must be accepted
-  for (const action of ['VARIANT_ASSIGNED', 'WIZARD_STEP_VIEWED', 'WIZARD_ANSWER', 'WIZARD_COMPLETED', 'WIZARD_SKIPPED']) {
+  // Wizard A/B + funnel drop-off telemetry event types must be accepted
+  const ALL_EVENT_TYPES = [
+    'VARIANT_ASSIGNED', 'WIZARD_STEP_VIEWED', 'WIZARD_ANSWER', 'WIZARD_COMPLETED', 'WIZARD_SKIPPED',
+    'MANUAL_PAY_VIEWED', 'WALLET_CONNECT_OPENED', 'WALLET_CONNECT_FAILED',
+    'INSUFFICIENT_BALANCE', 'TX_REJECTED', 'ADDRESS_COPIED',
+    'CANCEL_CLICKED', 'BACK_CLICKED', 'PAGE_HIDDEN',
+  ];
+  for (const action of ALL_EVENT_TYPES) {
     await check(`POST /api/embed/event (${action})`, async () => {
       const d = await fetchJSON(`${BASE}/api/embed/event`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

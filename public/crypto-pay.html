@@ -1310,6 +1310,15 @@
             document.getElementById('cpWizard')?.classList.add('hidden');
         }
 
+        // Page visibility (proxy for "tab switched / window minimized")
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                cpWizTrack('PAGE_HIDDEN', { hasOrder: !!window.currentOrderId, mode: window._payMode || null });
+            }
+        });
+
+        // (ADDRESS_COPIED is now fired directly by copyPayAddress() — no delegated listener needed.)
+
         // Init on DOM ready — once we have the variant decided, show wizard if guided.
         (function cpInitVariant() {
             const variant = cpAssignVariant();
@@ -2906,6 +2915,7 @@
 
         // Go back to store
         function goBack() {
+            cpWizTrack('BACK_CLICKED', { hasOrder: !!window.currentOrderId });
             // Priority: URL returnUrl > order returnUrl from API > referrer > merchant website > history > /
             const params = new URLSearchParams(window.location.search);
             const returnUrl = params.get('returnUrl') || params.get('cancelUrl');
@@ -4002,6 +4012,7 @@
         }
 
         async function cpManualStep1Next() {
+            cpWizTrack('MANUAL_PAY_VIEWED', { chain: window._orderChain || null, token: window._orderToken || null });
             const addr = document.getElementById('cpSenderWallet').value.trim();
             const chainKey = (document.querySelector('input[name="chain"]:checked')?.value)
                 || window._orderChain
@@ -4248,6 +4259,7 @@
         }
 
         async function cpCancelOrder() {
+            cpWizTrack('CANCEL_CLICKED', { hasOrder: !!window.currentOrderId });
             if (!confirm('Cancel this payment? You can start a new one any time.')) return;
             // Stop any timers/polling so we don't keep banging on a cancelled order
             if (window._cpPolling) { clearInterval(window._cpPolling); window._cpPolling = null; }
@@ -4608,6 +4620,7 @@
             event.target.textContent = 'COPIED!';
             setTimeout(() => event.target.textContent = 'COPY', 1500);
             trackFunnel('address_copied');
+            cpWizTrack('ADDRESS_COPIED', { chain: window._orderChain || null });
         }
 
         function copyPayAmount() {
