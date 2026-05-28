@@ -381,18 +381,15 @@
       this._track('WIZARD_COMPLETED', this._wizardState);
       this._wizardState.done = true;
       try { if (this._wizDoneKey) sessionStorage.setItem(this._wizDoneKey, '1'); } catch {}
-      // Apply answers as widget state — must happen BEFORE first render
-      if (this._wizardState.payType === 'native') this.payMode = 'crypto';
-      else if (this._wizardState.payType === 'stable') this.payMode = 'stable';
-      // method (wallet vs manual) is handled by the existing tab toggles after render
-      const targetTab = this._wizardState.method === 'wallet' ? 'wallet' : 'manual';
+      const targetMode = this._wizardState.payType === 'native' ? 'crypto' : 'stable';
+      const targetTab = this._wizardState.method === 'wallet' ? 'wallet' : 'send';
       this.render();
       this.attachEventListeners();
-      // Switch the method tab after render
-      const tabBtn = this.container.querySelector(targetTab === 'wallet' ? '#sp-method-wallet-tab, [data-method="wallet"]' : '#sp-method-manual-tab, [data-method="manual"]');
-      if (tabBtn && typeof tabBtn.click === 'function') {
-        try { tabBtn.click(); } catch {}
-      }
+      // Use setPayMode (NOT direct assignment) so refreshNativePrice, selectChain,
+      // selectedToken sync, fee banner, and mode-toggle button all update.
+      if (typeof this.setPayMode === 'function') this.setPayMode(targetMode);
+      const tabBtn = this.container.querySelector(`[data-method="${targetTab}"]`);
+      if (tabBtn && typeof tabBtn.click === 'function') { try { tabBtn.click(); } catch {} }
     }
 
     injectStyles() {

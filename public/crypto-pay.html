@@ -1401,11 +1401,79 @@
             }
         }
 
+        // Compute the display string for "Pay X TOKEN" depending on token type.
+        // Returns { display: "0.1234 SOL", amount: 0.1234, raw: "0.1234" } for native;
+        // EURC: { display: "€36.79 EURC", amount: 36.79 }; stable: { display: "39.99 USDC", amount: 39.99 }.
+        async function cpWizComputeDisplayAmount() {
+            const usd = parseFloat(window._productPrice || currentProduct?.price || 0);
+            if (!usd) return { display: '?.?? ' + cpWizState.token, amount: 0 };
+
+            if (NATIVE_TOKENS_SET.has(cpWizState.token)) {
+                try {
+                    const res = await fetch('/api/embed/native-price?token=' + encodeURIComponent(cpWizState.token));
+                    if (res.ok) {
+                        const data = await res.json();
+                        const priceUsd = data.priceUsd;
+                        if (priceUsd) {
+                            const fee = calcConversionFee(usd, cpWizState.chain);
+                            const sendAmt = (usd + fee) / priceUsd;
+                            return { display: sendAmt.toPrecision(4) + ' ' + cpWizState.token, amount: sendAmt, priceUsd, fee };
+                        }
+                    }
+                } catch {}
+                return { display: '... ' + cpWizState.token, amount: 0 };
+            }
+            if (cpWizState.token === 'EURC') {
+                const rate = await getEURRate();
+                const eur = usd * rate;
+                return { display: '€' + eur.toFixed(2) + ' EURC', amount: eur };
+            }
+            return { display: usd.toFixed(2) + ' ' + cpWizState.token, amount: usd };
+        }
+
+        async function cpWizCheckBalance() {
+            if (!connectedAddress || !selectedChainKey || !selectedToken) return { ok: true, reason: 'no-data' };
+            const chainConfig = CHAIN_CONFIG[selectedChainKey];
+            const tokenConfig = chainConfig?.tokens?.[selectedToken];
+            const usd = parseFloat(currentProduct?.price || 0);
+            let needed = usd;
+            if (NATIVE_TOKENS_SET.has(selectedToken)) {
+                const info = await cpWizComputeDisplayAmount();
+                needed = info.amount;
+            } else if (selectedToken === 'EURC') {
+                const rate = await getEURRate();
+                needed = usd * rate;
+            }
+            if (!needed || needed <= 0) return { ok: true, reason: 'no-amount' };
+
+            try {
+                const url = NATIVE_TOKENS_SET.has(selectedToken)
+                    ? '/api/embed/balance?chain=' + encodeURIComponent(selectedChainKey) + '&owner=' + encodeURIComponent(connectedAddress) + '&native=1'
+                    : '/api/embed/balance?chain=' + encodeURIComponent(selectedChainKey) + '&owner=' + encodeURIComponent(connectedAddress) + '&token=' + encodeURIComponent(tokenConfig?.address || '');
+                const res = await fetch(url);
+                if (!res.ok) return { ok: true, reason: 'fetch-failed' };
+                const data = await res.json();
+                const bal = typeof data?.balance === 'number' ? data.balance : NaN;
+                if (Number.isNaN(bal)) return { ok: true, reason: 'unknown' };
+                if (bal < needed) {
+                    cpWizTrack('INSUFFICIENT_BALANCE', { chain: selectedChainKey, token: selectedToken, balance: bal, needed });
+                    return { ok: false, balance: bal, needed };
+                }
+                return { ok: true, balance: bal, needed };
+            } catch {
+                return { ok: true, reason: 'error' };
+            }
+        }
+
         async function cpWizConnectAndPay() {
             const body = document.getElementById('cpWizBody');
             const chainCfg = CHAIN_CONFIG[cpWizState.chain];
             const chainName = chainCfg?.chainName || cpWizState.chain;
-            const amount = window._productPrice || currentProduct?.price || '?.??';
+
+            // Sync global state so initiatePayment + helpers see the wizard's selections
+            selectedChainKey = cpWizState.chain;
+            selectedToken = cpWizState.token;
+            if (NATIVE_TOKENS_SET.has(cpWizState.token)) setPayMode('crypto'); else setPayMode('stable');
 
             body.innerHTML = `<h2 class="text-2xl font-bold text-black mb-2 text-center">Connect your wallet</h2>
                 <p class="text-sm text-gray-600 mb-6 text-center">${cpWizState.token} on ${chainName}</p>
@@ -1420,37 +1488,53 @@
                 btn.disabled = true; btn.textContent = 'Connecting...';
 
                 try {
-                    // Reuse existing wallet connect flow
-                    if (chainCfg?.type === 'solana') {
-                        await connectSolanaWallet();
-                    } else {
-                        await connectEVMWallet();
+                    if (chainCfg?.type === 'solana') await connectSolanaWallet();
+                    else await connectEVMWallet();
+
+                    status.textContent = 'Checking balance...';
+                    const info = await cpWizComputeDisplayAmount();
+                    const balCheck = await cpWizCheckBalance();
+                    if (!balCheck.ok) {
+                        btn.textContent = `Insufficient ${cpWizState.token} (${(balCheck.balance ?? 0).toFixed(4)} available)`;
+                        btn.style.background = '#ef4444'; btn.style.color = '#fff';
+                        btn.disabled = true;
+                        status.textContent = `You need at least ${info.display}`;
+                        status.style.color = '#dc2626';
+                        return;
                     }
 
-                    status.textContent = 'Connected! Preparing payment...';
-                    btn.textContent = `Pay ${amount} ${cpWizState.token}`;
+                    status.textContent = 'Connected! Ready to pay.';
+                    status.style.color = '#10b981';
+                    btn.textContent = 'Pay ' + info.display;
                     btn.style.background = '#10b981';
                     btn.disabled = false;
 
                     btn.onclick = async () => {
                         btn.disabled = true; btn.textContent = 'Processing...';
                         try {
-                            // Lock order to chain if chain-agnostic
                             if (window.currentOrderId) {
+                                const lockBody = { chain: cpWizState.chain, token: cpWizState.token };
+                                if (cpWizState.token === 'EURC') lockBody.amount = info.amount;
                                 const lockRes = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ chain: cpWizState.chain, token: cpWizState.token }),
+                                    body: JSON.stringify(lockBody),
                                 });
                                 const lockData = await lockRes.json();
                                 if (!lockData.success && lockData.error) throw new Error(lockData.error);
+                                // Patch customerWallet (for FROM-address match in scanner)
+                                if (connectedAddress) {
+                                    fetch('/api/embed/order/' + window.currentOrderId + '/wallet', {
+                                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ customerWallet: connectedAddress }),
+                                    }).catch(() => {});
+                                }
                             }
                             await initiatePayment();
-                            // If payment tx sent, start scanning inside wizard
                             cpWizGoStep('scanning');
                             cpWizStartScanning();
                         } catch (e) {
-                            btn.disabled = false; btn.textContent = `Pay ${amount} ${cpWizState.token}`;
+                            btn.disabled = false; btn.textContent = 'Pay ' + info.display;
                             btn.style.background = '#10b981';
                             status.textContent = cpFriendlyError(e);
                             status.style.color = '#dc2626';
@@ -1461,6 +1545,7 @@
                     btn.disabled = false; btn.textContent = 'Connect wallet →'; btn.style.background = '#00E5FF';
                     status.textContent = e.code === 4001 ? 'Connection cancelled — try again' : (e.message || 'Connection failed').slice(0, 120);
                     status.style.color = '#dc2626';
+                    cpWizTrack('WALLET_CONNECT_FAILED', { chain: cpWizState.chain, code: e.code, msg: (e.message || '').slice(0, 200) });
                 }
             };
         }
@@ -1503,11 +1588,16 @@
 
             body.innerHTML = `<div class="text-center py-4"><div class="inline-block animate-spin w-6 h-6 border-4 border-black border-t-transparent rounded-full"></div><p class="text-xs text-gray-500 mt-2">Preparing address...</p></div>`;
 
+            // Compute display amount client-side (covers native + EURC + stable)
+            const info = await cpWizComputeDisplayAmount();
+
             let orderData;
             if (window.currentOrderId) {
+                const lockBody = { chain: cpWizState.chain, token: cpWizState.token };
+                if (cpWizState.token === 'EURC') lockBody.amount = info.amount;
                 const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chain: cpWizState.chain, token: cpWizState.token }),
+                    body: JSON.stringify(lockBody),
                 });
                 orderData = await res.json();
                 if (!orderData.success) throw new Error(orderData.error || 'Failed to lock chain');
@@ -1520,13 +1610,45 @@
             }
 
             const addr = orderData?.paymentAddress || orderData?.order?.paymentAddress || '';
-            const amt = orderData?.order?.amount || window._productPrice || currentProduct?.price || '?.??';
-            const expiresAt = orderData?.order?.expiresAt ? new Date(orderData.order.expiresAt) : new Date(Date.now() + 30 * 60 * 1000);
-            const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(addr);
+            // Native: server returns nativeSendAmount (authoritative). Fallback to client compute.
+            // EURC: server returns amount in EUR. Stable: server returns USD.
+            let amtStr, amtForQR;
+            if (NATIVE_TOKENS_SET.has(cpWizState.token)) {
+                const serverAmt = orderData?.nativeSendAmount;
+                if (serverAmt) {
+                    amtStr = parseFloat(serverAmt).toPrecision(4) + ' ' + cpWizState.token;
+                    amtForQR = serverAmt;
+                } else {
+                    amtStr = info.display;
+                    amtForQR = info.amount;
+                }
+            } else if (cpWizState.token === 'EURC') {
+                amtStr = '€' + (orderData?.amount || info.amount).toFixed(2) + ' EURC';
+                amtForQR = orderData?.amount || info.amount;
+            } else {
+                amtStr = (orderData?.amount || info.amount).toFixed(2) + ' ' + cpWizState.token;
+                amtForQR = orderData?.amount || info.amount;
+            }
+
+            const expiresAt = orderData?.expiresAt
+                ? new Date(orderData.expiresAt)
+                : (orderData?.order?.expiresAt ? new Date(orderData.order.expiresAt) : new Date(Date.now() + 30 * 60 * 1000));
+
+            // Solana Pay URI for Solana chain
+            let qrData = addr;
+            if (cpWizState.chain === 'SOLANA_MAINNET') {
+                if (NATIVE_TOKENS_SET.has(cpWizState.token)) {
+                    qrData = 'solana:' + addr + '?amount=' + amtForQR;
+                } else {
+                    const tokenAddr = CHAIN_CONFIG['SOLANA_MAINNET']?.tokens?.[cpWizState.token]?.address;
+                    if (tokenAddr) qrData = 'solana:' + addr + '?amount=' + amtForQR + '&spl-token=' + tokenAddr;
+                }
+            }
+            const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(qrData);
 
             body.innerHTML = `
                 <h2 class="text-xl font-bold text-black mb-1 text-center">Send exactly</h2>
-                <p class="text-2xl font-bold text-center mb-4" style="color:var(--mc-accent);">${amt} ${cpWizState.token}</p>
+                <p class="text-2xl font-bold text-center mb-4" style="color:var(--mc-accent);">${amtStr}</p>
                 <div class="text-center mb-4">
                     <img src="${qrUrl}" width="180" height="180" alt="QR" class="mx-auto border-2 border-black" />
                 </div>
