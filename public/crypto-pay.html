@@ -599,119 +599,13 @@
         <div class="w-full max-w-md mx-auto">
             <div class="text-center mb-6">
                 <div class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-1">Quick setup</div>
-                <div id="cpWizStepLabel" class="text-xs text-gray-400">Step 1 of 2</div>
+                <div id="cpWizStepLabel" class="text-xs text-gray-400"></div>
             </div>
-
-            <!-- (Removed step 1 "have wallet?" — 60% mid-wizard abandonment told us
-                 it's unnecessary friction. Onboarding is still reachable via the
-                 footer link at the bottom of step 1.) -->
-
-            <!-- Wallet onboarding (reachable via the footer link in step 1) -->
-            <div data-wizstep="1b" class="cp-wizstep hidden">
-                <h2 class="text-2xl font-bold text-black mb-2 text-center">Need a wallet first?</h2>
-                <p class="text-sm text-gray-600 mb-6 text-center">All free. Download, create an account, add some crypto, then come back here.</p>
-                <div class="space-y-3 mb-6">
-                    <a href="https://phantom.app/" target="_blank" rel="noopener"
-                       class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-bold">Phantom</div>
-                                <div class="text-xs text-gray-500 font-normal">Best for Solana — fastest + cheapest</div>
-                            </div>
-                            <span class="text-gray-400">↗</span>
-                        </div>
-                    </a>
-                    <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener"
-                       class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-bold">Coinbase Wallet</div>
-                                <div class="text-xs text-gray-500 font-normal">Trusted brand · supports most chains</div>
-                            </div>
-                            <span class="text-gray-400">↗</span>
-                        </div>
-                    </a>
-                    <a href="https://metamask.io/download/" target="_blank" rel="noopener"
-                       class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-bold">MetaMask</div>
-                                <div class="text-xs text-gray-500 font-normal">Industry standard for Ethereum</div>
-                            </div>
-                            <span class="text-gray-400">↗</span>
-                        </div>
-                    </a>
-                </div>
-                <button onclick="cpWizGoStep(1)"
-                        class="w-full py-4 px-4 font-bold text-base border-4 border-black hover:bg-gray-900 transition"
-                        style="background: #00E5FF; color: #000;">
-                    I'm back — let's pay →
-                </button>
-            </div>
-
-            <!-- Step 1 (was step 2): Stablecoin or native crypto? -->
-            <div data-wizstep="1" class="cp-wizstep">
-                <h2 class="text-2xl font-bold text-black mb-2 text-center">How do you want to pay?</h2>
-                <p class="text-sm text-gray-600 mb-8 text-center">Stablecoins are pegged to $1. Native crypto auto-converts with a small fee.</p>
-                <div class="space-y-3">
-                    <button onclick="cpWizAnswer('payType', 'stable')"
-                            class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-bold">Stablecoin <span class="text-xs text-gray-500 font-normal">(USDC / USDT / EURC)</span></div>
-                                <div class="text-xs text-gray-500 font-normal mt-0.5">No extra conversion fee</div>
-                            </div>
-                            <span class="text-xl">→</span>
-                        </div>
-                    </button>
-                    <button onclick="cpWizAnswer('payType', 'native')"
-                            class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-bold">Native crypto <span class="text-xs text-gray-500 font-normal">(ETH / SOL / BNB)</span></div>
-                                <div class="text-xs text-gray-500 font-normal mt-0.5">+1.5% conversion fee · we auto-swap to USDC</div>
-                            </div>
-                            <span class="text-xl">→</span>
-                        </div>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Step 2 (was step 3): Connect or manual? -->
-            <div data-wizstep="2" class="cp-wizstep hidden">
-                <h2 class="text-2xl font-bold text-black mb-2 text-center">How will you send it?</h2>
-                <p class="text-sm text-gray-600 mb-8 text-center">Either way the merchant gets paid the same.</p>
-                <div class="space-y-3">
-                    <button onclick="cpWizAnswer('method', 'wallet')"
-                            class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-bold">Connect my wallet</div>
-                                <div class="text-xs text-gray-500 font-normal mt-0.5">One click in MetaMask / Phantom / Coinbase</div>
-                            </div>
-                            <span class="text-xl">→</span>
-                        </div>
-                    </button>
-                    <button onclick="cpWizAnswer('method', 'manual')"
-                            class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-bold">Send manually</div>
-                                <div class="text-xs text-gray-500 font-normal mt-0.5">Copy address / scan QR code from your wallet</div>
-                            </div>
-                            <span class="text-xl">→</span>
-                        </div>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Skip + wallet help links -->
-            <div class="text-center mt-6 space-y-2">
+            <div id="cpWizBody"></div>
+            <div id="cpWizHint" class="text-center mt-4 text-xs text-gray-400 font-medium"></div>
+            <div id="cpWizFooter" class="text-center mt-4 space-y-2">
                 <button onclick="cpWizSkip()" class="text-xs text-gray-400 hover:text-gray-600 underline block mx-auto">
                     Skip — show me all options at once
-                </button>
-                <button onclick="cpWizGoStep('1b')" class="text-xs text-gray-400 hover:text-gray-600 underline block mx-auto">
-                    Don't have a wallet yet?
                 </button>
             </div>
         </div>
@@ -1245,50 +1139,464 @@
             } catch (_) { /* never break checkout */ }
         }
 
-        // Wizard state machine
-        const cpWizState = { payType: null, method: null, step: 1 };
+        // ═══ FULL-FLOW WIZARD ═══════════════════════════════════════════
+        // Steps: payType → network → token → method → pay → scanning
+        // Each step is dynamically rendered. Auto-advances when single option.
+        const cpWizState = { payType: null, chain: null, token: null, method: null, step: 'payType' };
+
+        function cpWizBtn(label, sub, onclick) {
+            return `<button onclick="${onclick}" class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
+                <div class="flex items-center justify-between">
+                    <div><div class="font-bold">${label}</div>${sub ? `<div class="text-xs text-gray-500 font-normal mt-0.5">${sub}</div>` : ''}</div>
+                    <span class="text-xl">→</span>
+                </div></button>`;
+        }
+
+        function cpWizBtnIcon(label, sub, onclick, iconUrl) {
+            const img = iconUrl ? `<img src="${iconUrl}" class="w-6 h-6 rounded-full mr-3" onerror="this.style.display='none'">` : '';
+            return `<button onclick="${onclick}" class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">${img}<div><div class="font-bold">${label}</div>${sub ? `<div class="text-xs text-gray-500 font-normal mt-0.5">${sub}</div>` : ''}</div></div>
+                    <span class="text-xl">→</span>
+                </div></button>`;
+        }
+
+        function cpWizStepCount() {
+            const chains = cpWizGetChains();
+            const tokens = cpWizGetTokens();
+            let n = 3; // payType + method + pay
+            if (chains.length > 1) n++;
+            if (tokens.length > 1) n++;
+            return n;
+        }
+
+        function cpWizStepNum(step) {
+            const chains = cpWizGetChains();
+            const tokens = cpWizGetTokens();
+            const order = ['payType'];
+            if (chains.length > 1) order.push('network');
+            if (tokens.length > 1) order.push('token');
+            order.push('method', 'pay');
+            const idx = order.indexOf(step);
+            return idx >= 0 ? idx + 1 : null;
+        }
+
+        function cpWizGetChains() {
+            if (!window._availableChains && !merchantChains?.length) return [];
+            const chains = window._availableChains || merchantChains || [];
+            if (cpWizState.payType === 'native') {
+                return chains.filter(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
+            }
+            return chains;
+        }
+
+        function cpWizGetTokens() {
+            if (!cpWizState.chain) return [];
+            const mc = (window._availableChains || merchantChains || []).find(c => c.chain === cpWizState.chain);
+            if (!mc) return [];
+            if (cpWizState.payType === 'native') {
+                const nt = CHAIN_NATIVE_TOKEN[cpWizState.chain];
+                return nt ? [nt] : [];
+            }
+            const supported = mc.supportedTokens || ['USDC'];
+            return supported.filter(t => !NATIVE_TOKENS_SET.has(t));
+        }
 
         function cpWizGoStep(step) {
             cpWizState.step = step;
-            document.querySelectorAll('.cp-wizstep').forEach(el => el.classList.add('hidden'));
-            const target = document.querySelector(`[data-wizstep="${step}"]`);
-            if (target) target.classList.remove('hidden');
-            const labels = { 1: 'Step 1 of 2', '1b': 'Setup wallet', 2: 'Step 2 of 2' };
-            const lbl = document.getElementById('cpWizStepLabel');
-            if (lbl) lbl.textContent = labels[step] || '';
+            const body = document.getElementById('cpWizBody');
+            const label = document.getElementById('cpWizStepLabel');
+            const hint = document.getElementById('cpWizHint');
+            const footer = document.getElementById('cpWizFooter');
+            if (!body) return;
+
+            const total = cpWizStepCount();
+            const num = cpWizStepNum(step);
+            const hints = { payType: 'Next: pick your network', network: 'Next: choose your coin', token: 'Next: choose how to send', method: 'Next: complete payment', pay: '' };
+
+            if (label) label.textContent = num ? `Step ${num} of ${total}` : (step === '1b' ? 'Get a wallet' : step === 'scanning' ? 'Confirming...' : '');
+            if (hint) hint.textContent = hints[step] || '';
+            if (footer) footer.style.display = (step === 'pay' || step === 'scanning') ? 'none' : '';
+
+            body.innerHTML = cpWizRenderStep(step);
             cpWizTrack('WIZARD_STEP_VIEWED', { step: String(step) });
+        }
+
+        function cpWizRenderStep(step) {
+            const usd = window._productPrice ? parseFloat(window._productPrice).toFixed(2) : (currentProduct?.price?.toFixed(2) || '?.??');
+
+            switch (step) {
+                case 'payType': {
+                    const anyNative = cpWizGetChains().length > 0 || (merchantChains || []).some(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
+                    let html = `<h2 class="text-2xl font-bold text-black mb-2 text-center">How do you want to pay?</h2>
+                        <p class="text-sm text-gray-600 mb-6 text-center">Pay $${usd} with crypto</p>
+                        <div class="space-y-3">
+                        ${cpWizBtn('Stablecoin <span class="text-xs text-gray-500 font-normal">(USDC / USDT)</span>', 'No extra conversion fee', "cpWizAnswer('payType','stable')")}`;
+                    if (anyNative) {
+                        html += cpWizBtn('Native crypto <span class="text-xs text-gray-500 font-normal">(ETH / SOL / BNB)</span>', '+1.5% conversion fee · auto-swapped', "cpWizAnswer('payType','native')");
+                    }
+                    html += `</div>
+                        <div class="text-center mt-5">
+                            <button onclick="cpWizGoStep('1b')" class="text-xs text-gray-400 hover:text-gray-600 underline">Don't have a wallet yet?</button>
+                        </div>`;
+                    return html;
+                }
+
+                case '1b':
+                    return `<h2 class="text-2xl font-bold text-black mb-2 text-center">Need a wallet first?</h2>
+                        <p class="text-sm text-gray-600 mb-6 text-center">All free. Download, create an account, add some crypto, then come back.</p>
+                        <div class="space-y-3 mb-6">
+                            <a href="https://phantom.app/" target="_blank" rel="noopener" class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
+                                <div class="flex items-center justify-between"><div><div class="font-bold">Phantom</div><div class="text-xs text-gray-500 font-normal">Best for Solana — fastest + cheapest</div></div><span class="text-gray-400">↗</span></div></a>
+                            <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener" class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
+                                <div class="flex items-center justify-between"><div><div class="font-bold">Coinbase Wallet</div><div class="text-xs text-gray-500 font-normal">Trusted brand · supports most chains</div></div><span class="text-gray-400">↗</span></div></a>
+                            <a href="https://metamask.io/download/" target="_blank" rel="noopener" class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
+                                <div class="flex items-center justify-between"><div><div class="font-bold">MetaMask</div><div class="text-xs text-gray-500 font-normal">Industry standard for Ethereum</div></div><span class="text-gray-400">↗</span></div></a>
+                        </div>
+                        <button onclick="cpWizGoStep('payType')" class="w-full py-4 px-4 font-bold text-base border-4 border-black hover:bg-gray-900 transition" style="background:#00E5FF;color:#000;">I'm back — let's pay →</button>`;
+
+                case 'network': {
+                    const chains = cpWizGetChains();
+                    const desc = cpWizState.payType === 'native' ? 'Lower fees on L2 networks like Base and Solana.' : 'Solana and Base are cheapest. All deliver instantly.';
+                    let html = `<h2 class="text-2xl font-bold text-black mb-2 text-center">Pick a network</h2>
+                        <p class="text-sm text-gray-600 mb-6 text-center">${desc}</p><div class="space-y-3">`;
+                    for (const mc of chains) {
+                        const cfg = CHAIN_CONFIG[mc.chain];
+                        const name = cfg?.chainName || mc.chain;
+                        const sub = cfg?.description || '';
+                        html += cpWizBtnIcon(name, sub, `cpWizAnswer('chain','${mc.chain}')`, getChainIcon(mc.chain));
+                    }
+                    html += '</div>';
+                    return html;
+                }
+
+                case 'token': {
+                    const tokens = cpWizGetTokens();
+                    const chainName = CHAIN_CONFIG[cpWizState.chain]?.chainName || cpWizState.chain;
+                    let html = `<h2 class="text-2xl font-bold text-black mb-2 text-center">Which coin?</h2>
+                        <p class="text-sm text-gray-600 mb-6 text-center">On ${chainName}</p><div class="space-y-3">`;
+                    for (const t of tokens) {
+                        const sub = NATIVE_TOKENS_SET.has(t) ? '+1.5% conversion fee' : 'No extra fee';
+                        html += cpWizBtnIcon(t, sub, `cpWizAnswer('token','${t}')`, getTokenIcon(t));
+                    }
+                    html += '</div>';
+                    return html;
+                }
+
+                case 'method':
+                    return `<h2 class="text-2xl font-bold text-black mb-2 text-center">How will you send it?</h2>
+                        <p class="text-sm text-gray-600 mb-6 text-center">${cpWizState.token} on ${CHAIN_CONFIG[cpWizState.chain]?.chainName || cpWizState.chain}</p>
+                        <div class="space-y-3">
+                        ${cpWizBtn('Connect my wallet', 'One click in MetaMask / Phantom / Coinbase', "cpWizAnswer('method','wallet')")}
+                        ${cpWizBtn('Send manually', 'Copy address or scan QR code', "cpWizAnswer('method','manual')")}
+                        </div>`;
+
+                case 'pay':
+                    return `<div class="text-center py-8">
+                        <div class="inline-block animate-spin w-8 h-8 border-4 border-black border-t-transparent rounded-full mb-4"></div>
+                        <p class="font-bold text-black">Setting up your payment...</p>
+                    </div>`;
+
+                case 'scanning':
+                    return `<div id="cpWizScan">
+                        <div id="cpWizExpiryWarning" style="display:none;"></div>
+                        <div class="w-full h-1 bg-gray-200 mb-4 overflow-hidden"><div id="cpWizScanBar" class="h-full transition-all duration-1000" style="width:0%;background:var(--mc-accent);"></div></div>
+                        <div class="text-center mb-4">
+                            <p id="cpWizScanStatus" class="text-base font-bold text-black mb-1">Scanning the blockchain...</p>
+                            <p id="cpWizScanTimer" class="text-xs text-gray-500">This can take up to a minute</p>
+                        </div>
+                        <div id="cpWizManualTx" class="hidden bg-gray-50 border-2 border-black p-3 mt-4">
+                            <p class="text-xs font-bold text-black mb-2">Still waiting? Paste your transaction ID:</p>
+                            <div class="flex gap-2">
+                                <input id="cpWizManualTxInput" type="text" placeholder="0x... transaction hash" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
+                                <button onclick="cpWizVerifyManualTx()" class="px-3 py-2 font-bold text-xs text-white" style="background:#000;">VERIFY</button>
+                            </div>
+                            <p id="cpWizManualTxStatus" class="text-xs text-gray-500 mt-1 hidden"></p>
+                        </div>
+                    </div>`;
+
+                default: return '';
+            }
         }
 
         function cpWizAnswer(key, value) {
             cpWizState[key] = value;
             cpWizTrack('WIZARD_ANSWER', { key, value, step: String(cpWizState.step) });
-            if (key === 'payType') return cpWizGoStep(2);
-            if (key === 'method')  return cpWizComplete();
+
+            if (key === 'payType') {
+                const chains = cpWizGetChains();
+                if (chains.length === 1) { cpWizState.chain = chains[0].chain; return cpWizAutoToken(); }
+                if (chains.length === 0) { cpWizSkip(); return; }
+                return cpWizGoStep('network');
+            }
+            if (key === 'chain') { return cpWizAutoToken(); }
+            if (key === 'token') { return cpWizGoStep('method'); }
+            if (key === 'method') { return cpWizStartPay(); }
+        }
+
+        function cpWizAutoToken() {
+            const tokens = cpWizGetTokens();
+            if (tokens.length === 1) { cpWizState.token = tokens[0]; return cpWizGoStep('method'); }
+            if (tokens.length === 0) { cpWizSkip(); return; }
+            return cpWizGoStep('token');
+        }
+
+        async function cpWizStartPay() {
+            cpWizGoStep('pay');
+            try {
+                // Apply selections to page state
+                if (cpWizState.payType === 'native') setPayMode('crypto');
+                else setPayMode('stable');
+                selectChain(cpWizState.chain);
+                selectedToken = cpWizState.token;
+
+                if (cpWizState.method === 'wallet') {
+                    await cpWizConnectAndPay();
+                } else {
+                    await cpWizManualPay();
+                }
+            } catch (err) {
+                console.error('Wizard pay error:', err);
+                const body = document.getElementById('cpWizBody');
+                if (body) body.innerHTML = `<div class="text-center py-6">
+                    <p class="font-bold text-red-600 mb-2">Something went wrong</p>
+                    <p class="text-sm text-gray-600 mb-4">${(err.message || 'Payment setup failed').slice(0, 200)}</p>
+                    <button onclick="cpWizGoStep('method')" class="py-3 px-6 font-bold text-sm border-4 border-black hover:bg-gray-50 transition">← Try again</button>
+                </div>`;
+            }
+        }
+
+        async function cpWizConnectAndPay() {
+            const body = document.getElementById('cpWizBody');
+            const chainCfg = CHAIN_CONFIG[cpWizState.chain];
+            const chainName = chainCfg?.chainName || cpWizState.chain;
+            const amount = window._productPrice || currentProduct?.price || '?.??';
+
+            body.innerHTML = `<h2 class="text-2xl font-bold text-black mb-2 text-center">Connect your wallet</h2>
+                <p class="text-sm text-gray-600 mb-6 text-center">${cpWizState.token} on ${chainName}</p>
+                <button id="cpWizConnBtn" class="w-full py-4 px-4 font-bold text-base border-4 border-black transition" style="background:#00E5FF;color:#000;">
+                    Connect wallet →
+                </button>
+                <p id="cpWizConnStatus" class="text-xs text-gray-500 text-center mt-3"></p>`;
+
+            document.getElementById('cpWizConnBtn').onclick = async () => {
+                const btn = document.getElementById('cpWizConnBtn');
+                const status = document.getElementById('cpWizConnStatus');
+                btn.disabled = true; btn.textContent = 'Connecting...';
+
+                try {
+                    // Reuse existing wallet connect flow
+                    if (chainCfg?.type === 'solana') {
+                        await connectSolanaWallet();
+                    } else {
+                        await connectEVMWallet();
+                    }
+
+                    status.textContent = 'Connected! Preparing payment...';
+                    btn.textContent = `Pay ${amount} ${cpWizState.token}`;
+                    btn.style.background = '#10b981';
+                    btn.disabled = false;
+
+                    btn.onclick = async () => {
+                        btn.disabled = true; btn.textContent = 'Processing...';
+                        try {
+                            // Lock order to chain if chain-agnostic
+                            if (window.currentOrderId) {
+                                const lockRes = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ chain: cpWizState.chain, token: cpWizState.token }),
+                                });
+                                const lockData = await lockRes.json();
+                                if (!lockData.success && lockData.error) throw new Error(lockData.error);
+                            }
+                            await initiatePayment();
+                            // If payment tx sent, start scanning inside wizard
+                            cpWizGoStep('scanning');
+                            cpWizStartScanning();
+                        } catch (e) {
+                            btn.disabled = false; btn.textContent = `Pay ${amount} ${cpWizState.token}`;
+                            btn.style.background = '#10b981';
+                            status.textContent = cpFriendlyError(e);
+                            status.style.color = '#dc2626';
+                            cpWizTrack('TX_REJECTED', { chain: cpWizState.chain, token: cpWizState.token, msg: (e.message || '').slice(0, 200) });
+                        }
+                    };
+                } catch (e) {
+                    btn.disabled = false; btn.textContent = 'Connect wallet →'; btn.style.background = '#00E5FF';
+                    status.textContent = e.code === 4001 ? 'Connection cancelled — try again' : (e.message || 'Connection failed').slice(0, 120);
+                    status.style.color = '#dc2626';
+                }
+            };
+        }
+
+        async function cpWizManualPay() {
+            const body = document.getElementById('cpWizBody');
+            const chainCfg = CHAIN_CONFIG[cpWizState.chain];
+            const chainName = chainCfg?.chainName || cpWizState.chain;
+
+            body.innerHTML = `<h2 class="text-2xl font-bold text-black mb-2 text-center">Send payment</h2>
+                <p class="text-sm text-gray-600 mb-4 text-center">${cpWizState.token} on ${chainName}</p>
+                <div class="text-center py-4"><div class="inline-block animate-spin w-6 h-6 border-4 border-black border-t-transparent rounded-full"></div><p class="text-xs text-gray-500 mt-2">Preparing address...</p></div>`;
+
+            // Lock order to chain + token
+            let orderData;
+            if (window.currentOrderId) {
+                const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chain: cpWizState.chain, token: cpWizState.token }),
+                });
+                orderData = await res.json();
+                if (!orderData.success) throw new Error(orderData.error || 'Failed to lock chain');
+            }
+
+            const addr = orderData?.paymentAddress || orderData?.order?.paymentAddress || '';
+            const amt = orderData?.order?.amount || window._productPrice || currentProduct?.price || '?.??';
+            const expiresAt = orderData?.order?.expiresAt ? new Date(orderData.order.expiresAt) : new Date(Date.now() + 30 * 60 * 1000);
+            const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(addr);
+
+            body.innerHTML = `
+                <h2 class="text-xl font-bold text-black mb-1 text-center">Send exactly</h2>
+                <p class="text-2xl font-bold text-center mb-4" style="color:var(--mc-accent);">${amt} ${cpWizState.token}</p>
+                <div class="text-center mb-4">
+                    <img src="${qrUrl}" width="180" height="180" alt="QR" class="mx-auto border-2 border-black" />
+                </div>
+                <div class="bg-gray-50 border-2 border-black p-3 mb-3">
+                    <p class="text-xs text-gray-500 mb-1">To this ${chainName} address:</p>
+                    <div class="flex items-center gap-2">
+                        <code class="text-xs font-mono text-black break-all flex-1">${addr}</code>
+                        <button onclick="navigator.clipboard.writeText('${addr}');this.textContent='Copied!';cpWizTrack('ADDRESS_COPIED',{chain:'${cpWizState.chain}'})" class="px-2 py-1 text-xs font-bold border-2 border-black hover:bg-gray-100 whitespace-nowrap">COPY</button>
+                    </div>
+                </div>
+                <div class="text-center mb-4">
+                    <p class="text-xs text-gray-500">Expires in <span id="cpWizManualCountdown" class="font-bold">--:--</span></p>
+                    <div id="cpWizManualExpWarning" style="display:none;"></div>
+                </div>
+                <button id="cpWizSentBtn" class="w-full py-4 px-4 font-bold text-base border-4 border-black transition" style="background:#00E5FF;color:#000;">
+                    I've sent the payment →
+                </button>`;
+
+            // Start countdown
+            const countdownEl = document.getElementById('cpWizManualCountdown');
+            const warnEl = document.getElementById('cpWizManualExpWarning');
+            const countdownTimer = setInterval(() => {
+                const secs = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+                if (countdownEl) countdownEl.textContent = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+                if (secs <= 0) { clearInterval(countdownTimer); if (countdownEl) countdownEl.textContent = 'Expired'; }
+                if (warnEl) {
+                    if (secs <= 60 && secs > 0) { warnEl.style.cssText = 'display:block;background:#fecaca;border:2px solid #ef4444;padding:6px 10px;font-size:12px;font-weight:600;text-align:center;margin-top:6px;'; warnEl.textContent = 'Less than 1 minute!'; }
+                    else if (secs <= 300) { warnEl.style.cssText = 'display:block;background:#fef3c7;border:2px solid #f59e0b;padding:6px 10px;font-size:12px;text-align:center;margin-top:6px;'; warnEl.textContent = 'Less than 5 minutes remaining'; }
+                    else { warnEl.style.display = 'none'; }
+                }
+            }, 1000);
+
+            document.getElementById('cpWizSentBtn').onclick = () => {
+                clearInterval(countdownTimer);
+                cpWizGoStep('scanning');
+                cpWizStartScanning();
+            };
+        }
+
+        function cpWizStartScanning() {
+            const startedAt = Date.now();
+            const statuses = [
+                { at: 0, text: 'Scanning the blockchain...' },
+                { at: 5000, text: 'Checking the public ledger...' },
+                { at: 10000, text: 'Verifying your transaction...' },
+                { at: 15000, text: 'Still looking — paste your TX below' },
+            ];
+            let statusIdx = 0;
+
+            const timer = setInterval(() => {
+                const elapsed = Date.now() - startedAt;
+                const bar = document.getElementById('cpWizScanBar');
+                const statusEl = document.getElementById('cpWizScanStatus');
+                const timerEl = document.getElementById('cpWizScanTimer');
+                if (!statusEl) { clearInterval(timer); return; }
+
+                if (bar) bar.style.width = Math.min(95, (elapsed / 180000) * 100) + '%';
+                while (statusIdx + 1 < statuses.length && elapsed >= statuses[statusIdx + 1].at) statusIdx++;
+                statusEl.textContent = statuses[statusIdx].text;
+
+                if (elapsed > 15000) {
+                    document.getElementById('cpWizManualTx')?.classList.remove('hidden');
+                    if (timerEl) timerEl.textContent = 'Paste your TX below to speed this up';
+                } else {
+                    const sl = Math.max(1, Math.ceil((15000 - elapsed) / 1000));
+                    if (timerEl) timerEl.textContent = `Manual TX paste in ${sl}s`;
+                }
+            }, 1000);
+
+            // Poll for confirmation
+            const poller = setInterval(async () => {
+                if (!window.currentOrderId) return;
+                try {
+                    const res = await fetch('/api/embed/order/' + window.currentOrderId);
+                    const data = await res.json();
+                    if (data.status === 'CONFIRMED') {
+                        clearInterval(timer); clearInterval(poller);
+                        const bar = document.getElementById('cpWizScanBar');
+                        if (bar) bar.style.width = '100%';
+                        try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
+                        document.getElementById('cpWizard')?.classList.add('hidden');
+                        const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };
+                        if (typeof showPaymentSuccess === 'function') showPaymentSuccess(product, data.chain, data.explorerLink || '#', data.id);
+                    } else if (data.status === 'EXPIRED' || data.status === 'CANCELLED') {
+                        clearInterval(timer); clearInterval(poller);
+                        const statusEl = document.getElementById('cpWizScanStatus');
+                        if (statusEl) statusEl.textContent = 'Order ' + data.status.toLowerCase();
+                        const timerEl = document.getElementById('cpWizScanTimer');
+                        if (timerEl) timerEl.textContent = 'Please start a new payment';
+                    } else if (data.wrongTokenDetected && data.status === 'PENDING') {
+                        const wt = data.wrongTokenDetected;
+                        const statusEl = document.getElementById('cpWizScanStatus');
+                        if (statusEl) statusEl.innerHTML = `<span style="color:#d97706">Detected <strong>${wt.receivedToken || 'wrong token'}</strong> — this order expects <strong>${wt.expectedToken}</strong></span>`;
+                    } else if (data.txDetected && data.requiredConfirms) {
+                        const got = Math.min(data.confirmations || 0, data.requiredConfirms);
+                        const bar = document.getElementById('cpWizScanBar');
+                        if (bar) bar.style.width = Math.min(95, 30 + (got / data.requiredConfirms) * 65) + '%';
+                        const statusEl = document.getElementById('cpWizScanStatus');
+                        if (statusEl) statusEl.textContent = `Detected — confirmation ${got} of ${data.requiredConfirms}`;
+                        document.getElementById('cpWizManualTx')?.classList.add('hidden');
+                    } else if (data.expiresAt) {
+                        const secs = Math.max(0, Math.floor((new Date(data.expiresAt).getTime() - Date.now()) / 1000));
+                        const w = document.getElementById('cpWizExpiryWarning');
+                        if (w) {
+                            if (secs <= 60 && secs > 0) { w.textContent = 'Less than 1 minute!'; w.style.cssText = 'display:block;background:#fecaca;border:2px solid #ef4444;padding:6px 10px;font-size:12px;font-weight:600;text-align:center;margin-bottom:8px;'; }
+                            else if (secs <= 300) { w.textContent = 'Less than 5 minutes remaining'; w.style.cssText = 'display:block;background:#fef3c7;border:2px solid #f59e0b;padding:6px 10px;font-size:12px;text-align:center;margin-bottom:8px;'; }
+                            else { w.style.display = 'none'; }
+                        }
+                    }
+                } catch {}
+            }, 4000);
+            window._cpWizPoller = poller;
+            window._cpWizTimer = timer;
+        }
+
+        async function cpWizVerifyManualTx() {
+            const input = document.getElementById('cpWizManualTxInput');
+            const status = document.getElementById('cpWizManualTxStatus');
+            const val = input?.value?.trim();
+            if (!val || !window.currentOrderId) return;
+            status.classList.remove('hidden');
+            status.textContent = 'Verifying...'; status.style.color = '';
+            try {
+                const res = await fetch('/api/embed/order/' + window.currentOrderId + '/verify-tx', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ txHash: val }),
+                });
+                const data = await res.json();
+                if (data.success) { status.textContent = 'Verified! Confirming...'; status.style.color = '#10b981'; }
+                else { status.textContent = data.error || 'Could not verify'; status.style.color = '#dc2626'; }
+            } catch { status.textContent = 'Verification failed'; status.style.color = '#dc2626'; }
         }
 
         function cpWizSkip() {
             cpWizTrack('WIZARD_SKIPPED', { step: String(cpWizState.step) });
             document.getElementById('cpWizard')?.classList.add('hidden');
             try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
-        }
-
-        function cpWizComplete() {
-            cpWizTrack('WIZARD_COMPLETED', {
-                hasWallet: cpWizState.hasWallet,
-                payType:   cpWizState.payType,
-                method:    cpWizState.method,
-            });
-            // Apply answers to page state
-            try {
-                if (cpWizState.payType === 'native' && typeof setPayMode === 'function') setPayMode('crypto');
-                else if (cpWizState.payType === 'stable' && typeof setPayMode === 'function') setPayMode('stable');
-                if (cpWizState.method === 'wallet' && typeof switchPayMethod === 'function') switchPayMethod('wallet');
-                else if (cpWizState.method === 'manual' && typeof switchPayMethod === 'function') switchPayMethod('manual');
-            } catch (e) { console.warn('Wizard state apply failed:', e); }
-            // Hide wizard, reveal main page
-            document.getElementById('cpWizard')?.classList.add('hidden');
-            // Persist done flag so refresh mid-payment doesn't re-show the wizard.
-            try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
+            if (window._cpWizPoller) { clearInterval(window._cpWizPoller); window._cpWizPoller = null; }
+            if (window._cpWizTimer) { clearInterval(window._cpWizTimer); window._cpWizTimer = null; }
         }
 
         function cpWizDoneKey() {
@@ -1296,32 +1604,22 @@
             return `sp_wiz_done_${orderId}`;
         }
 
-        // Page visibility (proxy for "tab switched / window minimized")
+        // Page visibility
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 cpWizTrack('PAGE_HIDDEN', { hasOrder: !!window.currentOrderId, mode: window._payMode || null });
             }
         });
 
-        // (ADDRESS_COPIED is now fired directly by copyPayAddress() — no delegated listener needed.)
-
-        // Init on DOM ready — once we have the variant decided, show wizard if guided.
+        // Init: show wizard for all sessions (unless already done this order)
         (function cpInitVariant() {
             const variant = cpAssignVariant();
             cpWizTrack('VARIANT_ASSIGNED', { variant });
-            // Mid-tx safety: if wizard was already completed/skipped for this order in this session, don't re-show.
             const alreadyDone = (() => { try { return sessionStorage.getItem(cpWizDoneKey()) === '1'; } catch { return false; } })();
             if (variant === 'guided' && !alreadyDone) {
-                // Defer until DOM ready so the wizard div is in the tree
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', () => {
-                        document.getElementById('cpWizard')?.classList.remove('hidden');
-                        cpWizGoStep(1);
-                    });
-                } else {
-                    document.getElementById('cpWizard')?.classList.remove('hidden');
-                    cpWizGoStep(1);
-                }
+                const show = () => { document.getElementById('cpWizard')?.classList.remove('hidden'); cpWizGoStep('payType'); };
+                if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
+                else show();
             }
         })();
         // Track when customers open the "how does this work?" helpers — tells us if they're useful.
