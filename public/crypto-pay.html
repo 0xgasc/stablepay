@@ -1109,7 +1109,10 @@
 
         function cpAssignVariant() {
             const url = new URL(window.location.href);
-            const override = url.searchParams.get('variant');
+            if (url.searchParams.get('sp_reset') === '1') {
+                ['sp_variant', 'sp_sid'].forEach(k => sessionStorage.removeItem(k));
+            }
+            const override = url.searchParams.get('variant') || url.searchParams.get('sp_variant');
             if (override === 'guided' || override === 'control') {
                 sessionStorage.setItem('sp_variant', override);
                 return override;

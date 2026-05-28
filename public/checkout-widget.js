@@ -168,8 +168,20 @@
       this.connectedWallet = null;
       this.provider = null;
 
-      // Anonymous session ID for telemetry — persists for this widget instance
-      this._sessionId = (window.crypto?.randomUUID?.() || `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
+      // Anonymous session ID for telemetry — persists across modal opens in the same
+      // browser session via sessionStorage. Without this cache, every modal open
+      // generates a new sessionId, inflating session counts for repeat-opens (and
+      // skewing A/B totals because heavy users get counted N times under the same variant).
+      try {
+        let sid = sessionStorage.getItem('sp_widget_sid');
+        if (!sid) {
+          sid = (window.crypto?.randomUUID?.() || `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
+          sessionStorage.setItem('sp_widget_sid', sid);
+        }
+        this._sessionId = sid;
+      } catch {
+        this._sessionId = (window.crypto?.randomUUID?.() || `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
+      }
 
       // 50/50 A/B: guided wizard vs classic. ?sp_variant=guided|control override for QA.
       this._variant = this._assignVariant();
@@ -181,7 +193,10 @@
     _assignVariant() {
       try {
         const url = new URL(window.location.href);
-        const override = url.searchParams.get('sp_variant');
+        if (url.searchParams.get('sp_reset') === '1') {
+          ['sp_widget_variant', 'sp_widget_sid'].forEach(k => sessionStorage.removeItem(k));
+        }
+        const override = url.searchParams.get('sp_variant') || url.searchParams.get('variant');
         if (override === 'guided' || override === 'control') {
           sessionStorage.setItem('sp_widget_variant', override);
           return override;
