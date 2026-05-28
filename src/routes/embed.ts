@@ -213,13 +213,20 @@ router.get('/chains', async (req, res) => {
       return 0;
     });
 
+    // FORCE_NATIVE_FOR_ALL=true makes every wallet appear as accepting native tokens
+    // so the wizard + widget UIs offer the native option universally during the testing phase.
+    const nativeForAll = String(process.env.FORCE_NATIVE_FOR_ALL || '').toLowerCase() === 'true';
+    const wallets = nativeForAll
+      ? orderedWallets.map(w => ({ ...w, acceptNativeTokens: true }))
+      : orderedWallets;
+
     res.json({
       merchantId,
       storeId: storeId || null,
       merchantName: storeBranding?.displayName || merchant.companyName,
       merchantWebsite: (storeId ? (await db.store.findUnique({ where: { id: storeId as string }, select: { website: true } }))?.website : null) || merchant.website || null,
       chains: orderedWallets.map(w => w.chain),
-      wallets: orderedWallets,
+      wallets,
       widgetConfig: storeBranding || widgetConfig,
     });
   } catch (error) {
@@ -418,7 +425,10 @@ router.post('/checkout', rateLimit({
         return res.status(400).json({ error: 'chain is required for native token orders' });
       }
       const walletConfig = wallet as any;
-      if (!walletConfig.acceptNativeTokens) {
+      // FORCE_NATIVE_FOR_ALL=true bypasses the per-wallet opt-in during the testing phase
+      // so every merchant offers native by default. Flip to false to restore opt-in.
+      const nativeForAll = String(process.env.FORCE_NATIVE_FOR_ALL || '').toLowerCase() === 'true';
+      if (!nativeForAll && !walletConfig.acceptNativeTokens) {
         return res.status(400).json({
           error: 'Native tokens not enabled',
           message: 'This merchant does not accept ETH/SOL/BNB on this chain. Please use USDC.',
@@ -593,7 +603,10 @@ router.get('/order/:orderId', async (req, res) => {
         orderBy: { priority: 'asc' },
         select: { chain: true, address: true, supportedTokens: true, acceptNativeTokens: true, preferredStablecoin: true },
       });
-      availableChains = wallets;
+      const nativeForAll = String(process.env.FORCE_NATIVE_FOR_ALL || '').toLowerCase() === 'true';
+      availableChains = nativeForAll
+        ? wallets.map(w => ({ ...w, acceptNativeTokens: true }))
+        : wallets;
     }
 
     // Resolve branding — store branding fully replaces merchant when order has storeId.
@@ -710,8 +723,9 @@ router.post('/order/:orderId/chain', async (req, res) => {
       });
     }
     if (isNativeChainLock) {
+      const nativeForAll = String(process.env.FORCE_NATIVE_FOR_ALL || '').toLowerCase() === 'true';
       const walletRecord = await db.merchantWallet.findFirst({ where: { merchantId: order.merchantId, chain, isActive: true } });
-      if (!walletRecord?.acceptNativeTokens) {
+      if (!nativeForAll && !walletRecord?.acceptNativeTokens) {
         return res.status(400).json({ error: 'Native tokens not enabled', message: 'This merchant does not accept ETH/SOL/BNB on this chain.' });
       }
     }
