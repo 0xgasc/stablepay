@@ -920,6 +920,8 @@
 
                 <!-- STEP 3: Listening / verifying -->
                 <div id="cpManualStep3" class="hidden">
+                    <!-- Expiry warning banner (shown at ≤5min and ≤1min) -->
+                    <div id="cpExpiryWarning" style="display:none;"></div>
                     <!-- Progress bar -->
                     <div class="w-full h-1 bg-gray-200 mb-4 overflow-hidden">
                         <div id="cpProgressBar" class="h-full transition-all duration-1000" style="width: 0%; background: var(--mc-accent);"></div>
@@ -2040,6 +2042,7 @@
                     payBtn.style.background = '#ef4444';
                     payBtn.style.color = '#fff';
                     payBtn.disabled = true;
+                    cpWizTrack('INSUFFICIENT_BALANCE', { chain: selectedChainKey, token: selectedToken, balance, needed: requiredAmt });
                 } else if (Number.isNaN(balance)) {
                     payBtn.textContent = window._mcCustomButtonText || `PAY WITH ${selectedToken}`;
                     payBtn.style.background = '';
@@ -3284,6 +3287,12 @@
 
             } catch (error) {
                 console.error('Payment error:', error);
+                const msg = (error?.message || error?.reason || String(error) || '').toLowerCase();
+                if (msg.includes('user rejected') || msg.includes('user denied') || error?.code === 4001 || error?.code === 'ACTION_REJECTED') {
+                    cpWizTrack('TX_REJECTED', { chain: selectedChainKey, token: selectedToken, msg: msg.slice(0, 200) });
+                } else {
+                    cpWizTrack('PAYMENT_FAILED', { chain: selectedChainKey, token: selectedToken, msg: msg.slice(0, 200) });
+                }
                 showError(cpFriendlyError(error));
                 hideTxStatus();
             }
@@ -4409,11 +4418,9 @@
         // Dynamic status messages during scan (matches widget pattern)
         const CP_STATUS_TIMELINE = [
             { at: 0, text: 'Scanning the blockchain...' },
-            { at: 8000, text: 'Checking the public ledger...' },
-            { at: 16000, text: 'Verifying your transaction...' },
-            { at: 25000, text: 'Waiting for network confirmation...' },
-            { at: 35000, text: 'Almost there...' },
-            { at: 45000, text: "Still looking — paste your TX below to help us find it" },
+            { at: 5000, text: 'Checking the public ledger...' },
+            { at: 10000, text: 'Verifying your transaction...' },
+            { at: 15000, text: "Still looking — paste your TX below to help us find it" },
         ];
 
         // Chain-specific manual TX validation
@@ -4497,11 +4504,11 @@
                 }
                 if (statusEl) statusEl.textContent = CP_STATUS_TIMELINE[lastStatusIndex].text;
 
-                if (elapsed > 45000) {
+                if (elapsed > 15000) {
                     document.getElementById('cpManualTxBox').classList.remove('hidden');
                     if (timerEl) timerEl.textContent = 'Pasting your TX below speeds this up';
                 } else {
-                    const secsLeft = Math.max(1, Math.ceil((45000 - elapsed) / 1000));
+                    const secsLeft = Math.max(1, Math.ceil((15000 - elapsed) / 1000));
                     if (timerEl) timerEl.textContent = `Manual TX paste unlocks in ${secsLeft}s`;
                 }
                 if (elapsed > TIMEOUT_MS) {
@@ -4530,6 +4537,25 @@
                         clearInterval(window._cpProgressTimer); window._cpProgressTimer = null;
                         if (statusEl) statusEl.textContent = 'Order ' + data.status.toLowerCase();
                         if (timerEl) timerEl.textContent = 'Please start a new payment';
+                    } else if (data.status === 'PENDING' && data.expiresAt) {
+                        const secsLeft = Math.max(0, Math.floor((new Date(data.expiresAt).getTime() - Date.now()) / 1000));
+                        const warningEl = document.getElementById('cpExpiryWarning');
+                        if (warningEl) {
+                            if (secsLeft <= 60 && secsLeft > 0) {
+                                warningEl.textContent = 'Less than 1 minute remaining! Complete payment now or start over.';
+                                warningEl.style.cssText = 'display:block;background:#fecaca;border:2px solid #ef4444;padding:8px 12px;font-size:13px;font-weight:600;text-align:center;margin-bottom:8px;';
+                            } else if (secsLeft <= 300) {
+                                warningEl.textContent = 'Less than 5 minutes remaining.';
+                                warningEl.style.cssText = 'display:block;background:#fef3c7;border:2px solid #f59e0b;padding:8px 12px;font-size:13px;text-align:center;margin-bottom:8px;';
+                            } else {
+                                warningEl.style.display = 'none';
+                            }
+                        }
+                    }
+                    if (data.wrongTokenDetected && data.status === 'PENDING') {
+                        const wt = data.wrongTokenDetected;
+                        if (statusEl) statusEl.innerHTML = `<span style="color:#d97706">We detected a <strong>${wt.receivedToken || 'different token'}</strong> transfer, but this order expects <strong>${wt.expectedToken}</strong>.</span>`;
+                        if (timerEl) timerEl.textContent = 'Please send the correct token to complete payment.';
                     } else if (data.txDetected && data.requiredConfirms) {
                         // Tx detected on-chain but not yet enough confirmations.
                         // Show the customer real progress instead of the generic timeline so they

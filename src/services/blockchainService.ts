@@ -4,6 +4,7 @@ import { CHAIN_CONFIGS } from '../config/chains';
 import { Chain } from '../types';
 import { Decimal } from '@prisma/client/runtime/library';
 import { OrderService } from './orderService';
+import { webhookService } from './webhookService';
 import { logger } from '../utils/logger';
 
 const USDC_ABI = [
@@ -51,11 +52,48 @@ export const TRON_TOKEN_CONTRACTS: Record<string, string> = {
   USDC: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8',
 };
 
-// Accepts ±0.1% tolerance. Anything outside (under OR over) is rejected.
-export function amountWithinTolerance(txAmount: number, orderAmount: number): boolean {
+function reverseTokenLookup(chain: string, contractAddr: string): string | null {
+  const stables = CHAIN_STABLES[chain];
+  if (!stables) return null;
+  const lower = contractAddr.toLowerCase();
+  for (const [token, addr] of Object.entries(stables)) {
+    if (addr.toLowerCase() === lower) return token;
+  }
+  return null;
+}
+
+function reverseSolanaMintLookup(mint: string): string | null {
+  for (const [token, m] of Object.entries(SOLANA_TOKEN_MINTS)) {
+    if (m === mint) return token;
+  }
+  return null;
+}
+
+async function flagWrongToken(orderId: string, merchantId: string | null, expected: string, received: string | null, txHash: string, chain: string) {
+  try {
+    const existing = await db.order.findUnique({ where: { id: orderId }, select: { metadata: true } });
+    const meta = (existing?.metadata as Record<string, unknown>) || {};
+    await db.order.update({
+      where: { id: orderId },
+      data: {
+        metadata: {
+          ...meta,
+          wrongTokenDetected: { expectedToken: expected, receivedToken: received, txHash, chain, detectedAt: new Date().toISOString() },
+        },
+      },
+    });
+    if (merchantId) {
+      webhookService.sendWebhook(merchantId, 'order.wrong_token', {
+        orderId, expectedToken: expected, receivedToken: received, txHash, chain,
+      }).catch(() => {});
+    }
+  } catch (e) { logger.warn('flagWrongToken failed', { orderId, error: (e as Error).message }); }
+}
+
+export function amountWithinTolerance(txAmount: number, orderAmount: number, tolerance = 0.01): boolean {
   if (orderAmount <= 0) return false;
   const diff = Math.abs(txAmount - orderAmount) / orderAmount;
-  return diff <= 0.001;
+  return diff <= tolerance;
 }
 
 export class BlockchainService {
@@ -99,7 +137,7 @@ export class BlockchainService {
           status: 'PENDING',
           expiresAt: { gt: new Date() },
         },
-        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, createdAt: true, token: true },
+        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, createdAt: true, token: true, merchantId: true },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -238,6 +276,7 @@ export class BlockchainService {
                 logContract,
                 txHash,
               });
+              flagWrongToken(order.id, order.merchantId, order.token, reverseTokenLookup(chain, logContract), txHash, chain);
               continue;
             }
 
@@ -542,7 +581,7 @@ export class BlockchainService {
     try {
       const pendingOrders = await db.order.findMany({
         where: { chain: 'SOLANA_MAINNET', status: 'PENDING', expiresAt: { gt: new Date() } },
-        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, token: true },
+        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, token: true, merchantId: true },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -697,6 +736,7 @@ export class BlockchainService {
                     actualMint: info.mint,
                     txHash,
                   });
+                  flagWrongToken(order.id, order.merchantId, order.token, reverseSolanaMintLookup(info.mint), txHash, 'SOLANA_MAINNET');
                   continue;
                 }
 
@@ -758,7 +798,7 @@ export class BlockchainService {
           status: 'PENDING',
           expiresAt: { gt: new Date() },
         },
-        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, token: true },
+        select: { id: true, paymentAddress: true, amount: true, customerWallet: true, token: true, merchantId: true },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -815,6 +855,7 @@ export class BlockchainService {
                   actualToken: tokenName,
                   txHash,
                 });
+                flagWrongToken(order.id, order.merchantId, order.token, tokenName, txHash, 'TRON_MAINNET');
                 continue;
               }
 

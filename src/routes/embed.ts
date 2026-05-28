@@ -643,6 +643,7 @@ router.get('/order/:orderId', async (req, res) => {
       requiredConfirms,
       confirmedAt: tx?.blockTimestamp?.toISOString() || null,
       expiresAt: order.expiresAt.toISOString(),
+      wrongTokenDetected: md.wrongTokenDetected || null,
     });
   } catch (error) {
     console.error('Get embed order error:', error);

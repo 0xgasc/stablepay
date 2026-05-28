@@ -789,6 +789,8 @@
               </div>
               <!-- Step 3: Verification -->
               <div id="sp-send-step3" style="display: none; padding: 20px;">
+                <!-- Expiry warning banner -->
+                <div id="sp-expiry-warning" style="display:none;"></div>
                 <!-- Progress bar -->
                 <div style="width: 100%; height: 4px; background: var(--sp-card); margin-bottom: 16px; overflow: hidden;">
                   <div id="sp-progress-bar" style="width: 0%; height: 100%; background: #00E5FF; transition: width 1s linear;"></div>
@@ -799,7 +801,7 @@
                   <p id="sp-poll-timer" style="font-size: 9px; color: var(--sp-muted);">This can take up to a minute</p>
                 </div>
 
-                <!-- Manual TX (hidden until 45s) -->
+                <!-- Manual TX (hidden until 15s) -->
                 <div id="sp-manual-tx" style="display: none; margin-top: 16px; text-align: left;">
                   <div style="background: var(--sp-card); border: 1px solid var(--sp-border); padding: 10px; border-radius: 4px;">
                     <p style="font-size: 11px; font-weight: 600; color: var(--sp-text); margin-bottom: 6px;">Paste your transaction ID</p>
@@ -1651,16 +1653,14 @@
       if (this._pollingInterval) return; // Don't double-poll
 
       const pollStartTime = Date.now();
-      const MANUAL_TX_TIMEOUT = 45000; // Show manual entry after 45s
+      const MANUAL_TX_TIMEOUT = 15000;
       let manualShown = false;
 
       const statusMessages = [
         { at: 0, text: 'Stablo is scanning the blockchain...' },
-        { at: 8, text: 'Checking the public ledger...' },
-        { at: 16, text: 'Verifying your transaction...' },
-        { at: 25, text: 'Waiting for network confirmation...' },
-        { at: 35, text: 'Almost there...' },
-        { at: 45, text: 'Still looking — paste your TX below to help Stablo find it' },
+        { at: 5, text: 'Checking the public ledger...' },
+        { at: 10, text: 'Verifying your transaction...' },
+        { at: 15, text: 'Still looking — paste your TX below to help Stablo find it' },
       ];
 
       // Timer display + progress bar
@@ -1831,6 +1831,35 @@
             this._pollingInterval = null;
             this._timerInterval = null;
             this.showSuccess(data);
+          } else if (data.status === 'EXPIRED' || data.status === 'CANCELLED') {
+            clearInterval(this._pollingInterval);
+            clearInterval(this._timerInterval);
+            this._pollingInterval = null;
+            this._timerInterval = null;
+            const pollStatus = this.container.querySelector('#sp-poll-status');
+            if (pollStatus) pollStatus.textContent = 'Order ' + data.status.toLowerCase();
+            const pollTimer = this.container.querySelector('#sp-poll-timer');
+            if (pollTimer) pollTimer.textContent = 'Please start a new payment';
+          } else if (data.wrongTokenDetected && data.status === 'PENDING') {
+            const wt = data.wrongTokenDetected;
+            const pollStatus = this.container.querySelector('#sp-poll-status');
+            if (pollStatus) pollStatus.innerHTML = `We detected a <strong>${wt.receivedToken || 'different token'}</strong> transfer, but this order expects <strong>${wt.expectedToken}</strong>.`;
+            const pollTimer = this.container.querySelector('#sp-poll-timer');
+            if (pollTimer) pollTimer.textContent = 'Please send the correct token to complete payment.';
+          } else if (data.status === 'PENDING' && data.expiresAt) {
+            const secsLeft = Math.max(0, Math.floor((new Date(data.expiresAt).getTime() - Date.now()) / 1000));
+            const warningEl = this.container.querySelector('#sp-expiry-warning');
+            if (warningEl) {
+              if (secsLeft <= 60 && secsLeft > 0) {
+                warningEl.textContent = 'Less than 1 minute! Complete payment now.';
+                warningEl.style.cssText = 'display:block;background:#fecaca;border:2px solid #ef4444;padding:6px 10px;font-size:12px;font-weight:600;text-align:center;margin-bottom:6px;';
+              } else if (secsLeft <= 300) {
+                warningEl.textContent = 'Less than 5 minutes remaining.';
+                warningEl.style.cssText = 'display:block;background:#fef3c7;border:2px solid #f59e0b;padding:6px 10px;font-size:12px;text-align:center;margin-bottom:6px;';
+              } else {
+                warningEl.style.display = 'none';
+              }
+            }
           }
         } catch (err) {
           // Silently retry
@@ -2052,13 +2081,15 @@
         this.provider = selectedProvider;
       } catch (err) {
         if (err.code === -32002) {
+          this._track('WALLET_CONNECT_FAILED', { reason: 'pending_request', chain: this.selectedChain?.chain, msg: 'pending_request' });
           this.showError('Your wallet has a pending request. Open MetaMask and approve or reject it, then try again.');
           return;
         }
         if (err.code === 4001) {
-          // User rejected — don't show error
+          this._track('WALLET_CONNECT_FAILED', { reason: 'user_rejected', chain: this.selectedChain?.chain });
           return;
         }
+        this._track('WALLET_CONNECT_FAILED', { reason: 'unknown', chain: this.selectedChain?.chain, msg: (err.message || '').slice(0, 200) });
         throw err;
       }
 
