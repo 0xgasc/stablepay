@@ -595,16 +595,16 @@
          Renders fullscreen when sessionStorage.sp_variant === 'guided'.
          Each step fires WIZARD_* telemetry. On completion, sets page state
          (mode + method) and hides itself; existing payment workflow proceeds. -->
-    <div id="cpWizard" class="hidden fixed inset-0 z-[1000] bg-white flex items-center justify-center p-4 overflow-y-auto">
-        <div class="w-full max-w-md mx-auto">
-            <div class="text-center mb-6">
-                <div class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-1">Quick setup</div>
-                <div id="cpWizStepLabel" class="text-xs text-gray-400"></div>
+    <div id="cpWizard" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:#fff;justify-content:center;align-items:center;padding:16px;overflow-y:auto;">
+        <div style="width:100%;max-width:28rem;margin:0 auto;">
+            <div style="text-align:center;margin-bottom:24px;">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#6b7280;font-weight:700;margin-bottom:4px;">Quick setup</div>
+                <div id="cpWizStepLabel" style="font-size:12px;color:#9ca3af;"></div>
             </div>
             <div id="cpWizBody"></div>
-            <div id="cpWizHint" class="text-center mt-4 text-xs text-gray-400 font-medium"></div>
-            <div id="cpWizFooter" class="text-center mt-4 space-y-2">
-                <button onclick="cpWizSkip()" class="text-xs text-gray-400 hover:text-gray-600 underline block mx-auto">
+            <div id="cpWizHint" style="text-align:center;margin-top:16px;font-size:12px;color:#9ca3af;font-weight:500;"></div>
+            <div id="cpWizFooter" style="text-align:center;margin-top:16px;">
+                <button data-wiz="skip" style="font-size:12px;color:#9ca3af;background:none;border:none;text-decoration:underline;cursor:pointer;">
                     Skip — show me all options at once
                 </button>
             </div>
@@ -1154,22 +1154,39 @@
         // Each step is dynamically rendered. Auto-advances when single option.
         const cpWizState = { payType: null, chain: null, token: null, method: null, step: 'payType' };
 
-        function cpWizBtn(label, sub, onclick) {
-            return `<button onclick="${onclick}" class="w-full py-4 px-4 bg-white text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left cursor-pointer">
-                <div class="flex items-center justify-between">
-                    <div><div class="font-bold">${label}</div>${sub ? `<div class="text-xs text-gray-500 font-normal mt-0.5">${sub}</div>` : ''}</div>
-                    <span class="text-xl">→</span>
+        function cpWizBtn(label, sub, actionKey, actionVal) {
+            return `<button data-wiz="${actionKey}" data-val="${actionVal || ''}" style="background:#fff;color:#000;border:4px solid #000;width:100%;padding:16px;font-weight:700;font-size:16px;text-align:left;cursor:pointer;-webkit-appearance:none;appearance:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;pointer-events:none;">
+                    <div><div style="font-weight:700;">${label}</div>${sub ? `<div style="font-size:12px;color:#6b7280;font-weight:400;margin-top:2px;">${sub}</div>` : ''}</div>
+                    <span style="font-size:20px;">→</span>
                 </div></button>`;
         }
 
-        function cpWizBtnIcon(label, sub, onclick, iconUrl) {
-            const img = iconUrl ? `<img src="${iconUrl}" class="w-6 h-6 rounded-full mr-3" onerror="this.style.display='none'">` : '';
-            return `<button onclick="${onclick}" class="w-full py-4 px-4 bg-white text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left cursor-pointer">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">${img}<div><div class="font-bold">${label}</div>${sub ? `<div class="text-xs text-gray-500 font-normal mt-0.5">${sub}</div>` : ''}</div></div>
-                    <span class="text-xl">→</span>
+        function cpWizBtnIcon(label, sub, actionKey, actionVal, iconUrl) {
+            const img = iconUrl ? `<img src="${iconUrl}" style="width:24px;height:24px;border-radius:50%;margin-right:12px;" onerror="this.style.display='none'">` : '';
+            return `<button data-wiz="${actionKey}" data-val="${actionVal || ''}" style="background:#fff;color:#000;border:4px solid #000;width:100%;padding:16px;font-weight:700;font-size:16px;text-align:left;cursor:pointer;-webkit-appearance:none;appearance:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;pointer-events:none;">
+                    <div style="display:flex;align-items:center;pointer-events:none;">${img}<div><div style="font-weight:700;">${label}</div>${sub ? `<div style="font-size:12px;color:#6b7280;font-weight:400;margin-top:2px;">${sub}</div>` : ''}</div></div>
+                    <span style="font-size:20px;">→</span>
                 </div></button>`;
         }
+
+        // Event delegation — captures click on any wizard button, works reliably on mobile
+        document.getElementById('cpWizard').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-wiz]');
+            if (!btn) return;
+            const key = btn.getAttribute('data-wiz');
+            const val = btn.getAttribute('data-val') || '';
+            if (key === 'answer') { const [k, v] = val.split(':'); cpWizAnswer(k, v); }
+            else if (key === 'goto') cpWizGoStep(val);
+            else if (key === 'skip') cpWizSkip();
+            else if (key === 'verify-tx') cpWizVerifyManualTx();
+            else if (key === 'copy') {
+                navigator.clipboard.writeText(val).catch(() => {});
+                btn.textContent = 'Copied!';
+                cpWizTrack('ADDRESS_COPIED', { chain: cpWizState.chain });
+            }
+        });
 
         function cpWizStepCount() {
             const chains = cpWizGetChains();
@@ -1238,43 +1255,43 @@
             switch (step) {
                 case 'payType': {
                     const anyNative = cpWizGetChains().length > 0 || (merchantChains || []).some(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
-                    let html = `<h2 class="text-2xl font-bold text-black mb-2 text-center">How do you want to pay?</h2>
-                        <p class="text-sm text-gray-600 mb-6 text-center">Pay $${usd} with crypto</p>
-                        <div class="space-y-3">
-                        ${cpWizBtn('Stablecoin <span class="text-xs text-gray-500 font-normal">(USDC / USDT)</span>', 'No extra conversion fee', "cpWizAnswer('payType','stable')")}`;
+                    let html = `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">How do you want to pay?</h2>
+                        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">Pay $${usd} with crypto</p>
+                        <div style="display:flex;flex-direction:column;gap:12px;">
+                        ${cpWizBtn('Stablecoin <span style="font-size:12px;color:#6b7280;font-weight:400;">(USDC / USDT)</span>', 'No extra conversion fee', 'answer', 'payType:stable')}`;
                     if (anyNative) {
-                        html += cpWizBtn('Native crypto <span class="text-xs text-gray-500 font-normal">(ETH / SOL / BNB)</span>', '+1.5% conversion fee · auto-swapped', "cpWizAnswer('payType','native')");
+                        html += cpWizBtn('Native crypto <span style="font-size:12px;color:#6b7280;font-weight:400;">(ETH / SOL / BNB)</span>', '+1.5% conversion fee · auto-swapped', 'answer', 'payType:native');
                     }
                     html += `</div>
-                        <div class="text-center mt-5">
-                            <button onclick="cpWizGoStep('1b')" class="text-xs text-gray-400 hover:text-gray-600 underline">Don't have a wallet yet?</button>
+                        <div style="text-align:center;margin-top:20px;">
+                            <button data-wiz="goto" data-val="1b" style="font-size:12px;color:#9ca3af;background:none;border:none;text-decoration:underline;cursor:pointer;">Don't have a wallet yet?</button>
                         </div>`;
                     return html;
                 }
 
                 case '1b':
-                    return `<h2 class="text-2xl font-bold text-black mb-2 text-center">Need a wallet first?</h2>
-                        <p class="text-sm text-gray-600 mb-6 text-center">All free. Download, create an account, add some crypto, then come back.</p>
-                        <div class="space-y-3 mb-6">
-                            <a href="https://phantom.app/" target="_blank" rel="noopener" class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
-                                <div class="flex items-center justify-between"><div><div class="font-bold">Phantom</div><div class="text-xs text-gray-500 font-normal">Best for Solana — fastest + cheapest</div></div><span class="text-gray-400">↗</span></div></a>
-                            <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener" class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
-                                <div class="flex items-center justify-between"><div><div class="font-bold">Coinbase Wallet</div><div class="text-xs text-gray-500 font-normal">Trusted brand · supports most chains</div></div><span class="text-gray-400">↗</span></div></a>
-                            <a href="https://metamask.io/download/" target="_blank" rel="noopener" class="block w-full py-3 px-4 bg-white text-black font-bold text-sm border-4 border-black hover:bg-gray-50 transition">
-                                <div class="flex items-center justify-between"><div><div class="font-bold">MetaMask</div><div class="text-xs text-gray-500 font-normal">Industry standard for Ethereum</div></div><span class="text-gray-400">↗</span></div></a>
+                    return `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">Need a wallet first?</h2>
+                        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">All free. Download, create an account, add some crypto, then come back.</p>
+                        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">
+                            <a href="https://phantom.app/" target="_blank" rel="noopener" style="display:block;width:100%;padding:12px 16px;background:#fff;color:#000;font-weight:700;font-size:14px;border:4px solid #000;text-decoration:none;box-sizing:border-box;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;"><div><div style="font-weight:700;">Phantom</div><div style="font-size:12px;color:#6b7280;font-weight:400;">Best for Solana — fastest + cheapest</div></div><span style="color:#9ca3af;">↗</span></div></a>
+                            <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener" style="display:block;width:100%;padding:12px 16px;background:#fff;color:#000;font-weight:700;font-size:14px;border:4px solid #000;text-decoration:none;box-sizing:border-box;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;"><div><div style="font-weight:700;">Coinbase Wallet</div><div style="font-size:12px;color:#6b7280;font-weight:400;">Trusted brand · supports most chains</div></div><span style="color:#9ca3af;">↗</span></div></a>
+                            <a href="https://metamask.io/download/" target="_blank" rel="noopener" style="display:block;width:100%;padding:12px 16px;background:#fff;color:#000;font-weight:700;font-size:14px;border:4px solid #000;text-decoration:none;box-sizing:border-box;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;"><div><div style="font-weight:700;">MetaMask</div><div style="font-size:12px;color:#6b7280;font-weight:400;">Industry standard for Ethereum</div></div><span style="color:#9ca3af;">↗</span></div></a>
                         </div>
-                        <button onclick="cpWizGoStep('payType')" class="w-full py-4 px-4 font-bold text-base border-4 border-black hover:bg-gray-900 transition" style="background:#00E5FF;color:#000;">I'm back — let's pay →</button>`;
+                        <button data-wiz="goto" data-val="payType" style="width:100%;padding:16px;font-weight:700;font-size:16px;border:4px solid #000;background:#00E5FF;color:#000;cursor:pointer;">I'm back — let's pay →</button>`;
 
                 case 'network': {
                     const chains = cpWizGetChains();
                     const desc = cpWizState.payType === 'native' ? 'Lower fees on L2 networks like Base and Solana.' : 'Solana and Base are cheapest. All deliver instantly.';
-                    let html = `<h2 class="text-2xl font-bold text-black mb-2 text-center">Pick a network</h2>
-                        <p class="text-sm text-gray-600 mb-6 text-center">${desc}</p><div class="space-y-3">`;
+                    let html = `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">Pick a network</h2>
+                        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">${desc}</p><div style="display:flex;flex-direction:column;gap:12px;">`;
                     for (const mc of chains) {
                         const cfg = CHAIN_CONFIG[mc.chain];
                         const name = cfg?.chainName || mc.chain;
                         const sub = cfg?.description || '';
-                        html += cpWizBtnIcon(name, sub, `cpWizAnswer('chain','${mc.chain}')`, getChainIcon(mc.chain));
+                        html += cpWizBtnIcon(name, sub, 'answer', 'chain:' + mc.chain, getChainIcon(mc.chain));
                     }
                     html += '</div>';
                     return html;
@@ -1283,22 +1300,22 @@
                 case 'token': {
                     const tokens = cpWizGetTokens();
                     const chainName = CHAIN_CONFIG[cpWizState.chain]?.chainName || cpWizState.chain;
-                    let html = `<h2 class="text-2xl font-bold text-black mb-2 text-center">Which coin?</h2>
-                        <p class="text-sm text-gray-600 mb-6 text-center">On ${chainName}</p><div class="space-y-3">`;
+                    let html = `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">Which coin?</h2>
+                        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">On ${chainName}</p><div style="display:flex;flex-direction:column;gap:12px;">`;
                     for (const t of tokens) {
                         const sub = NATIVE_TOKENS_SET.has(t) ? '+1.5% conversion fee' : 'No extra fee';
-                        html += cpWizBtnIcon(t, sub, `cpWizAnswer('token','${t}')`, getTokenIcon(t));
+                        html += cpWizBtnIcon(t, sub, 'answer', 'token:' + t, getTokenIcon(t));
                     }
                     html += '</div>';
                     return html;
                 }
 
                 case 'method':
-                    return `<h2 class="text-2xl font-bold text-black mb-2 text-center">How will you send it?</h2>
-                        <p class="text-sm text-gray-600 mb-6 text-center">${cpWizState.token} on ${CHAIN_CONFIG[cpWizState.chain]?.chainName || cpWizState.chain}</p>
-                        <div class="space-y-3">
-                        ${cpWizBtn('Connect my wallet', 'One click in MetaMask / Phantom / Coinbase', "cpWizAnswer('method','wallet')")}
-                        ${cpWizBtn('Send manually', 'Copy address or scan QR code', "cpWizAnswer('method','manual')")}
+                    return `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">How will you send it?</h2>
+                        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">${cpWizState.token} on ${CHAIN_CONFIG[cpWizState.chain]?.chainName || cpWizState.chain}</p>
+                        <div style="display:flex;flex-direction:column;gap:12px;">
+                        ${cpWizBtn('Connect my wallet', 'One click in MetaMask / Phantom / Coinbase', 'answer', 'method:wallet')}
+                        ${cpWizBtn('Send manually', 'Copy address or scan QR code', 'answer', 'method:manual')}
                         </div>`;
 
                 case 'pay':
@@ -1319,7 +1336,7 @@
                             <p class="text-xs font-bold text-black mb-2">Still waiting? Paste your transaction ID:</p>
                             <div class="flex gap-2">
                                 <input id="cpWizManualTxInput" type="text" placeholder="0x... transaction hash" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
-                                <button onclick="cpWizVerifyManualTx()" class="px-3 py-2 font-bold text-xs text-white" style="background:#000;">VERIFY</button>
+                                <button data-wiz="verify-tx" style="padding:8px 12px;font-weight:700;font-size:12px;color:#fff;background:#000;border:none;cursor:pointer;">VERIFY</button>
                             </div>
                             <p id="cpWizManualTxStatus" class="text-xs text-gray-500 mt-1 hidden"></p>
                         </div>
@@ -1371,7 +1388,7 @@
                 if (body) body.innerHTML = `<div class="text-center py-6">
                     <p class="font-bold text-red-600 mb-2">Something went wrong</p>
                     <p class="text-sm text-gray-600 mb-4">${(err.message || 'Payment setup failed').slice(0, 200)}</p>
-                    <button onclick="cpWizGoStep('method')" class="py-3 px-6 font-bold text-sm border-4 border-black hover:bg-gray-50 transition">← Try again</button>
+                    <button data-wiz="goto" data-val="method" style="padding:12px 24px;font-weight:700;font-size:14px;border:4px solid #000;background:#fff;cursor:pointer;">← Try again</button>
                 </div>`;
             }
         }
@@ -1475,7 +1492,7 @@
                     <p class="text-xs text-gray-500 mb-1">To this ${chainName} address:</p>
                     <div class="flex items-center gap-2">
                         <code class="text-xs font-mono text-black break-all flex-1">${addr}</code>
-                        <button onclick="navigator.clipboard.writeText('${addr}');this.textContent='Copied!';cpWizTrack('ADDRESS_COPIED',{chain:'${cpWizState.chain}'})" class="px-2 py-1 text-xs font-bold border-2 border-black hover:bg-gray-100 whitespace-nowrap">COPY</button>
+                        <button data-wiz="copy" data-val="${addr}" style="padding:4px 8px;font-size:12px;font-weight:700;border:2px solid #000;background:#fff;cursor:pointer;">COPY</button>
                     </div>
                 </div>
                 <div class="text-center mb-4">
@@ -1548,7 +1565,7 @@
                         const bar = document.getElementById('cpWizScanBar');
                         if (bar) bar.style.width = '100%';
                         try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
-                        document.getElementById('cpWizard')?.classList.add('hidden');
+                        const wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'none';
                         const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };
                         if (typeof showPaymentSuccess === 'function') showPaymentSuccess(product, data.chain, data.explorerLink || '#', data.id);
                     } else if (data.status === 'EXPIRED' || data.status === 'CANCELLED') {
@@ -1603,7 +1620,7 @@
 
         function cpWizSkip() {
             cpWizTrack('WIZARD_SKIPPED', { step: String(cpWizState.step) });
-            document.getElementById('cpWizard')?.classList.add('hidden');
+            const wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'none';
             try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
             if (window._cpWizPoller) { clearInterval(window._cpWizPoller); window._cpWizPoller = null; }
             if (window._cpWizTimer) { clearInterval(window._cpWizTimer); window._cpWizTimer = null; }
@@ -1627,7 +1644,7 @@
             cpWizTrack('VARIANT_ASSIGNED', { variant });
             const alreadyDone = (() => { try { return sessionStorage.getItem(cpWizDoneKey()) === '1'; } catch { return false; } })();
             if (variant === 'guided' && !alreadyDone) {
-                const show = () => { document.getElementById('cpWizard')?.classList.remove('hidden'); cpWizGoStep('payType'); };
+                const show = () => { const w = document.getElementById('cpWizard'); if (w) w.style.display = 'flex'; cpWizGoStep('payType'); };
                 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
                 else show();
             }
