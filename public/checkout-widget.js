@@ -259,12 +259,14 @@
       const isDark = this.options.theme === 'dark';
       const accent = this.options.accentColor;
       const brutal = this.options.borderStyle === 'brutal';
+      console.log('[SP] renderWizard', { container: this.container, parent: this.container.parentElement });
       this.container.innerHTML = `
         <div class="sp-widget sp-wiz ${this.options.theme}" style="
           background: ${isDark ? '#1a1a1a' : '#fff'};
           color: ${isDark ? '#fff' : '#000'};
           ${brutal ? 'border: 4px solid #000; box-shadow: 8px 8px 0 #000;' : 'border: 1px solid #e5e7eb; border-radius: 12px;'}
           padding: 24px 20px;
+          pointer-events: auto;
           font-family: ${this.options.fontFamily || "'Space Grotesk', -apple-system, system-ui, sans-serif"};
         ">
           <div style="text-align: center; margin-bottom: 16px;">
@@ -321,38 +323,43 @@
         const labels = { 1: 'Step 1 of 2', '1b': 'Setup wallet', 2: 'Step 2 of 2' };
         label.textContent = labels[step] || '';
       }
-      // Direct listeners on each button as fallback for mobile
-      this.container.querySelectorAll('.sp-wiz-ans').forEach(btn => {
+      const btns = this.container.querySelectorAll('.sp-wiz-ans');
+      console.log('[SP] wizGoStep', step, 'found', btns.length, 'answer btns');
+      btns.forEach(btn => {
         const k = btn.dataset.key, v = btn.dataset.value;
-        const h = (e) => { e.stopPropagation(); e.preventDefault(); this._wizAnswer(k, v); };
-        btn.onclick = h;
-        btn.ontouchend = h;
+        btn.addEventListener('click', (e) => { console.log('[SP] btn click', k, v); e.stopPropagation(); e.preventDefault(); this._wizAnswer(k, v); });
+        btn.addEventListener('touchend', (e) => { console.log('[SP] btn touch', k, v); e.stopPropagation(); e.preventDefault(); this._wizAnswer(k, v); });
       });
       this.container.querySelectorAll('.sp-wiz-goto').forEach(btn => {
         const s = btn.dataset.step;
-        const h = (e) => { e.stopPropagation(); e.preventDefault(); this._wizGoStep(s); };
-        btn.onclick = h;
-        btn.ontouchend = h;
+        btn.addEventListener('click', (e) => { console.log('[SP] goto click', s); e.stopPropagation(); e.preventDefault(); this._wizGoStep(s); });
+        btn.addEventListener('touchend', (e) => { console.log('[SP] goto touch', s); e.stopPropagation(); e.preventDefault(); this._wizGoStep(s); });
       });
       const skip = this.container.querySelector('#sp-wiz-skip');
       if (skip) {
-        const h = (e) => { e.stopPropagation(); e.preventDefault(); this._wizSkip(); };
-        skip.onclick = h;
-        skip.ontouchend = h;
+        skip.addEventListener('click', (e) => { console.log('[SP] skip click'); e.stopPropagation(); e.preventDefault(); this._wizSkip(); });
+        skip.addEventListener('touchend', (e) => { console.log('[SP] skip touch'); e.stopPropagation(); e.preventDefault(); this._wizSkip(); });
       }
       this._track('WIZARD_STEP_VIEWED', { step: String(step) });
     }
 
     attachWizardListeners() {
-      const handler = (e) => {
+      this.container.addEventListener('click', (e) => {
+        console.log('[SP] container click', e.target.tagName, e.target.className, e.target.textContent?.slice(0, 30));
         const ans = e.target.closest('.sp-wiz-ans');
         if (ans) { e.stopPropagation(); e.preventDefault(); return this._wizAnswer(ans.dataset.key, ans.dataset.value); }
         const goto = e.target.closest('.sp-wiz-goto');
         if (goto) { e.stopPropagation(); e.preventDefault(); return this._wizGoStep(goto.dataset.step); }
         if (e.target.closest('#sp-wiz-skip')) { e.stopPropagation(); e.preventDefault(); return this._wizSkip(); }
-      };
-      this.container.addEventListener('click', handler);
-      this.container.addEventListener('touchend', handler);
+      });
+      this.container.addEventListener('touchend', (e) => {
+        console.log('[SP] container touch', e.target.tagName, e.target.className);
+        const ans = e.target.closest('.sp-wiz-ans');
+        if (ans) { e.stopPropagation(); e.preventDefault(); return this._wizAnswer(ans.dataset.key, ans.dataset.value); }
+        const goto = e.target.closest('.sp-wiz-goto');
+        if (goto) { e.stopPropagation(); e.preventDefault(); return this._wizGoStep(goto.dataset.step); }
+        if (e.target.closest('#sp-wiz-skip')) { e.stopPropagation(); e.preventDefault(); return this._wizSkip(); }
+      });
     }
 
     _wizAnswer(key, value) {
@@ -3017,30 +3024,68 @@
     version: WIDGET_VERSION,
     create: (element, options) => new StablePayCheckout(element, options),
     checkout: (options) => {
+      const scrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+
       const overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+      overlay.addEventListener('touchmove', (e) => { if (e.target === overlay) e.preventDefault(); }, { passive: false });
+
       const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'max-width:420px;width:100%;max-height:90vh;overflow-y:auto;position:relative;';
+      wrapper.style.cssText = 'max-width:420px;width:100%;max-height:90vh;overflow-y:auto;position:relative;pointer-events:auto;';
+
       const closeBtn = document.createElement('button');
       closeBtn.textContent = '×';
       closeBtn.style.cssText = 'position:absolute;top:8px;right:12px;z-index:10;background:none;border:none;color:#999;font-size:24px;cursor:pointer;min-width:44px;min-height:44px;';
-      const closeOverlay = () => { overlay.remove(); document.querySelectorAll('[data-sp-cancel-bar]').forEach(el => el.remove()); if (options.onCancel) options.onCancel(); };
+
+      let spCheckout = null;
+      const restoreBody = () => {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, scrollY);
+      };
+      const closeOverlay = () => {
+        if (spCheckout && spCheckout.currentOrderId) {
+          fetch(`${STABLEPAY_URL}/api/embed/order/${spCheckout.currentOrderId}/cancel`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'customer_closed' })
+          }).catch(() => {});
+        }
+        if (spCheckout && spCheckout._pollingInterval) clearInterval(spCheckout._pollingInterval);
+        if (spCheckout && spCheckout._countdownInterval) clearInterval(spCheckout._countdownInterval);
+        overlay.remove();
+        restoreBody();
+        document.querySelectorAll('[data-sp-cancel-bar]').forEach(el => el.remove());
+        if (options.onCancel) options.onCancel();
+      };
+
       closeBtn.addEventListener('click', closeOverlay);
       closeBtn.addEventListener('touchend', (e) => { e.preventDefault(); closeOverlay(); });
       overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
       wrapper.addEventListener('click', (e) => e.stopPropagation());
+      wrapper.addEventListener('touchend', (e) => e.stopPropagation());
+
       wrapper.appendChild(closeBtn);
       const innerContainer = document.createElement('div');
+      innerContainer.style.cssText = 'position:relative;pointer-events:auto;';
       wrapper.appendChild(innerContainer);
       overlay.appendChild(wrapper);
       document.body.appendChild(overlay);
 
-      const checkout = new StablePayCheckout(innerContainer, {
+      spCheckout = new StablePayCheckout(innerContainer, {
         ...options,
-        onSuccess: (data) => { overlay.remove(); document.querySelectorAll('[data-sp-cancel-bar]').forEach(el => el.remove()); if (options.onSuccess) options.onSuccess(data); },
-        onCancel: () => { overlay.remove(); document.querySelectorAll('[data-sp-cancel-bar]').forEach(el => el.remove()); if (options.onCancel) options.onCancel(); },
+        onSuccess: (data) => {
+          overlay.remove(); restoreBody();
+          document.querySelectorAll('[data-sp-cancel-bar]').forEach(el => el.remove());
+          if (options.onSuccess) options.onSuccess(data);
+        },
+        onCancel: closeOverlay,
       });
-      return checkout;
+      return spCheckout;
     },
   };
 })();
