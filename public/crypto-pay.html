@@ -1143,13 +1143,19 @@
             } catch (_) { /* never break checkout */ }
         }
 
+        // Forward declarations — referenced by wizard before main init populates them
+        let merchantChains = [];
+        let currentProduct = null;
+        const NATIVE_TOKENS_SET = new Set(['ETH', 'SOL', 'BNB', 'MATIC', 'ARB']);
+        const CHAIN_NATIVE_TOKEN = { SOLANA_MAINNET: 'SOL', ETHEREUM_MAINNET: 'ETH', BASE_MAINNET: 'ETH', POLYGON_MAINNET: 'MATIC', ARBITRUM_MAINNET: 'ETH', BNB_MAINNET: 'BNB' };
+
         // ═══ FULL-FLOW WIZARD ═══════════════════════════════════════════
         // Steps: payType → network → token → method → pay → scanning
         // Each step is dynamically rendered. Auto-advances when single option.
         const cpWizState = { payType: null, chain: null, token: null, method: null, step: 'payType' };
 
         function cpWizBtn(label, sub, onclick) {
-            return `<button onclick="${onclick}" class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
+            return `<button onclick="${onclick}" class="w-full py-4 px-4 bg-white text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left cursor-pointer">
                 <div class="flex items-center justify-between">
                     <div><div class="font-bold">${label}</div>${sub ? `<div class="text-xs text-gray-500 font-normal mt-0.5">${sub}</div>` : ''}</div>
                     <span class="text-xl">→</span>
@@ -1158,7 +1164,7 @@
 
         function cpWizBtnIcon(label, sub, onclick, iconUrl) {
             const img = iconUrl ? `<img src="${iconUrl}" class="w-6 h-6 rounded-full mr-3" onerror="this.style.display='none'">` : '';
-            return `<button onclick="${onclick}" class="w-full py-4 px-4 text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left">
+            return `<button onclick="${onclick}" class="w-full py-4 px-4 bg-white text-black font-bold text-base border-4 border-black hover:bg-gray-50 transition text-left cursor-pointer">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">${img}<div><div class="font-bold">${label}</div>${sub ? `<div class="text-xs text-gray-500 font-normal mt-0.5">${sub}</div>` : ''}</div></div>
                     <span class="text-xl">→</span>
@@ -1845,9 +1851,8 @@
             }
         };
 
-        // Merchant's enabled chains (populated on load)
-        let merchantChains = [];
-        let merchantData = null; // Full merchant profile (for fee tier calculation)
+        // merchantChains declared above (before wizard) — just declare merchantData here
+        let merchantData = null;
         let selectedChainKey = null;
         let selectedToken = 'USDC'; // Default token
 
@@ -1964,7 +1969,7 @@
         let signer = null;
         let connectedAddress = null;
         let connectedWalletType = null; // 'evm' or 'solana'
-        let currentProduct = null;
+        // currentProduct declared above (before wizard)
         let selectedWalletProvider = null;
         let solanaConnection = null;
         let solanaWallet = null;
@@ -2838,7 +2843,7 @@
             };
             return icons[chain] || '';
         }
-        const NATIVE_TOKENS_SET = new Set(['ETH', 'SOL', 'BNB', 'MATIC', 'ARB']);
+        // NATIVE_TOKENS_SET declared above (before wizard)
         function getTokenIcon(token) {
             const icons = {
                 USDC: 'https://www.svgrepo.com/show/367255/usdc.svg',
@@ -2853,12 +2858,9 @@
             return icons[token] || '';
         }
 
-        // Chain → native token symbol
-        const CHAIN_NATIVE_TOKEN = {
-            BASE_MAINNET: 'ETH', ETHEREUM_MAINNET: 'ETH', ARBITRUM_MAINNET: 'ARB',
-            POLYGON_MAINNET: 'MATIC', BNB_MAINNET: 'BNB', SOLANA_MAINNET: 'SOL',
-            BASE_SEPOLIA: 'ETH', ETHEREUM_SEPOLIA: 'ETH',
-        };
+        // CHAIN_NATIVE_TOKEN declared above (before wizard) — add testnet keys here
+        CHAIN_NATIVE_TOKEN.BASE_SEPOLIA = 'ETH';
+        CHAIN_NATIVE_TOKEN.ETHEREUM_SEPOLIA = 'ETH';
         function cpToggleChainDropdown() {
             const btn = document.getElementById('cpChainBtn');
             if (btn?.disabled) return; // locked while wallet connected
