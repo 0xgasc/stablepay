@@ -284,10 +284,15 @@
           pointer-events: auto;
           font-family: ${this.options.fontFamily || "'Space Grotesk', -apple-system, system-ui, sans-serif"};
         ">
-          <div style="text-align: center; margin-bottom: 16px;">
-            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: ${isDark ? '#888' : '#666'}; font-weight: 700;">Quick setup</div>
-            <div id="sp-wiz-step-label" style="font-size: 11px; color: ${isDark ? '#666' : '#999'}; margin-top: 2px;">Step 1 of 3</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;min-height:24px;">
+            <button id="sp-wiz-back" type="button" style="visibility:hidden;background:none;border:none;color:${isDark ? '#9ca3af' : '#6b7280'};font-size:12px;font-weight:600;cursor:pointer;padding:4px 8px;">← Back</button>
+            <div style="text-align:center;flex:1;">
+              <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: ${isDark ? '#888' : '#666'}; font-weight: 700;">Quick setup</div>
+              <div id="sp-wiz-step-label" style="font-size: 11px; color: ${isDark ? '#666' : '#999'}; margin-top: 2px;">Step 1 of 3</div>
+            </div>
+            <button id="sp-wiz-info" type="button" aria-label="Help" style="width:24px;height:24px;border-radius:50%;background:${isDark ? '#2a2a2a' : '#f3f4f6'};border:1px solid ${isDark ? '#666' : '#d1d5db'};color:${isDark ? '#999' : '#6b7280'};font-size:12px;font-weight:700;cursor:pointer;padding:0;">i</button>
           </div>
+          <div id="sp-wiz-info-panel" style="display:none;background:${isDark ? '#0f172a' : '#f9fafb'};border:1px solid ${isDark ? '#334155' : '#e5e7eb'};padding:10px 12px;margin-bottom:12px;font-size:11px;color:${isDark ? '#cbd5e1' : '#374151'};line-height:1.5;border-radius:4px;white-space:pre-line;"></div>
           <div id="sp-wiz-body"></div>
           <div style="text-align: center; margin-top: 16px;">
             <button id="sp-wiz-skip" style="background: none; border: none; color: ${isDark ? '#666' : '#999'}; font-size: 11px; text-decoration: underline; cursor: pointer; padding: 4px;">Skip — show all options</button>
@@ -329,52 +334,69 @@
       }
     }
 
+    _wizBackTarget(fromStep) {
+      const s = String(fromStep);
+      if (s === '1b') return '1';
+      if (s === '2')  return '1';
+      // Step 3 (focused mode) handled by "← Change" in step3 header — separate path
+      return null;
+    }
+
+    _wizInfoText(step) {
+      const s = String(step);
+      const journey = 'Pay type → Send method → Pay';
+      const map = {
+        '1':  ["You're on step 1 of 3.", 'Choose stablecoin (USDC/USDT — no fee) or native crypto (ETH/SOL/BNB — +1.5% auto-converted).'],
+        '1b': ['Need a wallet first?', 'These are all free. Download one, fund it, then come back.'],
+        '2':  ["You're on step 2 of 3.", '"Connect my wallet" sends in one click. "Send manually" gives you an address + QR.'],
+      };
+      const lines = map[s] || ["You're in the checkout."];
+      return [...lines, '', 'Journey: ' + journey].join('\n');
+    }
+
     _wizGoStep(step) {
       this._wizardState.step = step;
       const body = this.container.querySelector('#sp-wiz-body');
       const label = this.container.querySelector('#sp-wiz-step-label');
+      const back = this.container.querySelector('#sp-wiz-back');
+      const info = this.container.querySelector('#sp-wiz-info-panel');
       if (body) body.innerHTML = this._wizStepHTML(step);
       if (label) {
         const labels = { 1: 'Step 1 of 3', '1b': 'Setup wallet', 2: 'Step 2 of 3' };
         label.textContent = labels[step] || '';
       }
-      const btns = this.container.querySelectorAll('.sp-wiz-ans');
-      console.log('[SP] wizGoStep', step, 'found', btns.length, 'answer btns');
-      btns.forEach(btn => {
-        const k = btn.dataset.key, v = btn.dataset.value;
-        btn.addEventListener('click', (e) => { console.log('[SP] btn click', k, v); e.stopPropagation(); e.preventDefault(); this._wizAnswer(k, v); });
-        btn.addEventListener('touchend', (e) => { console.log('[SP] btn touch', k, v); e.stopPropagation(); e.preventDefault(); this._wizAnswer(k, v); });
-      });
-      this.container.querySelectorAll('.sp-wiz-goto').forEach(btn => {
-        const s = btn.dataset.step;
-        btn.addEventListener('click', (e) => { console.log('[SP] goto click', s); e.stopPropagation(); e.preventDefault(); this._wizGoStep(s); });
-        btn.addEventListener('touchend', (e) => { console.log('[SP] goto touch', s); e.stopPropagation(); e.preventDefault(); this._wizGoStep(s); });
-      });
-      const skip = this.container.querySelector('#sp-wiz-skip');
-      if (skip) {
-        skip.addEventListener('click', (e) => { console.log('[SP] skip click'); e.stopPropagation(); e.preventDefault(); this._wizSkip(); });
-        skip.addEventListener('touchend', (e) => { console.log('[SP] skip touch'); e.stopPropagation(); e.preventDefault(); this._wizSkip(); });
-      }
+      if (back) back.style.visibility = this._wizBackTarget(step) ? 'visible' : 'hidden';
+      if (info) { info.style.display = 'none'; info.textContent = this._wizInfoText(step); }
       this._track('WIZARD_STEP_VIEWED', { step: String(step) });
     }
 
+    _wizGoBack() {
+      const t = this._wizBackTarget(this._wizardState.step);
+      if (!t) return;
+      this._track('WIZARD_BACK', { from: String(this._wizardState.step), to: String(t) });
+      if (t === '1') { this._wizardState.payType = null; this._wizardState.method = null; }
+      this._wizGoStep(t);
+    }
+
     attachWizardListeners() {
-      this.container.addEventListener('click', (e) => {
-        console.log('[SP] container click', e.target.tagName, e.target.className, e.target.textContent?.slice(0, 30));
+      if (this._wizListenersAttached) return; // idempotent — prevents leak on restart
+      this._wizListenersAttached = true;
+      const handle = (e) => {
+        if (e.target.closest('#sp-wiz-info')) {
+          e.stopPropagation(); e.preventDefault();
+          const panel = this.container.querySelector('#sp-wiz-info-panel');
+          if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+          return;
+        }
+        if (e.target.closest('#sp-wiz-back')) { e.stopPropagation(); e.preventDefault(); return this._wizGoBack(); }
         const ans = e.target.closest('.sp-wiz-ans');
         if (ans) { e.stopPropagation(); e.preventDefault(); return this._wizAnswer(ans.dataset.key, ans.dataset.value); }
         const goto = e.target.closest('.sp-wiz-goto');
         if (goto) { e.stopPropagation(); e.preventDefault(); return this._wizGoStep(goto.dataset.step); }
         if (e.target.closest('#sp-wiz-skip')) { e.stopPropagation(); e.preventDefault(); return this._wizSkip(); }
-      });
-      this.container.addEventListener('touchend', (e) => {
-        console.log('[SP] container touch', e.target.tagName, e.target.className);
-        const ans = e.target.closest('.sp-wiz-ans');
-        if (ans) { e.stopPropagation(); e.preventDefault(); return this._wizAnswer(ans.dataset.key, ans.dataset.value); }
-        const goto = e.target.closest('.sp-wiz-goto');
-        if (goto) { e.stopPropagation(); e.preventDefault(); return this._wizGoStep(goto.dataset.step); }
-        if (e.target.closest('#sp-wiz-skip')) { e.stopPropagation(); e.preventDefault(); return this._wizSkip(); }
-      });
+      };
+      this.container.addEventListener('click', handle);
+      this.container.addEventListener('touchend', handle);
     }
 
     _wizAnswer(key, value) {

@@ -597,10 +597,15 @@
          (mode + method) and hides itself; existing payment workflow proceeds. -->
     <div id="cpWizard" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:#fff;justify-content:center;align-items:center;padding:16px;overflow-y:auto;">
         <div style="width:100%;max-width:28rem;margin:0 auto;">
-            <div style="text-align:center;margin-bottom:24px;">
-                <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#6b7280;font-weight:700;margin-bottom:4px;">Quick setup</div>
-                <div id="cpWizStepLabel" style="font-size:12px;color:#9ca3af;"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;min-height:32px;">
+                <button id="cpWizBack" data-wiz="back" type="button" style="visibility:hidden;background:none;border:none;color:#6b7280;font-size:13px;font-weight:600;cursor:pointer;padding:6px 10px;">← Back</button>
+                <div style="text-align:center;flex:1;">
+                    <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#6b7280;font-weight:700;margin-bottom:4px;">Quick setup</div>
+                    <div id="cpWizStepLabel" style="font-size:12px;color:#9ca3af;"></div>
+                </div>
+                <button id="cpWizInfoBtn" type="button" aria-label="Help" style="width:28px;height:28px;border-radius:50%;background:#f3f4f6;border:1px solid #d1d5db;color:#6b7280;font-size:14px;font-weight:700;cursor:pointer;">i</button>
             </div>
+            <div id="cpWizInfoPanel" style="display:none;background:#f9fafb;border:1px solid #e5e7eb;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#374151;line-height:1.5;border-radius:4px;"></div>
             <div id="cpWizBody"></div>
             <div id="cpWizHint" style="text-align:center;margin-top:16px;font-size:12px;color:#9ca3af;font-weight:500;"></div>
             <div id="cpWizFooter" style="text-align:center;margin-top:16px;">
@@ -1176,12 +1181,19 @@
 
         // Event delegation — captures click on any wizard button, works reliably on mobile
         document.getElementById('cpWizard').addEventListener('click', (e) => {
+            // (i) toggle — outside data-wiz path so it works as a plain button
+            if (e.target.closest('#cpWizInfoBtn')) {
+                const panel = document.getElementById('cpWizInfoPanel');
+                if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                return;
+            }
             const btn = e.target.closest('[data-wiz]');
             if (!btn) return;
             const key = btn.getAttribute('data-wiz');
             const val = btn.getAttribute('data-val') || '';
             if (key === 'answer') { const [k, v] = val.split(':'); cpWizAnswer(k, v); }
             else if (key === 'goto') cpWizGoStep(val);
+            else if (key === 'back') cpWizGoBack();
             else if (key === 'skip') cpWizSkip();
             else if (key === 'verify-tx') cpWizVerifyManualTx();
             else if (key === 'copy') {
@@ -1235,26 +1247,98 @@
         function cpWizRefresh() {
             const wiz = document.getElementById('cpWizard');
             if (!wiz || wiz.style.display === 'none') return;
-            if (cpWizState.step === 'payType' || cpWizState.step === 'network' || cpWizState.step === 'token') {
-                cpWizGoStep(cpWizState.step);
+            // Re-render any step that depends on merchant data (price, chains, tokens).
+            // Sub-flow steps (sender-wallet/manual-send/connect-pay) own their own data fetches and shouldn't reset.
+            if (['payType', 'network', 'token', 'method'].includes(cpWizState.step)) {
+                cpWizGoStep(cpWizState.step, { isBack: true });
             }
         }
 
-        function cpWizGoStep(step) {
+        // Back-stack so user can rewind to any prior step. Cleared on wizard open.
+        let cpWizBackStack = [];
+
+        // What back goes to from each step. Steps not in this map have no back.
+        function cpWizBackTarget(fromStep) {
+            const order = ['payType'];
+            if (cpWizGetChains().length > 1) order.push('network');
+            if (cpWizGetTokens().length > 1) order.push('token');
+            order.push('method');
+            const idx = order.indexOf(fromStep);
+            if (idx > 0) return order[idx - 1];
+            if (fromStep === '1b') return 'payType';
+            if (fromStep === 'sender-wallet') return 'method';
+            if (fromStep === 'manual-send') return 'sender-wallet';
+            if (fromStep === 'connect-pay') return 'method';
+            return null;
+        }
+
+        function cpWizGoBack() {
+            const target = cpWizBackTarget(cpWizState.step);
+            if (!target) return;
+            cpWizTrack('WIZARD_BACK', { from: String(cpWizState.step), to: String(target) });
+            // Clear in-flight timers when leaving payment-y steps
+            if (window._cpWizPoller) { clearInterval(window._cpWizPoller); window._cpWizPoller = null; }
+            if (window._cpWizTimer)  { clearInterval(window._cpWizTimer);  window._cpWizTimer = null; }
+            if (window._cpWizCountdown) { clearInterval(window._cpWizCountdown); window._cpWizCountdown = null; }
+            // Reset state branches that the back invalidates
+            if (target === 'payType') { cpWizState.chain = null; cpWizState.token = null; cpWizState.method = null; cpWizState.senderWallet = null; }
+            if (target === 'network') { cpWizState.token = null; cpWizState.method = null; cpWizState.senderWallet = null; }
+            if (target === 'token')   { cpWizState.method = null; cpWizState.senderWallet = null; }
+            if (target === 'method')  { cpWizState.senderWallet = null; }
+            cpWizGoStep(target);
+        }
+
+        // (i) info: tell user where they are + what's left. Toggled by header (i) button.
+        function cpWizInfoText(step) {
+            const total = cpWizStepCount();
+            const num = cpWizStepNum(step);
+            const journey = ['Pick payment type', 'Pick network', 'Pick coin', 'Pick send method', 'Send / connect & pay'];
+            const lines = [];
+            if (num) lines.push(`You're on step ${num} of ${total}.`);
+            if (step === 'payType') lines.push('Choose stablecoin (USDC/USDT — no fee) or native crypto (ETH/SOL/BNB — +1.5% auto-converted).');
+            if (step === 'network') lines.push('Networks differ in fees. Solana and Base are cheapest. Pick the one your wallet uses.');
+            if (step === 'token')   lines.push('Pick the coin you actually hold in your wallet.');
+            if (step === 'method')  lines.push('"Connect my wallet" sends in one click. "Send manually" gives you an address + QR to send from any wallet.');
+            if (step === 'sender-wallet') lines.push('We need the address you\'ll send FROM so the blockchain scanner can match your payment.');
+            if (step === 'manual-send') lines.push('Send the exact amount to the shown address. Then click "I\'ve sent the payment" — we\'ll detect it within seconds.');
+            if (step === 'connect-pay')  lines.push('Connect your wallet and confirm the transaction. We\'ll handle the rest.');
+            if (step === 'scanning') lines.push('We\'re watching the blockchain. Most payments confirm in 10–60 seconds.');
+            lines.push(' ');
+            lines.push('Journey: ' + journey.slice(0, total).join(' → '));
+            return lines.join('\n');
+        }
+
+        function cpWizGoStep(step, opts) {
+            const prev = cpWizState.step;
+            // Push to back-stack unless this is a back-nav itself
+            if (!opts?.isBack && prev && prev !== step) cpWizBackStack.push(prev);
             cpWizState.step = step;
-            const body = document.getElementById('cpWizBody');
+            const body  = document.getElementById('cpWizBody');
             const label = document.getElementById('cpWizStepLabel');
-            const hint = document.getElementById('cpWizHint');
+            const hint  = document.getElementById('cpWizHint');
             const footer = document.getElementById('cpWizFooter');
+            const backBtn = document.getElementById('cpWizBack');
+            const infoPanel = document.getElementById('cpWizInfoPanel');
             if (!body) return;
 
             const total = cpWizStepCount();
             const num = cpWizStepNum(step);
-            const hints = { payType: 'Next: pick your network', network: 'Next: choose your coin', token: 'Next: choose how to send', method: 'Next: complete payment', pay: '' };
+            const hints = { payType: 'Next: pick your network', network: 'Next: choose your coin', token: 'Next: choose how to send', method: 'Next: complete payment', 'sender-wallet': 'Next: send payment', 'manual-send': 'Next: confirm payment', 'connect-pay': 'Next: confirm in your wallet', pay: '' };
 
-            if (label) label.textContent = num ? `Step ${num} of ${total}` : (step === '1b' ? 'Get a wallet' : step === 'scanning' ? 'Confirming...' : '');
+            if (label) {
+                if (num) label.textContent = `Step ${num} of ${total}`;
+                else if (step === '1b') label.textContent = 'Get a wallet';
+                else if (step === 'sender-wallet') label.textContent = `Sending — your wallet`;
+                else if (step === 'manual-send') label.textContent = `Sending — send & confirm`;
+                else if (step === 'connect-pay') label.textContent = `Sending — connect & pay`;
+                else if (step === 'scanning') label.textContent = 'Confirming...';
+                else label.textContent = '';
+            }
             if (hint) hint.textContent = hints[step] || '';
-            if (footer) footer.style.display = (step === 'pay' || step === 'scanning') ? 'none' : '';
+            if (footer) footer.style.display = (step === 'pay' || step === 'scanning' || step === 'connect-pay' || step === 'manual-send') ? 'none' : '';
+            // Show "Back" only when there's a valid target
+            if (backBtn) backBtn.style.visibility = cpWizBackTarget(step) ? 'visible' : 'hidden';
+            if (infoPanel) { infoPanel.style.display = 'none'; infoPanel.textContent = cpWizInfoText(step); }
 
             body.innerHTML = cpWizRenderStep(step);
             cpWizTrack('WIZARD_STEP_VIEWED', { step: String(step) });
@@ -1468,7 +1552,27 @@
             }
         }
 
+        // Update the wizard header when a sub-flow takes over the body (manual or connect-pay).
+        // Mirrors what cpWizGoStep does for the standard step machine.
+        function cpWizSetSubStep(name) {
+            cpWizState.step = name;
+            const label = document.getElementById('cpWizStepLabel');
+            const hint  = document.getElementById('cpWizHint');
+            const footer = document.getElementById('cpWizFooter');
+            const backBtn = document.getElementById('cpWizBack');
+            const infoPanel = document.getElementById('cpWizInfoPanel');
+            const hints = { 'sender-wallet': 'Next: send payment', 'manual-send': 'Next: confirm payment', 'connect-pay': 'Next: confirm in your wallet' };
+            const labels = { 'sender-wallet': 'Sending — your wallet', 'manual-send': 'Sending — send & confirm', 'connect-pay': 'Sending — connect & pay' };
+            if (label) label.textContent = labels[name] || '';
+            if (hint)  hint.textContent  = hints[name]  || '';
+            if (footer) footer.style.display = (name === 'manual-send' || name === 'connect-pay') ? 'none' : '';
+            if (backBtn) backBtn.style.visibility = cpWizBackTarget(name) ? 'visible' : 'hidden';
+            if (infoPanel) { infoPanel.style.display = 'none'; infoPanel.textContent = cpWizInfoText(name); }
+            cpWizTrack('WIZARD_STEP_VIEWED', { step: name });
+        }
+
         async function cpWizConnectAndPay() {
+            cpWizSetSubStep('connect-pay');
             const body = document.getElementById('cpWizBody');
             const chainCfg = CHAIN_CONFIG[cpWizState.chain];
             const chainName = chainCfg?.chainName || cpWizState.chain;
@@ -1554,6 +1658,7 @@
         }
 
         async function cpWizManualPay() {
+            cpWizSetSubStep('sender-wallet');
             const body = document.getElementById('cpWizBody');
             const chainCfg = CHAIN_CONFIG[cpWizState.chain];
             const chainName = chainCfg?.chainName || cpWizState.chain;
@@ -1585,6 +1690,7 @@
         }
 
         async function cpWizShowManualSend() {
+            cpWizSetSubStep('manual-send');
             const body = document.getElementById('cpWizBody');
             const chainCfg = CHAIN_CONFIG[cpWizState.chain];
             const chainName = chainCfg?.chainName || cpWizState.chain;
@@ -1673,10 +1779,11 @@
 
             const countdownEl = document.getElementById('cpWizManualCountdown');
             const warnEl = document.getElementById('cpWizManualExpWarning');
-            const countdownTimer = setInterval(() => {
+            if (window._cpWizCountdown) clearInterval(window._cpWizCountdown);
+            window._cpWizCountdown = setInterval(() => {
                 const secs = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
                 if (countdownEl) countdownEl.textContent = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
-                if (secs <= 0) { clearInterval(countdownTimer); if (countdownEl) countdownEl.textContent = 'Expired'; }
+                if (secs <= 0) { clearInterval(window._cpWizCountdown); window._cpWizCountdown = null; if (countdownEl) countdownEl.textContent = 'Expired'; }
                 if (warnEl) {
                     if (secs <= 60 && secs > 0) { warnEl.style.cssText = 'display:block;background:#fecaca;border:2px solid #ef4444;padding:6px 10px;font-size:12px;font-weight:600;text-align:center;margin-top:6px;'; warnEl.textContent = 'Less than 1 minute!'; }
                     else if (secs <= 300) { warnEl.style.cssText = 'display:block;background:#fef3c7;border:2px solid #f59e0b;padding:6px 10px;font-size:12px;text-align:center;margin-top:6px;'; warnEl.textContent = 'Less than 5 minutes remaining'; }
@@ -1685,7 +1792,7 @@
             }, 1000);
 
             document.getElementById('cpWizSentBtn').onclick = () => {
-                clearInterval(countdownTimer);
+                if (window._cpWizCountdown) { clearInterval(window._cpWizCountdown); window._cpWizCountdown = null; }
                 cpWizGoStep('scanning');
                 cpWizStartScanning();
             };
@@ -1790,7 +1897,8 @@
             const wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'none';
             try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
             if (window._cpWizPoller) { clearInterval(window._cpWizPoller); window._cpWizPoller = null; }
-            if (window._cpWizTimer) { clearInterval(window._cpWizTimer); window._cpWizTimer = null; }
+            if (window._cpWizTimer)  { clearInterval(window._cpWizTimer);  window._cpWizTimer = null; }
+            if (window._cpWizCountdown) { clearInterval(window._cpWizCountdown); window._cpWizCountdown = null; }
         }
 
         function cpWizDoneKey() {
