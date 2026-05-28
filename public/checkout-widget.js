@@ -321,6 +321,25 @@
         const labels = { 1: 'Step 1 of 2', '1b': 'Setup wallet', 2: 'Step 2 of 2' };
         label.textContent = labels[step] || '';
       }
+      // Direct listeners on each button as fallback for mobile
+      this.container.querySelectorAll('.sp-wiz-ans').forEach(btn => {
+        const k = btn.dataset.key, v = btn.dataset.value;
+        const h = (e) => { e.stopPropagation(); e.preventDefault(); this._wizAnswer(k, v); };
+        btn.onclick = h;
+        btn.ontouchend = h;
+      });
+      this.container.querySelectorAll('.sp-wiz-goto').forEach(btn => {
+        const s = btn.dataset.step;
+        const h = (e) => { e.stopPropagation(); e.preventDefault(); this._wizGoStep(s); };
+        btn.onclick = h;
+        btn.ontouchend = h;
+      });
+      const skip = this.container.querySelector('#sp-wiz-skip');
+      if (skip) {
+        const h = (e) => { e.stopPropagation(); e.preventDefault(); this._wizSkip(); };
+        skip.onclick = h;
+        skip.ontouchend = h;
+      }
       this._track('WIZARD_STEP_VIEWED', { step: String(step) });
     }
 
