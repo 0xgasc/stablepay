@@ -283,8 +283,8 @@
       const isDark = this.options.theme === 'dark';
       const accent = this.options.accentColor;
       const usd = parseFloat(this.options.amount || 0).toFixed(2);
-      const primaryBtnStyle = `width:100%;padding:14px 12px;background:${accent};color:#000;border:3px solid #000;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;`;
-      const secondaryBtnStyle = `width:100%;padding:14px 12px;background:${isDark ? '#2a2a2a' : '#fff'};color:${isDark ? '#fff' : '#000'};border:3px solid ${isDark ? '#666' : '#000'};font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;margin-top:10px;`;
+      const primaryBtnStyle = `width:100%;padding:14px 12px;background:${accent};color:#000;border:3px solid #000;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;-webkit-appearance:none;appearance:none;touch-action:manipulation;`;
+      const secondaryBtnStyle = `width:100%;padding:14px 12px;background:${isDark ? '#2a2a2a' : '#fff'};color:${isDark ? '#fff' : '#000'};border:3px solid ${isDark ? '#666' : '#000'};font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;margin-top:10px;-webkit-appearance:none;appearance:none;touch-action:manipulation;`;
       const subStyle = `font-size:11px;color:${isDark ? '#999' : '#666'};font-weight:400;margin-top:2px;`;
       switch (String(step)) {
         case '1':
@@ -325,13 +325,15 @@
     }
 
     attachWizardListeners() {
-      this.container.addEventListener('click', (e) => {
+      const handler = (e) => {
         const ans = e.target.closest('.sp-wiz-ans');
-        if (ans) { e.stopPropagation(); return this._wizAnswer(ans.dataset.key, ans.dataset.value); }
+        if (ans) { e.stopPropagation(); e.preventDefault(); return this._wizAnswer(ans.dataset.key, ans.dataset.value); }
         const goto = e.target.closest('.sp-wiz-goto');
-        if (goto) { e.stopPropagation(); return this._wizGoStep(goto.dataset.step); }
-        if (e.target.closest('#sp-wiz-skip')) { e.stopPropagation(); return this._wizSkip(); }
-      });
+        if (goto) { e.stopPropagation(); e.preventDefault(); return this._wizGoStep(goto.dataset.step); }
+        if (e.target.closest('#sp-wiz-skip')) { e.stopPropagation(); e.preventDefault(); return this._wizSkip(); }
+      };
+      this.container.addEventListener('click', handler);
+      this.container.addEventListener('touchend', handler);
     }
 
     _wizAnswer(key, value) {
@@ -3000,12 +3002,16 @@
       const overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
       const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'max-width:420px;width:100%;max-height:90vh;overflow-y:auto;position:relative;';
+      wrapper.style.cssText = 'max-width:420px;width:100%;max-height:90vh;overflow-y:auto;position:relative;-webkit-overflow-scrolling:touch;';
       const closeBtn = document.createElement('button');
       closeBtn.textContent = '×';
       closeBtn.style.cssText = 'position:absolute;top:8px;right:12px;z-index:10;background:none;border:none;color:#999;font-size:24px;cursor:pointer;';
-      closeBtn.onclick = () => { overlay.remove(); if (options.onCancel) options.onCancel(); };
-      overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); if (options.onCancel) options.onCancel(); } };
+      const closeOverlay = () => { overlay.remove(); if (options.onCancel) options.onCancel(); };
+      closeBtn.addEventListener('click', closeOverlay);
+      closeBtn.addEventListener('touchend', (e) => { e.preventDefault(); closeOverlay(); });
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
+      wrapper.addEventListener('click', (e) => e.stopPropagation());
+      wrapper.addEventListener('touchend', (e) => e.stopPropagation());
       wrapper.appendChild(closeBtn);
       overlay.appendChild(wrapper);
       document.body.appendChild(overlay);
