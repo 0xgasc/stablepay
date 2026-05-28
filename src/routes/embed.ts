@@ -864,6 +864,41 @@ router.post('/order/:orderId/wallet', async (req, res) => {
 });
 
 /**
+ * Generic contact-patch endpoint used by the fast A/B variant.
+ * Accepts ANY subset of { customerEmail, customerWallet } so the customer can give us
+ * whichever they have when they don't have a TX hash. The fast variant uses this when the
+ * customer can't paste a TX hash — we still need a way to reach them or match the payment.
+ *
+ * Only PENDING orders. Email format is loosely validated. Wallet is loosely validated.
+ */
+router.post('/order/:orderId/contact', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { customerEmail, customerWallet } = (req.body || {}) as { customerEmail?: string; customerWallet?: string };
+    const update: any = {};
+    if (customerEmail) {
+      const e = String(customerEmail).trim().slice(0, 200);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return res.status(400).json({ error: 'Invalid email' });
+      update.customerEmail = e;
+    }
+    if (customerWallet) {
+      const w = String(customerWallet).trim().slice(0, 64);
+      if (w.length < 10) return res.status(400).json({ error: 'Invalid wallet address' });
+      update.customerWallet = w;
+    }
+    if (Object.keys(update).length === 0) return res.status(400).json({ error: 'Provide customerEmail and/or customerWallet' });
+    const order = await db.order.findUnique({ where: { id: orderId }, select: { status: true } });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status !== 'PENDING') return res.status(400).json({ error: `Order status is ${order.status}` });
+    await db.order.update({ where: { id: orderId }, data: update });
+    res.json({ success: true, updated: Object.keys(update) });
+  } catch (error) {
+    console.error('Set customer contact error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * Manual TX submission — customer enters txHash when scanner doesn't catch it
  * Auto-verifies on-chain, falls back to manual review
  */
@@ -1269,6 +1304,9 @@ const ALLOWED_WIDGET_EVENTS = new Set([
   'WIZARD_BACK',              // user navigated backward in the wizard
   'MANUAL_TX_SUBMITTED',      // customer clicked "I've sent the payment" (manual flow)
   'ORDER_CONFIRMED',          // order reached terminal CONFIRMED state — true conversion signal
+  // Fast-variant (3rd A/B arm): skip sender-wallet upfront, ask for TX/wallet/email AFTER "I've sent it"
+  'FAST_STEP_VIEWED',         // user reached a fast-variant-specific screen (e.g. post-send paste-confirm)
+  'FAST_CONFIRMATION_PROVIDED', // user pasted TX hash, sender wallet, OR email. details.type='tx_hash'|'wallet'|'email'
   // Funnel drop-off pinpointing — added to close visibility gaps
   'MANUAL_PAY_VIEWED',       // QR / receive address screen displayed
   'WALLET_CONNECT_OPENED',    // customer clicked Connect Wallet

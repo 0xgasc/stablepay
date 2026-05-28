@@ -1112,23 +1112,29 @@
             return id;
         }
 
+        // 3-way A/B: control / guided / fast.
+        //   control = no wizard, full page UI
+        //   guided  = wizard with sender-wallet step before QR (original guided)
+        //   fast    = wizard but skip sender-wallet upfront; ask for TX/wallet/email AFTER "I've sent it"
+        // Cache key v2 forces re-roll for users cached on the old 2-way split.
+        const VARIANTS_LIST = ['control', 'guided', 'fast'];
         function cpAssignVariant() {
             const url = new URL(window.location.href);
             if (url.searchParams.get('sp_reset') === '1') {
-                ['sp_variant', 'sp_sid'].forEach(k => sessionStorage.removeItem(k));
+                ['sp_variant', 'sp_variant_v2', 'sp_sid'].forEach(k => sessionStorage.removeItem(k));
             }
             const override = url.searchParams.get('variant') || url.searchParams.get('sp_variant');
-            if (override === 'guided' || override === 'control') {
-                sessionStorage.setItem('sp_variant', override);
+            if (VARIANTS_LIST.includes(override)) {
+                sessionStorage.setItem('sp_variant_v2', override);
                 return override;
             }
-            const cached = sessionStorage.getItem('sp_variant');
-            if (cached === 'guided' || cached === 'control') return cached;
+            const cached = sessionStorage.getItem('sp_variant_v2');
+            if (VARIANTS_LIST.includes(cached)) return cached;
             const sid = cpSessionId();
             let hash = 0;
             for (let i = 0; i < sid.length; i++) hash = ((hash << 5) - hash + sid.charCodeAt(i)) | 0;
-            const variant = (Math.abs(hash) % 2 === 0) ? 'control' : 'guided';
-            sessionStorage.setItem('sp_variant', variant);
+            const variant = VARIANTS_LIST[Math.abs(hash) % 3];
+            sessionStorage.setItem('sp_variant_v2', variant);
             return variant;
         }
 
@@ -1196,6 +1202,8 @@
             else if (key === 'back') cpWizGoBack();
             else if (key === 'skip') cpWizSkip();
             else if (key === 'verify-tx') cpWizVerifyManualTx();
+            else if (key === 'fast-save-wallet') cpWizFastSaveContact('wallet');
+            else if (key === 'fast-save-email')  cpWizFastSaveContact('email');
             else if (key === 'copy') {
                 navigator.clipboard.writeText(val).catch(() => {});
                 btn.textContent = 'Copied!';
@@ -1272,8 +1280,11 @@
             if (idx > 0) return order[idx - 1];
             if (fromStep === '1b') return 'payType';
             if (fromStep === 'sender-wallet') return 'method';
-            if (fromStep === 'manual-send') return 'sender-wallet';
+            // manual-send: guided variant came from sender-wallet; fast variant came from method
+            if (fromStep === 'manual-send') return window._spVariant === 'fast' ? 'method' : 'sender-wallet';
             if (fromStep === 'connect-pay') return 'method';
+            // paste-confirm has no back — payment was already sent. Going back would be misleading.
+            if (fromStep === 'paste-confirm') return null;
             return null;
         }
 
@@ -1308,6 +1319,7 @@
             if (step === 'manual-send') lines.push('Send the exact amount to the shown address. Then click "I\'ve sent the payment" — we\'ll detect it within seconds.');
             if (step === 'connect-pay')  lines.push('Connect your wallet and confirm the transaction. We\'ll handle the rest.');
             if (step === 'scanning') lines.push('We\'re watching the blockchain. Most payments confirm in 10–60 seconds.');
+            if (step === 'paste-confirm') lines.push('You said you sent the payment. Paste your transaction ID for instant confirmation, or give us your wallet/email so we can match + reach you.');
             lines.push(' ');
             lines.push('Journey: ' + journey.slice(0, total).join(' → '));
             return lines.join('\n');
@@ -1328,7 +1340,7 @@
 
             const total = cpWizStepCount();
             const num = cpWizStepNum(step);
-            const hints = { payType: 'Next: pick your network', network: 'Next: choose your coin', token: 'Next: choose how to send', method: 'Next: complete payment', 'sender-wallet': 'Next: send payment', 'manual-send': 'Next: confirm payment', 'connect-pay': 'Next: confirm in your wallet', pay: '' };
+            const hints = { payType: 'Next: pick your network', network: 'Next: choose your coin', token: 'Next: choose how to send', method: 'Next: complete payment', 'sender-wallet': 'Next: send payment', 'manual-send': 'Next: confirm payment', 'connect-pay': 'Next: confirm in your wallet', 'paste-confirm': 'Waiting for confirmation', pay: '' };
 
             if (label) {
                 if (num) label.textContent = `Step ${num} of ${total}`;
@@ -1336,17 +1348,20 @@
                 else if (step === 'sender-wallet') label.textContent = `Sending — your wallet`;
                 else if (step === 'manual-send') label.textContent = `Sending — send & confirm`;
                 else if (step === 'connect-pay') label.textContent = `Sending — connect & pay`;
+                else if (step === 'paste-confirm') label.textContent = 'Confirming payment...';
                 else if (step === 'scanning') label.textContent = 'Confirming...';
                 else label.textContent = '';
             }
             if (hint) hint.textContent = hints[step] || '';
-            if (footer) footer.style.display = (step === 'pay' || step === 'scanning' || step === 'connect-pay' || step === 'manual-send') ? 'none' : '';
+            if (footer) footer.style.display = (step === 'pay' || step === 'scanning' || step === 'connect-pay' || step === 'manual-send' || step === 'paste-confirm') ? 'none' : '';
             // Show "Back" only when there's a valid target
             if (backBtn) backBtn.style.visibility = cpWizBackTarget(step) ? 'visible' : 'hidden';
             if (infoPanel) { infoPanel.style.display = 'none'; infoPanel.textContent = cpWizInfoText(step); }
 
             body.innerHTML = cpWizRenderStep(step);
-            cpWizTrack('WIZARD_STEP_VIEWED', { step: String(step) });
+            // Fire WIZARD_STEP_VIEWED for all variants, plus FAST_STEP_VIEWED for fast-specific screens.
+            cpWizTrack('WIZARD_STEP_VIEWED', { step: String(step), variant: window._spVariant });
+            if (step === 'paste-confirm') cpWizTrack('FAST_STEP_VIEWED', { step: 'paste-confirm' });
         }
 
         function cpWizRenderStep(step) {
@@ -1442,6 +1457,48 @@
                         </div>
                     </div>`;
 
+                // Fast-variant post-send step. We poll the chain in the background, but proactively
+                // collect TX hash (instant), or wallet/email (recovery channel) so stranded payments
+                // can still be matched + the customer can be reached.
+                case 'paste-confirm':
+                    return `<div id="cpWizScan">
+                        <div id="cpWizExpiryWarning" style="display:none;"></div>
+                        <div class="w-full h-1 bg-gray-200 mb-3 overflow-hidden"><div id="cpWizScanBar" class="h-full transition-all duration-1000" style="width:0%;background:var(--mc-accent);"></div></div>
+                        <p id="cpWizScanStatus" class="text-sm font-bold text-black mb-1 text-center">Scanning the blockchain for your payment...</p>
+                        <p id="cpWizScanTimer" class="text-xs text-gray-500 mb-4 text-center">Paste your TX below to confirm instantly</p>
+
+                        <div class="bg-gray-50 border-2 border-black p-3 mb-3">
+                            <p class="text-xs font-bold text-black mb-2">Paste your transaction ID (fastest)</p>
+                            <div class="flex gap-2">
+                                <input id="cpWizManualTxInput" type="text" placeholder="0x... or Solana tx signature" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
+                                <button data-wiz="verify-tx" style="padding:8px 12px;font-weight:700;font-size:12px;color:#fff;background:#000;border:none;cursor:pointer;">VERIFY</button>
+                            </div>
+                            <p id="cpWizManualTxStatus" class="text-xs text-gray-500 mt-1 hidden"></p>
+                        </div>
+
+                        <details id="cpWizFastFallback" style="border:2px solid #e5e7eb;padding:10px 12px;font-size:12px;">
+                            <summary style="cursor:pointer;font-weight:600;color:#374151;">Can't find your TX? Help us find it ▾</summary>
+                            <div style="margin-top:10px;">
+                                <p style="color:#6b7280;margin-bottom:6px;font-size:11px;">Give us EITHER your sender wallet (for automatic matching) OR your email (so we can reach you):</p>
+                                <div style="margin-bottom:8px;">
+                                    <label style="display:block;font-size:11px;color:#374151;font-weight:600;margin-bottom:2px;">Sender wallet address</label>
+                                    <div style="display:flex;gap:6px;">
+                                        <input id="cpWizFastWallet" type="text" placeholder="0x... or Solana address" style="flex:1;padding:6px 8px;font-size:12px;border:1px solid #d1d5db;font-family:monospace;" />
+                                        <button data-wiz="fast-save-wallet" style="padding:6px 10px;font-size:11px;font-weight:700;background:#000;color:#fff;border:none;cursor:pointer;">SAVE</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:11px;color:#374151;font-weight:600;margin-bottom:2px;">Your email</label>
+                                    <div style="display:flex;gap:6px;">
+                                        <input id="cpWizFastEmail" type="email" placeholder="you@example.com" style="flex:1;padding:6px 8px;font-size:12px;border:1px solid #d1d5db;" />
+                                        <button data-wiz="fast-save-email" style="padding:6px 10px;font-size:11px;font-weight:700;background:#000;color:#fff;border:none;cursor:pointer;">SAVE</button>
+                                    </div>
+                                </div>
+                                <p id="cpWizFastStatus" style="font-size:11px;color:#10b981;margin-top:6px;display:none;"></p>
+                            </div>
+                        </details>
+                    </div>`;
+
                 default: return '';
             }
         }
@@ -1479,6 +1536,10 @@
 
                 if (cpWizState.method === 'wallet') {
                     await cpWizConnectAndPay();
+                } else if (window._spVariant === 'fast') {
+                    // Fast variant: skip the upfront sender-wallet step. Go straight to QR.
+                    // The TX/wallet/email collection happens AFTER "I've sent it" via paste-confirm.
+                    await cpWizShowManualSend();
                 } else {
                     await cpWizManualPay();
                 }
@@ -1808,8 +1869,19 @@
 
             document.getElementById('cpWizSentBtn').onclick = () => {
                 if (window._cpWizCountdown) { clearInterval(window._cpWizCountdown); window._cpWizCountdown = null; }
-                cpWizGoStep('scanning');
-                cpWizStartScanning();
+                // PAY_CLICKED here too — manual "I've sent it" is the intent signal in the manual flow.
+                // Already fires when wallet flow processes payment; fire here to match for manual.
+                cpWizTrack('PAY_CLICKED', { chain: cpWizState.chain, token: cpWizState.token, method: 'manual', variant: window._spVariant });
+                cpWizTrack('MANUAL_TX_SUBMITTED', { chain: cpWizState.chain, token: cpWizState.token, variant: window._spVariant });
+                // Fast variant: route to paste-confirm so we collect TX/wallet/email AFTER they sent.
+                // Other variants: jump straight to passive scanning.
+                if (window._spVariant === 'fast') {
+                    cpWizGoStep('paste-confirm');
+                    cpWizStartScanning(); // background-scan still runs while user pastes
+                } else {
+                    cpWizGoStep('scanning');
+                    cpWizStartScanning();
+                }
             };
         }
 
@@ -1860,7 +1932,7 @@
                         cpWizTrack('WIZARD_COMPLETED', { payType: cpWizState.payType, chain: cpWizState.chain, token: cpWizState.token, method: cpWizState.method });
                         if (!window._cpOrderConfirmedTracked) {
                             window._cpOrderConfirmedTracked = true;
-                            cpWizTrack('ORDER_CONFIRMED', { chain: data.chain, token: data.token, orderId: data.id, variant: (sessionStorage.getItem('sp_variant') || null) });
+                            cpWizTrack('ORDER_CONFIRMED', { chain: data.chain, token: data.token, orderId: data.id, variant: (window._spVariant || sessionStorage.getItem('sp_variant_v2') || null) });
                         }
                         const wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'none';
                         const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };
@@ -1902,6 +1974,8 @@
             const status = document.getElementById('cpWizManualTxStatus');
             const val = input?.value?.trim();
             if (!val || !window.currentOrderId) return;
+            // Fast-variant telemetry: TX hash provided (primary confirmation path).
+            cpWizTrack('FAST_CONFIRMATION_PROVIDED', { type: 'tx_hash', variant: window._spVariant });
             status.classList.remove('hidden');
             status.textContent = 'Verifying...'; status.style.color = '';
             try {
@@ -1913,6 +1987,40 @@
                 if (data.success) { status.textContent = 'Verified! Confirming...'; status.style.color = '#10b981'; }
                 else { status.textContent = data.error || 'Could not verify'; status.style.color = '#dc2626'; }
             } catch { status.textContent = 'Verification failed'; status.style.color = '#dc2626'; }
+        }
+
+        // Fast-variant fallback contact save: TX-paste failed or unavailable, so save wallet/email
+        // to /order/:id/contact. Fires FAST_CONFIRMATION_PROVIDED for the variant metric.
+        async function cpWizFastSaveContact(kind) {
+            const walletInput = document.getElementById('cpWizFastWallet');
+            const emailInput  = document.getElementById('cpWizFastEmail');
+            const statusEl    = document.getElementById('cpWizFastStatus');
+            const body = {};
+            if (kind === 'wallet') {
+                const w = walletInput?.value?.trim();
+                if (!w || w.length < 10) { if (statusEl) { statusEl.style.display='block'; statusEl.style.color='#dc2626'; statusEl.textContent='Enter a valid wallet address.'; } return; }
+                body.customerWallet = w;
+            } else if (kind === 'email') {
+                const e = emailInput?.value?.trim();
+                if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { if (statusEl) { statusEl.style.display='block'; statusEl.style.color='#dc2626'; statusEl.textContent='Enter a valid email.'; } return; }
+                body.customerEmail = e;
+            }
+            if (!window.currentOrderId) return;
+            try {
+                const res = await fetch('/api/embed/order/' + window.currentOrderId + '/contact', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (res.ok) {
+                    if (statusEl) { statusEl.style.display='block'; statusEl.style.color='#10b981'; statusEl.textContent = kind === 'email' ? 'Saved — we\'ll email you when we confirm.' : 'Saved — scanner will use this to match.'; }
+                    cpWizTrack('FAST_CONFIRMATION_PROVIDED', { type: kind === 'wallet' ? 'wallet' : 'email', variant: window._spVariant });
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    if (statusEl) { statusEl.style.display='block'; statusEl.style.color='#dc2626'; statusEl.textContent = data.error || 'Save failed'; }
+                }
+            } catch {
+                if (statusEl) { statusEl.style.display='block'; statusEl.style.color='#dc2626'; statusEl.textContent = 'Network error — try again'; }
+            }
         }
 
         function cpWizSkip() {
@@ -1942,12 +2050,15 @@
         (function cpInitVariant() {
             let variant = 'control';
             try { variant = cpAssignVariant(); } catch { /* fall back to control on any failure */ }
+            // Stash globally so cpWizAnswer / cpWizShowManualSend / ORDER_CONFIRMED can branch on it.
+            window._spVariant = variant;
             // Telemetry order matters: VARIANT_ASSIGNED MUST be the first event for the session
             // so /ab-results can bucket every later event to a variant.
             cpWizTrack('VARIANT_ASSIGNED', { variant });
             cpWizTrack('WIDGET_OPENED', { variant, amount: window._productPrice || currentProduct?.price || null });
             const alreadyDone = (() => { try { return sessionStorage.getItem(cpWizDoneKey()) === '1'; } catch { return false; } })();
-            if (variant === 'guided' && !alreadyDone) {
+            // Both 'guided' and 'fast' use the wizard UI. They differ in the manual sub-flow.
+            if ((variant === 'guided' || variant === 'fast') && !alreadyDone) {
                 const show = () => { const w = document.getElementById('cpWizard'); if (w) w.style.display = 'flex'; cpWizGoStep('payType'); };
                 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
                 else show();
@@ -5171,7 +5282,7 @@
                         // poller racing on the same order (both pollers can see CONFIRMED concurrently).
                         if (!window._cpOrderConfirmedTracked) {
                             window._cpOrderConfirmedTracked = true;
-                            cpWizTrack('ORDER_CONFIRMED', { chain: data.chain, token: data.token, orderId: data.id, variant: (sessionStorage.getItem('sp_variant') || null) });
+                            cpWizTrack('ORDER_CONFIRMED', { chain: data.chain, token: data.token, orderId: data.id, variant: (window._spVariant || sessionStorage.getItem('sp_variant_v2') || null) });
                         }
                         if (bar) bar.style.width = '100%';
                         if (statusEl) statusEl.textContent = 'Payment confirmed!';

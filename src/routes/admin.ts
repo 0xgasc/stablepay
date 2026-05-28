@@ -2135,10 +2135,16 @@ router.get('/ab-results', requireAdminKey, async (req, res) => {
     const CLICK_ACTIONS    = new Set(['PAY_CLICKED', 'NATIVE_TX_BROADCAST']);
     const PURCHASE_ACTIONS = new Set(['ORDER_CONFIRMED']);
 
-    type Sess = { variant: string | null; surface: string | null; opened: boolean; clicked: boolean; purchased: boolean; wizardCompleted: boolean; wizardSkipped: boolean };
+    type Sess = {
+      variant: string | null; surface: string | null;
+      opened: boolean; clicked: boolean; purchased: boolean;
+      wizardCompleted: boolean; wizardSkipped: boolean;
+      // fast-variant specific
+      fastTxPasted: boolean; fastWalletPasted: boolean; fastEmailGiven: boolean;
+    };
     const sessions = new Map<string, Sess>();
     for (const e of events) {
-      const s = sessions.get(e.sessionId) ?? { variant: null, surface: null, opened: false, clicked: false, purchased: false, wizardCompleted: false, wizardSkipped: false };
+      const s = sessions.get(e.sessionId) ?? { variant: null, surface: null, opened: false, clicked: false, purchased: false, wizardCompleted: false, wizardSkipped: false, fastTxPasted: false, fastWalletPasted: false, fastEmailGiven: false };
       const det = (e.details || {}) as any;
       if (e.action === 'VARIANT_ASSIGNED') s.variant = det.variant ?? s.variant;
       if (det.surface && !s.surface) s.surface = det.surface; // 'widget' or 'page'
@@ -2147,24 +2153,38 @@ router.get('/ab-results', requireAdminKey, async (req, res) => {
       if (PURCHASE_ACTIONS.has(e.action)) s.purchased = true;
       if (e.action === 'WIZARD_COMPLETED') s.wizardCompleted = true;
       if (e.action === 'WIZARD_SKIPPED')   s.wizardSkipped = true;
+      if (e.action === 'FAST_CONFIRMATION_PROVIDED') {
+        const t = det.type;
+        if (t === 'tx_hash') s.fastTxPasted = true;
+        if (t === 'wallet')  s.fastWalletPasted = true;
+        if (t === 'email')   s.fastEmailGiven = true;
+      }
       sessions.set(e.sessionId, s);
     }
 
-    const empty = () => ({ total: 0, clicked: 0, purchased: 0, wizardCompleted: 0, wizardSkipped: 0 });
-    const buckets: any = { control: empty(), guided: empty() };
-    const bySurface: any = { widget: { control: empty(), guided: empty() }, page: { control: empty(), guided: empty() } };
+    const empty = () => ({ total: 0, clicked: 0, purchased: 0, wizardCompleted: 0, wizardSkipped: 0, fastTxPasted: 0, fastWalletPasted: 0, fastEmailGiven: 0 });
+    const VARIANTS = ['control', 'guided', 'fast'] as const;
+    const buckets: any = { control: empty(), guided: empty(), fast: empty() };
+    const bySurface: any = {
+      widget: { control: empty(), guided: empty(), fast: empty() },
+      page:   { control: empty(), guided: empty(), fast: empty() },
+    };
     let unassigned = 0;
     for (const s of sessions.values()) {
-      if (s.variant !== 'control' && s.variant !== 'guided') { unassigned++; continue; }
-      buckets[s.variant].total++;
-      if (s.clicked)          buckets[s.variant].clicked++;
-      if (s.purchased)        buckets[s.variant].purchased++;
-      if (s.wizardCompleted)  buckets[s.variant].wizardCompleted++;
-      if (s.wizardSkipped)    buckets[s.variant].wizardSkipped++;
+      if (!s.variant || !VARIANTS.includes(s.variant as any)) { unassigned++; continue; }
+      const v = s.variant as keyof typeof buckets;
+      buckets[v].total++;
+      if (s.clicked)          buckets[v].clicked++;
+      if (s.purchased)        buckets[v].purchased++;
+      if (s.wizardCompleted)  buckets[v].wizardCompleted++;
+      if (s.wizardSkipped)    buckets[v].wizardSkipped++;
+      if (s.fastTxPasted)     buckets[v].fastTxPasted++;
+      if (s.fastWalletPasted) buckets[v].fastWalletPasted++;
+      if (s.fastEmailGiven)   buckets[v].fastEmailGiven++;
       const surf = s.surface === 'page' ? 'page' : 'widget';
-      bySurface[surf][s.variant].total++;
-      if (s.clicked)   bySurface[surf][s.variant].clicked++;
-      if (s.purchased) bySurface[surf][s.variant].purchased++;
+      bySurface[surf][v].total++;
+      if (s.clicked)   bySurface[surf][v].clicked++;
+      if (s.purchased) bySurface[surf][v].purchased++;
     }
 
     const pct = (n: number, d: number) => d > 0 ? +(100 * n / d).toFixed(2) : 0;
@@ -2178,16 +2198,27 @@ router.get('/ab-results', requireAdminKey, async (req, res) => {
       wizardSkipped: b.wizardSkipped,
       wizardCompletionPct: pct(b.wizardCompleted, b.total),
       skipPct: pct(b.wizardSkipped, b.total),
+      // fast-variant signals (always present, zero for control/guided)
+      fastTxPasted: b.fastTxPasted,
+      fastWalletPasted: b.fastWalletPasted,
+      fastEmailGiven: b.fastEmailGiven,
+      fastTxPastedPct: pct(b.fastTxPasted, b.total),
+      fastWalletPastedPct: pct(b.fastWalletPasted, b.total),
+      fastEmailGivenPct: pct(b.fastEmailGiven, b.total),
     });
 
     res.json({
       days, since: since.toISOString(),
       totalSessions: sessions.size,
       unassigned,
-      variants: { control: summarize(buckets.control), guided: summarize(buckets.guided) },
+      variants: {
+        control: summarize(buckets.control),
+        guided:  summarize(buckets.guided),
+        fast:    summarize(buckets.fast),
+      },
       bySurface: {
-        widget: { control: summarize(bySurface.widget.control), guided: summarize(bySurface.widget.guided) },
-        page:   { control: summarize(bySurface.page.control),   guided: summarize(bySurface.page.guided)   },
+        widget: { control: summarize(bySurface.widget.control), guided: summarize(bySurface.widget.guided), fast: summarize(bySurface.widget.fast) },
+        page:   { control: summarize(bySurface.page.control),   guided: summarize(bySurface.page.guided),   fast: summarize(bySurface.page.fast)   },
       },
     });
   } catch (error) {

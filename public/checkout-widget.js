@@ -191,28 +191,30 @@
     }
 
     _assignVariant() {
+      // 3-way: control / guided / fast. v2 cache key forces re-roll for users on the old 2-way split.
+      const VARIANTS = ['control', 'guided', 'fast'];
       try {
         const url = new URL(window.location.href);
         if (url.searchParams.get('sp_reset') === '1') {
-          ['sp_widget_variant', 'sp_widget_sid'].forEach(k => sessionStorage.removeItem(k));
+          ['sp_widget_variant', 'sp_widget_variant_v2', 'sp_widget_sid'].forEach(k => sessionStorage.removeItem(k));
         }
         const override = url.searchParams.get('sp_variant') || url.searchParams.get('variant');
-        if (override === 'guided' || override === 'control') {
-          sessionStorage.setItem('sp_widget_variant', override);
+        if (VARIANTS.includes(override)) {
+          sessionStorage.setItem('sp_widget_variant_v2', override);
           return override;
         }
-        const cached = sessionStorage.getItem('sp_widget_variant');
-        if (cached === 'guided' || cached === 'control') return cached;
+        const cached = sessionStorage.getItem('sp_widget_variant_v2');
+        if (VARIANTS.includes(cached)) return cached;
         const sid = this._sessionId;
         let hash = 0;
         for (let i = 0; i < sid.length; i++) hash = ((hash << 5) - hash + sid.charCodeAt(i)) | 0;
-        const variant = (Math.abs(hash) % 2 === 0) ? 'control' : 'guided';
-        sessionStorage.setItem('sp_widget_variant', variant);
+        const variant = VARIANTS[Math.abs(hash) % 3];
+        sessionStorage.setItem('sp_widget_variant_v2', variant);
         return variant;
       } catch {
         // sessionStorage blocked (Safari ITP, iframe w/ 3p cookies blocked, private mode).
-        // Coin-flip from Math.random so we don't systematically bias these sessions toward one arm.
-        return Math.random() < 0.5 ? 'control' : 'guided';
+        // Random fallback so we don't systematically bias these sessions toward one arm.
+        return VARIANTS[Math.floor(Math.random() * 3)];
       }
     }
 
@@ -264,7 +266,9 @@
       try { alreadyDone = sessionStorage.getItem(wizDoneKey) === '1'; } catch {}
       this._wizDoneKey = wizDoneKey;
 
-      if (this._variant === 'guided' && !this._wizardState.done && !alreadyDone) {
+      // Both 'guided' and 'fast' use the wizard UI. They differ only in the manual sub-flow
+      // (fast skips the sender-wallet step before QR; collects TX/wallet/email AFTER "I've sent it").
+      if ((this._variant === 'guided' || this._variant === 'fast') && !this._wizardState.done && !alreadyDone) {
         this._renderWizard();
         this.attachWizardListeners();
         return;
@@ -441,6 +445,16 @@
       if (tabBtn && typeof tabBtn.click === 'function') { try { tabBtn.click(); } catch {} }
       // ── Wizard "Step 3": hide chrome so the user sees only the focused action ──
       this._applyWizardFocusedMode();
+      // Fast variant + manual method: skip the sender-wallet entry step entirely.
+      // The wallet input (#sp-send-step1) is the friction we're testing whether removing improves
+      // conversion. We jump straight to step 2 (QR + address + "I've sent it") here.
+      // TX hash / wallet / email collection happens AFTER "I've sent it" in the paste-confirm UI.
+      if (this._variant === 'fast' && this._wizardState.method === 'manual') {
+        // Small delay so the tab-click rendering completes first.
+        setTimeout(() => {
+          try { this.showManualPaymentDetails('send'); } catch (e) { console.warn('[SP] fast skip-wallet failed', e); }
+        }, 50);
+      }
     }
 
     _applyWizardFocusedMode() {
@@ -1317,6 +1331,68 @@
           this.container.querySelector('#sp-send-step3').style.display = 'block';
           this.updateStepIndicator(3);
           this.startPaymentPolling();
+          // Fast variant: reveal TX paste box IMMEDIATELY (don't wait for the 15s timeout)
+          // and inject wallet+email fallback inputs below. Without this, the fast variant
+          // would feel identical to guided after "I've sent it" — defeating the test.
+          if (this._variant === 'fast') {
+            this._track('FAST_STEP_VIEWED', { step: 'paste-confirm' });
+            const manualDiv = this.container.querySelector('#sp-manual-tx');
+            if (manualDiv) {
+              manualDiv.style.display = 'block';
+              // Add wallet+email recovery section if not already present
+              if (!manualDiv.querySelector('#sp-fast-fallback')) {
+                const wrap = document.createElement('details');
+                wrap.id = 'sp-fast-fallback';
+                wrap.style.cssText = 'margin-top:10px;border:1px solid var(--sp-border);padding:8px 10px;font-size:11px;border-radius:4px;';
+                wrap.innerHTML = `
+                  <summary style="cursor:pointer;font-weight:600;color:var(--sp-muted);">Can't find your TX? — help us reach you ▾</summary>
+                  <div style="margin-top:8px;">
+                    <p style="color:var(--sp-muted);margin-bottom:6px;font-size:10px;">Give us your sender wallet (auto-match) OR email (we contact you):</p>
+                    <div style="margin-bottom:6px;">
+                      <input id="sp-fast-wallet" type="text" placeholder="Sender wallet address" style="width:100%;padding:6px 8px;font-size:11px;border:1px solid var(--sp-border);background:var(--sp-bg);color:var(--sp-text);font-family:monospace;border-radius:3px;margin-bottom:4px;">
+                      <button id="sp-fast-wallet-save" style="width:100%;padding:6px;font-size:10px;font-weight:700;background:#000;color:#fff;border:none;cursor:pointer;border-radius:3px;">SAVE WALLET</button>
+                    </div>
+                    <div>
+                      <input id="sp-fast-email" type="email" placeholder="your@email.com" style="width:100%;padding:6px 8px;font-size:11px;border:1px solid var(--sp-border);background:var(--sp-bg);color:var(--sp-text);border-radius:3px;margin-bottom:4px;">
+                      <button id="sp-fast-email-save" style="width:100%;padding:6px;font-size:10px;font-weight:700;background:#000;color:#fff;border:none;cursor:pointer;border-radius:3px;">SAVE EMAIL</button>
+                    </div>
+                    <p id="sp-fast-status" style="font-size:10px;margin-top:6px;display:none;"></p>
+                  </div>`;
+                manualDiv.appendChild(wrap);
+                // Bind save handlers
+                const self = this;
+                const save = async (kind) => {
+                  if (!self.currentOrderId) return;
+                  const v = kind === 'wallet'
+                    ? self.container.querySelector('#sp-fast-wallet')?.value?.trim()
+                    : self.container.querySelector('#sp-fast-email')?.value?.trim();
+                  const statusEl = self.container.querySelector('#sp-fast-status');
+                  if (kind === 'wallet' && (!v || v.length < 10)) { statusEl.style.display = 'block'; statusEl.style.color = '#ef4444'; statusEl.textContent = 'Invalid wallet'; return; }
+                  if (kind === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v || '')) { statusEl.style.display = 'block'; statusEl.style.color = '#ef4444'; statusEl.textContent = 'Invalid email'; return; }
+                  const body = kind === 'wallet' ? { customerWallet: v } : { customerEmail: v };
+                  try {
+                    const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${self.currentOrderId}/contact`, {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+                    });
+                    if (res.ok) {
+                      statusEl.style.display = 'block'; statusEl.style.color = '#10b981';
+                      statusEl.textContent = kind === 'email' ? 'Saved — we\'ll email you.' : 'Saved — scanner will match.';
+                      self._track('FAST_CONFIRMATION_PROVIDED', { type: kind, variant: self._variant });
+                    } else {
+                      const data = await res.json().catch(() => ({}));
+                      statusEl.style.display = 'block'; statusEl.style.color = '#ef4444';
+                      statusEl.textContent = data.error || 'Save failed';
+                    }
+                  } catch {
+                    statusEl.style.display = 'block'; statusEl.style.color = '#ef4444';
+                    statusEl.textContent = 'Network error';
+                  }
+                };
+                manualDiv.querySelector('#sp-fast-wallet-save')?.addEventListener('click', () => save('wallet'));
+                manualDiv.querySelector('#sp-fast-email-save')?.addEventListener('click', () => save('email'));
+              }
+            }
+          }
         });
       }
 
@@ -1845,6 +1921,8 @@
               const statusEl = this.container.querySelector('#sp-manual-tx-status');
               const value = input?.value?.trim();
               if (!value) return;
+              // Fast-variant telemetry: TX hash provided (the primary confirmation path).
+              this._track('FAST_CONFIRMATION_PROVIDED', { type: 'tx_hash', variant: this._variant });
 
               // Basic format validation
               const isLink = value.startsWith('http');
