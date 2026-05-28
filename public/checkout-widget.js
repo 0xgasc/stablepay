@@ -376,7 +376,7 @@
       }
       if (back) back.style.visibility = this._wizBackTarget(step) ? 'visible' : 'hidden';
       if (info) { info.style.display = 'none'; info.textContent = this._wizInfoText(step); }
-      this._track('WIZARD_STEP_VIEWED', { step: String(step) });
+      this._track('WIZARD_STEP_VIEWED', { step: String(step), variant: this._variant });
     }
 
     _wizGoBack() {
@@ -424,8 +424,11 @@
     }
 
     _wizComplete() {
-      // Include chain/token/variant so the wizard-completion analytics can slice properly.
-      this._track('WIZARD_COMPLETED', {
+      // Renamed from WIZARD_COMPLETED → WIZARD_ANSWERED. New semantic split:
+      //  - WIZARD_ANSWERED: pre-payment intent (wizard questions done)
+      //  - WIZARD_COMPLETED: post-payment success (fires from showSuccess on ORDER_CONFIRMED)
+      // Both surfaces fire both events so /ab-results can measure drop-off between intent and purchase.
+      this._track('WIZARD_ANSWERED', {
         payType: this._wizardState.payType,
         method: this._wizardState.method,
         chain: this.selectedChain?.chain || null,
@@ -1721,18 +1724,25 @@
             }
           }
 
-          // QR code for receive address
+          // QR code for receive address. For native SOL on Solana, encode as a Solana Pay URI
+          // (`solana:addr?amount=X`) so Phantom/Solflare etc. pre-fill the amount on scan —
+          // matches the page implementation. For other native chains (ETH/BNB/etc.) there's
+          // no equivalent URI standard, so we encode the raw address.
           const canvas = this.container.querySelector('#sp-qr-canvas');
           if (canvas) {
+            const nativeAmt = nativeSendAmt || (this.nativePriceUsd ? ((usdAmount + fee) / this.nativePriceUsd) : null);
+            const qrData = (chain.chain === 'SOLANA_MAINNET' && nativeAmt)
+              ? `solana:${receiveAddress}?amount=${parseFloat(nativeAmt)}`
+              : receiveAddress;
             const waitAndRender = () => {
               if (typeof QRCode !== 'undefined') {
-                QRCode.toCanvas(canvas, receiveAddress, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, () => {});
+                QRCode.toCanvas(canvas, qrData, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, () => {});
               } else { setTimeout(waitAndRender, 500); }
             };
             waitAndRender();
           }
 
-          // Hide Solana Pay toggle (native SOL, not SPL)
+          // Hide Solana Pay toggle (native SOL, not SPL) — the QR above already is a Solana Pay URI.
           const solPayToggle = this.container.querySelector('#sp-solanapay-toggle');
           if (solPayToggle) solPayToggle.style.display = 'none';
 
@@ -3042,6 +3052,12 @@
       if (!this._orderConfirmedTracked) {
         this._orderConfirmedTracked = true;
         this._track('ORDER_CONFIRMED', { chain: this.selectedChain?.chain || null, token: this.selectedToken || null, orderId: this.currentOrderId || null, txHash: hash, variant: this._variant });
+        // WIZARD_COMPLETED now means "wizard-driven session reached CONFIRMED". Only fire for
+        // guided/fast (wizard variants) — control has no wizard so wizardCompletionPct
+        // would be nonsense.
+        if (this._variant === 'guided' || this._variant === 'fast') {
+          this._track('WIZARD_COMPLETED', { chain: this.selectedChain?.chain || null, token: this.selectedToken || null, variant: this._variant });
+        }
       }
 
       // Guard: if hash looks like a URL, treat it as explorerLink instead
@@ -3211,6 +3227,18 @@
         window.scrollTo(0, scrollY);
       };
       const closeOverlay = () => {
+        // Telemetry parity with page's CANCEL_CLICKED (page's explicit cancel button fires this).
+        // Lets us measure abandonment rates symmetrically across surfaces. Variant included so
+        // we can see if one A/B arm drives more cancels.
+        if (spCheckout) {
+          try {
+            spCheckout._track('CANCEL_CLICKED', {
+              reason: 'customer_closed',
+              variant: spCheckout._variant,
+              hasOrder: !!spCheckout.currentOrderId,
+            });
+          } catch {}
+        }
         if (spCheckout && spCheckout.currentOrderId) {
           fetch(`${STABLEPAY_URL}/api/embed/order/${spCheckout.currentOrderId}/cancel`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'customer_closed' })

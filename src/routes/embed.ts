@@ -1305,7 +1305,8 @@ const ALLOWED_WIDGET_EVENTS = new Set([
   'VARIANT_ASSIGNED',
   'WIZARD_STEP_VIEWED',
   'WIZARD_ANSWER',
-  'WIZARD_COMPLETED',
+  'WIZARD_ANSWERED',          // wizard's questions answered (pre-payment intent)
+  'WIZARD_COMPLETED',         // full wizard → order CONFIRMED (post-payment, true success)
   'WIZARD_SKIPPED',
   'WIZARD_BACK',              // user navigated backward in the wizard
   'MANUAL_TX_SUBMITTED',      // customer clicked "I've sent the payment" (manual flow)

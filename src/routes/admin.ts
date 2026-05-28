@@ -2138,21 +2138,24 @@ router.get('/ab-results', requireAdminKey, async (req, res) => {
     type Sess = {
       variant: string | null; surface: string | null;
       opened: boolean; clicked: boolean; purchased: boolean;
-      wizardCompleted: boolean; wizardSkipped: boolean;
-      // fast-variant specific
+      // wizardAnswered = pre-payment intent (wizard questions done).
+      // wizardCompleted = post-payment success (order CONFIRMED while wizard active).
+      // Drop-off = wizardAnswered - wizardCompleted.
+      wizardAnswered: boolean; wizardCompleted: boolean; wizardSkipped: boolean;
       fastTxPasted: boolean; fastWalletPasted: boolean; fastEmailGiven: boolean;
     };
     const sessions = new Map<string, Sess>();
     for (const e of events) {
-      const s = sessions.get(e.sessionId) ?? { variant: null, surface: null, opened: false, clicked: false, purchased: false, wizardCompleted: false, wizardSkipped: false, fastTxPasted: false, fastWalletPasted: false, fastEmailGiven: false };
+      const s = sessions.get(e.sessionId) ?? { variant: null, surface: null, opened: false, clicked: false, purchased: false, wizardAnswered: false, wizardCompleted: false, wizardSkipped: false, fastTxPasted: false, fastWalletPasted: false, fastEmailGiven: false };
       const det = (e.details || {}) as any;
       if (e.action === 'VARIANT_ASSIGNED') s.variant = det.variant ?? s.variant;
       if (det.surface && !s.surface) s.surface = det.surface; // 'widget' or 'page'
       if (e.action === 'WIDGET_OPENED') s.opened = true;
       if (CLICK_ACTIONS.has(e.action))    s.clicked = true;
       if (PURCHASE_ACTIONS.has(e.action)) s.purchased = true;
+      if (e.action === 'WIZARD_ANSWERED')  s.wizardAnswered  = true;
       if (e.action === 'WIZARD_COMPLETED') s.wizardCompleted = true;
-      if (e.action === 'WIZARD_SKIPPED')   s.wizardSkipped = true;
+      if (e.action === 'WIZARD_SKIPPED')   s.wizardSkipped   = true;
       if (e.action === 'FAST_CONFIRMATION_PROVIDED') {
         const t = det.type;
         if (t === 'tx_hash') s.fastTxPasted = true;
@@ -2162,7 +2165,7 @@ router.get('/ab-results', requireAdminKey, async (req, res) => {
       sessions.set(e.sessionId, s);
     }
 
-    const empty = () => ({ total: 0, clicked: 0, purchased: 0, wizardCompleted: 0, wizardSkipped: 0, fastTxPasted: 0, fastWalletPasted: 0, fastEmailGiven: 0 });
+    const empty = () => ({ total: 0, clicked: 0, purchased: 0, wizardAnswered: 0, wizardCompleted: 0, wizardSkipped: 0, fastTxPasted: 0, fastWalletPasted: 0, fastEmailGiven: 0 });
     const VARIANTS = ['control', 'guided', 'fast'] as const;
     const buckets: any = { control: empty(), guided: empty(), fast: empty() };
     const bySurface: any = {
@@ -2176,6 +2179,7 @@ router.get('/ab-results', requireAdminKey, async (req, res) => {
       buckets[v].total++;
       if (s.clicked)          buckets[v].clicked++;
       if (s.purchased)        buckets[v].purchased++;
+      if (s.wizardAnswered)   buckets[v].wizardAnswered++;
       if (s.wizardCompleted)  buckets[v].wizardCompleted++;
       if (s.wizardSkipped)    buckets[v].wizardSkipped++;
       if (s.fastTxPasted)     buckets[v].fastTxPasted++;
@@ -2194,8 +2198,13 @@ router.get('/ab-results', requireAdminKey, async (req, res) => {
       purchased: b.purchased,
       clickRatePct: pct(b.clicked, b.total),
       purchaseRatePct: pct(b.purchased, b.total),
+      // wizardAnsweredPct: % who finished wizard answers (pre-payment intent).
+      // wizardCompletionPct: % who actually purchased AFTER finishing the wizard.
+      // Gap between these two = drop-off between intent and conversion.
+      wizardAnswered: b.wizardAnswered,
       wizardCompleted: b.wizardCompleted,
       wizardSkipped: b.wizardSkipped,
+      wizardAnsweredPct: pct(b.wizardAnswered, b.total),
       wizardCompletionPct: pct(b.wizardCompleted, b.total),
       skipPct: pct(b.wizardSkipped, b.total),
       // fast-variant signals (always present, zero for control/guided)
