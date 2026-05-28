@@ -3017,28 +3017,28 @@
     version: WIDGET_VERSION,
     create: (element, options) => new StablePayCheckout(element, options),
     checkout: (options) => {
-      // Create a modal overlay for the checkout
       const overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
       const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'max-width:420px;width:100%;max-height:90vh;overflow-y:auto;position:relative;-webkit-overflow-scrolling:touch;';
+      wrapper.style.cssText = 'max-width:420px;width:100%;max-height:90vh;overflow-y:auto;position:relative;';
       const closeBtn = document.createElement('button');
       closeBtn.textContent = '×';
-      closeBtn.style.cssText = 'position:absolute;top:8px;right:12px;z-index:10;background:none;border:none;color:#999;font-size:24px;cursor:pointer;';
-      const closeOverlay = () => { overlay.remove(); if (options.onCancel) options.onCancel(); };
+      closeBtn.style.cssText = 'position:absolute;top:8px;right:12px;z-index:10;background:none;border:none;color:#999;font-size:24px;cursor:pointer;min-width:44px;min-height:44px;';
+      const closeOverlay = () => { overlay.remove(); document.querySelectorAll('[data-sp-cancel-bar]').forEach(el => el.remove()); if (options.onCancel) options.onCancel(); };
       closeBtn.addEventListener('click', closeOverlay);
       closeBtn.addEventListener('touchend', (e) => { e.preventDefault(); closeOverlay(); });
       overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
       wrapper.addEventListener('click', (e) => e.stopPropagation());
-      wrapper.addEventListener('touchend', (e) => e.stopPropagation());
       wrapper.appendChild(closeBtn);
+      const innerContainer = document.createElement('div');
+      wrapper.appendChild(innerContainer);
       overlay.appendChild(wrapper);
       document.body.appendChild(overlay);
 
-      const checkout = new StablePayCheckout(wrapper, {
+      const checkout = new StablePayCheckout(innerContainer, {
         ...options,
-        onSuccess: (data) => { overlay.remove(); if (options.onSuccess) options.onSuccess(data); },
-        onCancel: () => { overlay.remove(); if (options.onCancel) options.onCancel(); },
+        onSuccess: (data) => { overlay.remove(); document.querySelectorAll('[data-sp-cancel-bar]').forEach(el => el.remove()); if (options.onSuccess) options.onSuccess(data); },
+        onCancel: () => { overlay.remove(); document.querySelectorAll('[data-sp-cancel-bar]').forEach(el => el.remove()); if (options.onCancel) options.onCancel(); },
       });
       return checkout;
     },

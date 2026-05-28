@@ -1229,6 +1229,14 @@
             return supported.filter(t => !NATIVE_TOKENS_SET.has(t));
         }
 
+        function cpWizRefresh() {
+            const wiz = document.getElementById('cpWizard');
+            if (!wiz || wiz.style.display === 'none') return;
+            if (cpWizState.step === 'payType' || cpWizState.step === 'network' || cpWizState.step === 'token') {
+                cpWizGoStep(cpWizState.step);
+            }
+        }
+
         function cpWizGoStep(step) {
             cpWizState.step = step;
             const body = document.getElementById('cpWizBody');
@@ -2522,6 +2530,7 @@
 
                     document.getElementById('productName').textContent = currentProduct.name;
                     document.getElementById('productPrice').textContent = `$${currentProduct.price.toFixed(2)} ${orderData.token || 'USDC'}`;
+                    cpWizRefresh();
 
                     console.log('Order loaded:', orderData);
 
@@ -2572,6 +2581,7 @@
                         }));
                         // Stash for client-side address lookup (avoids premature backend PATCH)
                         window._availableChains = merchantChains;
+                        cpWizRefresh();
                         renderChainOptions();
                         // Hide pay button (manual flow drives confirmation)
                         const payBtn = document.getElementById('payBtn');
@@ -2585,6 +2595,7 @@
                         selectedToken = orderData.token || 'USDC';
                         window._orderChain = orderData.chain;
                         merchantChains = [{ chain: orderData.chain, address: orderData.paymentAddress, supportedTokens: [orderData.token || 'USDC'] }];
+                        cpWizRefresh();
                         const paymentSection = document.getElementById('paymentSection');
                         if (paymentSection) paymentSection.classList.add('hidden');
                         const topSelector = document.getElementById('chainSelectorTop');
@@ -2629,6 +2640,7 @@
             // Update UI with product info
             document.getElementById('productName').textContent = currentProduct.name;
             document.getElementById('productPrice').textContent = `$${currentProduct.price} (${currentProduct.price} USDC)`;
+            cpWizRefresh();
 
             console.log('Product loaded:', currentProduct);
             if (currentProduct.enabledChains) {
@@ -2655,6 +2667,7 @@
                 }
 
                 merchantChains = defaultChains.map(key => ({ chain: key, address: null }));
+                cpWizRefresh();
                 renderChainOptions();
                 return;
             }
@@ -2699,6 +2712,7 @@
                         );
                         console.log('Filtered to specified chains:', currentProduct.enabledChains);
                     }
+                    cpWizRefresh();
 
                     if (merchantChains.length === 0) {
                         chainOptionsContainer.innerHTML = `
