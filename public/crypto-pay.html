@@ -1844,7 +1844,7 @@
                         <button data-wiz="copy" data-val="${addr}" style="padding:4px 8px;font-size:12px;font-weight:700;border:2px solid #000;background:#fff;cursor:pointer;">COPY</button>
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 mb-3 text-center">Sending from: <code class="font-mono">${cpWizState.senderWallet?.slice(0,6)}...${cpWizState.senderWallet?.slice(-4)}</code></p>
+                ${cpWizState.senderWallet ? `<p class="text-xs text-gray-500 mb-3 text-center">Sending from: <code class="font-mono">${cpWizState.senderWallet.slice(0,6)}...${cpWizState.senderWallet.slice(-4)}</code></p>` : ''}
                 <div class="text-center mb-4">
                     <p class="text-xs text-gray-500">Expires in <span id="cpWizManualCountdown" class="font-bold">--:--</span></p>
                     <div id="cpWizManualExpWarning" style="display:none;"></div>
@@ -1974,8 +1974,11 @@
             const status = document.getElementById('cpWizManualTxStatus');
             const val = input?.value?.trim();
             if (!val || !window.currentOrderId) return;
-            // Fast-variant telemetry: TX hash provided (primary confirmation path).
-            cpWizTrack('FAST_CONFIRMATION_PROVIDED', { type: 'tx_hash', variant: window._spVariant });
+            // Fast-variant telemetry: only fire when this session IS fast (was firing for all
+            // variants, polluting the fast paste-rate metric).
+            if (window._spVariant === 'fast') {
+                cpWizTrack('FAST_CONFIRMATION_PROVIDED', { type: 'tx_hash', variant: window._spVariant });
+            }
             status.classList.remove('hidden');
             status.textContent = 'Verifying...'; status.style.color = '';
             try {

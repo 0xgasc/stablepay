@@ -871,7 +871,13 @@ router.post('/order/:orderId/wallet', async (req, res) => {
  *
  * Only PENDING orders. Email format is loosely validated. Wallet is loosely validated.
  */
-router.post('/order/:orderId/contact', async (req, res) => {
+router.post('/order/:orderId/contact', rateLimit({
+  // No merchantId on this endpoint; rate-limit anonymously to prevent contact-spam attacks
+  // (attacker guessing orderIds to overwrite customerEmail/Wallet).
+  getMerchantId: async () => null,
+  limitAnonymous: true,
+  anonymousLimit: 20,
+}), async (req, res) => {
   try {
     const { orderId } = req.params;
     const { customerEmail, customerWallet } = (req.body || {}) as { customerEmail?: string; customerWallet?: string };

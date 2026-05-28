@@ -1881,51 +1881,89 @@
         // Show manual TX entry after timeout
         if (!manualShown && Date.now() - pollStartTime > MANUAL_TX_TIMEOUT) {
           manualShown = true;
-          const manualDiv = this.container.querySelector('#sp-manual-tx');
-          if (manualDiv) manualDiv.style.display = 'block';
+          this._revealManualTxPaste();
+        }
+      }, 1000);
 
-          // Stop progress bar at current position
-          const bar = this.container.querySelector('#sp-progress-bar');
-          if (bar) bar.style.transition = 'none';
-
-          // Update status
-          const pollStatus = this.container.querySelector('#sp-poll-status');
-          if (pollStatus) pollStatus.textContent = 'Stablo couldn\'t find it automatically';
-          const pollTimer = this.container.querySelector('#sp-poll-timer');
-          if (pollTimer) pollTimer.textContent = 'Paste your transaction ID below to verify';
-
-          // Set smart placeholder + hint per chain
-          const txInput = this.container.querySelector('#sp-manual-tx-input');
-          const txHint = this.container.querySelector('#sp-manual-tx-hint');
-          const chain = this.selectedChain?.chain;
-          const chainType = this.selectedChain?.config?.type;
-          if (txInput) {
-            if (chainType === 'solana') {
-              txInput.placeholder = 'TX signature or link...';
-            } else if (chain === 'TRON_MAINNET') {
-              txInput.placeholder = 'TX hash or link...';
-            } else {
-              txInput.placeholder = 'TX hash or link...';
+      // Polling for confirmation (continues even after manual TX shown).
+      this._pollingInterval = setInterval(async () => {
+        if (!this.currentOrderId) return;
+        try {
+          const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}`);
+          const data = await res.json();
+          if (data.status === 'CONFIRMED') {
+            clearInterval(this._pollingInterval); this._pollingInterval = null;
+            clearInterval(this._timerInterval);   this._timerInterval = null;
+            this.showSuccess(data);
+          } else if (data.status === 'EXPIRED' || data.status === 'CANCELLED') {
+            clearInterval(this._pollingInterval); this._pollingInterval = null;
+            clearInterval(this._timerInterval);   this._timerInterval = null;
+            const pollStatus = this.container.querySelector('#sp-poll-status');
+            if (pollStatus) pollStatus.textContent = 'Order ' + data.status.toLowerCase();
+            const pollTimer = this.container.querySelector('#sp-poll-timer');
+            if (pollTimer) pollTimer.textContent = 'Please start a new payment';
+          } else if (data.wrongTokenDetected && data.status === 'PENDING') {
+            const wt = data.wrongTokenDetected;
+            const pollStatus = this.container.querySelector('#sp-poll-status');
+            if (pollStatus) pollStatus.innerHTML = `We detected a <strong>${wt.receivedToken || 'different token'}</strong> transfer, but this order expects <strong>${wt.expectedToken}</strong>.`;
+            const pollTimer = this.container.querySelector('#sp-poll-timer');
+            if (pollTimer) pollTimer.textContent = 'Please send the correct token to complete payment.';
+          } else if (data.status === 'PENDING' && data.expiresAt) {
+            const secsLeft = Math.max(0, Math.floor((new Date(data.expiresAt).getTime() - Date.now()) / 1000));
+            const warningEl = this.container.querySelector('#sp-expiry-warning');
+            if (warningEl) {
+              if (secsLeft <= 60 && secsLeft > 0) { warningEl.textContent = 'Less than 1 minute! Complete payment now.'; warningEl.style.cssText = 'display:block;background:#fecaca;border:2px solid #ef4444;padding:6px 10px;font-size:12px;font-weight:600;text-align:center;margin-bottom:6px;'; }
+              else if (secsLeft <= 300) { warningEl.textContent = 'Less than 5 minutes remaining.'; warningEl.style.cssText = 'display:block;background:#fef3c7;border:2px solid #f59e0b;padding:6px 10px;font-size:12px;text-align:center;margin-bottom:6px;'; }
+              else { warningEl.style.display = 'none'; }
             }
           }
-          if (txHint) {
-            const explorerNames = { BASE_MAINNET: 'basescan.org', ETHEREUM_MAINNET: 'etherscan.io', POLYGON_MAINNET: 'polygonscan.com', ARBITRUM_MAINNET: 'arbiscan.io', BNB_MAINNET: 'bscscan.com', SOLANA_MAINNET: 'solscan.io', TRON_MAINNET: 'tronscan.org' };
-            txHint.textContent = `Paste from ${explorerNames[chain] || 'your block explorer'}`;
+        } catch {}
+      }, 5000);
+    }
+
+    // Reveal the manual TX paste UI + bind its Submit handler. Extracted from inline code
+    // inside startPaymentPolling's 15s-timeout block so fast variant can call it IMMEDIATELY
+    // when the customer clicks "I've sent it" — otherwise the Submit button would be dead
+    // until 15s elapsed (the handler was bound inside that gated block).
+    _revealManualTxPaste() {
+      if (this._manualTxRevealed) return; // idempotent
+      this._manualTxRevealed = true;
+      const manualDiv = this.container.querySelector('#sp-manual-tx');
+      if (manualDiv) manualDiv.style.display = 'block';
+      const bar = this.container.querySelector('#sp-progress-bar');
+      if (bar) bar.style.transition = 'none';
+      // Skip the "couldn't find it" copy for fast — they have their own paste-confirm context.
+      if (this._variant !== 'fast') {
+        const pollStatus = this.container.querySelector('#sp-poll-status');
+        if (pollStatus) pollStatus.textContent = 'Stablo couldn\'t find it automatically';
+        const pollTimer = this.container.querySelector('#sp-poll-timer');
+        if (pollTimer) pollTimer.textContent = 'Paste your transaction ID below to verify';
+      }
+      const txInput = this.container.querySelector('#sp-manual-tx-input');
+      const txHint = this.container.querySelector('#sp-manual-tx-hint');
+      const chain = this.selectedChain?.chain;
+      const chainType = this.selectedChain?.config?.type;
+      if (txInput) {
+        txInput.placeholder = chainType === 'solana' ? 'TX signature or link...' : 'TX hash or link...';
+      }
+      if (txHint) {
+        const explorerNames = { BASE_MAINNET: 'basescan.org', ETHEREUM_MAINNET: 'etherscan.io', POLYGON_MAINNET: 'polygonscan.com', ARBITRUM_MAINNET: 'arbiscan.io', BNB_MAINNET: 'bscscan.com', SOLANA_MAINNET: 'solscan.io', TRON_MAINNET: 'tronscan.org' };
+        txHint.textContent = `Paste from ${explorerNames[chain] || 'your block explorer'}`;
+      }
+      const submitBtn = this.container.querySelector('#sp-manual-tx-btn');
+      if (submitBtn) {
+        submitBtn.addEventListener('click', async () => {
+          const input = this.container.querySelector('#sp-manual-tx-input');
+          const statusEl = this.container.querySelector('#sp-manual-tx-status');
+          const value = input?.value?.trim();
+          if (!value) return;
+          // Gated on variant — only count as fast-conversion when this IS the fast arm.
+          if (this._variant === 'fast') {
+            this._track('FAST_CONFIRMATION_PROVIDED', { type: 'tx_hash', variant: this._variant });
           }
 
-          // Attach manual TX submit handler
-          const submitBtn = this.container.querySelector('#sp-manual-tx-btn');
-          if (submitBtn) {
-            submitBtn.addEventListener('click', async () => {
-              const input = this.container.querySelector('#sp-manual-tx-input');
-              const statusEl = this.container.querySelector('#sp-manual-tx-status');
-              const value = input?.value?.trim();
-              if (!value) return;
-              // Fast-variant telemetry: TX hash provided (the primary confirmation path).
-              this._track('FAST_CONFIRMATION_PROVIDED', { type: 'tx_hash', variant: this._variant });
-
-              // Basic format validation
-              const isLink = value.startsWith('http');
+          // Basic format validation
+          const isLink = value.startsWith('http');
               if (!isLink) {
                 // TX hash validation per chain
                 const ct = this.selectedChain?.config?.type;
@@ -2011,55 +2049,6 @@
             });
           }
         }
-      }, 1000);
-
-      // Polling for confirmation (continues even after manual TX shown)
-      this._pollingInterval = setInterval(async () => {
-        if (!this.currentOrderId) return;
-        try {
-          const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}`);
-          const data = await res.json();
-          if (data.status === 'CONFIRMED') {
-            clearInterval(this._pollingInterval);
-            clearInterval(this._timerInterval);
-            this._pollingInterval = null;
-            this._timerInterval = null;
-            this.showSuccess(data);
-          } else if (data.status === 'EXPIRED' || data.status === 'CANCELLED') {
-            clearInterval(this._pollingInterval);
-            clearInterval(this._timerInterval);
-            this._pollingInterval = null;
-            this._timerInterval = null;
-            const pollStatus = this.container.querySelector('#sp-poll-status');
-            if (pollStatus) pollStatus.textContent = 'Order ' + data.status.toLowerCase();
-            const pollTimer = this.container.querySelector('#sp-poll-timer');
-            if (pollTimer) pollTimer.textContent = 'Please start a new payment';
-          } else if (data.wrongTokenDetected && data.status === 'PENDING') {
-            const wt = data.wrongTokenDetected;
-            const pollStatus = this.container.querySelector('#sp-poll-status');
-            if (pollStatus) pollStatus.innerHTML = `We detected a <strong>${wt.receivedToken || 'different token'}</strong> transfer, but this order expects <strong>${wt.expectedToken}</strong>.`;
-            const pollTimer = this.container.querySelector('#sp-poll-timer');
-            if (pollTimer) pollTimer.textContent = 'Please send the correct token to complete payment.';
-          } else if (data.status === 'PENDING' && data.expiresAt) {
-            const secsLeft = Math.max(0, Math.floor((new Date(data.expiresAt).getTime() - Date.now()) / 1000));
-            const warningEl = this.container.querySelector('#sp-expiry-warning');
-            if (warningEl) {
-              if (secsLeft <= 60 && secsLeft > 0) {
-                warningEl.textContent = 'Less than 1 minute! Complete payment now.';
-                warningEl.style.cssText = 'display:block;background:#fecaca;border:2px solid #ef4444;padding:6px 10px;font-size:12px;font-weight:600;text-align:center;margin-bottom:6px;';
-              } else if (secsLeft <= 300) {
-                warningEl.textContent = 'Less than 5 minutes remaining.';
-                warningEl.style.cssText = 'display:block;background:#fef3c7;border:2px solid #f59e0b;padding:6px 10px;font-size:12px;text-align:center;margin-bottom:6px;';
-              } else {
-                warningEl.style.display = 'none';
-              }
-            }
-          }
-        } catch (err) {
-          // Silently retry
-        }
-      }, 5000);
-    }
 
     selectChain(chainKey) {
       const prevType = this.selectedChain?.config?.type;
@@ -2619,7 +2608,7 @@
       const payBtn = this.container.querySelector('#sp-pay-btn');
       if (!payBtn || !this.connectedWallet || !this.selectedChain) return;
 
-      this._track('PAY_CLICKED', { chain: this.selectedChain.chain, token: this.selectedToken, mode: this.payMode });
+      this._track('PAY_CLICKED', { chain: this.selectedChain.chain, token: this.selectedToken, mode: this.payMode, method: 'wallet', variant: this._variant });
 
       payBtn.disabled = true;
       payBtn.innerHTML = '<span class="sp-spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; margin-right: 8px;"></span>Processing...';
@@ -2768,7 +2757,7 @@
 
       console.log(`[StablePay] Native send: ${nativeSendAmt} ${this.selectedToken} → ${receiveAddress}`);
       const tx = await signer.sendTransaction({ to: receiveAddress, value: valueWei });
-      this._track('NATIVE_TX_BROADCAST', { chain: this.selectedChain.chain, token: this.selectedToken, txHash: tx.hash, amount: nativeSendAmt });
+      this._track('NATIVE_TX_BROADCAST', { chain: this.selectedChain.chain, token: this.selectedToken, txHash: tx.hash, amount: nativeSendAmt, variant: this._variant });
       this.showProcessing(tx.hash, 'Confirming Payment...');
 
       const receipt = await tx.wait();
@@ -2920,6 +2909,8 @@
         const signed = await this.provider.signTransaction(tx);
         const sig = await connection.sendRawTransaction(signed.serialize());
 
+        // A/B telemetry: matches EVM path so conversion comparisons aren't biased by chain.
+        this._track('NATIVE_TX_BROADCAST', { chain: this.selectedChain?.chain || 'SOLANA_MAINNET', token: this.selectedToken, txHash: sig, variant: this._variant });
         this.showProcessing(sig);
 
         await connection.confirmTransaction(sig, 'confirmed');
