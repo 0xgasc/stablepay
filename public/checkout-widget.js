@@ -286,7 +286,7 @@
         ">
           <div style="text-align: center; margin-bottom: 16px;">
             <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: ${isDark ? '#888' : '#666'}; font-weight: 700;">Quick setup</div>
-            <div id="sp-wiz-step-label" style="font-size: 11px; color: ${isDark ? '#666' : '#999'}; margin-top: 2px;">Step 1 of 2</div>
+            <div id="sp-wiz-step-label" style="font-size: 11px; color: ${isDark ? '#666' : '#999'}; margin-top: 2px;">Step 1 of 3</div>
           </div>
           <div id="sp-wiz-body"></div>
           <div style="text-align: center; margin-top: 16px;">
@@ -335,7 +335,7 @@
       const label = this.container.querySelector('#sp-wiz-step-label');
       if (body) body.innerHTML = this._wizStepHTML(step);
       if (label) {
-        const labels = { 1: 'Step 1 of 2', '1b': 'Setup wallet', 2: 'Step 2 of 2' };
+        const labels = { 1: 'Step 1 of 3', '1b': 'Setup wallet', 2: 'Step 2 of 3' };
         label.textContent = labels[step] || '';
       }
       const btns = this.container.querySelectorAll('.sp-wiz-ans');
@@ -400,11 +400,46 @@
       const targetTab = this._wizardState.method === 'wallet' ? 'wallet' : 'send';
       this.render();
       this.attachEventListeners();
-      // Use setPayMode (NOT direct assignment) so refreshNativePrice, selectChain,
-      // selectedToken sync, fee banner, and mode-toggle button all update.
+      // Apply mode via setPayMode (NOT direct assignment) so refreshNativePrice,
+      // selectChain, selectedToken sync, fee banner, and toggle button all update.
       if (typeof this.setPayMode === 'function') this.setPayMode(targetMode);
       const tabBtn = this.container.querySelector(`[data-method="${targetTab}"]`);
       if (tabBtn && typeof tabBtn.click === 'function') { try { tabBtn.click(); } catch {} }
+      // ── Wizard "Step 3": hide chrome so the user sees only the focused action ──
+      this._applyWizardFocusedMode();
+    }
+
+    _applyWizardFocusedMode() {
+      const w = this.container;
+      // Hide pay-mode toggle + fee banner — wizard already chose pay type
+      const modeToggle = w.querySelector('#sp-pay-mode-toggle');
+      if (modeToggle) modeToggle.style.display = 'none';
+      // Hide the Network/Token grid — wizard's selections lock to defaults
+      const grids = w.querySelectorAll('div[style*="grid-template-columns: 1fr 1fr"]');
+      grids.forEach(g => { if (g.querySelector('#sp-chain-select-wrapper') || g.querySelector('#sp-token-select-wrapper')) g.style.display = 'none'; });
+      // Hide the method tabs — wizard already chose
+      const tabs = w.querySelector('#sp-method-tabs');
+      if (tabs) tabs.style.display = 'none';
+      // Inject a wizard-style header above the action area so it feels like a wizard step
+      const inner = w.querySelector('.sp-widget');
+      if (inner && !w.querySelector('#sp-wiz-step3-header')) {
+        const stepLabel = this._wizardState.method === 'wallet' ? 'Step 3 of 3 — Connect & pay' : 'Step 3 of 3 — Send payment';
+        const header = document.createElement('div');
+        header.id = 'sp-wiz-step3-header';
+        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-bottom:2px solid #e2e8f0;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;';
+        header.innerHTML = `<span>${stepLabel}</span><button id="sp-wiz-back" type="button" style="background:none;border:none;color:#3b82f6;font-size:11px;font-weight:600;cursor:pointer;text-decoration:underline;text-transform:none;letter-spacing:0;">← Change</button>`;
+        const card = inner.firstElementChild || inner;
+        inner.insertBefore(header, card);
+        const back = header.querySelector('#sp-wiz-back');
+        if (back) back.addEventListener('click', () => this._wizRestart());
+      }
+    }
+
+    _wizRestart() {
+      this._wizardState = { payType: null, method: null, step: 1, done: false };
+      try { if (this._wizDoneKey) sessionStorage.removeItem(this._wizDoneKey); } catch {}
+      this._renderWizard();
+      this.attachWizardListeners();
     }
 
     injectStyles() {
