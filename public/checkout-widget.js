@@ -171,7 +171,7 @@
       // Anonymous session ID for telemetry — persists for this widget instance
       this._sessionId = (window.crypto?.randomUUID?.() || `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`);
 
-      // Wizard is default for all sessions. ?sp_variant=control override for QA only.
+      // 50/50 A/B: guided wizard vs classic. ?sp_variant=guided|control override for QA.
       this._variant = this._assignVariant();
       this._wizardState = { payType: null, method: null, step: 1, done: false };
 
@@ -182,12 +182,18 @@
       try {
         const url = new URL(window.location.href);
         const override = url.searchParams.get('sp_variant');
-        if (override === 'control') {
-          sessionStorage.setItem('sp_widget_variant', 'control');
-          return 'control';
+        if (override === 'guided' || override === 'control') {
+          sessionStorage.setItem('sp_widget_variant', override);
+          return override;
         }
-        sessionStorage.setItem('sp_widget_variant', 'guided');
-        return 'guided';
+        const cached = sessionStorage.getItem('sp_widget_variant');
+        if (cached === 'guided' || cached === 'control') return cached;
+        const sid = this._sessionId;
+        let hash = 0;
+        for (let i = 0; i < sid.length; i++) hash = ((hash << 5) - hash + sid.charCodeAt(i)) | 0;
+        const variant = (Math.abs(hash) % 2 === 0) ? 'control' : 'guided';
+        sessionStorage.setItem('sp_widget_variant', variant);
+        return variant;
       } catch {
         return 'guided';
       }
@@ -315,19 +321,17 @@
         const labels = { 1: 'Step 1 of 2', '1b': 'Setup wallet', 2: 'Step 2 of 2' };
         label.textContent = labels[step] || '';
       }
-      // Rebind handlers for newly-rendered buttons
-      this.container.querySelectorAll('.sp-wiz-ans').forEach(btn => {
-        btn.addEventListener('click', () => this._wizAnswer(btn.dataset.key, btn.dataset.value));
-      });
-      this.container.querySelectorAll('.sp-wiz-goto').forEach(btn => {
-        btn.addEventListener('click', () => this._wizGoStep(btn.dataset.step));
-      });
       this._track('WIZARD_STEP_VIEWED', { step: String(step) });
     }
 
     attachWizardListeners() {
-      const skip = this.container.querySelector('#sp-wiz-skip');
-      if (skip) skip.addEventListener('click', () => this._wizSkip());
+      this.container.addEventListener('click', (e) => {
+        const ans = e.target.closest('.sp-wiz-ans');
+        if (ans) { e.stopPropagation(); return this._wizAnswer(ans.dataset.key, ans.dataset.value); }
+        const goto = e.target.closest('.sp-wiz-goto');
+        if (goto) { e.stopPropagation(); return this._wizGoStep(goto.dataset.step); }
+        if (e.target.closest('#sp-wiz-skip')) { e.stopPropagation(); return this._wizSkip(); }
+      });
     }
 
     _wizAnswer(key, value) {
