@@ -238,13 +238,15 @@
     async init() {
       this.injectStyles();
       this.renderLoading();
-      await this.loadMerchantConfig();
-
-      // A/B: render wizard first when assigned to 'guided'. On completion the wizard
-      // calls _wizardComplete() which sets payMode + method and calls this.render().
+      // Fire VARIANT_ASSIGNED + WIDGET_OPENED BEFORE awaiting any network calls,
+      // so even sessions that fail loadMerchantConfig are bucketed correctly in A/B.
+      // (Previously these fired after await — slow networks / failures left sessions
+      // unassigned, biasing the variant counts.)
       window._spWidget = this;
       this._track('VARIANT_ASSIGNED', { variant: this._variant });
       this._track('WIDGET_OPENED', { amount: this.options.amount, productName: this.options.productName, variant: this._variant });
+
+      await this.loadMerchantConfig();
 
       // Track page-hidden as a proxy for distraction/tab-switch abandonment
       if (!this._visibilityHandlerAttached) {
