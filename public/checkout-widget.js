@@ -1336,9 +1336,11 @@
           // would feel identical to guided after "I've sent it" — defeating the test.
           if (this._variant === 'fast') {
             this._track('FAST_STEP_VIEWED', { step: 'paste-confirm' });
+            // CRITICAL: call _revealManualTxPaste() — it binds the Submit click handler.
+            // Setting display:block alone leaves Submit dead until the 15s timeout fires.
+            this._revealManualTxPaste();
             const manualDiv = this.container.querySelector('#sp-manual-tx');
             if (manualDiv) {
-              manualDiv.style.display = 'block';
               // Add wallet+email recovery section if not already present
               if (!manualDiv.querySelector('#sp-fast-fallback')) {
                 const wrap = document.createElement('details');
