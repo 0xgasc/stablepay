@@ -1854,9 +1854,14 @@
                         const bar = document.getElementById('cpWizScanBar');
                         if (bar) bar.style.width = '100%';
                         try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
-                        // A/B telemetry: full wizard completion + confirmed purchase
+                        // A/B telemetry: full wizard completion + confirmed purchase.
+                        // Idempotent guard so this poller + the main page poller don't double-fire
+                        // ORDER_CONFIRMED for the same session (would inflate purchase rate).
                         cpWizTrack('WIZARD_COMPLETED', { payType: cpWizState.payType, chain: cpWizState.chain, token: cpWizState.token, method: cpWizState.method });
-                        cpWizTrack('ORDER_CONFIRMED', { chain: data.chain, token: data.token, orderId: data.id });
+                        if (!window._cpOrderConfirmedTracked) {
+                            window._cpOrderConfirmedTracked = true;
+                            cpWizTrack('ORDER_CONFIRMED', { chain: data.chain, token: data.token, orderId: data.id, variant: (sessionStorage.getItem('sp_variant') || null) });
+                        }
                         const wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'none';
                         const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };
                         if (typeof showPaymentSuccess === 'function') showPaymentSuccess(product, data.chain, data.explorerLink || '#', data.id);
@@ -5162,8 +5167,12 @@
                     if (data.status === 'CONFIRMED') {
                         clearInterval(window._cpPolling); window._cpPolling = null;
                         clearInterval(window._cpProgressTimer); window._cpProgressTimer = null;
-                        // A/B telemetry: actual purchase (best-in-class conversion metric)
-                        cpWizTrack('ORDER_CONFIRMED', { chain: data.chain, token: data.token, orderId: data.id });
+                        // A/B telemetry: actual purchase. Idempotent — also guarded against the wizard
+                        // poller racing on the same order (both pollers can see CONFIRMED concurrently).
+                        if (!window._cpOrderConfirmedTracked) {
+                            window._cpOrderConfirmedTracked = true;
+                            cpWizTrack('ORDER_CONFIRMED', { chain: data.chain, token: data.token, orderId: data.id, variant: (sessionStorage.getItem('sp_variant') || null) });
+                        }
                         if (bar) bar.style.width = '100%';
                         if (statusEl) statusEl.textContent = 'Payment confirmed!';
                         const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };
