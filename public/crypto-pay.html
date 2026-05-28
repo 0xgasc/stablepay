@@ -1108,16 +1108,20 @@
         }
 
         function cpAssignVariant() {
-            // A/B killed — wizard is now default for all sessions.
-            // QA override kept so ?variant=control still works for debugging.
             const url = new URL(window.location.href);
             const override = url.searchParams.get('variant');
-            if (override === 'control') {
-                sessionStorage.setItem('sp_variant', 'control');
-                return 'control';
+            if (override === 'guided' || override === 'control') {
+                sessionStorage.setItem('sp_variant', override);
+                return override;
             }
-            sessionStorage.setItem('sp_variant', 'guided');
-            return 'guided';
+            const cached = sessionStorage.getItem('sp_variant');
+            if (cached === 'guided' || cached === 'control') return cached;
+            const sid = cpSessionId();
+            let hash = 0;
+            for (let i = 0; i < sid.length; i++) hash = ((hash << 5) - hash + sid.charCodeAt(i)) | 0;
+            const variant = (Math.abs(hash) % 2 === 0) ? 'control' : 'guided';
+            sessionStorage.setItem('sp_variant', variant);
+            return variant;
         }
 
         // Wrapper for /api/embed/event — wizard events, fire-and-forget.
