@@ -210,7 +210,9 @@
         sessionStorage.setItem('sp_widget_variant', variant);
         return variant;
       } catch {
-        return 'guided';
+        // sessionStorage blocked (Safari ITP, iframe w/ 3p cookies blocked, private mode).
+        // Coin-flip from Math.random so we don't systematically bias these sessions toward one arm.
+        return Math.random() < 0.5 ? 'control' : 'guided';
       }
     }
 
@@ -308,13 +310,14 @@
       const primaryBtnStyle = `width:100%;padding:14px 12px;background:${accent};color:#000;border:3px solid #000;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;-webkit-appearance:none;appearance:none;touch-action:manipulation;`;
       const secondaryBtnStyle = `width:100%;padding:14px 12px;background:${isDark ? '#2a2a2a' : '#fff'};color:${isDark ? '#fff' : '#000'};border:3px solid ${isDark ? '#666' : '#000'};font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;margin-top:10px;-webkit-appearance:none;appearance:none;touch-action:manipulation;`;
       const subStyle = `font-size:11px;color:${isDark ? '#999' : '#666'};font-weight:400;margin-top:2px;`;
+      const anyNative = (this.merchantChains || []).some(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
       switch (String(step)) {
         case '1':
           return `
             <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">How do you want to pay?</h2>
-            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">Both end up as USDC for the merchant.</p>
+            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">${anyNative ? 'Both end up as USDC for the merchant.' : 'Pay with stablecoins.'}</p>
             <button class="sp-wiz-ans" data-key="payType" data-value="stable" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Stablecoin (USDC/USDT)</span><span style="${subStyle}">No extra conversion fee</span></span><span>→</span></button>
-            <button class="sp-wiz-ans" data-key="payType" data-value="native" style="${secondaryBtnStyle};"><span><span style="display:block">Native crypto (ETH / SOL / BNB)</span><span style="${subStyle}">+1.5% fee, auto-swapped for you</span></span><span>→</span></button>
+            ${anyNative ? `<button class="sp-wiz-ans" data-key="payType" data-value="native" style="${secondaryBtnStyle};"><span><span style="display:block">Native crypto (ETH / SOL / BNB)</span><span style="${subStyle}">+1.5% fee, auto-swapped for you</span></span><span>→</span></button>` : ''}
             <div style="text-align:center;margin-top:14px;"><button class="sp-wiz-goto" data-step="1b" style="background:none;border:none;color:${isDark ? '#666' : '#999'};font-size:11px;text-decoration:underline;cursor:pointer;">Don't have a wallet yet?</button></div>`;
         case '1b':
           return `
@@ -415,7 +418,14 @@
     }
 
     _wizComplete() {
-      this._track('WIZARD_COMPLETED', this._wizardState);
+      // Include chain/token/variant so the wizard-completion analytics can slice properly.
+      this._track('WIZARD_COMPLETED', {
+        payType: this._wizardState.payType,
+        method: this._wizardState.method,
+        chain: this.selectedChain?.chain || null,
+        token: this.selectedToken || null,
+        variant: this._variant,
+      });
       this._wizardState.done = true;
       try { if (this._wizDoneKey) sessionStorage.setItem(this._wizDoneKey, '1'); } catch {}
       const targetMode = this._wizardState.payType === 'native' ? 'crypto' : 'stable';
@@ -1258,6 +1268,9 @@
         sentBtn.addEventListener('click', async () => {
           sentBtn.disabled = true;
           sentBtn.textContent = 'REGISTERING...';
+          // A/B telemetry: customer claims they sent payment. Equivalent to PAY_CLICKED for manual flow.
+          this._track('PAY_CLICKED', { chain: this.selectedChain?.chain || null, token: this.selectedToken, method: 'manual', variant: this._variant });
+          this._track('MANUAL_TX_SUBMITTED', { chain: this.selectedChain?.chain || null, token: this.selectedToken, variant: this._variant });
           // Stop countdown — they're confirming
           if (this._countdownInterval) clearInterval(this._countdownInterval);
 
@@ -2951,6 +2964,12 @@
       // Handle both string txHash and object {txHash, explorerLink, ...} from polling
       let hash = typeof txHashOrData === 'string' ? txHashOrData : (txHashOrData?.txHash || null);
       let explorerLink = typeof txHashOrData === 'object' ? txHashOrData?.explorerLink : null;
+      // A/B telemetry: actual confirmed purchase (true conversion metric).
+      // Idempotent guard so retries / re-polls don't double-fire.
+      if (!this._orderConfirmedTracked) {
+        this._orderConfirmedTracked = true;
+        this._track('ORDER_CONFIRMED', { chain: this.selectedChain?.chain || null, token: this.selectedToken || null, orderId: this.currentOrderId || null, txHash: hash, variant: this._variant });
+      }
 
       // Guard: if hash looks like a URL, treat it as explorerLink instead
       if (hash && hash.startsWith('http')) {

@@ -1225,7 +1225,12 @@
 
         function cpWizGetChains() {
             if (!window._availableChains && !merchantChains?.length) return [];
-            const chains = window._availableChains || merchantChains || [];
+            let chains = window._availableChains || merchantChains || [];
+            // If the order is already chain-locked (loaded via orderId param),
+            // honor that lock — don't offer chains that would 409 on /chain POST.
+            if (window._orderChain) {
+                chains = chains.filter(mc => mc.chain === window._orderChain);
+            }
             if (cpWizState.payType === 'native') {
                 return chains.filter(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
             }
@@ -1702,19 +1707,29 @@
 
             let orderData;
             if (window.currentOrderId) {
-                const lockBody = { chain: cpWizState.chain, token: cpWizState.token };
-                if (cpWizState.token === 'EURC') lockBody.amount = info.amount;
-                const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(lockBody),
-                });
-                orderData = await res.json();
-                if (!orderData.success) throw new Error(orderData.error || 'Failed to lock chain');
-                if (cpWizState.senderWallet) {
-                    fetch('/api/embed/order/' + window.currentOrderId + '/wallet', {
+                try {
+                    const lockBody = { chain: cpWizState.chain, token: cpWizState.token };
+                    if (cpWizState.token === 'EURC') lockBody.amount = info.amount;
+                    const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ customerWallet: cpWizState.senderWallet }),
-                    }).catch(() => {});
+                        body: JSON.stringify(lockBody),
+                    });
+                    orderData = await res.json();
+                    if (!orderData.success) throw new Error(orderData.error || 'Failed to lock chain');
+                    if (cpWizState.senderWallet) {
+                        fetch('/api/embed/order/' + window.currentOrderId + '/wallet', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ customerWallet: cpWizState.senderWallet }),
+                        }).catch(() => {});
+                    }
+                } catch (err) {
+                    body.innerHTML = `<div style="text-align:center;padding:24px 8px;">
+                        <p style="font-size:16px;font-weight:700;color:#dc2626;margin-bottom:8px;">Couldn't prepare payment</p>
+                        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">${(err.message || 'Server error').slice(0,160)}</p>
+                        <button data-wiz="back" style="padding:12px 24px;font-weight:700;font-size:14px;border:4px solid #000;background:#fff;cursor:pointer;">← Try again</button>
+                    </div>`;
+                    cpWizTrack('PAYMENT_FAILED', { stage: 'chain-lock', msg: (err.message || '').slice(0, 200) });
+                    return;
                 }
             }
 
@@ -1839,6 +1854,9 @@
                         const bar = document.getElementById('cpWizScanBar');
                         if (bar) bar.style.width = '100%';
                         try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
+                        // A/B telemetry: full wizard completion + confirmed purchase
+                        cpWizTrack('WIZARD_COMPLETED', { payType: cpWizState.payType, chain: cpWizState.chain, token: cpWizState.token, method: cpWizState.method });
+                        cpWizTrack('ORDER_CONFIRMED', { chain: data.chain, token: data.token, orderId: data.id });
                         const wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'none';
                         const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };
                         if (typeof showPaymentSuccess === 'function') showPaymentSuccess(product, data.chain, data.explorerLink || '#', data.id);
@@ -1913,10 +1931,16 @@
             }
         });
 
-        // Init: show wizard for all sessions (unless already done this order)
+        // Init: show wizard for all sessions (unless already done this order).
+        // Wrapped in try/catch so any error in variant assignment doesn't crash the page;
+        // and so WIDGET_OPENED fires deterministically even if something throws downstream.
         (function cpInitVariant() {
-            const variant = cpAssignVariant();
+            let variant = 'control';
+            try { variant = cpAssignVariant(); } catch { /* fall back to control on any failure */ }
+            // Telemetry order matters: VARIANT_ASSIGNED MUST be the first event for the session
+            // so /ab-results can bucket every later event to a variant.
             cpWizTrack('VARIANT_ASSIGNED', { variant });
+            cpWizTrack('WIDGET_OPENED', { variant, amount: window._productPrice || currentProduct?.price || null });
             const alreadyDone = (() => { try { return sessionStorage.getItem(cpWizDoneKey()) === '1'; } catch { return false; } })();
             if (variant === 'guided' && !alreadyDone) {
                 const show = () => { const w = document.getElementById('cpWizard'); if (w) w.style.display = 'flex'; cpWizGoStep('payType'); };
@@ -3751,6 +3775,9 @@
         // Create order and initiate payment
         async function initiatePayment() {
             trackFunnel('pay_click');
+            // A/B telemetry: PAY_CLICKED is what /ab-results counts as conversion.
+            // Without this on the page, page sessions appear to never convert.
+            cpWizTrack('PAY_CLICKED', { chain: selectedChainKey, token: selectedToken, mode: window._payMode || null });
             if (!connectedAddress || !currentProduct) {
                 showError('Please connect wallet first');
                 return;
@@ -4043,7 +4070,10 @@
             }
 
             const tx = await tokenContract.transfer(order.paymentAddress, amount);
-            
+
+            // A/B telemetry: NATIVE_TX_BROADCAST (used as conversion signal by /ab-results)
+            cpWizTrack('NATIVE_TX_BROADCAST', { chain: selectedChainKey, token: selectedToken, txHash: tx.hash });
+
             showTxStatus('Transaction sent! Waiting for confirmation...');
             console.log('Transaction hash:', tx.hash);
 
@@ -4187,6 +4217,9 @@
                 // Sign and send transaction via wallet
                 const signedTransaction = await solanaWallet.signTransaction(transaction);
                 const txHash = await solanaConnection.sendRawTransaction(signedTransaction.serialize());
+
+                // A/B telemetry: NATIVE_TX_BROADCAST (Solana). Same conversion signal as EVM path.
+                cpWizTrack('NATIVE_TX_BROADCAST', { chain: chainKey, token: selectedToken, txHash });
 
                 showTxStatus('Transaction sent! Waiting for confirmation...');
                 console.log('Solana transaction hash:', txHash);
@@ -5129,6 +5162,8 @@
                     if (data.status === 'CONFIRMED') {
                         clearInterval(window._cpPolling); window._cpPolling = null;
                         clearInterval(window._cpProgressTimer); window._cpProgressTimer = null;
+                        // A/B telemetry: actual purchase (best-in-class conversion metric)
+                        cpWizTrack('ORDER_CONFIRMED', { chain: data.chain, token: data.token, orderId: data.id });
                         if (bar) bar.style.width = '100%';
                         if (statusEl) statusEl.textContent = 'Payment confirmed!';
                         const product = currentProduct || { name: data.productName || 'Order', price: Number(data.amount) };

@@ -1252,6 +1252,9 @@ const ALLOWED_WIDGET_EVENTS = new Set([
   'WIZARD_ANSWER',
   'WIZARD_COMPLETED',
   'WIZARD_SKIPPED',
+  'WIZARD_BACK',              // user navigated backward in the wizard
+  'MANUAL_TX_SUBMITTED',      // customer clicked "I've sent the payment" (manual flow)
+  'ORDER_CONFIRMED',          // order reached terminal CONFIRMED state — true conversion signal
   // Funnel drop-off pinpointing — added to close visibility gaps
   'MANUAL_PAY_VIEWED',       // QR / receive address screen displayed
   'WALLET_CONNECT_OPENED',    // customer clicked Connect Wallet

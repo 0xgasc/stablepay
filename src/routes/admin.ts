@@ -2129,46 +2129,65 @@ router.get('/ab-results', requireAdminKey, async (req, res) => {
       orderBy: { createdAt: 'asc' },
     });
 
-    const TERMINAL_ACTIONS = new Set(['PAY_CLICKED', 'NATIVE_TX_BROADCAST']);
-    const WIZARD_ACTIONS   = new Set(['WIZARD_STEP_VIEWED', 'WIZARD_ANSWER', 'WIZARD_COMPLETED', 'WIZARD_SKIPPED']);
+    // Two conversion metrics:
+    //  - "click rate":     pay attempt (PAY_CLICKED / NATIVE_TX_BROADCAST). Intent signal.
+    //  - "purchase rate":  ORDER_CONFIRMED. True conversion (settled on-chain).
+    const CLICK_ACTIONS    = new Set(['PAY_CLICKED', 'NATIVE_TX_BROADCAST']);
+    const PURCHASE_ACTIONS = new Set(['ORDER_CONFIRMED']);
 
-    type Sess = { variant: string | null; opened: boolean; converted: boolean; wizardCompleted: boolean; wizardSkipped: boolean };
+    type Sess = { variant: string | null; surface: string | null; opened: boolean; clicked: boolean; purchased: boolean; wizardCompleted: boolean; wizardSkipped: boolean };
     const sessions = new Map<string, Sess>();
     for (const e of events) {
-      const s = sessions.get(e.sessionId) ?? { variant: null, opened: false, converted: false, wizardCompleted: false, wizardSkipped: false };
-      if (e.action === 'VARIANT_ASSIGNED') {
-        s.variant = (e.details as any)?.variant ?? s.variant;
-      }
+      const s = sessions.get(e.sessionId) ?? { variant: null, surface: null, opened: false, clicked: false, purchased: false, wizardCompleted: false, wizardSkipped: false };
+      const det = (e.details || {}) as any;
+      if (e.action === 'VARIANT_ASSIGNED') s.variant = det.variant ?? s.variant;
+      if (det.surface && !s.surface) s.surface = det.surface; // 'widget' or 'page'
       if (e.action === 'WIDGET_OPENED') s.opened = true;
-      if (TERMINAL_ACTIONS.has(e.action)) s.converted = true;
+      if (CLICK_ACTIONS.has(e.action))    s.clicked = true;
+      if (PURCHASE_ACTIONS.has(e.action)) s.purchased = true;
       if (e.action === 'WIZARD_COMPLETED') s.wizardCompleted = true;
       if (e.action === 'WIZARD_SKIPPED')   s.wizardSkipped = true;
       sessions.set(e.sessionId, s);
     }
 
-    const buckets = { control: { total: 0, converted: 0 }, guided: { total: 0, converted: 0, wizardCompleted: 0, wizardSkipped: 0 } };
+    const empty = () => ({ total: 0, clicked: 0, purchased: 0, wizardCompleted: 0, wizardSkipped: 0 });
+    const buckets: any = { control: empty(), guided: empty() };
+    const bySurface: any = { widget: { control: empty(), guided: empty() }, page: { control: empty(), guided: empty() } };
+    let unassigned = 0;
     for (const s of sessions.values()) {
-      if (s.variant === 'control')  { buckets.control.total++; if (s.converted) buckets.control.converted++; }
-      else if (s.variant === 'guided') {
-        buckets.guided.total++;
-        if (s.converted) buckets.guided.converted++;
-        if (s.wizardCompleted) buckets.guided.wizardCompleted++;
-        if (s.wizardSkipped)   buckets.guided.wizardSkipped++;
-      }
+      if (s.variant !== 'control' && s.variant !== 'guided') { unassigned++; continue; }
+      buckets[s.variant].total++;
+      if (s.clicked)          buckets[s.variant].clicked++;
+      if (s.purchased)        buckets[s.variant].purchased++;
+      if (s.wizardCompleted)  buckets[s.variant].wizardCompleted++;
+      if (s.wizardSkipped)    buckets[s.variant].wizardSkipped++;
+      const surf = s.surface === 'page' ? 'page' : 'widget';
+      bySurface[surf][s.variant].total++;
+      if (s.clicked)   bySurface[surf][s.variant].clicked++;
+      if (s.purchased) bySurface[surf][s.variant].purchased++;
     }
 
     const pct = (n: number, d: number) => d > 0 ? +(100 * n / d).toFixed(2) : 0;
+    const summarize = (b: any) => ({
+      total: b.total,
+      clicked: b.clicked,
+      purchased: b.purchased,
+      clickRatePct: pct(b.clicked, b.total),
+      purchaseRatePct: pct(b.purchased, b.total),
+      wizardCompleted: b.wizardCompleted,
+      wizardSkipped: b.wizardSkipped,
+      wizardCompletionPct: pct(b.wizardCompleted, b.total),
+      skipPct: pct(b.wizardSkipped, b.total),
+    });
+
     res.json({
       days, since: since.toISOString(),
       totalSessions: sessions.size,
-      variants: {
-        control: { ...buckets.control, conversionPct: pct(buckets.control.converted, buckets.control.total) },
-        guided:  {
-          ...buckets.guided,
-          conversionPct: pct(buckets.guided.converted, buckets.guided.total),
-          wizardCompletionPct: pct(buckets.guided.wizardCompleted, buckets.guided.total),
-          skipPct: pct(buckets.guided.wizardSkipped, buckets.guided.total),
-        },
+      unassigned,
+      variants: { control: summarize(buckets.control), guided: summarize(buckets.guided) },
+      bySurface: {
+        widget: { control: summarize(bySurface.widget.control), guided: summarize(bySurface.widget.guided) },
+        page:   { control: summarize(bySurface.page.control),   guided: summarize(bySurface.page.guided)   },
       },
     });
   } catch (error) {
