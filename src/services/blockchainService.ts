@@ -736,7 +736,11 @@ export class BlockchainService {
                     actualMint: info.mint,
                     txHash,
                   });
-                  flagWrongToken(order.id, order.merchantId, order.token, reverseSolanaMintLookup(info.mint), txHash, 'SOLANA_MAINNET');
+                  // Only flag a genuine wrong-STABLECOIN payment (e.g. USDT sent to a USDC order).
+                  // Solana addresses get spammed with junk/airdrop SPL tokens; an unrecognized mint
+                  // (reverse lookup = null) is noise — skip it silently, don't scare the customer.
+                  const receivedTok = reverseSolanaMintLookup(info.mint);
+                  if (receivedTok) flagWrongToken(order.id, order.merchantId, order.token, receivedTok, txHash, 'SOLANA_MAINNET');
                   continue;
                 }
 

@@ -913,12 +913,16 @@ router.post('/order/:orderId/tx', async (req, res) => {
     const { orderId } = req.params;
     let { txHash, explorerLink } = req.body;
 
-    // Parse txHash from explorer link if provided
-    if (!txHash && explorerLink) {
-      // Extract hash from URLs like https://basescan.org/tx/0x123... or https://solscan.io/tx/abc...
-      const match = explorerLink.match(/(?:\/tx\/|\/transaction\/)([a-zA-Z0-9]+)/);
-      if (match) txHash = match[1];
-    }
+    // Accept a pasted explorer URL in EITHER field (customers paste solscan/etherscan links,
+    // not raw hashes). Extract the hash/signature from URLs like
+    // https://solscan.io/tx/<sig>?cluster=mainnet or https://basescan.org/tx/0x123...
+    const extractTxId = (s: any): string => {
+      const str = String(s || '').trim();
+      const m = str.match(/(?:\/tx\/|\/transaction\/)([a-zA-Z0-9]+)/);
+      return m ? m[1] : str.split(/[?#]/)[0];
+    };
+    if (!txHash && explorerLink) txHash = extractTxId(explorerLink);
+    else if (txHash) txHash = extractTxId(txHash);
 
     if (!txHash) {
       return res.status(400).json({ error: 'txHash or explorerLink required' });

@@ -2058,10 +2058,10 @@
                         if (statusEl) statusEl.textContent = 'Order ' + data.status.toLowerCase();
                         const timerEl = document.getElementById('cpWizScanTimer');
                         if (timerEl) timerEl.textContent = 'Please start a new payment';
-                    } else if (data.wrongTokenDetected && data.status === 'PENDING') {
+                    } else if (data.wrongTokenDetected && data.wrongTokenDetected.receivedToken && data.status === 'PENDING') {
                         const wt = data.wrongTokenDetected;
                         const statusEl = document.getElementById('cpWizScanStatus');
-                        if (statusEl) statusEl.innerHTML = `<span style="color:#d97706">Detected <strong>${wt.receivedToken || 'wrong token'}</strong> — this order expects <strong>${wt.expectedToken}</strong></span>`;
+                        if (statusEl) statusEl.innerHTML = `<span style="color:#d97706">Detected <strong>${wt.receivedToken}</strong> — this order expects <strong>${wt.expectedToken}</strong></span>`;
                     } else if (data.txDetected && data.requiredConfirms) {
                         const got = Math.min(data.confirmations || 0, data.requiredConfirms);
                         const bar = document.getElementById('cpWizScanBar');
@@ -2084,10 +2084,19 @@
             window._cpWizTimer = timer;
         }
 
+        // Extract a raw tx hash / Solana signature from a pasted explorer URL (solscan, etherscan, etc.)
+        // or return the value unchanged if it's already a bare hash.
+        function cpExtractTxId(s) {
+            if (!s) return s;
+            const str = String(s).trim();
+            const m = str.match(/(?:\/tx\/|\/transaction\/)([a-zA-Z0-9]+)/);
+            return m ? m[1] : str.split(/[?#]/)[0];
+        }
+
         async function cpWizVerifyManualTx() {
             const input = document.getElementById('cpWizManualTxInput');
             const status = document.getElementById('cpWizManualTxStatus');
-            const val = input?.value?.trim();
+            const val = cpExtractTxId(input?.value?.trim());
             if (!val || !window.currentOrderId) return;
             // Fast-variant telemetry: only fire when this session IS fast (was firing for all
             // variants, polluting the fast paste-rate metric).
@@ -5435,9 +5444,9 @@
                             }
                         }
                     }
-                    if (data.wrongTokenDetected && data.status === 'PENDING') {
+                    if (data.wrongTokenDetected && data.wrongTokenDetected.receivedToken && data.status === 'PENDING') {
                         const wt = data.wrongTokenDetected;
-                        if (statusEl) statusEl.innerHTML = `<span style="color:#d97706">We detected a <strong>${wt.receivedToken || 'different token'}</strong> transfer, but this order expects <strong>${wt.expectedToken}</strong>.</span>`;
+                        if (statusEl) statusEl.innerHTML = `<span style="color:#d97706">We detected a <strong>${wt.receivedToken}</strong> transfer, but this order expects <strong>${wt.expectedToken}</strong>.</span>`;
                         if (timerEl) timerEl.textContent = 'Please send the correct token to complete payment.';
                     } else if (data.txDetected && data.requiredConfirms) {
                         // Tx detected on-chain but not yet enough confirmations.

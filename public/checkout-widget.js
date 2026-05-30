@@ -1914,10 +1914,10 @@
             if (pollStatus) pollStatus.textContent = 'Order ' + data.status.toLowerCase();
             const pollTimer = this.container.querySelector('#sp-poll-timer');
             if (pollTimer) pollTimer.textContent = 'Please start a new payment';
-          } else if (data.wrongTokenDetected && data.status === 'PENDING') {
+          } else if (data.wrongTokenDetected && data.wrongTokenDetected.receivedToken && data.status === 'PENDING') {
             const wt = data.wrongTokenDetected;
             const pollStatus = this.container.querySelector('#sp-poll-status');
-            if (pollStatus) pollStatus.innerHTML = `We detected a <strong>${wt.receivedToken || 'different token'}</strong> transfer, but this order expects <strong>${wt.expectedToken}</strong>.`;
+            if (pollStatus) pollStatus.innerHTML = `We detected a <strong>${wt.receivedToken}</strong> transfer, but this order expects <strong>${wt.expectedToken}</strong>.`;
             const pollTimer = this.container.querySelector('#sp-poll-timer');
             if (pollTimer) pollTimer.textContent = 'Please send the correct token to complete payment.';
           } else if (data.status === 'PENDING' && data.expiresAt) {
