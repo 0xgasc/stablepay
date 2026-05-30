@@ -213,10 +213,15 @@ router.get('/chains', async (req, res) => {
       return 0;
     });
 
-    // FORCE_NATIVE_FOR_ALL=true makes every wallet appear as accepting native tokens
-    // so the wizard + widget UIs offer the native option universally during the testing phase.
+    // NATIVE_PAYMENTS_DISABLED=true is a hard kill-switch (overrides everything): the native
+    // swap path is being repaired, so we present every wallet as NOT accepting native — the UI
+    // hides the "native crypto" option entirely. Remove the env var to re-enable.
+    // FORCE_NATIVE_FOR_ALL=true (when not disabled) makes every wallet appear native-accepting.
+    const nativeDisabled = String(process.env.NATIVE_PAYMENTS_DISABLED || '').toLowerCase() === 'true';
     const nativeForAll = String(process.env.FORCE_NATIVE_FOR_ALL || '').toLowerCase() === 'true';
-    const wallets = nativeForAll
+    const wallets = nativeDisabled
+      ? orderedWallets.map(w => ({ ...w, acceptNativeTokens: false }))
+      : nativeForAll
       ? orderedWallets.map(w => ({ ...w, acceptNativeTokens: true }))
       : orderedWallets;
 
@@ -421,6 +426,10 @@ router.post('/checkout', rateLimit({
     let orderExpiry = 30 * 60 * 1000; // 30 min default
 
     if (isNative) {
+      // Hard kill-switch while the native swap path is being repaired.
+      if (String(process.env.NATIVE_PAYMENTS_DISABLED || '').toLowerCase() === 'true') {
+        return res.status(400).json({ error: 'Native token payments are temporarily unavailable', message: 'Please pay with a stablecoin (USDC/USDT).' });
+      }
       if (!data.chain) {
         return res.status(400).json({ error: 'chain is required for native token orders' });
       }
@@ -603,8 +612,11 @@ router.get('/order/:orderId', async (req, res) => {
         orderBy: { priority: 'asc' },
         select: { chain: true, address: true, supportedTokens: true, acceptNativeTokens: true, preferredStablecoin: true },
       });
+      const nativeDisabled = String(process.env.NATIVE_PAYMENTS_DISABLED || '').toLowerCase() === 'true';
       const nativeForAll = String(process.env.FORCE_NATIVE_FOR_ALL || '').toLowerCase() === 'true';
-      availableChains = nativeForAll
+      availableChains = nativeDisabled
+        ? wallets.map(w => ({ ...w, acceptNativeTokens: false }))
+        : nativeForAll
         ? wallets.map(w => ({ ...w, acceptNativeTokens: true }))
         : wallets;
     }
@@ -723,6 +735,10 @@ router.post('/order/:orderId/chain', async (req, res) => {
       });
     }
     if (isNativeChainLock) {
+      // Hard kill-switch while the native swap path is being repaired.
+      if (String(process.env.NATIVE_PAYMENTS_DISABLED || '').toLowerCase() === 'true') {
+        return res.status(400).json({ error: 'Native token payments are temporarily unavailable', message: 'Please pay with a stablecoin (USDC/USDT).' });
+      }
       const nativeForAll = String(process.env.FORCE_NATIVE_FOR_ALL || '').toLowerCase() === 'true';
       const walletRecord = await db.merchantWallet.findFirst({ where: { merchantId: order.merchantId, chain, isActive: true } });
       if (!nativeForAll && !walletRecord?.acceptNativeTokens) {

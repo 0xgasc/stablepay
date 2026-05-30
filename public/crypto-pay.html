@@ -1124,23 +1124,17 @@
                 if (url.searchParams.get('sp_reset') === '1') {
                     ['sp_variant', 'sp_variant_v2', 'sp_sid'].forEach(k => sessionStorage.removeItem(k));
                 }
+                // A/B concluded: 'fast' won every engagement metric, 'guided' was worst, 'control'
+                // bounced. We now serve 'fast' to 100% of traffic. ?variant= override kept for QA.
                 const override = url.searchParams.get('variant') || url.searchParams.get('sp_variant');
                 if (VARIANTS_LIST.includes(override)) {
                     sessionStorage.setItem('sp_variant_v2', override);
                     return override;
                 }
-                const cached = sessionStorage.getItem('sp_variant_v2');
-                if (VARIANTS_LIST.includes(cached)) return cached;
-                const sid = cpSessionId();
-                let hash = 0;
-                for (let i = 0; i < sid.length; i++) hash = ((hash << 5) - hash + sid.charCodeAt(i)) | 0;
-                const variant = VARIANTS_LIST[Math.abs(hash) % 3];
-                sessionStorage.setItem('sp_variant_v2', variant);
-                return variant;
+                return 'fast';
             } catch {
-                // sessionStorage blocked (Safari ITP, private mode). Random fallback so we don't
-                // systematically bias these sessions toward any one arm. Matches widget behavior.
-                return VARIANTS_LIST[Math.floor(Math.random() * 3)];
+                // sessionStorage blocked (Safari ITP, private mode). Still serve the winner.
+                return 'fast';
             }
         }
 
@@ -1446,18 +1440,23 @@
 
                 case 'method': {
                     const mChainName = CHAIN_CONFIG[cpWizState.chain]?.chainName || cpWizState.chain;
-                    const hasWallet = cpHasBrowserWallet(cpWizState.chain);
+                    const mChainType = CHAIN_CONFIG[cpWizState.chain]?.type;
+                    // Connect-pay only works reliably on EVM (Solana connect-pay throws; TRON N/A).
+                    // For non-EVM, offer manual only — it's proven to confirm.
+                    const hasWallet = mChainType === 'evm' && cpHasBrowserWallet(cpWizState.chain);
                     let html = `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">How will you send it?</h2>
                         <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">${cpWizState.token} on ${mChainName}</p>
                         <div style="display:flex;flex-direction:column;gap:12px;">`;
-                    // Only offer "Connect my wallet" when a browser wallet is actually present for
-                    // this chain — otherwise it just dead-ends ("install MetaMask"). Manual works for everyone.
+                    // Only offer "Connect my wallet" when a browser EVM wallet is actually present —
+                    // otherwise it dead-ends ("install MetaMask") or crashes (non-EVM). Manual works for everyone.
                     if (hasWallet) {
                         html += cpWizBtn('Connect my wallet', 'One click in your browser wallet', 'answer', 'method:wallet');
                     }
                     html += cpWizBtn('Send manually', 'Copy the address or scan the QR — pay from any wallet or exchange', 'answer', 'method:manual');
                     html += `</div>`;
-                    if (!hasWallet) {
+                    // Only nudge "get a wallet" for EVM chains with no detected wallet. For non-EVM,
+                    // manual is simply the way (no misleading "no wallet" message).
+                    if (mChainType === 'evm' && !hasWallet) {
                         html += `<p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:16px;">No browser wallet detected on this device — send manually above, or <button data-wiz="goto" data-val="1b" style="color:#6b7280;background:none;border:none;text-decoration:underline;cursor:pointer;font-size:12px;">get a wallet first</button>.</p>`;
                     }
                     return html;
@@ -1707,8 +1706,14 @@
                 btn.disabled = true; btn.textContent = 'Connecting...';
 
                 try {
-                    if (chainCfg?.type === 'solana') await connectSolanaWallet();
-                    else await connectEVMWallet();
+                    // connectEVMWallet/connectSolanaWallet REQUIRE a resolved wallet object
+                    // (they deref wallet.provider). Resolve one from detectWallets() — same source
+                    // cpHasBrowserWallet uses to gate this button — instead of calling with no arg.
+                    const _want = chainCfg?.type === 'solana' ? 'solana' : 'evm';
+                    const _wallet = (detectWallets() || []).find(w => _want === 'solana' ? w.type === 'solana' : w.type !== 'solana');
+                    if (!_wallet) throw new Error('No browser wallet found for ' + chainName);
+                    if (chainCfg?.type === 'solana') await connectSolanaWallet(_wallet);
+                    else await connectEVMWallet(_wallet);
 
                     status.textContent = 'Checking balance...';
                     const info = await cpWizComputeDisplayAmount();
@@ -2106,7 +2111,7 @@
             status.classList.remove('hidden');
             status.textContent = 'Verifying...'; status.style.color = '';
             try {
-                const res = await fetch('/api/embed/order/' + window.currentOrderId + '/verify-tx', {
+                const res = await fetch('/api/embed/order/' + window.currentOrderId + '/tx', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ txHash: val }),
                 });

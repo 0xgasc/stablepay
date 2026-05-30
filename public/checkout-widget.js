@@ -198,23 +198,16 @@
         if (url.searchParams.get('sp_reset') === '1') {
           ['sp_widget_variant', 'sp_widget_variant_v2', 'sp_widget_sid'].forEach(k => sessionStorage.removeItem(k));
         }
+        // A/B concluded: 'fast' won every engagement metric; 'guided'/'control' retired.
+        // 100% of traffic now gets 'fast'. ?sp_variant= / ?variant= override kept for QA.
         const override = url.searchParams.get('sp_variant') || url.searchParams.get('variant');
         if (VARIANTS.includes(override)) {
           sessionStorage.setItem('sp_widget_variant_v2', override);
           return override;
         }
-        const cached = sessionStorage.getItem('sp_widget_variant_v2');
-        if (VARIANTS.includes(cached)) return cached;
-        const sid = this._sessionId;
-        let hash = 0;
-        for (let i = 0; i < sid.length; i++) hash = ((hash << 5) - hash + sid.charCodeAt(i)) | 0;
-        const variant = VARIANTS[Math.abs(hash) % 3];
-        sessionStorage.setItem('sp_widget_variant_v2', variant);
-        return variant;
+        return 'fast';
       } catch {
-        // sessionStorage blocked (Safari ITP, iframe w/ 3p cookies blocked, private mode).
-        // Random fallback so we don't systematically bias these sessions toward one arm.
-        return VARIANTS[Math.floor(Math.random() * 3)];
+        return 'fast';
       }
     }
 
@@ -333,12 +326,20 @@
             <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">Coinbase Wallet</span><span style="${subStyle}">Trusted multi-chain wallet</span></span><span>↗</span></a>
             <a href="https://metamask.io/download/" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">MetaMask</span><span style="${subStyle}">Standard for Ethereum</span></span><span>↗</span></a>
             <button class="sp-wiz-goto" data-step="1" style="${primaryBtnStyle};margin-top:14px;"><span>I'm back — let's pay</span><span>→</span></button>`;
-        case '2':
+        case '2': {
+          // Connect-wallet currently only works reliably on EVM chains. Solana connect-pay throws
+          // (Buffer/legacy-transfer) and TRON connects the wrong wallet type — so for non-EVM chains
+          // offer manual only (proven to confirm). EVM keeps the one-click connect option.
+          const chainType = this.selectedChain?.config?.type;
+          const connectBtn = chainType === 'evm'
+            ? `<button class="sp-wiz-ans" data-key="method" data-value="wallet" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Connect my wallet</span><span style="${subStyle}">One click in MetaMask / Coinbase</span></span><span>→</span></button>`
+            : '';
           return `
             <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">How will you send it?</h2>
             <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">Same outcome either way.</p>
-            <button class="sp-wiz-ans" data-key="method" data-value="wallet" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Connect my wallet</span><span style="${subStyle}">One click in MetaMask / Phantom</span></span><span>→</span></button>
-            <button class="sp-wiz-ans" data-key="method" data-value="manual" style="${secondaryBtnStyle};"><span><span style="display:block">Send manually</span><span style="${subStyle}">Copy address or scan QR</span></span><span>→</span></button>`;
+            ${connectBtn}
+            <button class="sp-wiz-ans" data-key="method" data-value="manual" style="${secondaryBtnStyle};margin-top:${chainType === 'evm' ? '10px' : '0'};"><span><span style="display:block">Send manually</span><span style="${subStyle}">Copy address or scan QR — works with any wallet</span></span><span>→</span></button>`;
+        }
         default: return '';
       }
     }
@@ -1288,6 +1289,7 @@
           sentBtn.disabled = true;
           sentBtn.textContent = 'REGISTERING...';
           // A/B telemetry: customer claims they sent payment. Equivalent to PAY_CLICKED for manual flow.
+          this._paymentInFlight = true; // B10: never auto-cancel this order on overlay close now
           this._track('PAY_CLICKED', { chain: this.selectedChain?.chain || null, token: this.selectedToken, method: 'manual', variant: this._variant });
           this._track('MANUAL_TX_SUBMITTED', { chain: this.selectedChain?.chain || null, token: this.selectedToken, variant: this._variant });
           // Stop countdown — they're confirming
@@ -2620,6 +2622,7 @@
       const payBtn = this.container.querySelector('#sp-pay-btn');
       if (!payBtn || !this.connectedWallet || !this.selectedChain) return;
 
+      this._paymentInFlight = true; // B10: never auto-cancel this order on overlay close now
       this._track('PAY_CLICKED', { chain: this.selectedChain.chain, token: this.selectedToken, mode: this.payMode, method: 'wallet', variant: this._variant });
 
       payBtn.disabled = true;
@@ -2851,7 +2854,7 @@
             const verifyData = await verifyRes.json();
             if (verifyData.status === 'CONFIRMED') {
               this.showSuccess({ txHash: tx.hash, explorerLink: verifyData.explorerLink, status: 'CONFIRMED' });
-              if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: tx.hash, amount, token: this.selectedToken });
+              // onSuccess fired centrally in showSuccess()
               return;
             }
           } catch (e) {
@@ -2860,7 +2863,7 @@
         }
         // Fallback: show success with just the hash (scanner will confirm async)
         this.showSuccess(tx.hash);
-        if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: tx.hash, amount, token: this.selectedToken });
+        // onSuccess fired centrally in showSuccess()
       } else {
         throw new Error('Transaction failed');
       }
@@ -2938,7 +2941,7 @@
             const verifyData = await verifyRes.json();
             if (verifyData.status === 'CONFIRMED') {
               this.showSuccess({ txHash: sig, explorerLink: verifyData.explorerLink, status: 'CONFIRMED' });
-              if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: sig, amount, token: this.selectedToken });
+              // onSuccess fired centrally in showSuccess()
               return;
             }
           } catch (e) {
@@ -2946,7 +2949,7 @@
           }
         }
         this.showSuccess(sig);
-        if (this.options.onSuccess) this.options.onSuccess({ orderId: this.currentOrderId, txHash: sig, amount, token: this.selectedToken });
+        // onSuccess fired centrally in showSuccess()
       } catch (err) {
         throw new Error('Solana transaction failed: ' + err.message);
       }
@@ -3023,7 +3026,7 @@
           const status = d?.status;
           if (status === 'CONFIRMED') {
             this.showSuccess({ txHash, status: 'CONFIRMED' });
-            if (this.options.onSuccess) this.options.onSuccess({ orderId, txHash, amount: parseFloat(this.options.amount), token: this.selectedToken });
+            // onSuccess fired centrally in showSuccess()
             return;
           }
           if (status === 'REFUNDED' || status === 'CANCELLED') {
@@ -3038,9 +3041,11 @@
         } catch { /* keep polling */ }
         await new Promise(r => setTimeout(r, 3000));
       }
-      // Timeout — order should land eventually, but stop polling
-      this.showSuccess({ txHash, status: 'PROCESSING' });
-      if (this.options.onSuccess) this.options.onSuccess({ orderId, txHash, amount: parseFloat(this.options.amount), token: this.selectedToken });
+      // Timeout — the tx was broadcast but hasn't confirmed yet. Do NOT claim success or fire
+      // onSuccess/ORDER_CONFIRMED here (that inflates conversion metrics and misleads the buyer).
+      // Show an honest "still confirming" state; the scanner will confirm async and the backend
+      // order.confirmed webhook fires for fulfillment.
+      this.showProcessing(txHash, 'Still confirming on-chain — you’ll get a receipt by email once it lands.');
     }
 
     showSuccess(txHashOrData) {
@@ -3058,6 +3063,15 @@
         if (this._variant === 'guided' || this._variant === 'fast') {
           this._track('WIZARD_COMPLETED', { chain: this.selectedChain?.chain || null, token: this.selectedToken || null, variant: this._variant });
         }
+        // Notify the host EXACTLY ONCE from here, so EVERY confirmation path (manual poll, manual
+        // paste, connect-wallet, native) fires onSuccess. Previously manual-send never did, so
+        // onSuccess-dependent merchant integrations (redirect, unlock, analytics) silently never ran,
+        // and the overlay wrapper (which auto-closes inside onSuccess) stayed stuck on "Confirmed".
+        try {
+          const _payload = { orderId: this.currentOrderId, txHash: hash, amount: parseFloat(this.options.amount), token: this.selectedToken };
+          this.options.onSuccess?.(_payload);
+          this.emit?.('success', _payload);
+        } catch (e) { /* a throwing host callback must not break the success UI */ }
       }
 
       // Guard: if hash looks like a URL, treat it as explorerLink instead
@@ -3239,7 +3253,12 @@
             });
           } catch {}
         }
-        if (spCheckout && spCheckout.currentOrderId) {
+        // B10: NEVER auto-cancel a payment that's in flight. If the customer already clicked
+        // "I've sent it" (polling running) or the order is confirmed, cancelling here orphans a
+        // real on-chain deposit (scanner only matches PENDING) = direct money loss. Only cancel
+        // an order the customer abandoned BEFORE sending.
+        const _inFlight = spCheckout && (spCheckout._pollingInterval || spCheckout._orderConfirmedTracked || spCheckout._paymentInFlight);
+        if (spCheckout && spCheckout.currentOrderId && !_inFlight) {
           fetch(`${STABLEPAY_URL}/api/embed/order/${spCheckout.currentOrderId}/cancel`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'customer_closed' })
           }).catch(() => {});
