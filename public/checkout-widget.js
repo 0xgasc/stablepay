@@ -258,8 +258,10 @@
       // Show the wizard fresh on every load. We only suppress re-showing it within THIS instance
       // (in-memory _wizardState.done), NOT across reloads — previously a persisted flag trapped
       // the customer on the classic UI forever after one "show all options" click + refresh.
-      // Both 'guided' and 'fast' use the wizard UI.
-      if ((this._variant === 'guided' || this._variant === 'fast') && !this._wizardState.done) {
+      // Both 'guided' and 'fast' use the wizard UI — but only if the merchant actually has chains.
+      // Otherwise fall through to render() which shows the proper "payment not available" state
+      // (the wizard's network step would render zero buttons = a dead end).
+      if ((this._variant === 'guided' || this._variant === 'fast') && !this._wizardState.done && (this.merchantChains || []).length > 0) {
         this._renderWizard();
         this.attachWizardListeners();
         return;
@@ -273,7 +275,6 @@
       const isDark = this.options.theme === 'dark';
       const accent = this.options.accentColor;
       const brutal = this.options.borderStyle === 'brutal';
-      console.log('[SP] renderWizard', { container: this.container, parent: this.container.parentElement });
       this.container.innerHTML = `
         <div class="sp-widget sp-wiz ${this.options.theme}" style="
           background: ${isDark ? '#1a1a1a' : '#fff'};
@@ -297,7 +298,50 @@
             <button id="sp-wiz-skip" style="background: none; border: none; color: ${isDark ? '#666' : '#999'}; font-size: 11px; text-decoration: underline; cursor: pointer; padding: 4px;">Skip — show all options</button>
           </div>
         </div>`;
-      this._wizGoStep(1);
+      this._wizStart();
+    }
+
+    // Decide the first wizard step. With native payments off there's only one pay type, so the
+    // "Stablecoin vs Native" question is a dead one-option screen — skip it. With a single chain,
+    // skip the network step too.
+    _wizStart() {
+      const anyNative = (this.merchantChains || []).some(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
+      const multiChain = (this.merchantChains || []).length > 1;
+      if (anyNative) { this._wizGoStep('1'); return; }
+      this._wizardState.payType = 'stable';
+      if (multiChain) { this._wizGoStep('network'); return; }
+      this._selectWizChain((this.merchantChains[0] || {}).chain);
+      this._wizGoStep('2');
+    }
+
+    // Is a usable browser wallet actually present for this chain type? Used to hide "Connect my
+    // wallet" on no-extension browsers (e.g. Safari) where it would only dead-end.
+    _hasWalletFor(type) {
+      try {
+        if (type === 'solana') return !!(window.phantom?.solana || window.solflare?.isSolflare || window.solana);
+        return !!(window.ethereum || window.phantom?.ethereum || (typeof this.detectEVMProviders === 'function' && this.detectEVMProviders().length));
+      } catch { return false; }
+    }
+
+    // Lock the wizard's chosen chain + a default token onto instance state.
+    _selectWizChain(chainKey) {
+      const mc = (this.merchantChains || []).find(c => c.chain === chainKey) || this.merchantChains[0];
+      if (!mc) return;
+      this.selectedChain = mc;
+      this._wizardState.chain = mc.chain;
+      const toks = (mc.supportedTokens || ['USDC']).filter(t => mc.config?.tokens?.[t]);
+      this.selectedToken = toks[0] || 'USDC';
+    }
+
+    // Ordered list of wizard steps before the final "send" screen — used for "Step N of M" labels.
+    _wizStepOrder() {
+      const anyNative = (this.merchantChains || []).some(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
+      const multiChain = (this.merchantChains || []).length > 1;
+      const order = [];
+      if (anyNative) order.push('1');
+      if (multiChain) order.push('network');
+      order.push('2');
+      return order;
     }
 
     _wizStepHTML(step) {
@@ -324,19 +368,39 @@
             <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">Coinbase Wallet</span><span style="${subStyle}">Trusted multi-chain wallet</span></span><span>↗</span></a>
             <a href="https://metamask.io/download/" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">MetaMask</span><span style="${subStyle}">Standard for Ethereum</span></span><span>↗</span></a>
             <button class="sp-wiz-goto" data-step="1" style="${primaryBtnStyle};margin-top:14px;"><span>I'm back — let's pay</span><span>→</span></button>`;
+        case 'network': {
+          // Clean chain picker — so the customer chooses their network here, not buried in the
+          // big payment screen.
+          const chains = this.merchantChains || [];
+          let btns = '';
+          for (const mc of chains) {
+            const name = mc.config?.chainName || mc.chain;
+            const sub = mc.chain === 'SOLANA_MAINNET' ? 'Fastest + cheapest'
+              : mc.chain === 'BASE_MAINNET' ? 'Low fees'
+              : (mc.config?.network === 'testnet' ? 'Testnet' : '');
+            btns += `<button class="sp-wiz-ans" data-key="chain" data-value="${mc.chain}" style="${secondaryBtnStyle};margin-top:10px;"><span style="display:flex;align-items:center;gap:10px;"><img src="${this.getChainIcon(mc.chain)}" style="width:22px;height:22px;border-radius:50%;" onerror="this.style.display='none'"><span><span style="display:block">${name}</span>${sub ? `<span style="${subStyle}">${sub}</span>` : ''}</span></span><span>→</span></button>`;
+          }
+          return `
+            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">Choose your network</h2>
+            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 8px;">Pick the chain you'll pay from. You'll send <strong>$${usd} in USDC</strong>.</p>
+            ${btns}`;
+        }
         case '2': {
           // Connect-wallet works on EVM + Solana (Solana SPL transfer fixed to TransferChecked).
-          // TRON has no working browser-wallet connect path → manual only there. Manual always offered.
+          // Only offer it when a browser wallet is ACTUALLY present (no-extension browsers like
+          // Safari would just dead-end). TRON has no working connect path. Manual always offered.
           const chainType = this.selectedChain?.config?.type;
-          const canConnect = chainType === 'evm' || chainType === 'solana';
+          const canConnect = (chainType === 'evm' || chainType === 'solana') && this._hasWalletFor(chainType);
           const connectBtn = canConnect
             ? `<button class="sp-wiz-ans" data-key="method" data-value="wallet" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Connect my wallet</span><span style="${subStyle}">One click in MetaMask / Phantom / Coinbase</span></span><span>→</span></button>`
             : '';
+          const chainName = this.selectedChain?.config?.chainName || '';
           return `
             <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">How will you send it?</h2>
-            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">Same outcome either way.</p>
+            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">${this.selectedToken || 'USDC'} on ${chainName}.</p>
             ${connectBtn}
-            <button class="sp-wiz-ans" data-key="method" data-value="manual" style="${secondaryBtnStyle};margin-top:${canConnect ? '10px' : '0'};"><span><span style="display:block">Send manually</span><span style="${subStyle}">Copy address or scan QR — works with any wallet</span></span><span>→</span></button>`;
+            <button class="sp-wiz-ans" data-key="method" data-value="manual" style="${secondaryBtnStyle};margin-top:${canConnect ? '10px' : '0'};"><span><span style="display:block">Send manually</span><span style="${subStyle}">Copy address or scan a QR — works from any wallet or exchange</span></span><span>→</span></button>
+            ${canConnect ? '' : `<p style="font-size:11px;text-align:center;color:${isDark ? '#777' : '#9ca3af'};margin-top:14px;">No browser wallet detected — sending manually works from any wallet.</p>`}`;
         }
         default: return '';
       }
@@ -345,21 +409,24 @@
     _wizBackTarget(fromStep) {
       const s = String(fromStep);
       if (s === '1b') return '1';
-      if (s === '2')  return '1';
-      // Step 3 (focused mode) handled by "← Change" in step3 header — separate path
+      // Walk the actual step order so back works through payType → network → method.
+      const order = this._wizStepOrder();
+      const idx = order.indexOf(s);
+      if (idx > 0) return order[idx - 1];
+      // First step (or focused "step 3", handled by the "← Change" header) has no back here.
       return null;
     }
 
     _wizInfoText(step) {
       const s = String(step);
-      const journey = 'Pay type → Send method → Pay';
       const map = {
-        '1':  ["You're on step 1 of 3.", 'Choose stablecoin (USDC/USDT — no fee) or native crypto (ETH/SOL/BNB — +1.5% auto-converted).'],
+        '1':  ['Choose how to pay.', 'Stablecoin (USDC/USDT — no fee) or native crypto (auto-converted to USDC for the merchant).'],
         '1b': ['Need a wallet first?', 'These are all free. Download one, fund it, then come back.'],
-        '2':  ["You're on step 2 of 3.", '"Connect my wallet" sends in one click. "Send manually" gives you an address + QR.'],
+        'network': ['Pick your network.', 'Choose the chain your funds are on. Solana and Base are cheapest + fastest.'],
+        '2':  ['Choose how to send.', '"Connect my wallet" signs in one click. "Send manually" gives you an address + QR you can pay from any wallet or exchange.'],
       };
       const lines = map[s] || ["You're in the checkout."];
-      return [...lines, '', 'Journey: ' + journey].join('\n');
+      return lines.join('\n');
     }
 
     _wizGoStep(step) {
@@ -370,8 +437,14 @@
       const info = this.container.querySelector('#sp-wiz-info-panel');
       if (body) body.innerHTML = this._wizStepHTML(step);
       if (label) {
-        const labels = { 1: 'Step 1 of 3', '1b': 'Setup wallet', 2: 'Step 2 of 3' };
-        label.textContent = labels[step] || '';
+        if (String(step) === '1b') {
+          label.textContent = 'Get a wallet';
+        } else {
+          const order = this._wizStepOrder();
+          const total = order.length + 1; // + the final "send" screen
+          const idx = order.indexOf(String(step));
+          label.textContent = idx >= 0 ? `Step ${idx + 1} of ${total}` : '';
+        }
       }
       if (back) back.style.visibility = this._wizBackTarget(step) ? 'visible' : 'hidden';
       if (info) { info.style.display = 'none'; info.textContent = this._wizInfoText(step); }
@@ -382,7 +455,8 @@
       const t = this._wizBackTarget(this._wizardState.step);
       if (!t) return;
       this._track('WIZARD_BACK', { from: String(this._wizardState.step), to: String(t) });
-      if (t === '1') { this._wizardState.payType = null; this._wizardState.method = null; }
+      if (t === '1') { this._wizardState.payType = null; this._wizardState.chain = null; this._wizardState.method = null; }
+      else if (t === 'network') { this._wizardState.chain = null; this._wizardState.method = null; }
       this._wizGoStep(t);
     }
 
@@ -410,7 +484,12 @@
     _wizAnswer(key, value) {
       this._wizardState[key] = value;
       this._track('WIZARD_ANSWER', { key, value, step: String(this._wizardState.step) });
-      if (key === 'payType') return this._wizGoStep(2);
+      if (key === 'payType') {
+        if ((this.merchantChains || []).length > 1) return this._wizGoStep('network');
+        this._selectWizChain((this.merchantChains[0] || {}).chain);
+        return this._wizGoStep('2');
+      }
+      if (key === 'chain') { this._selectWizChain(value); return this._wizGoStep('2'); }
       if (key === 'method')  return this._wizComplete();
     }
 
@@ -455,6 +534,12 @@
       // Apply mode via setPayMode (NOT direct assignment) so refreshNativePrice,
       // selectChain, selectedToken sync, fee banner, and toggle button all update.
       if (typeof this.setPayMode === 'function') this.setPayMode(targetMode);
+      // Sync the classic UI to the chain the customer picked in the wizard's network step —
+      // render() defaults the dropdown to merchantChains[0], so without this the picked chain
+      // wouldn't be reflected.
+      if (this._wizardState.chain && typeof this.selectChain === 'function') {
+        try { this.selectChain(this._wizardState.chain); } catch {}
+      }
       const tabBtn = this.container.querySelector(`[data-method="${targetTab}"]`);
       if (tabBtn && typeof tabBtn.click === 'function') { try { tabBtn.click(); } catch {} }
       // ── Wizard "Step 3": hide chrome so the user sees only the focused action ──
@@ -476,15 +561,20 @@
       // Hide pay-mode toggle + fee banner — wizard already chose pay type (and native is disabled).
       const modeToggle = w.querySelector('#sp-pay-mode-toggle');
       if (modeToggle) modeToggle.style.display = 'none';
-      // KEEP the Network/Token selectors VISIBLE so the customer can change chain/token — never
-      // silently force them onto the default (Solana). Defaulting is fine; locking is not.
+      // Hide the Network/Token grid — the chain is already chosen in the wizard's network step, so
+      // the big in-page selectors are just clutter on the send screen (this is the "too busy / can't
+      // pick network" complaint). The "← Change" header below lets them rewind to re-pick.
+      const grids = w.querySelectorAll('div[style*="grid-template-columns: 1fr 1fr"]');
+      grids.forEach(g => { if (g.querySelector('#sp-chain-select-wrapper') || g.querySelector('#sp-token-select-wrapper')) g.style.display = 'none'; });
       // Hide the method tabs — wizard already chose connect vs manual.
       const tabs = w.querySelector('#sp-method-tabs');
       if (tabs) tabs.style.display = 'none';
-      // Inject a wizard-style header above the action area so it feels like a wizard step
+      // Inject a wizard-style header above the action area so it feels like a wizard step.
       const inner = w.querySelector('.sp-widget');
       if (inner && !w.querySelector('#sp-wiz-step3-header')) {
-        const stepLabel = this._wizardState.method === 'wallet' ? 'Step 3 of 3 — Connect & pay' : 'Step 3 of 3 — Send payment';
+        const _total = this._wizStepOrder().length + 1;
+        const _what = this._wizardState.method === 'wallet' ? 'Connect & pay' : 'Send payment';
+        const stepLabel = `Step ${_total} of ${_total} — ${_what}`;
         const header = document.createElement('div');
         header.id = 'sp-wiz-step3-header';
         header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-bottom:2px solid #e2e8f0;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;';
