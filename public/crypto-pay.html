@@ -1206,6 +1206,7 @@
             if (key === 'answer') { const [k, v] = val.split(':'); cpWizAnswer(k, v); }
             else if (key === 'goto') cpWizGoStep(val);
             else if (key === 'back') cpWizGoBack();
+            else if (key === 'show-address') cpWizShowAddressAgain();
             else if (key === 'skip') cpWizSkip();
             else if (key === 'verify-tx') cpWizVerifyManualTx();
             else if (key === 'fast-save-wallet') cpWizFastSaveContact('wallet');
@@ -1461,6 +1462,9 @@
                             </div>
                             <p id="cpWizManualTxStatus" class="text-xs text-gray-500 mt-1 hidden"></p>
                         </div>
+                        <div class="text-center mt-4">
+                            <button data-wiz="show-address" style="font-size:12px;color:#6b7280;background:none;border:none;text-decoration:underline;cursor:pointer;">Didn't send yet? Show the address again</button>
+                        </div>
                     </div>`;
 
                 // Fast-variant post-send step. We poll the chain in the background, but proactively
@@ -1503,6 +1507,9 @@
                                 <p id="cpWizFastStatus" style="font-size:11px;color:#10b981;margin-top:6px;display:none;"></p>
                             </div>
                         </details>
+                        <div class="text-center mt-3">
+                            <button data-wiz="show-address" style="font-size:12px;color:#6b7280;background:none;border:none;text-decoration:underline;cursor:pointer;">Didn't send yet? Show the address again</button>
+                        </div>
                     </div>`;
 
                 default: return '';
@@ -1847,17 +1854,30 @@
             }
             const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(qrData);
 
+            // Cache everything needed to re-paint this screen WITHOUT re-locking the chain,
+            // so "Didn't send yet? Show the address again" can bring the customer back here.
+            window._cpManualInfo = { addr, amtStr, qrUrl, chainName, expiresAt };
+            cpWizPaintAddressScreen(window._cpManualInfo);
+        }
+
+        // Renders the "Send exactly / address / QR / countdown / I've sent" screen from a cached
+        // info object. Shared by the first render (cpWizShowManualSend) and the go-back path
+        // (cpWizShowAddressAgain) so the two can never drift.
+        function cpWizPaintAddressScreen(info) {
+            const body = document.getElementById('cpWizBody');
+            if (!body) return;
+            const expiresAt = info.expiresAt instanceof Date ? info.expiresAt : new Date(info.expiresAt);
             body.innerHTML = `
                 <h2 class="text-xl font-bold text-black mb-1 text-center">Send exactly</h2>
-                <p class="text-2xl font-bold text-center mb-4" style="color:var(--mc-accent);">${amtStr}</p>
+                <p class="text-2xl font-bold text-center mb-4" style="color:var(--mc-accent);">${info.amtStr}</p>
                 <div class="text-center mb-4">
-                    <img src="${qrUrl}" width="180" height="180" alt="QR" class="mx-auto border-2 border-black" />
+                    <img src="${info.qrUrl}" width="180" height="180" alt="QR" class="mx-auto border-2 border-black" />
                 </div>
                 <div class="bg-gray-50 border-2 border-black p-3 mb-3">
-                    <p class="text-xs text-gray-500 mb-1">To this ${chainName} address:</p>
+                    <p class="text-xs text-gray-500 mb-1">To this ${info.chainName} address:</p>
                     <div class="flex items-center gap-2">
-                        <code class="text-xs font-mono text-black break-all flex-1">${addr}</code>
-                        <button data-wiz="copy" data-val="${addr}" style="padding:4px 8px;font-size:12px;font-weight:700;border:2px solid #000;background:#fff;cursor:pointer;">COPY</button>
+                        <code class="text-xs font-mono text-black break-all flex-1">${info.addr}</code>
+                        <button data-wiz="copy" data-val="${info.addr}" style="padding:4px 8px;font-size:12px;font-weight:700;border:2px solid #000;background:#fff;cursor:pointer;">COPY</button>
                     </div>
                 </div>
                 ${cpWizState.senderWallet ? `<p class="text-xs text-gray-500 mb-3 text-center">Sending from: <code class="font-mono">${cpWizState.senderWallet.slice(0,6)}...${cpWizState.senderWallet.slice(-4)}</code></p>` : ''}
@@ -1901,7 +1921,22 @@
             };
         }
 
+        // "Didn't send yet?" — bring the customer back to the address/QR screen from the
+        // scanning/paste-confirm step. Re-paints from cache (no chain re-lock). Leaves the
+        // background poller running so a payment that DOES arrive still auto-confirms.
+        function cpWizShowAddressAgain() {
+            cpWizTrack('WIZARD_BACK', { from: String(cpWizState.step), to: 'manual-send' });
+            if (window._cpWizTimer) { clearInterval(window._cpWizTimer); window._cpWizTimer = null; }
+            cpWizSetSubStep('manual-send');
+            if (window._cpManualInfo) cpWizPaintAddressScreen(window._cpManualInfo);
+            else cpWizShowManualSend();
+        }
+
         function cpWizStartScanning() {
+            // Idempotent: clear any prior scan timers so going back to the address and
+            // re-clicking "I've sent" doesn't stack a second timer/poller.
+            if (window._cpWizTimer) { clearInterval(window._cpWizTimer); window._cpWizTimer = null; }
+            if (window._cpWizPoller) { clearInterval(window._cpWizPoller); window._cpWizPoller = null; }
             const startedAt = Date.now();
             const statuses = [
                 { at: 0, text: 'Scanning the blockchain...' },
