@@ -253,15 +253,11 @@
         });
       }
 
-      // Mid-tx safety: if the wizard was already completed/skipped in this session, don't re-show on refresh.
-      const wizDoneKey = `sp_widget_wiz_done_${this.options.merchantId || 'any'}`;
-      let alreadyDone = false;
-      try { alreadyDone = sessionStorage.getItem(wizDoneKey) === '1'; } catch {}
-      this._wizDoneKey = wizDoneKey;
-
-      // Both 'guided' and 'fast' use the wizard UI. They differ only in the manual sub-flow
-      // (fast skips the sender-wallet step before QR; collects TX/wallet/email AFTER "I've sent it").
-      if ((this._variant === 'guided' || this._variant === 'fast') && !this._wizardState.done && !alreadyDone) {
+      // Show the wizard fresh on every load. We only suppress re-showing it within THIS instance
+      // (in-memory _wizardState.done), NOT across reloads — previously a persisted flag trapped
+      // the customer on the classic UI forever after one "show all options" click + refresh.
+      // Both 'guided' and 'fast' use the wizard UI.
+      if ((this._variant === 'guided' || this._variant === 'fast') && !this._wizardState.done) {
         this._renderWizard();
         this.attachWizardListeners();
         return;
@@ -327,18 +323,18 @@
             <a href="https://metamask.io/download/" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">MetaMask</span><span style="${subStyle}">Standard for Ethereum</span></span><span>↗</span></a>
             <button class="sp-wiz-goto" data-step="1" style="${primaryBtnStyle};margin-top:14px;"><span>I'm back — let's pay</span><span>→</span></button>`;
         case '2': {
-          // Connect-wallet currently only works reliably on EVM chains. Solana connect-pay throws
-          // (Buffer/legacy-transfer) and TRON connects the wrong wallet type — so for non-EVM chains
-          // offer manual only (proven to confirm). EVM keeps the one-click connect option.
+          // Connect-wallet works on EVM + Solana (Solana SPL transfer fixed to TransferChecked).
+          // TRON has no working browser-wallet connect path → manual only there. Manual always offered.
           const chainType = this.selectedChain?.config?.type;
-          const connectBtn = chainType === 'evm'
-            ? `<button class="sp-wiz-ans" data-key="method" data-value="wallet" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Connect my wallet</span><span style="${subStyle}">One click in MetaMask / Coinbase</span></span><span>→</span></button>`
+          const canConnect = chainType === 'evm' || chainType === 'solana';
+          const connectBtn = canConnect
+            ? `<button class="sp-wiz-ans" data-key="method" data-value="wallet" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Connect my wallet</span><span style="${subStyle}">One click in MetaMask / Phantom / Coinbase</span></span><span>→</span></button>`
             : '';
           return `
             <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">How will you send it?</h2>
             <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">Same outcome either way.</p>
             ${connectBtn}
-            <button class="sp-wiz-ans" data-key="method" data-value="manual" style="${secondaryBtnStyle};margin-top:${chainType === 'evm' ? '10px' : '0'};"><span><span style="display:block">Send manually</span><span style="${subStyle}">Copy address or scan QR — works with any wallet</span></span><span>→</span></button>`;
+            <button class="sp-wiz-ans" data-key="method" data-value="manual" style="${secondaryBtnStyle};margin-top:${canConnect ? '10px' : '0'};"><span><span style="display:block">Send manually</span><span style="${subStyle}">Copy address or scan QR — works with any wallet</span></span><span>→</span></button>`;
         }
         default: return '';
       }
@@ -418,10 +414,23 @@
 
     _wizSkip() {
       this._track('WIZARD_SKIPPED', { step: String(this._wizardState.step) });
-      this._wizardState.done = true;
-      try { if (this._wizDoneKey) sessionStorage.setItem(this._wizDoneKey, '1'); } catch {}
+      this._wizardState.done = true; // in-memory only — reload re-shows the wizard
       this.render();
       this.attachEventListeners();
+      // Give a way BACK to the guided flow (previously skip was a one-way trap).
+      this._injectBackToGuided();
+    }
+
+    _injectBackToGuided() {
+      const inner = this.container.querySelector('.sp-widget');
+      if (!inner || this.container.querySelector('#sp-back-to-guided')) return;
+      const bar = document.createElement('div');
+      bar.id = 'sp-back-to-guided';
+      bar.style.cssText = 'text-align:center;padding:8px;background:#f8fafc;border-bottom:1px solid #e2e8f0;';
+      bar.innerHTML = `<button type="button" style="background:none;border:none;color:#3b82f6;font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;">← Back to guided setup</button>`;
+      const card = inner.firstElementChild || inner;
+      inner.insertBefore(bar, card);
+      bar.querySelector('button').addEventListener('click', () => this._wizRestart());
     }
 
     _wizComplete() {
@@ -436,8 +445,7 @@
         token: this.selectedToken || null,
         variant: this._variant,
       });
-      this._wizardState.done = true;
-      try { if (this._wizDoneKey) sessionStorage.setItem(this._wizDoneKey, '1'); } catch {}
+      this._wizardState.done = true; // in-memory only (reload re-shows the wizard)
       const targetMode = this._wizardState.payType === 'native' ? 'crypto' : 'stable';
       const targetTab = this._wizardState.method === 'wallet' ? 'wallet' : 'send';
       this.render();
@@ -463,13 +471,12 @@
 
     _applyWizardFocusedMode() {
       const w = this.container;
-      // Hide pay-mode toggle + fee banner — wizard already chose pay type
+      // Hide pay-mode toggle + fee banner — wizard already chose pay type (and native is disabled).
       const modeToggle = w.querySelector('#sp-pay-mode-toggle');
       if (modeToggle) modeToggle.style.display = 'none';
-      // Hide the Network/Token grid — wizard's selections lock to defaults
-      const grids = w.querySelectorAll('div[style*="grid-template-columns: 1fr 1fr"]');
-      grids.forEach(g => { if (g.querySelector('#sp-chain-select-wrapper') || g.querySelector('#sp-token-select-wrapper')) g.style.display = 'none'; });
-      // Hide the method tabs — wizard already chose
+      // KEEP the Network/Token selectors VISIBLE so the customer can change chain/token — never
+      // silently force them onto the default (Solana). Defaulting is fine; locking is not.
+      // Hide the method tabs — wizard already chose connect vs manual.
       const tabs = w.querySelector('#sp-method-tabs');
       if (tabs) tabs.style.display = 'none';
       // Inject a wizard-style header above the action area so it feels like a wizard step
@@ -489,7 +496,7 @@
 
     _wizRestart() {
       this._wizardState = { payType: null, method: null, step: 1, done: false };
-      try { if (this._wizDoneKey) sessionStorage.removeItem(this._wizDoneKey); } catch {}
+      const back = this.container.querySelector('#sp-back-to-guided'); if (back) back.remove();
       this._renderWizard();
       this.attachWizardListeners();
     }
@@ -2903,16 +2910,23 @@
       const fromATA = getATA(fromPubkey, mintPubkey);
       const toATA = getATA(toPubkey, mintPubkey);
 
-      // Build transfer instruction (SPL token transfer, 6 decimals)
-      const amountLamports = Math.round(amount * 1e6);
+      // Build TransferChecked instruction (SPL opcode 12). B5 fix: the old code used legacy
+      // Transfer (opcode 3) which carries NO mint — both the /tx verifier and the scanner reject
+      // mint-less transfers, so the payment could never confirm (silent fund loss). It also used
+      // `Buffer` (undefined in the browser → ReferenceError). TransferChecked includes the mint +
+      // decimals, and Uint8Array works without a Buffer polyfill.
+      // keys order for TransferChecked: (source, mint, destination, owner); data = [12, u64 LE amount, decimals].
+      const decimals = tokenConfig.decimals ?? 6;
+      const amountUnits = Math.round(amount * Math.pow(10, decimals));
       const transferIx = new solana.TransactionInstruction({
         keys: [
           { pubkey: fromATA, isSigner: false, isWritable: true },
+          { pubkey: mintPubkey, isSigner: false, isWritable: false },
           { pubkey: toATA, isSigner: false, isWritable: true },
           { pubkey: fromPubkey, isSigner: true, isWritable: false },
         ],
         programId: TOKEN_PROGRAM_ID,
-        data: Buffer.from([3, ...new Uint8Array(new BigUint64Array([BigInt(amountLamports)]).buffer)]),
+        data: new Uint8Array([12, ...new Uint8Array(new BigUint64Array([BigInt(amountUnits)]).buffer), decimals]),
       });
 
       const { blockhash } = await connection.getLatestBlockhash();

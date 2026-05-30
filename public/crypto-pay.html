@@ -1441,9 +1441,10 @@
                 case 'method': {
                     const mChainName = CHAIN_CONFIG[cpWizState.chain]?.chainName || cpWizState.chain;
                     const mChainType = CHAIN_CONFIG[cpWizState.chain]?.type;
-                    // Connect-pay only works reliably on EVM (Solana connect-pay throws; TRON N/A).
-                    // For non-EVM, offer manual only — it's proven to confirm.
-                    const hasWallet = mChainType === 'evm' && cpHasBrowserWallet(cpWizState.chain);
+                    // Connect-pay works on EVM + Solana (SPL transfer fixed to TransferChecked).
+                    // TRON has no working browser-wallet connect path → manual only there.
+                    const canConnectType = mChainType === 'evm' || mChainType === 'solana';
+                    const hasWallet = canConnectType && cpHasBrowserWallet(cpWizState.chain);
                     let html = `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">How will you send it?</h2>
                         <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">${cpWizState.token} on ${mChainName}</p>
                         <div style="display:flex;flex-direction:column;gap:12px;">`;
@@ -1454,9 +1455,9 @@
                     }
                     html += cpWizBtn('Send manually', 'Copy the address or scan the QR — pay from any wallet or exchange', 'answer', 'method:manual');
                     html += `</div>`;
-                    // Only nudge "get a wallet" for EVM chains with no detected wallet. For non-EVM,
-                    // manual is simply the way (no misleading "no wallet" message).
-                    if (mChainType === 'evm' && !hasWallet) {
+                    // Nudge "get a wallet" only for connect-capable chains (EVM/Solana) with no
+                    // detected wallet. For TRON, manual is simply the way (no misleading message).
+                    if (canConnectType && !hasWallet) {
                         html += `<p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:16px;">No browser wallet detected on this device — send manually above, or <button data-wiz="goto" data-val="1b" style="color:#6b7280;background:none;border:none;text-decoration:underline;cursor:pointer;font-size:12px;">get a wallet first</button>.</p>`;
                     }
                     return html;
@@ -2158,10 +2159,26 @@
         function cpWizSkip() {
             cpWizTrack('WIZARD_SKIPPED', { step: String(cpWizState.step) });
             const wiz = document.getElementById('cpWizard'); if (wiz) wiz.style.display = 'none';
-            try { sessionStorage.setItem(cpWizDoneKey(), '1'); } catch {}
+            // Do NOT persist the skip — previously this trapped the customer on the classic UI on
+            // every reload. Reload now shows the guided flow fresh.
             if (window._cpWizPoller) { clearInterval(window._cpWizPoller); window._cpWizPoller = null; }
             if (window._cpWizTimer)  { clearInterval(window._cpWizTimer);  window._cpWizTimer = null; }
             if (window._cpWizCountdown) { clearInterval(window._cpWizCountdown); window._cpWizCountdown = null; }
+            // Give a way BACK to the guided flow (floating button; previously skip was one-way).
+            if (!document.getElementById('cpBackToGuided')) {
+                const b = document.createElement('button');
+                b.id = 'cpBackToGuided';
+                b.type = 'button';
+                b.textContent = '← Guided setup';
+                b.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:9999;background:#000;color:#fff;border:none;border-radius:999px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);';
+                b.addEventListener('click', () => {
+                    b.remove();
+                    cpWizState.step = 'payType';
+                    const w = document.getElementById('cpWizard'); if (w) w.style.display = 'flex';
+                    cpWizGoStep('payType');
+                });
+                document.body.appendChild(b);
+            }
         }
 
         function cpWizDoneKey() {
@@ -4445,14 +4462,17 @@
 
                 showTxStatus('Please confirm transaction in your wallet...');
 
-                // Create transfer instruction
-                // Since we don't have full SPL token library, we'll use a raw transaction
-                // This requires the @solana/spl-token library which is loaded
-                const transferInstruction = splToken.createTransferInstruction(
+                // B5 fix: use TransferChecked (carries the mint) — legacy createTransferInstruction
+                // produces a mint-less transfer that BOTH the /tx verifier and the scanner reject,
+                // so the payment could never confirm. createTransferCheckedInstruction includes the
+                // mint + decimals so info.mint === expectedMint on-chain.
+                const transferInstruction = splToken.createTransferCheckedInstruction(
                     fromTokenAddress,
+                    mintPubkey,
                     toTokenAddress,
                     fromPubkey,
-                    amount
+                    amount,
+                    tokenConfig.decimals
                 );
 
                 transaction.add(transferInstruction);
