@@ -1295,6 +1295,18 @@
             return null;
         }
 
+        // Does the visitor have a browser-injected wallet usable for this chain's type?
+        // Used to hide "Connect my wallet" when it would just dead-end (desktop w/o extension,
+        // or a normal mobile browser outside a wallet app). EVM wallets have no `type`; Solana ones set type:'solana'.
+        function cpHasBrowserWallet(chainKey) {
+            try {
+                const type = CHAIN_CONFIG[chainKey]?.type || 'evm';
+                const wallets = detectWallets();
+                if (type === 'solana') return wallets.some(w => w.type === 'solana');
+                return wallets.some(w => w.type !== 'solana');
+            } catch { return false; }
+        }
+
         function cpWizGoBack() {
             const target = cpWizBackTarget(cpWizState.step);
             if (!target) return;
@@ -1432,13 +1444,24 @@
                     return html;
                 }
 
-                case 'method':
-                    return `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">How will you send it?</h2>
-                        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">${cpWizState.token} on ${CHAIN_CONFIG[cpWizState.chain]?.chainName || cpWizState.chain}</p>
-                        <div style="display:flex;flex-direction:column;gap:12px;">
-                        ${cpWizBtn('Connect my wallet', 'One click in MetaMask / Phantom / Coinbase', 'answer', 'method:wallet')}
-                        ${cpWizBtn('Send manually', 'Copy address or scan QR code', 'answer', 'method:manual')}
-                        </div>`;
+                case 'method': {
+                    const mChainName = CHAIN_CONFIG[cpWizState.chain]?.chainName || cpWizState.chain;
+                    const hasWallet = cpHasBrowserWallet(cpWizState.chain);
+                    let html = `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">How will you send it?</h2>
+                        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">${cpWizState.token} on ${mChainName}</p>
+                        <div style="display:flex;flex-direction:column;gap:12px;">`;
+                    // Only offer "Connect my wallet" when a browser wallet is actually present for
+                    // this chain — otherwise it just dead-ends ("install MetaMask"). Manual works for everyone.
+                    if (hasWallet) {
+                        html += cpWizBtn('Connect my wallet', 'One click in your browser wallet', 'answer', 'method:wallet');
+                    }
+                    html += cpWizBtn('Send manually', 'Copy the address or scan the QR — pay from any wallet or exchange', 'answer', 'method:manual');
+                    html += `</div>`;
+                    if (!hasWallet) {
+                        html += `<p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:16px;">No browser wallet detected on this device — send manually above, or <button data-wiz="goto" data-val="1b" style="color:#6b7280;background:none;border:none;text-decoration:underline;cursor:pointer;font-size:12px;">get a wallet first</button>.</p>`;
+                    }
+                    return html;
+                }
 
                 case 'pay':
                     return `<div class="text-center py-8">
