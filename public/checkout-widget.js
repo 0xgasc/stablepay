@@ -9,9 +9,11 @@
   const STABLEPAY_URL = 'https://wetakestables.shop';
   const WIDGET_VERSION = '3.0.0';
 
-  const NATIVE_TOKENS = new Set(['ETH', 'SOL', 'BNB', 'MATIC', 'ARB']);
+  // B3: Arbitrum's native/gas token is ETH, not ARB. Sending 'ARB' made the backend price the
+  // $0.10 ARB governance token instead of ETH — a ~19,000x misprice. ARB removed from natives.
+  const NATIVE_TOKENS = new Set(['ETH', 'SOL', 'BNB', 'MATIC']);
   const CHAIN_NATIVE_TOKEN = {
-    BASE_MAINNET: 'ETH', ETHEREUM_MAINNET: 'ETH', ARBITRUM_MAINNET: 'ARB',
+    BASE_MAINNET: 'ETH', ETHEREUM_MAINNET: 'ETH', ARBITRUM_MAINNET: 'ETH',
     POLYGON_MAINNET: 'MATIC', BNB_MAINNET: 'BNB', SOLANA_MAINNET: 'SOL',
     BASE_SEPOLIA: 'ETH', ETHEREUM_SEPOLIA: 'ETH',
   };

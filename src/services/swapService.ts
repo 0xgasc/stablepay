@@ -18,7 +18,7 @@ const EVM_CHAIN: Record<string, {
   // Sized for: LiFi swap tx + ERC-20 forward tx, with buffer. Swept back to agent after use.
   BASE_MAINNET:     { chainId: 8453,  rpc: 'https://mainnet.base.org',      gasThreshold: '0.00005', gasFund: '0.0001', stables: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', USDT: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42' } },
   ETHEREUM_MAINNET: { chainId: 1,     rpc: 'https://eth.llamarpc.com',       gasThreshold: '0.003',   gasFund: '0.005',  stables: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7', EURC: '0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c' } },
-  POLYGON_MAINNET:  { chainId: 137,   rpc: 'https://polygon-rpc.com',        gasThreshold: '0.005',   gasFund: '0.02',   stables: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' } },
+  POLYGON_MAINNET:  { chainId: 137,   rpc: process.env.POLYGON_MAINNET_RPC_URL || 'https://polygon-bor-rpc.publicnode.com', gasThreshold: '0.005',   gasFund: '0.02',   stables: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F' } },
   ARBITRUM_MAINNET: { chainId: 42161, rpc: process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arbitrum-one-rpc.publicnode.com', gasThreshold: '0.00005', gasFund: '0.0001', stables: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' } },
   BNB_MAINNET:      { chainId: 56,    rpc: process.env.BNB_MAINNET_RPC_URL   || 'https://bsc-dataseed.binance.org', gasThreshold: '0.0005',  gasFund: '0.001',  stables: { USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', USDT: '0x55d398326f99059fF775485246999027B3197955' } },
 };
@@ -37,7 +37,9 @@ const ERC20_ABI = [
 ];
 
 // Tokens accepted as native input
-export const NATIVE_TOKENS = new Set(['ETH', 'SOL', 'BNB', 'MATIC', 'ARB']);
+// 'ARB' removed: Arbitrum's native/gas token is ETH (CHAIN_NATIVE.ARBITRUM_MAINNET='ETH'). The ARB
+// governance token must never be accepted/priced as a gas-token payment (B3 — was a ~19,000x misprice).
+export const NATIVE_TOKENS = new Set(['ETH', 'SOL', 'BNB', 'MATIC']);
 
 // Which native token is expected on each chain
 export const CHAIN_NATIVE: Record<string, string> = {
@@ -89,7 +91,10 @@ function decryptWalletKey(encrypted: string): string {
 // ─── Price feed ───────────────────────────────────────────────────────────────
 const GECKO_IDS: Record<string, string> = {
   ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
-  MATIC: 'matic-network', ARB: 'arbitrum',
+  // B4: 'matic-network' is dead (returns empty → no price → order creation 500). The Polygon gas
+  // token is now POL; 'polygon-ecosystem-token' is its live CoinGecko id (POL≈MATIC 1:1).
+  MATIC: 'polygon-ecosystem-token',
+  // ARB removed (B3): Arbitrum native is ETH, never the ARB governance token.
 };
 const priceCache = new Map<string, { price: number; ts: number }>();
 
@@ -268,15 +273,19 @@ async function executeJupiterSwap(
 ): Promise<{ txHash: string; stableReceived: number }> {
   const outputMint = SOL_STABLES[targetStable] ?? SOL_STABLES.USDC;
 
+  // B2: quote-api.jup.ag is dead (NXDOMAIN) → every SOL swap threw "fetch failed". Use the live v1
+  // host; env-overridable so a future migration is config, not a redeploy. Request/response shapes
+  // are identical to v6 ({quoteResponse,userPublicKey,wrapAndUnwrapSol} → {swapTransaction}).
+  const JUP_BASE = process.env.JUPITER_API_BASE || 'https://lite-api.jup.ag/swap/v1';
   const qRes = await fetch(
-    `https://quote-api.jup.ag/v6/quote?inputMint=${WRAPPED_SOL}&outputMint=${outputMint}&amount=${lamports}&slippageBps=200`,
+    `${JUP_BASE}/quote?inputMint=${WRAPPED_SOL}&outputMint=${outputMint}&amount=${lamports}&slippageBps=200`,
     { signal: AbortSignal.timeout(10_000) },
   );
   if (!qRes.ok) throw new Error(`Jupiter quote failed: ${qRes.status}`);
   const quoteResponse = await qRes.json();
 
   const keypair = Keypair.fromSecretKey(Buffer.from(secretHex, 'hex'));
-  const sRes    = await fetch('https://quote-api.jup.ag/v6/swap', {
+  const sRes    = await fetch(`${JUP_BASE}/swap`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quoteResponse, userPublicKey: keypair.publicKey.toBase58(), wrapAndUnwrapSol: true }),

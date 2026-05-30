@@ -27,7 +27,7 @@ const checkoutSchema = z.object({
   storeId: z.string().optional(),  // Scope order to a merchant's sub-brand for webhook/branding isolation
   amount: z.number().positive(),
   chain: z.string().min(1).optional(),  // Optional: omit to let customer pick from merchant's active chains
-  token: z.enum(['USDC', 'USDT', 'EURC', 'ETH', 'SOL', 'BNB', 'MATIC', 'ARB']).default('USDC'),
+  token: z.enum(['USDC', 'USDT', 'EURC', 'ETH', 'SOL', 'BNB', 'MATIC']).default('USDC'), // ARB removed (B3): Arbitrum native is ETH
   customerEmail: z.string().email().optional().or(z.literal('')),
   customerName: z.string().optional(),
   customerWallet: z.string().optional(),  // Customer's wallet for precise FROM matching
@@ -353,7 +353,7 @@ router.post('/checkout', rateLimit({
 
     // Enforce token only when chain is locked (chain-agnostic orders re-validate at chain selection)
     // Native tokens (ETH/SOL/BNB/MATIC/ARB) bypass this check — they're validated in the native token path below
-    const NATIVE_TOKEN_SET = new Set(['ETH', 'SOL', 'BNB', 'MATIC', 'ARB']);
+    const NATIVE_TOKEN_SET = new Set(['ETH', 'SOL', 'BNB', 'MATIC']); // ARB removed (B3)
     if (!chainAgnostic && !NATIVE_TOKEN_SET.has(data.token)) {
       const supportedTokens = (wallet.supportedTokens && wallet.supportedTokens.length > 0)
         ? wallet.supportedTokens

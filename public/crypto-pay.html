@@ -1160,7 +1160,7 @@
         // Forward declarations — referenced by wizard before main init populates them
         let merchantChains = [];
         let currentProduct = null;
-        const NATIVE_TOKENS_SET = new Set(['ETH', 'SOL', 'BNB', 'MATIC', 'ARB']);
+        const NATIVE_TOKENS_SET = new Set(['ETH', 'SOL', 'BNB', 'MATIC']); // ARB removed (B3): Arbitrum native is ETH
         const CHAIN_NATIVE_TOKEN = { SOLANA_MAINNET: 'SOL', ETHEREUM_MAINNET: 'ETH', BASE_MAINNET: 'ETH', POLYGON_MAINNET: 'MATIC', ARBITRUM_MAINNET: 'ETH', BNB_MAINNET: 'BNB' };
 
         // ═══ FULL-FLOW WIZARD ═══════════════════════════════════════════

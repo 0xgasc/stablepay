@@ -275,13 +275,18 @@ export class OrderService {
       }
     }
 
-    // Atomic guard: only flip PENDING → CONFIRMED if the order is still PENDING and not yet expired.
-    // Returns 0 rows updated if the order was already confirmed/refunded/expired between the scanner
-    // detecting a TX and this call — preventing double-confirm or resurrecting an expired order.
+    // Atomic guard. Two legitimate confirmable states:
+    //  - PENDING + not expired: the normal stablecoin path.
+    //  - PROCESSING (any expiry): the native-swap path. swapAndForward atomically claims the order
+    //    PENDING→PROCESSING (that claim is itself the double-execution guard), runs the swap+forward
+    //    — which can finish AFTER the 15-min window and re-quotes stale prices — then calls confirm.
+    //    Requiring PENDING here is exactly why native orders could NEVER confirm (0/27). B1 fix.
+    // The IN-set still rejects already CONFIRMED/EXPIRED/CANCELLED/REFUNDED orders → no double-confirm.
     const confirmNow = new Date();
     const updated = await db.$executeRaw`
       UPDATE orders SET status = 'CONFIRMED'::"OrderStatus", "updatedAt" = ${confirmNow}
-      WHERE id = ${orderId} AND status = 'PENDING' AND "expiresAt" > ${confirmNow}
+      WHERE id = ${orderId}
+        AND (status = 'PROCESSING'::"OrderStatus" OR (status = 'PENDING'::"OrderStatus" AND "expiresAt" > ${confirmNow}))
     `;
     if (updated === 0) {
       logger.warn('confirmOrder skipped — order not PENDING or expired', {
