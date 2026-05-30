@@ -1813,8 +1813,10 @@
             const info = await cpWizComputeDisplayAmount();
 
             let orderData;
-            if (window.currentOrderId) {
-                try {
+            try {
+                if (window.currentOrderId) {
+                    // Existing order (orderId link, or re-entry after we created one): lock it to the
+                    // chosen chain/token.
                     const lockBody = { chain: cpWizState.chain, token: cpWizState.token };
                     if (cpWizState.token === 'EURC') lockBody.amount = info.amount;
                     const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
@@ -1822,22 +1824,55 @@
                         body: JSON.stringify(lockBody),
                     });
                     orderData = await res.json();
-                    if (!orderData.success) throw new Error(orderData.error || 'Failed to lock chain');
-                    if (cpWizState.senderWallet) {
-                        fetch('/api/embed/order/' + window.currentOrderId + '/wallet', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ customerWallet: cpWizState.senderWallet }),
-                        }).catch(() => {});
+                    if (!orderData.success) {
+                        // Re-entry: order is already chain-locked. Reuse its existing address instead of erroring.
+                        const cur = await (await fetch('/api/embed/order/' + window.currentOrderId)).json();
+                        if (cur && cur.paymentAddress) orderData = cur;
+                        else throw new Error(orderData.error || 'Failed to lock chain');
                     }
-                } catch (err) {
-                    body.innerHTML = `<div style="text-align:center;padding:24px 8px;">
-                        <p style="font-size:16px;font-weight:700;color:#dc2626;margin-bottom:8px;">Couldn't prepare payment</p>
-                        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">${(err.message || 'Server error').slice(0,160)}</p>
-                        <button data-wiz="back" style="padding:12px 24px;font-weight:700;font-size:14px;border:4px solid #000;background:#fff;cursor:pointer;">← Try again</button>
-                    </div>`;
-                    cpWizTrack('PAYMENT_FAILED', { stage: 'chain-lock', msg: (err.message || '').slice(0, 200) });
-                    return;
+                } else {
+                    // No order yet (product / tip checkout): create one NOW for this chain/token,
+                    // so we get a real paymentAddress. Previously this path was skipped entirely,
+                    // leaving the address blank on product links.
+                    const _params = new URLSearchParams(window.location.search);
+                    const amountToCharge = (cpWizState.token === 'EURC' && info.amount)
+                        ? info.amount
+                        : parseFloat(currentProduct?.price ?? _params.get('price') ?? _params.get('amount') ?? 0);
+                    const res = await fetch('/api/embed/checkout', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            merchantId: currentProduct?.merchantId || _params.get('merchantId'),
+                            amount: amountToCharge,
+                            chain: cpWizState.chain,
+                            token: cpWizState.token,
+                            productName: currentProduct?.name || _params.get('productName') || 'Payment',
+                            customerWallet: cpWizState.senderWallet || undefined,
+                            externalId: _params.get('externalId') || undefined,
+                            linkId: _params.get('linkId') || undefined,
+                            paymentMethod: 'MANUAL_SEND',
+                            source: 'CHECKOUT_LINK',
+                        }),
+                    });
+                    const data = await res.json();
+                    if (!data.success || !data.order) throw new Error(data.error || 'Failed to create order');
+                    window.currentOrderId = data.order.id;
+                    orderData = data.order; // {id, paymentAddress, amount, token, chain, nativeSendAmount, expiresAt}
                 }
+                // Patch sender wallet onto the order (either path) when we captured one.
+                if (cpWizState.senderWallet && window.currentOrderId) {
+                    fetch('/api/embed/order/' + window.currentOrderId + '/wallet', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ customerWallet: cpWizState.senderWallet }),
+                    }).catch(() => {});
+                }
+            } catch (err) {
+                body.innerHTML = `<div style="text-align:center;padding:24px 8px;">
+                    <p style="font-size:16px;font-weight:700;color:#dc2626;margin-bottom:8px;">Couldn't prepare payment</p>
+                    <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">${(err.message || 'Server error').slice(0,160)}</p>
+                    <button data-wiz="back" style="padding:12px 24px;font-weight:700;font-size:14px;border:4px solid #000;background:#fff;cursor:pointer;">← Try again</button>
+                </div>`;
+                cpWizTrack('PAYMENT_FAILED', { stage: 'order-prepare', msg: (err.message || '').slice(0, 200) });
+                return;
             }
 
             const addr = orderData?.paymentAddress || orderData?.order?.paymentAddress || '';
