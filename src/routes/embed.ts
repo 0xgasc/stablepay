@@ -10,6 +10,32 @@ import { getTokenBalance } from '../services/balanceService';
 
 const router = Router();
 
+// Server-side USD→EUR conversion for EURC orders, mirroring the source the wizard uses
+// (CoinGecko euro-coin USD price; eurAmount = usd / priceOfEurcInUsd, same 1.15 fallback as
+// checkout-widget.js fetchEURCRate). Cached briefly to avoid hammering CoinGecko per-order.
+let _eurcRateCache: { rate: number; fetchedAt: number } | null = null;
+async function getEurcUsdRate(): Promise<number> {
+  if (_eurcRateCache && Date.now() - _eurcRateCache.fetchedAt < 5 * 60 * 1000) {
+    return _eurcRateCache.rate;
+  }
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=euro-coin&vs_currencies=usd', {
+      signal: AbortSignal.timeout(8000),
+    });
+    const data: any = await res.json();
+    const rate = Number(data?.['euro-coin']?.usd) || 1.15; // USD per 1 EURC; fallback 1.15
+    _eurcRateCache = { rate, fetchedAt: Date.now() };
+    return rate;
+  } catch {
+    return _eurcRateCache?.rate ?? 1.15; // fallback to last-known or static fallback
+  }
+}
+// Convert a USD figure to EUR (EURC) units, matching the widget: eur = usd / (USD price of EURC).
+async function usdToEur(usdAmount: number): Promise<number> {
+  const rate = await getEurcUsdRate();
+  return parseFloat((usdAmount / rate).toFixed(2));
+}
+
 // CORS headers for embed endpoints (allow cross-origin)
 router.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -451,11 +477,29 @@ router.post('/checkout', rateLimit({
       orderExpiry = 15 * 60 * 1000; // 15 min — price snapshot goes stale
     }
 
+    // ─── EURC: convert USD→EUR server-side for chain-locked server-created orders ─────────
+    // The JS widget (EMBED_WIDGET) and hosted page (CHECKOUT_LINK) already convert USD→EUR
+    // client-side before calling /checkout, so we must NOT re-convert those (double-charge).
+    // Chain-agnostic orders are converted later at the /order/:id/chain commit (amountOverride
+    // branch below), so we must NOT convert those here either (double-charge).
+    // The genuine bug is the documented public API path: a server-created order (API / INVOICE /
+    // DASHBOARD) with a LOCKED chain and token:EURC sends a raw USD amount and never runs any
+    // converter — it was charging USD-as-EUR (~8% overpay). Convert exactly those here, stashing
+    // the original USD in metadata for accounting (mirrors the /chain EURC branch).
+    let orderAmount: number = data.amount;
+    const orderSource = data.source || 'EMBED_WIDGET';
+    const serverCreatedSource = orderSource === 'API' || orderSource === 'INVOICE' || orderSource === 'DASHBOARD';
+    if (!isNative && data.token === 'EURC' && serverCreatedSource && !chainAgnostic) {
+      const usdAmount = data.amount;
+      orderAmount = await usdToEur(usdAmount);
+      finalMetadata._originalUsdAmount = usdAmount;
+    }
+
     const order = await db.order.create({
       data: {
         merchantId: data.merchantId,
         storeId: resolvedStoreId,
-        amount: data.amount,
+        amount: orderAmount,
         token: isNative ? 'USDC' : data.token, // order amount always tracks USD/stablecoin value
         chain: resolvedChain,
         customerEmail: data.customerEmail || null,
@@ -501,17 +545,19 @@ router.post('/checkout', rateLimit({
     logger.info('Embed order created', {
       orderId: order.id,
       merchantId: data.merchantId,
-      amount: data.amount,
+      // Report the actual stored/charged amount (EUR for converted EURC orders, USD otherwise)
+      amount: Number(order.amount),
       chain: data.chain,
       externalId: data.externalId,
       source: 'embed_widget'
     });
 
-    // Send webhook
+    // Send webhook — report the actual charged order amount so the merchant's accounting matches
+    // what the customer pays and what the scanner verifies (EUR for converted EURC, USD otherwise).
     webhookService.sendWebhook(data.merchantId, 'order.created', {
       orderId: order.id,
       externalId: data.externalId || null,
-      amount: data.amount,
+      amount: Number(order.amount),
       token: data.token,
       chain: data.chain,
       paymentAddress: wallet.address,

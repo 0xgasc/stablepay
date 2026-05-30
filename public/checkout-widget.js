@@ -1417,6 +1417,9 @@
               const data = await res.json();
               if (data.success) {
                 this.currentOrderId = data.order.id;
+                // Reconcile the placeholder send-screen countdown to the order's REAL expiresAt
+                // now that the deferred stablecoin order exists.
+                if (data.order.expiresAt) this.reconcileCountdown(data.order.expiresAt);
               } else {
                 this.showError(data.error || 'Failed to register payment');
                 sentBtn.disabled = false;
@@ -1591,22 +1594,56 @@
         });
       }
 
-      // Copy buttons (delegated)
-      this.container.addEventListener('click', (e) => {
+      // Copy buttons (delegated). navigator.clipboard.writeText() rejects in many in-app webviews
+      // (and is undefined on insecure origins), so try it, then fall back to execCommand('copy').
+      // Only flash "Copied!" on an ACTUAL success — never lie that we copied when we didn't.
+      this.container.addEventListener('click', async (e) => {
+        const flash = (btn, ok) => {
+          btn.textContent = ok ? 'COPIED!' : 'FAILED';
+          setTimeout(() => btn.textContent = 'COPY', 1500);
+        };
         if (e.target.id === 'sp-copy-addr-btn') {
           const addr = this.container.querySelector('#sp-pay-address')?.textContent;
           if (addr) {
-            navigator.clipboard.writeText(addr);
-            e.target.textContent = 'COPIED!';
-            this._track('ADDRESS_COPIED', { chain: this.selectedChain?.chain });
-            setTimeout(() => e.target.textContent = 'COPY', 1500);
+            const ok = await this._copyToClipboard(addr);
+            if (ok) this._track('ADDRESS_COPIED', { chain: this.selectedChain?.chain });
+            flash(e.target, ok);
           }
         }
         if (e.target.id === 'sp-copy-amt-btn') {
           const amt = this.container.querySelector('#sp-pay-amount')?.textContent;
-          if (amt) { navigator.clipboard.writeText(amt.split(' ')[0]); e.target.textContent = 'COPIED!'; setTimeout(() => e.target.textContent = 'COPY', 1500); }
+          if (amt) {
+            const ok = await this._copyToClipboard(amt.split(' ')[0]);
+            flash(e.target, ok);
+          }
         }
       });
+    }
+
+    // Copy text to the clipboard, returning true only on real success. Tries the async Clipboard
+    // API first, then falls back to a hidden-textarea execCommand('copy') for in-app webviews /
+    // insecure origins where navigator.clipboard is missing or rejects.
+    async _copyToClipboard(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (e) { /* fall through to execCommand */ }
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:absolute;left:-9999px;top:0;opacity:0;';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return !!ok;
+      } catch (e) {
+        return false;
+      }
     }
 
     initSenderWalletInput() {
@@ -1829,12 +1866,12 @@
           // (`solana:addr?amount=X`) so Phantom/Solflare etc. pre-fill the amount on scan —
           // matches the page implementation. For other native chains (ETH/BNB/etc.) there's
           // no equivalent URI standard, so we encode the raw address.
+          const nativeAmt = nativeSendAmt || (this.nativePriceUsd ? ((usdAmount + fee) / this.nativePriceUsd) : null);
+          const qrData = (chain.chain === 'SOLANA_MAINNET' && nativeAmt)
+            ? `solana:${receiveAddress}?amount=${parseFloat(nativeAmt)}`
+            : receiveAddress;
           const canvas = this.container.querySelector('#sp-qr-canvas');
           if (canvas) {
-            const nativeAmt = nativeSendAmt || (this.nativePriceUsd ? ((usdAmount + fee) / this.nativePriceUsd) : null);
-            const qrData = (chain.chain === 'SOLANA_MAINNET' && nativeAmt)
-              ? `solana:${receiveAddress}?amount=${parseFloat(nativeAmt)}`
-              : receiveAddress;
             const waitAndRender = () => {
               if (typeof QRCode !== 'undefined') {
                 QRCode.toCanvas(canvas, qrData, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, () => {});
@@ -1847,8 +1884,17 @@
           const solPayToggle = this.container.querySelector('#sp-solanapay-toggle');
           if (solPayToggle) solPayToggle.style.display = 'none';
 
+          // Mobile deep-link button (native send). solana: opens Phantom prefilled; for native-EVM
+          // there is no token-transfer URI, so we deep-link the bare address (recipient prefilled).
+          this._renderMobileWalletLink(qrData, receiveAddress);
+
+          // ONE source of truth per screen: the #sp-native-expiry banner already shows the real
+          // 15-min price-lock countdown, so DON'T run the separate #sp-countdown timer here (it would
+          // hardcode 5:00 and falsely say "Time expired"). Hide the #sp-countdown element entirely.
+          const cdEl = this.container.querySelector('#sp-countdown');
+          if (cdEl) cdEl.style.display = 'none';
+
           this.lockSelectors();
-          this.startCountdown();
           return;
         } catch (err) {
           console.error('Failed to create native order:', err);
@@ -1893,46 +1939,129 @@
       const chainConfig = this.selectedChain?.config;
       const tokenConfig = chainConfig?.tokens?.[this.selectedToken];
 
+      // Solana Pay amount-encoded QR is now the DEFAULT (no opt-in checkbox required) — hide the
+      // legacy toggle; wallets always get the amount + spl-token prefilled on Solana.
       const solPayToggle = this.container.querySelector('#sp-solanapay-toggle');
-      const solPayCheck = this.container.querySelector('#sp-solanapay-check');
-      if (solPayToggle) solPayToggle.style.display = chainConfig?.type === 'solana' ? 'block' : 'none';
+      if (solPayToggle) solPayToggle.style.display = 'none';
 
-      const generateQR = (useSolanaPay = false) => {
-        if (!canvas || typeof QRCode === 'undefined') return;
-        let qrData = walletAddr;
-        if (useSolanaPay && chainConfig?.type === 'solana' && tokenConfig?.address) {
-          qrData = `solana:${walletAddr}?amount=${amount}&spl-token=${tokenConfig.address}`;
+      // Build the payment URI for QR + mobile deep-link.
+      //  • Solana SPL stablecoin → Solana Pay URI with amount + spl-token (DEFAULTED on).
+      //  • EVM ERC-20 stablecoin → EIP-681 token transfer so wallets prefill token/recipient/amount.
+      //    `ethereum:<tokenContract>@<chainId>/transfer?address=<merchant>&uint256=<baseUnits>`
+      //    NOTE: CHAIN_CONFIG stores chainId as HEX (Base '0x2105'); EIP-681 needs DECIMAL chainId.
+      //  • TRON / unknown → fall back to the bare address (no EIP-681 equivalent).
+      // String-based base-units scaler (no float drift at 18 decimals) — parity with the page's
+      // cpScaleToBaseUnits so both surfaces emit identical EIP-681 uint256.
+      const scaleToBaseUnits = (amt, decimals) => {
+        const s = String(amt).trim();
+        if (!/^\d*\.?\d*$/.test(s) || s === '' || s === '.') return null;
+        const [intPart = '0', fracRaw = ''] = s.split('.');
+        const frac = (fracRaw + '0'.repeat(decimals)).slice(0, decimals);
+        const combined = (intPart + frac).replace(/^0+(?=\d)/, '');
+        return combined === '' ? '0' : combined;
+      };
+      const buildPaymentUri = () => {
+        if (chainConfig?.type === 'solana' && tokenConfig?.address) {
+          return `solana:${walletAddr}?amount=${amount}&spl-token=${tokenConfig.address}`;
         }
-        QRCode.toCanvas(canvas, qrData, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
+        if (chainConfig?.type === 'evm' && tokenConfig?.address && tokenConfig?.decimals != null && chainConfig?.chainId) {
+          const decimalChainId = parseInt(chainConfig.chainId, 16); // hex -> decimal (0x2105 -> 8453)
+          const units = scaleToBaseUnits(amount, tokenConfig.decimals);
+          if (units == null) return walletAddr;
+          return `ethereum:${tokenConfig.address}@${decimalChainId}/transfer?address=${walletAddr}&uint256=${units}`;
+        }
+        return walletAddr;
+      };
+      const paymentUri = buildPaymentUri();
+
+      const generateQR = () => {
+        if (!canvas || typeof QRCode === 'undefined') return;
+        QRCode.toCanvas(canvas, paymentUri, { width: 140, margin: 2, color: { dark: '#000', light: '#fff' } }, (err) => {
           if (err) console.error('QR generation failed:', err);
         });
       };
 
       if (canvas) {
         const waitAndRender = () => {
-          if (typeof QRCode !== 'undefined') { generateQR(false); } else { setTimeout(waitAndRender, 500); }
+          if (typeof QRCode !== 'undefined') { generateQR(); } else { setTimeout(waitAndRender, 500); }
         };
         waitAndRender();
       }
 
-      if (solPayCheck) {
-        solPayCheck.checked = false;
-        solPayCheck.onchange = () => generateQR(solPayCheck.checked);
-      }
+      // Mobile "Open in wallet" deep-link — tapping the payment URI opens the user's wallet
+      // prefilled, so mobile users don't have to scan their own on-screen QR.
+      this._renderMobileWalletLink(paymentUri, walletAddr);
 
       this.lockSelectors();
+      // The stablecoin order is created later (on "I've sent it"), so no real expiresAt yet — show a
+      // calm placeholder window and reconcile to the server expiresAt once the order is created.
       this.startCountdown();
     }
 
-    startCountdown() {
+    // Inject/refresh a tappable "Open in wallet" deep-link button on the send screen. Uses the
+    // same ethereum:/solana: payment URI as the QR; for EVM/Solana also offers a MetaMask/Phantom
+    // universal link so mobile in-app browsers can hand off without scanning. The .mobile-wallet-link
+    // CSS slot was previously dead — this is its first real use.
+    _renderMobileWalletLink(paymentUri, fallbackAddr) {
+      try {
+        const countdown = this.container.querySelector('#sp-countdown');
+        if (!countdown || !countdown.parentNode) return;
+        const uri = paymentUri || fallbackAddr;
+        if (!uri) return;
+        const type = this.selectedChain?.config?.type;
+
+        // Universal links for simple cases so in-app webviews can deep-link reliably.
+        let universal = null;
+        if (type === 'evm' && uri.startsWith('ethereum:')) {
+          // MetaMask universal link expects the dapp/host portion; pass the address host.
+          universal = `https://metamask.app.link/send/${uri.replace(/^ethereum:/, '')}`;
+        } else if (type === 'solana' && uri.startsWith('solana:')) {
+          universal = `https://phantom.app/ul/v1/pay?uri=${encodeURIComponent(uri)}`;
+        }
+        const href = universal || uri;
+
+        let link = this.container.querySelector('.mobile-wallet-link');
+        if (!link) {
+          link = document.createElement('a');
+          link.className = 'mobile-wallet-link';
+          link.style.cssText = 'display:block;width:100%;padding:12px;margin-bottom:10px;background:var(--sp-card);color:var(--sp-text);border:2px solid var(--sp-border);font-weight:700;font-size:12px;text-align:center;text-decoration:none;text-transform:uppercase;cursor:pointer;';
+          link.textContent = 'Open in wallet';
+          countdown.parentNode.insertBefore(link, countdown);
+        }
+        link.style.display = 'block';
+        link.href = href;
+        link.target = universal ? '_blank' : '_self';
+        if (universal) link.rel = 'noopener';
+        link.onclick = () => { try { this._track('MOBILE_WALLET_LINK_CLICKED', { chain: this.selectedChain?.chain, token: this.selectedToken }); } catch {} };
+      } catch (e) { /* deep-link is best-effort; never break the send screen */ }
+    }
+
+    // Drive the send-screen countdown from the order's REAL expiresAt (returned by /checkout
+    // and GET /order/:id) instead of a hardcoded 5:00. Compute remaining time from the absolute
+    // timestamp each tick (don't decrement a local counter — that drifts and is wrong if the tab
+    // was backgrounded). If no expiry is known yet (deferred stablecoin order not created), fall
+    // back to the backend stablecoin TTL (30 min) as a calm placeholder and do NOT declare the
+    // order dead — re-confirm true status against the server before showing any "expired" copy.
+    startCountdown(expiresAt) {
       if (this._countdownInterval) clearInterval(this._countdownInterval);
-      let seconds = 300; // 5 minutes
       const timerEl = this.container.querySelector('#sp-countdown-time');
       const wrapperEl = this.container.querySelector('#sp-countdown');
+      const labelEl = wrapperEl ? wrapperEl.querySelector('span') : null;
       if (!timerEl) return;
 
-      this._countdownInterval = setInterval(() => {
-        seconds--;
+      // Resolve an absolute expiry timestamp (ms). Prefer the order's real expiresAt; otherwise
+      // use the 30-min stablecoin TTL window as a non-authoritative placeholder.
+      const STABLECOIN_TTL_MS = 30 * 60 * 1000;
+      const expiryMs = expiresAt ? new Date(expiresAt).getTime() : (Date.now() + STABLECOIN_TTL_MS);
+      // Only an order-backed expiry is authoritative enough to declare the order dead at 0:00.
+      const hasRealExpiry = !!expiresAt;
+      this._countdownExpiryMs = expiryMs;
+
+      // Calm "rate locked" framing while the timer is running.
+      if (labelEl) labelEl.textContent = hasRealExpiry ? 'Rate locked — complete payment within' : 'Complete payment soon';
+
+      const tick = () => {
+        const seconds = Math.max(0, Math.floor((this._countdownExpiryMs - Date.now()) / 1000));
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -1942,16 +2071,34 @@
           timerEl.style.color = '#ef4444'; // Red last minute
         } else if (seconds <= 120) {
           timerEl.style.color = '#f59e0b'; // Yellow last 2 min
+        } else {
+          timerEl.style.color = 'var(--sp-text)';
         }
 
         if (seconds <= 0) {
           clearInterval(this._countdownInterval);
+          this._countdownInterval = null;
           timerEl.textContent = '0:00';
+          // Never falsely declare a still-valid order dead. Only show the hard "expired" message
+          // when we have the order's REAL expiresAt; for the placeholder window, just nudge.
           if (wrapperEl) {
-            wrapperEl.innerHTML = '<p style="font-size: 11px; color: #ef4444; font-weight: 700;">Time expired — please start a new payment</p>';
+            if (hasRealExpiry) {
+              wrapperEl.innerHTML = '<p style="font-size: 11px; color: #ef4444; font-weight: 700;">Time expired — please start a new payment</p>';
+            } else {
+              wrapperEl.innerHTML = '<p style="font-size: 11px; color: var(--sp-muted); font-weight: 600;">Please complete your payment soon.</p>';
+            }
           }
         }
-      }, 1000);
+      };
+      tick();
+      this._countdownInterval = setInterval(tick, 1000);
+    }
+
+    // Reconcile a running placeholder countdown to the server's real expiresAt once the deferred
+    // stablecoin order has been created. Called from the "I've sent it" handler after order creation.
+    reconcileCountdown(expiresAt) {
+      if (!expiresAt) return;
+      this._countdownExpiryMs = new Date(expiresAt).getTime();
     }
 
     startPaymentPolling() {

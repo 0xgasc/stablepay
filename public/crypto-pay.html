@@ -757,6 +757,7 @@
                         </div>
                         <p class="text-sm font-bold text-black mt-3">Send exactly <span id="cpQRAmount" style="color: var(--mc-accent);">—</span></p>
                         <p class="text-xs text-gray-500 mt-1">Scan with your wallet app</p>
+                        <a id="cpWalletDeepLink" class="mobile-wallet-link w-full text-center py-3 px-4 font-bold text-sm border-2 border-black mt-3" style="display:none;background:#fff;color:#000;text-decoration:none;">📲 Open in wallet</a>
                     </div>
 
                     <!-- Address view -->
@@ -765,14 +766,14 @@
                             <p class="text-xs font-bold text-gray-500 mb-1" style="text-transform: uppercase;">Send to</p>
                             <div class="flex items-center gap-2">
                                 <code id="cpCopyAddress" class="text-xs text-black font-bold font-mono break-all flex-1">—</code>
-                                <button onclick="copyPayAddress()" class="px-3 py-1 font-bold text-xs text-black border-2 border-black mc-accent-bg">COPY</button>
+                                <button onclick="copyPayAddress(this)" class="px-3 py-1 font-bold text-xs text-black border-2 border-black mc-accent-bg">COPY</button>
                             </div>
                         </div>
                         <div class="bg-gray-50 border-2 border-black p-3">
                             <p class="text-xs font-bold text-gray-500 mb-1" style="text-transform: uppercase;" data-i18n="checkout.exactAmount">Exact amount</p>
                             <div class="flex items-center gap-2">
                                 <span id="cpCopyAmount" class="text-xl font-bold text-black flex-1">—</span>
-                                <button onclick="copyPayAmount()" class="px-3 py-1 font-bold text-xs text-black border-2 border-black mc-accent-bg">COPY</button>
+                                <button onclick="copyPayAmount(this)" class="px-3 py-1 font-bold text-xs text-black border-2 border-black mc-accent-bg">COPY</button>
                             </div>
                         </div>
                     </div>
@@ -1206,9 +1207,9 @@
             else if (key === 'fast-save-wallet') cpWizFastSaveContact('wallet');
             else if (key === 'fast-save-email')  cpWizFastSaveContact('email');
             else if (key === 'copy') {
-                navigator.clipboard.writeText(val).catch(() => {});
-                btn.textContent = 'Copied!';
-                cpWizTrack('ADDRESS_COPIED', { chain: cpWizState.chain });
+                cpCopyToClipboard(val, btn).then((ok) => {
+                    if (ok) cpWizTrack('ADDRESS_COPIED', { chain: cpWizState.chain });
+                });
             }
         });
 
@@ -1906,21 +1907,16 @@
                 ? new Date(orderData.expiresAt)
                 : (orderData?.order?.expiresAt ? new Date(orderData.order.expiresAt) : new Date(Date.now() + 30 * 60 * 1000));
 
-            // Solana Pay URI for Solana chain
-            let qrData = addr;
-            if (cpWizState.chain === 'SOLANA_MAINNET') {
-                if (NATIVE_TOKENS_SET.has(cpWizState.token)) {
-                    qrData = 'solana:' + addr + '?amount=' + amtForQR;
-                } else {
-                    const tokenAddr = CHAIN_CONFIG['SOLANA_MAINNET']?.tokens?.[cpWizState.token]?.address;
-                    if (tokenAddr) qrData = 'solana:' + addr + '?amount=' + amtForQR + '&spl-token=' + tokenAddr;
-                }
-            }
+            // Build a payment URI (EIP-681 for EVM stablecoins, Solana Pay for Solana) so the QR
+            // and the "Open in wallet" deep-link prefill token + recipient + exact amount.
+            // Falls back to the bare address for TRON / native-EVM where no standard URI exists.
+            const payUri = cpBuildPayURI(cpWizState.chain, cpWizState.token, addr, amtForQR);
+            const qrData = payUri || addr;
             const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(qrData);
 
             // Cache everything needed to re-paint this screen WITHOUT re-locking the chain,
             // so "Didn't send yet? Show the address again" can bring the customer back here.
-            window._cpManualInfo = { addr, amtStr, qrUrl, chainName, expiresAt };
+            window._cpManualInfo = { addr, amtStr, qrUrl, payUri, chainName, expiresAt };
             cpWizPaintAddressScreen(window._cpManualInfo);
         }
 
@@ -1945,6 +1941,7 @@
                     </div>
                 </div>
                 ${cpWizState.senderWallet ? `<p class="text-xs text-gray-500 mb-3 text-center">Sending from: <code class="font-mono">${cpWizState.senderWallet.slice(0,6)}...${cpWizState.senderWallet.slice(-4)}</code></p>` : ''}
+                ${info.payUri ? `<a href="${info.payUri}" class="mobile-wallet-link w-full text-center py-3 px-4 font-bold text-sm border-2 border-black mb-3" style="background:#fff;color:#000;text-decoration:none;">📲 Open in wallet</a>` : ''}
                 <div class="text-center mb-4">
                     <p class="text-xs text-gray-500">Expires in <span id="cpWizManualCountdown" class="font-bold">--:--</span></p>
                     <div id="cpWizManualExpWarning" style="display:none;"></div>
@@ -2431,6 +2428,77 @@
                 }
             }
         };
+
+        // ── Shared payment-URI + clipboard helpers (used by both the wizard and the classic flow) ──
+
+        // Scale a decimal UI amount to integer base-units as a string, bigint-safe (no float drift
+        // at 18 decimals on BNB tokens). e.g. ('47.53', 18) -> '47530000000000000000'.
+        function cpScaleToBaseUnits(amount, decimals) {
+            const s = String(amount).trim();
+            if (!/^\d*\.?\d*$/.test(s) || s === '' || s === '.') return null;
+            const [intPart = '0', fracRaw = ''] = s.split('.');
+            const frac = (fracRaw + '0'.repeat(decimals)).slice(0, decimals);
+            const combined = (intPart + frac).replace(/^0+(?=\d)/, '');
+            return combined === '' ? '0' : combined;
+        }
+
+        // Build a wallet deep-link / QR payload for the given chain+token+merchant+amount.
+        // - EVM stablecoins  -> EIP-681 token transfer (prefills token, recipient, exact amount)
+        // - Solana (SPL/SOL) -> Solana Pay URI (prefills amount, +spl-token for stablecoins)
+        // - TRON / native-EVM / unknown -> null (caller falls back to the bare address)
+        function cpBuildPayURI(chainKey, token, addr, amount) {
+            const cfg = CHAIN_CONFIG[chainKey];
+            if (!cfg || !addr) return null;
+            if (cfg.type === 'solana') {
+                if (NATIVE_TOKENS_SET.has(token)) return 'solana:' + addr + '?amount=' + amount;
+                const mint = cfg.tokens?.[token]?.address;
+                return mint ? ('solana:' + addr + '?amount=' + amount + '&spl-token=' + mint) : null;
+            }
+            if (cfg.type === 'evm') {
+                // No EIP-681 token-transfer URI for native EVM sends — fall back to bare address.
+                if (NATIVE_TOKENS_SET.has(token)) return null;
+                const tok = cfg.tokens?.[token];
+                if (!tok?.address || tok.decimals == null || !cfg.chainId) return null;
+                const decimalChainId = parseInt(cfg.chainId, 16); // hex '0x2105' -> 8453
+                const units = cpScaleToBaseUnits(amount, tok.decimals);
+                if (!Number.isFinite(decimalChainId) || units == null) return null;
+                return 'ethereum:' + tok.address + '@' + decimalChainId + '/transfer?address=' + addr + '&uint256=' + units;
+            }
+            // TRON (TronLink uses its own scheme) and anything else -> no standard URI.
+            return null;
+        }
+
+        // Copy with a real fallback + confirmed-only success. Shows 'COPIED!' only when the
+        // clipboard write actually succeeds; otherwise leaves a 'Copy failed' hint.
+        async function cpCopyToClipboard(text, btn) {
+            let ok = false;
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    ok = true;
+                }
+            } catch (_) { ok = false; }
+            if (!ok) {
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.setAttribute('readonly', '');
+                    ta.style.cssText = 'position:absolute;left:-9999px;top:0;';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    ta.setSelectionRange(0, text.length);
+                    ok = document.execCommand('copy');
+                    document.body.removeChild(ta);
+                } catch (_) { ok = false; }
+            }
+            if (btn) {
+                const prev = btn.dataset.cpCopyLabel || btn.textContent;
+                btn.dataset.cpCopyLabel = prev;
+                btn.textContent = ok ? 'COPIED!' : 'Copy failed';
+                setTimeout(() => { btn.textContent = btn.dataset.cpCopyLabel || 'COPY'; }, 1500);
+            }
+            return ok;
+        }
 
         // merchantChains declared above (before wizard) — just declare merchantData here
         let merchantData = null;
@@ -3082,6 +3150,8 @@
                     // Store payment address for use later
                     window.merchantPaymentAddress = orderData.paymentAddress;
                     window.currentOrderId = orderIdParam;
+                    // Capture the order's REAL expiry so the step-2 countdown matches the backend TTL.
+                    if (orderData.expiresAt) window._cpOrderExpiresAt = new Date(orderData.expiresAt).getTime();
                     trackFunnel('merchant_loaded', { chain: orderData.chain, token: orderData.token, amount: orderData.amount });
 
                     document.getElementById('productName').textContent = currentProduct.name;
@@ -5060,31 +5130,51 @@
             cpStartCountdown();
         }
 
-        // Regenerate QR with optional Solana Pay URI format
+        // Regenerate QR. EVM stablecoins get an EIP-681 token-transfer URI (prefills token +
+        // recipient + exact amount); Solana gets a Solana Pay URI. The Solana Pay checkbox can
+        // still toggle Solana back to the bare address. Also (re)build the "Open in wallet" deep
+        // link from the same URI.
         function cpRenderQR(useSolanaPay) {
             const ctx = window._cpQRContext;
             const qrImg = document.getElementById('cpQRImage');
             if (!ctx || !qrImg || !ctx.merchantAddr) return;
 
-            let qrData = ctx.merchantAddr;
-            if (useSolanaPay && ctx.chainKey === 'SOLANA_MAINNET') {
-                const tokenAddr = CHAIN_CONFIG['SOLANA_MAINNET']?.tokens?.[ctx.token]?.address;
-                if (tokenAddr) {
-                    qrData = `solana:${ctx.merchantAddr}?amount=${ctx.payAmount}&spl-token=${tokenAddr}`;
-                }
-            }
+            // Strip any trailing " TOKEN" / native-token suffix so only the numeric amount is encoded.
+            const amountNum = String(ctx.payAmount).trim().split(/\s+/)[0];
+            const cfg = CHAIN_CONFIG[ctx.chainKey];
+            let payUri = cpBuildPayURI(ctx.chainKey, ctx.token, ctx.merchantAddr, amountNum);
+            // Solana respects the checkbox toggle: unchecked -> bare address QR.
+            if (cfg?.type === 'solana' && !useSolanaPay) payUri = null;
+            const qrData = payUri || ctx.merchantAddr;
             qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=' + encodeURIComponent(qrData);
+            cpRenderWalletDeepLink(payUri);
         }
 
-        // 5-minute countdown on step 2
+        // Populate the mobile "Open in wallet" deep-link slot from the current payment URI.
+        function cpRenderWalletDeepLink(payUri) {
+            const slot = document.getElementById('cpWalletDeepLink');
+            if (!slot) return;
+            if (payUri) {
+                slot.href = payUri;
+                slot.style.display = '';
+            } else {
+                slot.removeAttribute('href');
+                slot.style.display = 'none';
+            }
+        }
+
+        // Step-2 countdown driven by the order's REAL expiresAt (backend stablecoin TTL is 30 min).
+        // When the order isn't created yet (product/tip links create it on "I've sent it"), fall
+        // back to a 30-min window that matches the backend default rather than a fake 5:00.
+        // Never destroys the address/QR and never tells the payer to "start a new payment" off a
+        // client timer — at 0:00 it just shows "0:00" in red; true expiry is enforced server-side.
         function cpStartCountdown() {
             if (window._cpCountdownTimer) clearInterval(window._cpCountdownTimer);
-            const COUNTDOWN_SECONDS = 5 * 60;
-            const startedAt = Date.now();
+            const expiresAtMs = window._cpOrderExpiresAt || (Date.now() + 30 * 60 * 1000);
             const tick = () => {
-                const remaining = COUNTDOWN_SECONDS - Math.floor((Date.now() - startedAt) / 1000);
+                const remaining = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000));
                 const el = document.getElementById('cpCountdown');
-                if (!el) { clearInterval(window._cpCountdownTimer); return; }
+                if (!el) { clearInterval(window._cpCountdownTimer); window._cpCountdownTimer = null; return; }
                 if (remaining <= 0) {
                     el.textContent = '0:00';
                     el.style.color = '#dc2626';
@@ -5543,20 +5633,19 @@
             }
         }
 
-        function copyPayAddress() {
+        function copyPayAddress(btn) {
             const addr = document.getElementById('cpCopyAddress').textContent;
-            navigator.clipboard.writeText(addr);
-            event.target.textContent = 'COPIED!';
-            setTimeout(() => event.target.textContent = 'COPY', 1500);
-            trackFunnel('address_copied');
-            cpWizTrack('ADDRESS_COPIED', { chain: window._orderChain || null });
+            cpCopyToClipboard(addr, btn).then((ok) => {
+                if (ok) {
+                    trackFunnel('address_copied');
+                    cpWizTrack('ADDRESS_COPIED', { chain: window._orderChain || null });
+                }
+            });
         }
 
-        function copyPayAmount() {
+        function copyPayAmount(btn) {
             const amt = document.getElementById('cpCopyAmount').textContent;
-            navigator.clipboard.writeText(amt.split(' ')[0]);
-            event.target.textContent = 'COPIED!';
-            setTimeout(() => event.target.textContent = 'COPY', 1500);
+            cpCopyToClipboard(amt.split(' ')[0], btn);
         }
 
         document.addEventListener('DOMContentLoaded', function() {

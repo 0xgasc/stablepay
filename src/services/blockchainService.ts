@@ -178,8 +178,19 @@ export class BlockchainService {
       // No sequential block crawling — just ask "did this wallet receive tokens recently?"
       const uniqueAddresses = [...new Set(pendingOrders.map(o => o.paymentAddress.toLowerCase()).filter(a => a.length > 0))];
 
-      // Look back ~10 min on Base (300 blocks), ~2 min on Ethereum (10 blocks)
-      const lookbackBlocks = Math.ceil(600 / (config.blockTimeSeconds || 2));
+      // Size the lookback window from the OLDEST still-pending order's age, not a fixed ~10 min.
+      // A fixed 600s window is SHORTER than the 30-min stablecoin order TTL, so a real payment that
+      // lands during an RPC outage (entire fallback pool down >10 min — the documented llamarpc
+      // Cloudflare-403 mode) ages out of the window before scanning resumes and is permanently
+      // missed even though the order stays PENDING. Cover the full pending lifetime + slack so a
+      // payment can never age out while its order is still PENDING. Capped at ~35 min (max order
+      // lifetime 30 min + slack) so the eth_getLogs range stays bounded.
+      const blockTime = config.blockTimeSeconds || 2;
+      const oldestCreatedAtMs = Math.min(...pendingOrders.map(o => o.createdAt.getTime()));
+      const oldestAgeSeconds = (Date.now() - oldestCreatedAtMs) / 1000;
+      // Always cover at least the legacy ~600s window; never exceed the capped lifetime.
+      const coverSeconds = Math.min(Math.max(oldestAgeSeconds + 60, 600), 35 * 60);
+      const lookbackBlocks = Math.ceil(coverSeconds / blockTime);
       const fromBlock = Math.max(0, currentBlock - lookbackBlocks);
 
       let matched = 0;
@@ -191,8 +202,19 @@ export class BlockchainService {
           try {
             // Targeted filter: Transfer(anyone → targetAddress)
             const filter = contract.filters.Transfer(null, targetAddress);
-            const events = await contract.queryFilter(filter, fromBlock, currentBlock);
-            allEvents.push(...(events as ethers.EventLog[]));
+            // Chunk the block range into provider-safe spans. The window can now span the full
+            // order lifetime (up to ~35 min), which on fast chains (e.g. Arbitrum at ~0.25s/block
+            // ≈ 8.4k blocks) exceeds the ~2k-block getLogs cap many public RPCs enforce. Querying
+            // in chunks avoids -32602 "block range too large" — otherwise we'd trade a silent miss
+            // for a hard error and lose the payment anyway.
+            const MAX_GETLOGS_SPAN = 2000;
+            let spanStart = fromBlock;
+            while (spanStart <= currentBlock) {
+              const spanEnd = Math.min(spanStart + MAX_GETLOGS_SPAN - 1, currentBlock);
+              const events = await contract.queryFilter(filter, spanStart, spanEnd);
+              allEvents.push(...(events as ethers.EventLog[]));
+              spanStart = spanEnd + 1;
+            }
           } catch (err: any) {
             // Classify by failure mode so we don't page Sentry on routine rate-limits.
             // RPC providers throttle aggressively — JSON-RPC -32005 / "rate limit" / "batch
@@ -257,9 +279,13 @@ export class BlockchainService {
           const existingTx = await db.transaction.findUnique({ where: { txHash } });
           if (existingTx) continue;
 
-          // Find matching pending order for this address + token contract + amount
-          let matchedOrder = null;
-          let matchedAmount: string | null = null;
+          // Find matching pending order for this address + token contract + amount.
+          // customerWallet (the captured FROM) is a TIEBREAKER, not a hard filter: a customer who
+          // connects wallet A to prove identity but pays from exchange/cold wallet B sent the
+          // correct token+amount to the correct address — we must NOT drop that payment just
+          // because FROM differs. Collect all (address+token+amount) candidates, then use FROM
+          // only to disambiguate when MULTIPLE orders collide.
+          const candidates: { order: typeof pendingOrders[number]; txAmount: number }[] = [];
           for (const order of pendingOrders) {
             if (order.paymentAddress.toLowerCase() !== toAddress) continue;
 
@@ -295,14 +321,37 @@ export class BlockchainService {
               continue;
             }
 
-            // If order has customerWallet, require FROM match
-            if (order.customerWallet && order.customerWallet.startsWith('0x')) {
-              if (fromAddress.toLowerCase() !== order.customerWallet.toLowerCase()) continue;
-            }
+            candidates.push({ order, txAmount });
+          }
 
-            matchedOrder = order;
-            matchedAmount = txAmount.toString();
-            break;
+          // Disambiguate candidates by FROM (tiebreaker). When several pending orders collide on
+          // the same (address, token, amount), prefer the one whose captured customerWallet matches
+          // the actual sender; otherwise fall back to the first (preserves prior iteration order).
+          let matchedOrder: typeof pendingOrders[number] | null = null;
+          let matchedAmount: string | null = null;
+          let senderMismatch = false;
+          if (candidates.length > 0) {
+            const fromLower = (fromAddress || '').toLowerCase();
+            const byFrom = candidates.find(c =>
+              c.order.customerWallet && c.order.customerWallet.startsWith('0x') &&
+              c.order.customerWallet.toLowerCase() === fromLower
+            );
+            const chosen = byFrom || candidates[0];
+            matchedOrder = chosen.order;
+            matchedAmount = chosen.txAmount.toString();
+            // Advisory flag (non-blocking): confirmed despite the sender differing from the captured wallet.
+            if (chosen.order.customerWallet && chosen.order.customerWallet.startsWith('0x') &&
+                chosen.order.customerWallet.toLowerCase() !== fromLower) {
+              senderMismatch = true;
+              logger.warn('scanner confirming FROM-mismatched payment (customerWallet is a tiebreaker, not a filter)', {
+                event: 'scanner.sender_mismatch',
+                orderId: chosen.order.id,
+                chain,
+                capturedWallet: chosen.order.customerWallet,
+                actualFrom: fromAddress,
+                txHash,
+              });
+            }
           }
 
           if (!matchedOrder || !matchedAmount) continue;
@@ -356,6 +405,19 @@ export class BlockchainService {
                   flags: screening.flags,
                   riskScore: screening.riskScore,
                 });
+              }
+
+              // Surface a non-blocking sender-mismatch flag for merchant compliance review when
+              // we confirmed a payment whose FROM differs from the captured customerWallet.
+              if (senderMismatch) {
+                try {
+                  const existing = await db.order.findUnique({ where: { id: matchedOrder.id }, select: { metadata: true } });
+                  const meta = (existing?.metadata as Record<string, unknown>) || {};
+                  await db.order.update({
+                    where: { id: matchedOrder.id },
+                    data: { metadata: { ...meta, senderMismatch: { capturedWallet: matchedOrder.customerWallet, actualFrom: fromAddress, txHash, chain, detectedAt: new Date().toISOString() } } },
+                  });
+                } catch (e) { logger.warn('failed to flag sender mismatch', { orderId: matchedOrder.id, error: (e as Error).message }); }
               }
 
               await this.orderService.confirmOrder(matchedOrder.id, {
@@ -722,7 +784,11 @@ export class BlockchainService {
               const isOurWallet = destOwner === address || dest === address || tokenAccounts.includes(dest);
               if (!isOurWallet) continue;
 
-              // Match against pending orders
+              // Match against pending orders. Collect every order matching token+amount first;
+              // customerWallet (captured FROM) is a TIEBREAKER, not a hard filter — a payment from
+              // a different wallet than the one the customer connected is still valid and must not
+              // be dropped. FROM is used only to disambiguate colliding orders.
+              const solCandidates: typeof orders = [];
               for (const order of orders) {
                 // Token mint must match order's expected token
                 const expectedMint = SOLANA_TOKEN_MINTS[order.token];
@@ -756,7 +822,25 @@ export class BlockchainService {
                   });
                   continue;
                 }
-                if (order.customerWallet && !order.customerWallet.startsWith('0x') && from !== order.customerWallet) continue;
+                solCandidates.push(order);
+              }
+
+              if (solCandidates.length > 0) {
+                // Tiebreaker: prefer the order whose captured customerWallet == actual sender;
+                // otherwise take the first (preserves prior iteration order).
+                const byFrom = solCandidates.find(o => o.customerWallet && o.customerWallet === from);
+                const order = byFrom || solCandidates[0];
+                const senderMismatch = !!(order.customerWallet && order.customerWallet !== from);
+                if (senderMismatch) {
+                  logger.warn('scanner confirming FROM-mismatched payment (customerWallet is a tiebreaker, not a filter)', {
+                    event: 'scanner.sender_mismatch',
+                    orderId: order.id,
+                    chain: 'SOLANA_MAINNET',
+                    capturedWallet: order.customerWallet,
+                    actualFrom: from,
+                    txHash,
+                  });
+                }
 
                 // Match! Create transaction + confirm
                 await db.transaction.create({
@@ -768,6 +852,17 @@ export class BlockchainService {
                   },
                 });
 
+                if (senderMismatch) {
+                  try {
+                    const existing = await db.order.findUnique({ where: { id: order.id }, select: { metadata: true } });
+                    const meta = (existing?.metadata as Record<string, unknown>) || {};
+                    await db.order.update({
+                      where: { id: order.id },
+                      data: { metadata: { ...meta, senderMismatch: { capturedWallet: order.customerWallet, actualFrom: from, txHash, chain: 'SOLANA_MAINNET', detectedAt: new Date().toISOString() } } },
+                    });
+                  } catch (e) { logger.warn('failed to flag sender mismatch', { orderId: order.id, error: (e as Error).message }); }
+                }
+
                 const { complianceService } = await import('./complianceService');
                 const screening = await complianceService.screenTransaction(order.id, from);
 
@@ -777,7 +872,6 @@ export class BlockchainService {
                 } else {
                   console.log(`[scanner] ❌ Solana BLOCKED ${order.id} — ${screening.flags.join(', ')}`);
                 }
-                break;
               }
             }
           }
@@ -847,7 +941,11 @@ export class BlockchainService {
             const amount = parseFloat(tx.value) / 1e6; // TRC-20 stables are 6 decimals
             const fromAddress = tx.from;
 
-            // Match against pending orders
+            // Match against pending orders. Collect every order matching token+amount first;
+            // customerWallet (captured FROM) is a TIEBREAKER, not a hard filter — a payment from a
+            // different wallet than the one captured is still valid and must not be dropped. FROM
+            // is used only to disambiguate colliding orders.
+            const tronCandidates: typeof orders = [];
             for (const order of orders) {
               // Token must match (e.g. order for USDC should not confirm on USDT deposit)
               if (tokenName !== order.token) {
@@ -875,8 +973,25 @@ export class BlockchainService {
                 });
                 continue;
               }
-              // Only enforce wallet match if it's a TRON address (starts with T)
-              if (order.customerWallet && order.customerWallet.startsWith('T') && fromAddress !== order.customerWallet) continue;
+              tronCandidates.push(order);
+            }
+
+            if (tronCandidates.length > 0) {
+              // Tiebreaker: prefer the order whose captured customerWallet == actual sender;
+              // otherwise take the first (preserves prior iteration order).
+              const byFrom = tronCandidates.find(o => o.customerWallet && o.customerWallet === fromAddress);
+              const order = byFrom || tronCandidates[0];
+              const senderMismatch = !!(order.customerWallet && order.customerWallet !== fromAddress);
+              if (senderMismatch) {
+                logger.warn('scanner confirming FROM-mismatched payment (customerWallet is a tiebreaker, not a filter)', {
+                  event: 'scanner.sender_mismatch',
+                  orderId: order.id,
+                  chain: 'TRON_MAINNET',
+                  capturedWallet: order.customerWallet,
+                  actualFrom: fromAddress,
+                  txHash,
+                });
+              }
 
               // Match found
               await db.transaction.create({
@@ -893,6 +1008,17 @@ export class BlockchainService {
                 },
               });
 
+              if (senderMismatch) {
+                try {
+                  const existing = await db.order.findUnique({ where: { id: order.id }, select: { metadata: true } });
+                  const meta = (existing?.metadata as Record<string, unknown>) || {};
+                  await db.order.update({
+                    where: { id: order.id },
+                    data: { metadata: { ...meta, senderMismatch: { capturedWallet: order.customerWallet, actualFrom: fromAddress, txHash, chain: 'TRON_MAINNET', detectedAt: new Date().toISOString() } } },
+                  });
+                } catch (e) { logger.warn('failed to flag sender mismatch', { orderId: order.id, error: (e as Error).message }); }
+              }
+
               // Compliance screening
               const { complianceService } = await import('./complianceService');
               const screening = await complianceService.screenTransaction(order.id, fromAddress);
@@ -903,7 +1029,6 @@ export class BlockchainService {
               } else {
                 console.log(`[scanner] ❌ TRON BLOCKED order ${order.id} — ${screening.flags.join(', ')}`);
               }
-              break;
             }
           }
         } catch (err: any) {
