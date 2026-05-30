@@ -444,7 +444,7 @@ router.post('/checkout', rateLimit({
     }
 
     // ─── Native token path (ETH/SOL/BNB/MATIC/ARB) ──────────────────────────
-    const { NATIVE_TOKENS, getPriceUsd, calcConversionFee, createNativeReceiveWallet } = await import('../services/swapService');
+    const { NATIVE_TOKENS, CHAIN_NATIVE, getPriceUsd, calcConversionFee, createNativeReceiveWallet } = await import('../services/swapService');
     const isNative = NATIVE_TOKENS.has(data.token);
     let nativePriceSnapshot: number | undefined;
     let conversionFeeAmount: number | undefined;
@@ -452,12 +452,17 @@ router.post('/checkout', rateLimit({
     let orderExpiry = 30 * 60 * 1000; // 30 min default
 
     if (isNative) {
-      // Hard kill-switch while the native swap path is being repaired.
+      // Hard kill-switch (env-controlled) for native payments.
       if (String(process.env.NATIVE_PAYMENTS_DISABLED || '').toLowerCase() === 'true') {
         return res.status(400).json({ error: 'Native token payments are temporarily unavailable', message: 'Please pay with a stablecoin (USDC/USDT).' });
       }
       if (!data.chain) {
         return res.status(400).json({ error: 'chain is required for native token orders' });
+      }
+      // The native token MUST be the chain's actual gas token (e.g. ETH on Base, SOL on Solana).
+      // Otherwise we'd price/accept a token that can't be the gas asset (BNB on Base, etc.).
+      if (CHAIN_NATIVE[data.chain] !== data.token) {
+        return res.status(400).json({ error: 'Invalid native token for chain', message: `${data.chain} native token is ${CHAIN_NATIVE[data.chain] || 'a stablecoin'}, not ${data.token}.` });
       }
       const walletConfig = wallet as any;
       // FORCE_NATIVE_FOR_ALL=true bypasses the per-wallet opt-in during the testing phase
@@ -771,7 +776,7 @@ router.post('/order/:orderId/chain', async (req, res) => {
 
     // Validate token — native tokens (ETH/SOL/BNB/MATIC/ARB) skip supportedTokens check
     const requestedToken = token || order.token || 'USDC';
-    const { NATIVE_TOKENS: NATIVE_SET, getPriceUsd, calcConversionFee, createNativeReceiveWallet } = await import('../services/swapService');
+    const { NATIVE_TOKENS: NATIVE_SET, CHAIN_NATIVE, getPriceUsd, calcConversionFee, createNativeReceiveWallet } = await import('../services/swapService');
     const isNativeChainLock = NATIVE_SET.has(requestedToken);
 
     if (!isNativeChainLock && !supportedTokens.includes(requestedToken)) {
@@ -781,9 +786,13 @@ router.post('/order/:orderId/chain', async (req, res) => {
       });
     }
     if (isNativeChainLock) {
-      // Hard kill-switch while the native swap path is being repaired.
+      // Hard kill-switch (env-controlled) for native payments.
       if (String(process.env.NATIVE_PAYMENTS_DISABLED || '').toLowerCase() === 'true') {
         return res.status(400).json({ error: 'Native token payments are temporarily unavailable', message: 'Please pay with a stablecoin (USDC/USDT).' });
+      }
+      // Native token must be the chain's actual gas token.
+      if (CHAIN_NATIVE[chain] !== requestedToken) {
+        return res.status(400).json({ error: 'Invalid native token for chain', message: `${chain} native token is ${CHAIN_NATIVE[chain] || 'a stablecoin'}, not ${requestedToken}.` });
       }
       const nativeForAll = String(process.env.FORCE_NATIVE_FOR_ALL || '').toLowerCase() === 'true';
       const walletRecord = await db.merchantWallet.findFirst({ where: { merchantId: order.merchantId, chain, isActive: true } });
