@@ -2096,7 +2096,7 @@
                     ${isNative ? `<p style="font-size:11px;color:${muted};background:${surface};border:1px solid ${border};padding:6px 8px;margin-top:6px;">Native adds a 1.5% conversion fee — you'll send ${info_amtStrPlaceholder()}</p>` : ''}
                 </div>`;
             }
-            return `<details id="cpWizEditOptions" style="border:1px solid ${border};background:#FFFFFF;margin-bottom:14px;">
+            return `<details id="cpWizEditOptions" ${window._cpEditPanelOpen ? 'open' : ''} style="border:1px solid ${border};background:#FFFFFF;margin-bottom:14px;">
                 <summary style="cursor:pointer;list-style:none;padding:12px 14px;font-size:13px;font-weight:600;color:${muted};display:flex;align-items:center;justify-content:space-between;">
                     <span>Edit payment options</span><span style="font-size:11px;">▾</span>
                 </summary>
@@ -2224,6 +2224,7 @@
             const editDetails = document.getElementById('cpWizEditOptions');
             if (editDetails) {
                 editDetails.addEventListener('toggle', () => {
+                    window._cpEditPanelOpen = editDetails.open; // remembered across instant-apply rebuilds
                     if (editDetails.open) cpWizTrack('EDIT_PANEL_OPENED', { chain: cpWizState.chain, token: cpWizState.token });
                 });
             }

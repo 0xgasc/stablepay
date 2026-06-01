@@ -613,6 +613,10 @@
           payGrid.style.marginBottom = '0';
           const details = document.createElement('details');
           details.id = 'sp-edit-options';
+          // Preserve open state across instant-apply rebuilds: changing a coin/chain/pay-type repaints
+          // the send screen (regenerating this panel), so without this it collapses mid-edit and looks
+          // like the editor "exited". Set BEFORE the toggle listener so the restore doesn't re-fire telemetry.
+          if (this._editPanelOpen) details.open = true;
           details.style.cssText = 'border:1px solid #D4D4D8;background:#FFFFFF;border-radius:6px;margin-bottom:12px;';
           const summary = document.createElement('summary');
           summary.style.cssText = 'cursor:pointer;list-style:none;padding:10px 12px;font-size:12px;font-weight:600;color:#71717A;user-select:none;';
@@ -640,6 +644,7 @@
           bodyWrap.appendChild(editSave);
           // Telemetry: measure how often customers actually open the edit panel.
           details.addEventListener('toggle', () => {
+            this._editPanelOpen = details.open; // remembered across instant-apply rebuilds
             if (details.open) this._track('EDIT_PANEL_OPENED', { chain: this.selectedChain?.chain, token: this.selectedToken });
           });
           sendPanel.parentNode.insertBefore(details, sendPanel);
