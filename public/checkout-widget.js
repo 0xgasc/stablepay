@@ -2139,9 +2139,13 @@
           // Quiet ghost styling — this is an OPTIONAL convenience, not the primary action.
           // "I've sent the payment" is the only filled CTA; keep this low-key so it doesn't read
           // as "tap me instead of scrolling to the real button".
-          link.style.cssText = 'display:block;width:100%;padding:8px;margin-bottom:10px;background:transparent;color:var(--sp-muted);border:1px solid var(--sp-border);font-weight:600;font-size:11px;text-align:center;text-decoration:none;text-transform:none;border-radius:6px;cursor:pointer;';
+          // Tiny, quiet last-resort helper at the BOTTOM (under the primary CTA) — per the UX call.
+          // No box/border so it never competes with "I've sent the payment".
+          link.style.cssText = 'display:block;width:100%;padding:6px;margin-top:8px;background:transparent;color:var(--sp-muted);border:none;font-weight:600;font-size:11px;text-align:center;text-decoration:underline;text-transform:none;cursor:pointer;';
           link.textContent = 'Open in your wallet app ↗';
-          countdown.parentNode.insertBefore(link, countdown);
+          const sentBtn = this.container.querySelector('#sp-send-sent-btn');
+          if (sentBtn && sentBtn.parentNode) sentBtn.parentNode.insertBefore(link, sentBtn.nextSibling);
+          else countdown.parentNode.insertBefore(link, countdown);
         }
         link.style.display = 'block';
         link.href = href;

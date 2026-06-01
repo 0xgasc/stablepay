@@ -2177,7 +2177,6 @@
                     </div>
                 </div>
                 ${cpWizState.senderWallet ? `<p class="text-xs mb-3 text-center" style="color:#71717A;">Sending from: <code class="font-mono">${cpWizState.senderWallet.slice(0,6)}...${cpWizState.senderWallet.slice(-4)}</code></p>` : ''}
-                ${info.payUri ? `<a href="${info.payUri}" class="mobile-wallet-link w-full text-center mb-3" style="background:transparent;color:#71717A;border:1px solid #D4D4D8;border-radius:6px;padding:8px;font-weight:600;font-size:11px;text-transform:none;text-decoration:none;">Open in your wallet app ↗</a>` : ''}
                 ${_isFast ? cpWizEditPanelHTML() : ''}
                 <div class="text-center mb-4">
                     <p class="text-xs" style="color:#71717A;">Expires in <span id="cpWizManualCountdown" class="font-bold" style="color:#18181B;">--:--</span></p>
@@ -2185,7 +2184,8 @@
                 </div>
                 <button id="cpWizSentBtn" class="w-full py-4 px-4 font-bold text-base border-4 transition" style="border-color:#18181B;background:#18181B;color:#fff;">
                     I've sent the payment →
-                </button>`;
+                </button>
+                ${info.payUri ? `<a href="${info.payUri}" class="mobile-wallet-link w-full text-center" style="display:block;background:transparent;color:#71717A;border:none;padding:6px;margin-top:8px;font-weight:600;font-size:11px;text-transform:none;text-decoration:underline;">Open in your wallet app ↗</a>` : ''}`;
 
             const countdownEl = document.getElementById('cpWizManualCountdown');
             const warnEl = document.getElementById('cpWizManualExpWarning');
