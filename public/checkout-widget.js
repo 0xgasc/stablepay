@@ -273,30 +273,32 @@
     // ─── A/B WIZARD (widget variant) ─────────────────────────────────────
     _renderWizard() {
       const isDark = this.options.theme === 'dark';
-      const accent = this.options.accentColor;
       const brutal = this.options.borderStyle === 'brutal';
+      // STRUCTURAL: fast drops setup chrome (eyebrow, step counter, info button/panel, skip footer).
+      // Kept for guided/control behind the variant gate (?sp_variant=/?variant= QA override).
+      const isFast = this._variant === 'fast';
       this.container.innerHTML = `
         <div class="sp-widget sp-wiz ${this.options.theme}" style="
           background: ${isDark ? '#1a1a1a' : '#fff'};
           color: ${isDark ? '#fff' : '#000'};
-          ${brutal ? 'border: 4px solid #000; box-shadow: 8px 8px 0 #000;' : 'border: 1px solid #e5e7eb; border-radius: 12px;'}
+          ${brutal ? 'border: 4px solid #000; box-shadow: 8px 8px 0 #000;' : 'border: 1px solid #D4D4D8; border-radius: 12px;'}
           padding: 24px 20px;
           pointer-events: auto;
           font-family: ${this.options.fontFamily || "'Space Grotesk', -apple-system, system-ui, sans-serif"};
         ">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;min-height:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;min-height:24px;${isFast ? 'display:none;' : ''}">
             <button id="sp-wiz-back" type="button" style="visibility:hidden;background:none;border:none;color:${isDark ? '#9ca3af' : '#6b7280'};font-size:12px;font-weight:600;cursor:pointer;padding:4px 8px;">← Back</button>
             <div style="text-align:center;flex:1;">
               <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: ${isDark ? '#888' : '#666'}; font-weight: 700;">Quick setup</div>
               <div id="sp-wiz-step-label" style="font-size: 11px; color: ${isDark ? '#666' : '#999'}; margin-top: 2px;">Step 1 of 3</div>
             </div>
-            <button id="sp-wiz-info" type="button" aria-label="Help" style="width:24px;height:24px;border-radius:50%;background:${isDark ? '#2a2a2a' : '#f3f4f6'};border:1px solid ${isDark ? '#666' : '#d1d5db'};color:${isDark ? '#999' : '#6b7280'};font-size:12px;font-weight:700;cursor:pointer;padding:0;">i</button>
+            <button id="sp-wiz-info" type="button" aria-label="Help" style="width:24px;height:24px;border-radius:50%;background:${isDark ? '#2a2a2a' : '#F4F4F5'};border:1px solid ${isDark ? '#666' : '#D4D4D8'};color:${isDark ? '#999' : '#71717A'};font-size:12px;font-weight:700;cursor:pointer;padding:0;">i</button>
           </div>
-          <div id="sp-wiz-info-panel" style="display:none;background:${isDark ? '#0f172a' : '#f9fafb'};border:1px solid ${isDark ? '#334155' : '#e5e7eb'};padding:10px 12px;margin-bottom:12px;font-size:11px;color:${isDark ? '#cbd5e1' : '#374151'};line-height:1.5;border-radius:4px;white-space:pre-line;"></div>
+          <div id="sp-wiz-info-panel" style="display:none;background:${isDark ? '#0f172a' : '#F4F4F5'};border:1px solid ${isDark ? '#334155' : '#D4D4D8'};padding:10px 12px;margin-bottom:12px;font-size:11px;color:${isDark ? '#cbd5e1' : '#18181B'};line-height:1.5;border-radius:4px;white-space:pre-line;"></div>
           <div id="sp-wiz-body"></div>
-          <div style="text-align: center; margin-top: 16px;">
+          ${isFast ? '' : `<div style="text-align: center; margin-top: 16px;">
             <button id="sp-wiz-skip" style="background: none; border: none; color: ${isDark ? '#666' : '#999'}; font-size: 11px; text-decoration: underline; cursor: pointer; padding: 4px;">Skip — show all options</button>
-          </div>
+          </div>`}
         </div>`;
       this._wizStart();
     }
@@ -305,6 +307,16 @@
     // "Stablecoin vs Native" question is a dead one-option screen — skip it. With a single chain,
     // skip the network step too.
     _wizStart() {
+      // FAST: no setup questions. Default to stablecoin on the merchant's FIRST-configured
+      // chain/token, default method = manual (QR/address). Connect stays reachable via the
+      // method tabs/edit panel but the address screen is the default surface. Jump straight
+      // to the send screen (_wizComplete → showManualPaymentDetails('send')).
+      if (this._variant === 'fast') {
+        this._wizardState.payType = 'stable';
+        this._selectWizChain((this.merchantChains[0] || {}).chain);
+        this._wizardState.method = 'manual';
+        return this._wizComplete();
+      }
       const anyNative = (this.merchantChains || []).some(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
       const multiChain = (this.merchantChains || []).length > 1;
       if (anyNative) { this._wizGoStep('1'); return; }
@@ -348,7 +360,7 @@
       const isDark = this.options.theme === 'dark';
       const accent = this.options.accentColor;
       const usd = parseFloat(this.options.amount || 0).toFixed(2);
-      const primaryBtnStyle = `width:100%;padding:14px 12px;background:${accent};color:#000;border:3px solid #000;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;-webkit-appearance:none;appearance:none;touch-action:manipulation;`;
+      const primaryBtnStyle = `width:100%;padding:14px 12px;background:#18181B;color:#fff;border:3px solid #000;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;-webkit-appearance:none;appearance:none;touch-action:manipulation;`;
       const secondaryBtnStyle = `width:100%;padding:14px 12px;background:${isDark ? '#2a2a2a' : '#fff'};color:${isDark ? '#fff' : '#000'};border:3px solid ${isDark ? '#666' : '#000'};font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;margin-top:10px;-webkit-appearance:none;appearance:none;touch-action:manipulation;`;
       const subStyle = `font-size:11px;color:${isDark ? '#999' : '#666'};font-weight:400;margin-top:2px;`;
       const anyNative = (this.merchantChains || []).some(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
@@ -364,7 +376,7 @@
           return `
             <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">Pick a wallet</h2>
             <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">All free. Download, fund, come back.</p>
-            <a href="https://phantom.app/" target="_blank" rel="noopener" style="${secondaryBtnStyle};margin-top:0;text-decoration:none;"><span><span style="display:block">Phantom</span><span style="${subStyle}">Best for Solana (cheapest)</span></span><span>↗</span></a>
+            <a href="https://phantom.app/" target="_blank" rel="noopener" style="${secondaryBtnStyle};margin-top:0;text-decoration:none;"><span><span style="display:block">Phantom</span><span style="${subStyle}">Popular Solana wallet</span></span><span>↗</span></a>
             <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">Coinbase Wallet</span><span style="${subStyle}">Trusted multi-chain wallet</span></span><span>↗</span></a>
             <a href="https://metamask.io/download/" target="_blank" rel="noopener" style="${secondaryBtnStyle};text-decoration:none;"><span><span style="display:block">MetaMask</span><span style="${subStyle}">Standard for Ethereum</span></span><span>↗</span></a>
             <button class="sp-wiz-goto" data-step="1" style="${primaryBtnStyle};margin-top:14px;"><span>I'm back — let's pay</span><span>→</span></button>`;
@@ -375,9 +387,8 @@
           let btns = '';
           for (const mc of chains) {
             const name = mc.config?.chainName || mc.chain;
-            const sub = mc.chain === 'SOLANA_MAINNET' ? 'Fastest + cheapest'
-              : mc.chain === 'BASE_MAINNET' ? 'Low fees'
-              : (mc.config?.network === 'testnet' ? 'Testnet' : '');
+            // No Solana/Base steering — only flag testnet (neutral), otherwise name only.
+            const sub = (mc.config?.network === 'testnet') ? 'Testnet' : '';
             btns += `<button class="sp-wiz-ans" data-key="chain" data-value="${mc.chain}" style="${secondaryBtnStyle};margin-top:10px;"><span style="display:flex;align-items:center;gap:10px;"><img src="${this.getChainIcon(mc.chain)}" style="width:22px;height:22px;border-radius:50%;" onerror="this.style.display='none'"><span><span style="display:block">${name}</span>${sub ? `<span style="${subStyle}">${sub}</span>` : ''}</span></span><span>→</span></button>`;
           }
           return `
@@ -422,7 +433,7 @@
       const map = {
         '1':  ['Choose how to pay.', 'Stablecoin (USDC/USDT — no fee) or native crypto (auto-converted to USDC for the merchant).'],
         '1b': ['Need a wallet first?', 'These are all free. Download one, fund it, then come back.'],
-        'network': ['Pick your network.', 'Choose the chain your funds are on. Solana and Base are cheapest + fastest.'],
+        'network': ['Pick your network.', 'Choose the chain your funds are on.'],
         '2':  ['Choose how to send.', '"Connect my wallet" signs in one click. "Send manually" gives you an address + QR you can pay from any wallet or exchange.'],
       };
       const lines = map[s] || ["You're in the checkout."];
@@ -507,8 +518,8 @@
       if (!inner || this.container.querySelector('#sp-back-to-guided')) return;
       const bar = document.createElement('div');
       bar.id = 'sp-back-to-guided';
-      bar.style.cssText = 'text-align:center;padding:8px;background:#f8fafc;border-bottom:1px solid #e2e8f0;';
-      bar.innerHTML = `<button type="button" style="background:none;border:none;color:#3b82f6;font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;">← Back to guided setup</button>`;
+      bar.style.cssText = 'text-align:center;padding:8px;background:#F4F4F5;border-bottom:1px solid #D4D4D8;';
+      bar.innerHTML = `<button type="button" style="background:none;border:none;color:#18181B;font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;">← Back to guided setup</button>`;
       const card = inner.firstElementChild || inner;
       inner.insertBefore(bar, card);
       bar.querySelector('button').addEventListener('click', () => this._wizRestart());
@@ -558,27 +569,80 @@
 
     _applyWizardFocusedMode() {
       const w = this.container;
-      // Hide pay-mode toggle + fee banner — wizard already chose pay type (and native is disabled).
+      const isFast = this._variant === 'fast';
+      // Per-rail native support: only surface the stable/native toggle when the CURRENTLY
+      // selected chain accepts native tokens.
+      const railAcceptsNative = !!(this.selectedChain && this.selectedChain.acceptNativeTokens && CHAIN_NATIVE_TOKEN[this.selectedChain.chain]);
+      // Pay-mode toggle + fee banner.
       const modeToggle = w.querySelector('#sp-pay-mode-toggle');
-      if (modeToggle) modeToggle.style.display = 'none';
-      // Hide the Network/Token grid — the chain is already chosen in the wizard's network step, so
-      // the big in-page selectors are just clutter on the send screen (this is the "too busy / can't
-      // pick network" complaint). The "← Change" header below lets them rewind to re-pick.
+      const feeBanner = w.querySelector('#sp-fee-banner');
+      if (isFast) {
+        // Keep the toggle reachable — it moves INTO the edit panel below (native stays selectable),
+        // but only when this rail accepts native; otherwise hide it.
+        if (modeToggle) modeToggle.style.display = railAcceptsNative ? 'flex' : 'none';
+      } else {
+        // guided/control: wizard already chose pay type — keep prior behavior (hide it).
+        if (modeToggle) modeToggle.style.display = 'none';
+      }
+      // The Network/Token grid.
       const grids = w.querySelectorAll('div[style*="grid-template-columns: 1fr 1fr"]');
-      grids.forEach(g => { if (g.querySelector('#sp-chain-select-wrapper') || g.querySelector('#sp-token-select-wrapper')) g.style.display = 'none'; });
+      let payGrid = null;
+      grids.forEach(g => { if (g.querySelector('#sp-chain-select-wrapper') || g.querySelector('#sp-token-select-wrapper')) payGrid = g; });
       // Hide the method tabs — wizard already chose connect vs manual.
       const tabs = w.querySelector('#sp-method-tabs');
       if (tabs) tabs.style.display = 'none';
-      // Inject a wizard-style header above the action area so it feels like a wizard step.
       const inner = w.querySelector('.sp-widget');
+
+      if (isFast) {
+        // FAST: instead of hiding the grid, fold it into a COLLAPSED <details> 'Edit payment options'
+        // inserted right above the send panel. The customer pays without ever opening it.
+        const sendPanel = w.querySelector('#sp-method-send');
+        if (payGrid && sendPanel && !w.querySelector('#sp-edit-options')) {
+          payGrid.style.display = '';
+          payGrid.style.marginBottom = '0';
+          const details = document.createElement('details');
+          details.id = 'sp-edit-options';
+          details.style.cssText = 'border:1px solid #D4D4D8;background:#FFFFFF;border-radius:6px;margin-bottom:12px;';
+          const summary = document.createElement('summary');
+          summary.style.cssText = 'cursor:pointer;list-style:none;padding:10px 12px;font-size:12px;font-weight:600;color:#71717A;user-select:none;';
+          summary.textContent = 'Edit payment options ▾';
+          const bodyWrap = document.createElement('div');
+          bodyWrap.style.cssText = 'padding:0 12px 12px;';
+          details.appendChild(summary);
+          details.appendChild(bodyWrap);
+          // Move the pay-mode toggle (if this rail accepts native) + the network/token grid inside.
+          if (modeToggle && railAcceptsNative) {
+            modeToggle.style.marginBottom = '12px';
+            bodyWrap.appendChild(modeToggle);
+            if (feeBanner) bodyWrap.appendChild(feeBanner);
+          }
+          // Re-parent the grid into the panel.
+          bodyWrap.appendChild(payGrid);
+          sendPanel.parentNode.insertBefore(details, sendPanel);
+        }
+        // Neutral header (no step counter, no chromatic link). The edit panel replaces 'Change'.
+        if (inner && !w.querySelector('#sp-wiz-step3-header')) {
+          const _what = this._wizardState.method === 'wallet' ? 'Connect & pay' : 'Send payment';
+          const header = document.createElement('div');
+          header.id = 'sp-wiz-step3-header';
+          header.style.cssText = 'padding:10px 14px;background:#FFFFFF;border-bottom:1px solid #D4D4D8;font-size:11px;font-weight:700;color:#18181B;text-transform:uppercase;letter-spacing:1px;';
+          header.innerHTML = `<span>${_what}</span>`;
+          const card = inner.firstElementChild || inner;
+          inner.insertBefore(header, card);
+        }
+        return;
+      }
+
+      // guided/control: original behavior — hide the grid + inject the wizard-style header.
+      if (payGrid) payGrid.style.display = 'none';
       if (inner && !w.querySelector('#sp-wiz-step3-header')) {
         const _total = this._wizStepOrder().length + 1;
         const _what = this._wizardState.method === 'wallet' ? 'Connect & pay' : 'Send payment';
         const stepLabel = `Step ${_total} of ${_total} — ${_what}`;
         const header = document.createElement('div');
         header.id = 'sp-wiz-step3-header';
-        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-bottom:2px solid #e2e8f0;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1px;';
-        header.innerHTML = `<span>${stepLabel}</span><button id="sp-wiz-back" type="button" style="background:none;border:none;color:#3b82f6;font-size:11px;font-weight:600;cursor:pointer;text-decoration:underline;text-transform:none;letter-spacing:0;">← Change</button>`;
+        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#F4F4F5;border-bottom:2px solid #D4D4D8;font-size:11px;font-weight:700;color:#18181B;text-transform:uppercase;letter-spacing:1px;';
+        header.innerHTML = `<span>${stepLabel}</span><button id="sp-wiz-back" type="button" style="background:none;border:none;color:#18181B;font-size:11px;font-weight:600;cursor:pointer;text-decoration:underline;text-transform:none;letter-spacing:0;">← Change</button>`;
         const card = inner.firstElementChild || inner;
         inner.insertBefore(header, card);
         const back = header.querySelector('#sp-wiz-back');
@@ -660,8 +724,8 @@
         }
 
         if (data.wallets && data.wallets.length > 0) {
-          // Sort chains by global usage (Solana > Ethereum > TRON > BNB > Base > rest)
-          const chainPriority = { SOLANA_MAINNET: 0, ETHEREUM_MAINNET: 1, TRON_MAINNET: 2, BNB_MAINNET: 3, BASE_MAINNET: 4, POLYGON_MAINNET: 5, ARBITRUM_MAINNET: 6 };
+          // Preserve the merchant's configured wallet order — merchantChains[0] is the
+          // merchant's FIRST-configured rail (no opinionated chainPriority re-sort).
           this.merchantChains = data.wallets
             .filter(w => CHAIN_CONFIG[w.chain])
             .map(w => ({
@@ -671,8 +735,7 @@
               acceptNativeTokens: !!w.acceptNativeTokens,
               preferredStablecoin: w.preferredStablecoin || 'USDC',
               config: CHAIN_CONFIG[w.chain]
-            }))
-            .sort((a, b) => (chainPriority[a.chain] ?? 99) - (chainPriority[b.chain] ?? 99));
+            }));
         }
 
         if (this.merchantChains.length > 0) {
@@ -714,8 +777,8 @@
         ">
           <div class="sp-spinner" style="
             width: 32px; height: 32px;
-            border: 3px solid ${isDark ? '#333' : '#e5e7eb'};
-            border-top-color: ${this.options.accentColor};
+            border: 3px solid ${isDark ? '#333' : '#D4D4D8'};
+            border-top-color: ${isDark ? '#fff' : '#18181B'};
             border-radius: 50%;
             margin: 0 auto 12px;
           "></div>
@@ -748,7 +811,7 @@
       this.container.innerHTML = `
         ${this.options.customCSS ? `<style>.sp-widget { ${this.options.customCSS} }</style>` : ''}
         <div class="sp-widget ${this.options.theme}" style="
-          --sp-accent: ${accent};
+          --sp-accent: ${this._variant === 'fast' ? '#18181B' : accent};
           background: var(--sp-bg);
           ${this.options.borderStyle === 'brutal' ? 'border: 4px solid #000; box-shadow: 8px 8px 0px #000;' : ''}
           ${this.options.borderStyle === 'rounded' ? 'border: 1px solid var(--sp-border); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.12);' : ''}
@@ -762,12 +825,14 @@
           pointer-events: auto;
         ">
           <!-- Header -->
-          <div style="background: ${this.options.headerColor}; padding: 16px 20px; ${this.options.borderStyle === 'brutal' ? 'border-bottom: 4px solid #000;' : 'border-bottom: 1px solid var(--sp-border);'}">
+          <!-- FAST: force a neutral white header band (ignore merchant headerColor/accent).
+               guided/control keep the merchant headerColor + headerTextColor branding. -->
+          <div style="background: ${this._variant === 'fast' ? '#FFFFFF' : this.options.headerColor}; padding: 16px 20px; ${this.options.borderStyle === 'brutal' ? 'border-bottom: 4px solid #000;' : 'border-bottom: 1px solid var(--sp-border);'}">
             ${this.options.logoUrl ? `<img src="${this.options.logoUrl}" style="height: 24px; margin-bottom: 8px;" alt="logo">` : ''}
-            <div style="font-size: 11px; font-weight: 700; color: ${this.options.headerTextColor === 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">
+            <div style="font-size: 11px; font-weight: 700; color: ${this._variant === 'fast' ? '#71717A' : (this.options.headerTextColor === 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)')}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">
               ${this.options.productName || 'Pay with Stablecoins'}
             </div>
-            <div id="sp-amount-display" style="font-size: 28px; font-weight: 700; color: ${this.options.headerTextColor === 'light' ? '#fff' : '#000'};">
+            <div id="sp-amount-display" style="font-size: 28px; font-weight: 700; color: ${this._variant === 'fast' ? '#18181B' : (this.options.headerTextColor === 'light' ? '#fff' : '#000')};">
               $${parseFloat(this.options.amount || 0) < 0.01 ? parseFloat(this.options.amount || 0).toFixed(4) : parseFloat(this.options.amount || 0).toFixed(2)}
             </div>
           </div>
@@ -792,19 +857,19 @@
               <span style="font-size: 10px; opacity: 0.6; font-weight: 400;">+1.5% conversion fee</span>
             </button>
           </div>
-          <!-- Conversion fee banner -->
-          <div id="sp-fee-banner" style="display: none; background: #fefce8; border: 2px solid #facc15; padding: 10px 12px; margin-bottom: 12px; font-size: 12px;">
+          <!-- Conversion fee note (neutral, grayscale) -->
+          <div id="sp-fee-banner" style="display: none; background: #F4F4F5; border: 1px solid #D4D4D8; padding: 10px 12px; margin-bottom: 12px; font-size: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
               <div>
-                <strong style="color: #713f12;">1.5% conversion fee</strong>
-                <span style="color: #92400e;"> — You'll send <strong id="sp-native-send-amt">—</strong></span>
+                <strong style="color: #18181B;">Native adds a 1.5% conversion fee</strong>
+                <span style="color: #71717A;"> — you'll send <strong id="sp-native-send-amt" style="color: #18181B;">—</strong></span>
               </div>
               <button type="button" onclick="window._spWidget?.setPayMode('stable')" style="
-                font-size: 11px; font-weight: 700; text-decoration: underline; color: #713f12;
+                font-size: 11px; font-weight: 700; text-decoration: underline; color: #18181B;
                 background: none; border: none; cursor: pointer; white-space: nowrap; padding: 0;
               ">Use USDC →</button>
             </div>
-            <div id="sp-native-expiry" style="font-size: 10px; color: #92400e; margin-top: 4px;"></div>
+            <div id="sp-native-expiry" style="font-size: 10px; color: #71717A; margin-top: 4px;"></div>
           </div>
           ` : ''}
 
@@ -881,7 +946,7 @@
             <div id="sp-method-tabs" style="display: flex; gap: 0; margin-bottom: 12px; border: 2px solid var(--sp-border);">
               <button class="sp-method-tab" data-method="send" style="
                 flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 700; border: none;
-                background: #00E5FF; color: #000; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
+                background: #18181B; color: #fff; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;
               ">Send Payment</button>
               <button class="sp-method-tab" data-method="wallet" style="
                 flex: 1; padding: 10px 6px; font-size: 11px; font-weight: 700; border: none; border-left: 2px solid var(--sp-border);
@@ -897,7 +962,7 @@
                 display: flex; align-items: center; justify-content: space-between;
               ">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></div>
+                  <div style="width: 8px; height: 8px; border-radius: 50%; background: #71717A;"></div>
                   <span style="font-size: 12px; color: var(--sp-muted); font-weight: 600;">Not connected</span>
                 </div>
                 <button id="sp-connect-btn" style="
@@ -906,7 +971,7 @@
                 ">Connect</button>
               </div>
               <button id="sp-pay-btn" class="sp-pay-btn" disabled style="
-                width: 100%; padding: 14px; background: #00E5FF; color: #000;
+                width: 100%; padding: 14px; background: #18181B; color: #fff;
                 border: 3px solid var(--sp-border); font-size: 14px; font-weight: 700; cursor: pointer;
                 box-shadow: 4px 4px 0px #000;
               ">Connect Wallet to Pay</button>
@@ -914,8 +979,8 @@
 
             <!-- Method: Send Payment (default) -->
             <div id="sp-method-send" class="sp-method-panel">
-              <!-- Step indicator -->
-              <div id="sp-step-indicator" style="display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 14px; padding: 0 12px;">
+              <!-- Step indicator (hidden for fast — guided 3-step framing) -->
+              <div id="sp-step-indicator" style="${this._variant === 'fast' ? 'display: none;' : 'display: flex;'} align-items: center; justify-content: center; gap: 0; margin-bottom: 14px; padding: 0 12px;">
                 <div class="sp-step-dot sp-step-active" data-step="1" style="width: 24px; height: 24px; border-radius: 50%; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">1</div>
                 <div style="flex: 1; height: 2px; background: var(--sp-border);"></div>
                 <div class="sp-step-dot" data-step="2" style="width: 24px; height: 24px; border-radius: 50%; background: var(--sp-card); color: var(--sp-muted); border: 2px solid var(--sp-border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">2</div>
@@ -953,7 +1018,7 @@
                     text-overflow: ellipsis; border-radius: 3px;
                   ">
                   <button id="sp-sender-wallet-btn" style="
-                    padding: 8px 16px; background: #00E5FF; color: #000; border: none;
+                    padding: 8px 16px; background: #18181B; color: #fff; border: none;
                     font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
                     border-radius: 3px; flex-shrink: 0;
                   ">Next</button>
@@ -963,7 +1028,7 @@
               <div id="sp-send-step2" style="display: none; padding: 12px;">
                 <!-- Toggle: QR / Address -->
                 <div style="display: flex; gap: 0; margin-bottom: 12px; border: 2px solid var(--sp-border);">
-                  <button id="sp-send-toggle-qr" style="flex:1; padding: 6px; font-size: 9px; font-weight: 700; border: none; background: #00E5FF; color: #000; cursor: pointer; text-transform: uppercase;">QR Code</button>
+                  <button id="sp-send-toggle-qr" style="flex:1; padding: 6px; font-size: 9px; font-weight: 700; border: none; background: #18181B; color: #fff; cursor: pointer; text-transform: uppercase;">QR Code</button>
                   <button id="sp-send-toggle-addr" style="flex:1; padding: 6px; font-size: 9px; font-weight: 700; border: none; border-left: 2px solid var(--sp-border); background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase;">Copy Address</button>
                 </div>
 
@@ -971,16 +1036,16 @@
                 <div id="sp-send-view-qr" style="text-align: center; margin-bottom: 12px;">
                   <!-- Solana Pay toggle (only visible on Solana) -->
                   <div id="sp-solanapay-toggle" style="display: none; margin-bottom: 10px;">
-                    <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; background: #9945FF15; border: 1px solid #9945FF40; padding: 6px 12px; border-radius: 6px;">
-                      <input type="checkbox" id="sp-solanapay-check" style="width: 14px; height: 14px; accent-color: #9945FF;">
-                      <span style="font-size: 10px; color: #9945FF; font-weight: 700;">Solana Pay QR</span>
+                    <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; background: #F4F4F5; border: 1px solid #D4D4D8; padding: 6px 12px; border-radius: 6px;">
+                      <input type="checkbox" id="sp-solanapay-check" style="width: 14px; height: 14px; accent-color: #18181B;">
+                      <span style="font-size: 10px; color: #18181B; font-weight: 700;">Solana Pay QR</span>
                       <span style="font-size: 8px; color: var(--sp-muted);">Phantom / Solflare</span>
                     </label>
                   </div>
                   <div style="background: white; padding: 10px; display: inline-block; border: 2px solid var(--sp-border); margin-bottom: 8px;">
                     <canvas id="sp-qr-canvas" width="140" height="140"></canvas>
                   </div>
-                  <p style="font-size: 11px; color: var(--sp-text); font-weight: 600;">Send exactly <span id="sp-send-amount-display" style="color: #00E5FF;"></span></p>
+                  <p style="font-size: 11px; color: var(--sp-text); font-weight: 600;">Send exactly <span id="sp-send-amount-display" style="color: #18181B; font-weight: 700;"></span></p>
                   <p style="font-size: 9px; color: var(--sp-muted);">Scan with your wallet app and send the exact amount.</p>
                 </div>
 
@@ -1009,7 +1074,7 @@
                 </div>
 
                 <button id="sp-send-sent-btn" style="
-                  width: 100%; padding: 12px; background: #00E5FF; color: #000; border: 3px solid var(--sp-border);
+                  width: 100%; padding: 12px; background: #18181B; color: #fff; border: 3px solid var(--sp-border);
                   font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; box-shadow: 4px 4px 0px #000;
                 ">I've Sent the Payment</button>
                 <button id="sp-send-back-btn" style="
@@ -1023,7 +1088,7 @@
                 <div id="sp-expiry-warning" style="display:none;"></div>
                 <!-- Progress bar -->
                 <div style="width: 100%; height: 4px; background: var(--sp-card); margin-bottom: 16px; overflow: hidden;">
-                  <div id="sp-progress-bar" style="width: 0%; height: 100%; background: #00E5FF; transition: width 1s linear;"></div>
+                  <div id="sp-progress-bar" style="width: 0%; height: 100%; background: #18181B; transition: width 1s linear;"></div>
                 </div>
 
                 <div style="text-align: center;">
@@ -1110,10 +1175,10 @@
       if (this.payMode === 'crypto' && this.selectedChain.acceptNativeTokens && nativeToken) {
         return [nativeToken];
       }
-      const tokenOrder = { USDC: 0, USDT: 1, EURC: 2 };
+      // Respect the merchant's configured supportedTokens order — selectedToken defaults
+      // to supportedTokens[0] (no opinionated USDC/USDT/EURC re-sort).
       return [...this.selectedChain.supportedTokens]
-        .filter(t => this.selectedChain.config.tokens[t])
-        .sort((a, b) => (tokenOrder[a] ?? 99) - (tokenOrder[b] ?? 99));
+        .filter(t => this.selectedChain.config.tokens[t]);
     }
 
     setPayMode(mode) {
@@ -1364,8 +1429,8 @@
                 step1.innerHTML = `
                   <div style="padding: 16px; text-align: center;">
                     ${i < steps.length - 1
-                      ? '<span class="sp-spinner" style="display:inline-block;width:16px;height:16px;border:2px solid var(--sp-border);border-top-color:#00E5FF;border-radius:50%;margin-bottom:8px;"></span>'
-                      : '<div style="color:#22c55e;font-size:20px;font-weight:700;margin-bottom:4px;">✓</div>'}
+                      ? '<span class="sp-spinner" style="display:inline-block;width:16px;height:16px;border:2px solid var(--sp-border);border-top-color:#18181B;border-radius:50%;margin-bottom:8px;"></span>'
+                      : '<div style="color:#18181B;font-size:20px;font-weight:700;margin-bottom:4px;">✓</div>'}
                     <div style="font-size: 11px; color: var(--sp-muted); font-weight: 600; text-transform: uppercase;">${steps[i].text}</div>
                     <div style="font-size: 10px; color: var(--sp-text); font-family: monospace; margin-top: 4px;">${shortAddr}</div>
                   </div>
@@ -1476,25 +1541,25 @@
                     ? self.container.querySelector('#sp-fast-wallet')?.value?.trim()
                     : self.container.querySelector('#sp-fast-email')?.value?.trim();
                   const statusEl = self.container.querySelector('#sp-fast-status');
-                  if (kind === 'wallet' && (!v || v.length < 10)) { statusEl.style.display = 'block'; statusEl.style.color = '#ef4444'; statusEl.textContent = 'Invalid wallet'; return; }
-                  if (kind === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v || '')) { statusEl.style.display = 'block'; statusEl.style.color = '#ef4444'; statusEl.textContent = 'Invalid email'; return; }
+                  if (kind === 'wallet' && (!v || v.length < 10)) { statusEl.style.display = 'block'; statusEl.style.color = '#18181B'; statusEl.textContent = '! Invalid wallet'; return; }
+                  if (kind === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v || '')) { statusEl.style.display = 'block'; statusEl.style.color = '#18181B'; statusEl.textContent = '! Invalid email'; return; }
                   const body = kind === 'wallet' ? { customerWallet: v } : { customerEmail: v };
                   try {
                     const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${self.currentOrderId}/contact`, {
                       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
                     });
                     if (res.ok) {
-                      statusEl.style.display = 'block'; statusEl.style.color = '#10b981';
-                      statusEl.textContent = kind === 'email' ? 'Saved — we\'ll email you.' : 'Saved — scanner will match.';
+                      statusEl.style.display = 'block'; statusEl.style.color = '#18181B';
+                      statusEl.textContent = kind === 'email' ? '✓ Saved — we\'ll email you.' : '✓ Saved — scanner will match.';
                       self._track('FAST_CONFIRMATION_PROVIDED', { type: kind, variant: self._variant });
                     } else {
                       const data = await res.json().catch(() => ({}));
-                      statusEl.style.display = 'block'; statusEl.style.color = '#ef4444';
-                      statusEl.textContent = data.error || 'Save failed';
+                      statusEl.style.display = 'block'; statusEl.style.color = '#18181B';
+                      statusEl.textContent = '! ' + (data.error || 'Save failed');
                     }
                   } catch {
-                    statusEl.style.display = 'block'; statusEl.style.color = '#ef4444';
-                    statusEl.textContent = 'Network error';
+                    statusEl.style.display = 'block'; statusEl.style.color = '#18181B';
+                    statusEl.textContent = '! Network error';
                   }
                 };
                 manualDiv.querySelector('#sp-fast-wallet-save')?.addEventListener('click', () => save('wallet'));
@@ -1583,13 +1648,13 @@
         toggleQR.addEventListener('click', () => {
           this.container.querySelector('#sp-send-view-qr').style.display = 'block';
           this.container.querySelector('#sp-send-view-addr').style.display = 'none';
-          toggleQR.style.background = '#00E5FF'; toggleQR.style.color = '#000';
+          toggleQR.style.background = '#18181B'; toggleQR.style.color = '#fff';
           toggleAddr.style.background = 'var(--sp-card)'; toggleAddr.style.color = 'var(--sp-muted)';
         });
         toggleAddr.addEventListener('click', () => {
           this.container.querySelector('#sp-send-view-qr').style.display = 'none';
           this.container.querySelector('#sp-send-view-addr').style.display = 'block';
-          toggleAddr.style.background = '#00E5FF'; toggleAddr.style.color = '#000';
+          toggleAddr.style.background = '#18181B'; toggleAddr.style.color = '#fff';
           toggleQR.style.background = 'var(--sp-card)'; toggleQR.style.color = 'var(--sp-muted)';
         });
       }
@@ -1657,6 +1722,10 @@
     }
 
     lockSelectors() {
+      // FAST: the chain/token selectors live inside the collapsible 'Edit payment options' panel
+      // and MUST stay interactive so the customer can switch rail/coin and have the address/QR
+      // re-render. Skip locking for fast (guided/control keep the original lock).
+      if (this._variant === 'fast') return;
       const chainBtn = this.container.querySelector('#sp-chain-select-btn');
       const chainSelect = this.container.querySelector('#sp-chain-select');
       const tokenSelect = this.container.querySelector('#sp-token-select');
@@ -1718,13 +1787,13 @@
         const step = parseInt(dot.dataset.step);
         if (step < activeStep) {
           // Completed
-          dot.style.background = '#22c55e';
+          dot.style.background = '#18181B';
           dot.style.color = '#fff';
           dot.style.border = 'none';
           dot.innerHTML = '✓';
         } else if (step === activeStep) {
           // Active
-          dot.style.background = '#000';
+          dot.style.background = '#18181B';
           dot.style.color = '#fff';
           dot.style.border = 'none';
           dot.innerHTML = step;
@@ -1741,7 +1810,7 @@
       if (indicator) {
         const lines = indicator.querySelectorAll('div[style*="height: 2px"]');
         lines.forEach((line, i) => {
-          line.style.background = (i + 1) < activeStep ? '#22c55e' : 'var(--sp-border)';
+          line.style.background = (i + 1) < activeStep ? '#18181B' : 'var(--sp-border)';
         });
       }
     }
@@ -1750,8 +1819,8 @@
       // Update tabs — neo-brutalist active state
       this.container.querySelectorAll('.sp-method-tab').forEach(tab => {
         if (tab.dataset.method === method) {
-          tab.style.background = '#00E5FF';
-          tab.style.color = '#000';
+          tab.style.background = '#18181B';
+          tab.style.color = '#fff';
         } else {
           tab.style.background = 'var(--sp-card)';
           tab.style.color = 'var(--sp-muted)';
@@ -2064,16 +2133,12 @@
         const seconds = Math.max(0, Math.floor((this._countdownExpiryMs - Date.now()) / 1000));
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
-        timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-
-        // Color changes for urgency
-        if (seconds <= 60) {
-          timerEl.style.color = '#ef4444'; // Red last minute
-        } else if (seconds <= 120) {
-          timerEl.style.color = '#f59e0b'; // Yellow last 2 min
-        } else {
-          timerEl.style.color = 'var(--sp-text)';
-        }
+        // Urgency without color: textPrimary always, bolder/larger + a clock glyph in the last 2 min.
+        const urgent = seconds <= 120;
+        timerEl.textContent = `${urgent ? '⏱ ' : ''}${mins}:${secs.toString().padStart(2, '0')}`;
+        timerEl.style.color = 'var(--sp-text)';
+        timerEl.style.fontWeight = urgent ? '900' : '800';
+        timerEl.style.fontSize = seconds <= 60 ? '26px' : '22px';
 
         if (seconds <= 0) {
           clearInterval(this._countdownInterval);
@@ -2083,7 +2148,7 @@
           // when we have the order's REAL expiresAt; for the placeholder window, just nudge.
           if (wrapperEl) {
             if (hasRealExpiry) {
-              wrapperEl.innerHTML = '<p style="font-size: 11px; color: #ef4444; font-weight: 700;">Time expired — please start a new payment</p>';
+              wrapperEl.innerHTML = '<p style="font-size: 11px; color: var(--sp-text); font-weight: 700;">⏱ Time expired — please start a new payment</p>';
             } else {
               wrapperEl.innerHTML = '<p style="font-size: 11px; color: var(--sp-muted); font-weight: 600;">Please complete your payment soon.</p>';
             }
@@ -2172,8 +2237,8 @@
             const secsLeft = Math.max(0, Math.floor((new Date(data.expiresAt).getTime() - Date.now()) / 1000));
             const warningEl = this.container.querySelector('#sp-expiry-warning');
             if (warningEl) {
-              if (secsLeft <= 60 && secsLeft > 0) { warningEl.textContent = 'Less than 1 minute! Complete payment now.'; warningEl.style.cssText = 'display:block;background:#fecaca;border:2px solid #ef4444;padding:6px 10px;font-size:12px;font-weight:600;text-align:center;margin-bottom:6px;'; }
-              else if (secsLeft <= 300) { warningEl.textContent = 'Less than 5 minutes remaining.'; warningEl.style.cssText = 'display:block;background:#fef3c7;border:2px solid #f59e0b;padding:6px 10px;font-size:12px;text-align:center;margin-bottom:6px;'; }
+              if (secsLeft <= 60 && secsLeft > 0) { warningEl.textContent = '⏱ Less than 1 minute! Complete payment now.'; warningEl.style.cssText = 'display:block;background:#F4F4F5;border:1px solid #D4D4D8;color:#18181B;padding:6px 10px;font-size:12px;font-weight:700;text-align:center;margin-bottom:6px;'; }
+              else if (secsLeft <= 300) { warningEl.textContent = '⏱ Less than 5 minutes remaining.'; warningEl.style.cssText = 'display:block;background:#F4F4F5;border:1px solid #D4D4D8;color:#18181B;padding:6px 10px;font-size:12px;text-align:center;margin-bottom:6px;'; }
               else { warningEl.style.display = 'none'; }
             }
           }
@@ -2228,15 +2293,15 @@
                 // TX hash validation per chain
                 const ct = this.selectedChain?.config?.type;
                 if (ct === 'evm' && (!value.startsWith('0x') || value.length !== 66)) {
-                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'EVM transaction hashes start with 0x and are 66 characters'; statusEl.style.color = '#ef4444'; }
+                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '! EVM transaction hashes start with 0x and are 66 characters'; statusEl.style.color = '#18181B'; }
                   return;
                 }
                 if (ct === 'solana' && (value.startsWith('0x') || value.length < 40)) {
-                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Solana signatures are base58 encoded, ~88 characters'; statusEl.style.color = '#ef4444'; }
+                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '! Solana signatures are base58 encoded, ~88 characters'; statusEl.style.color = '#18181B'; }
                   return;
                 }
                 if (value.length < 20) {
-                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'That doesn\'t look like a transaction hash'; statusEl.style.color = '#ef4444'; }
+                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '! That doesn\'t look like a transaction hash'; statusEl.style.color = '#18181B'; }
                   return;
                 }
               }
@@ -2259,7 +2324,7 @@
                   };
                   const expected = validExplorers[chain];
                   if (expected && !value.includes(expected)) {
-                    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = `Wrong explorer — use ${expected} for ${this.selectedChain?.config?.chainName}`; statusEl.style.color = '#ef4444'; }
+                    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = `! Wrong explorer — use ${expected} for ${this.selectedChain?.config?.chainName}`; statusEl.style.color = '#18181B'; }
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Submit';
                     return;
@@ -2286,7 +2351,7 @@
                   });
                 } else if (data.success) {
                   // Queued for review
-                  if (statusEl) { statusEl.textContent = 'Submitted for review. You\'ll be notified once confirmed.'; statusEl.style.color = '#22c55e'; }
+                  if (statusEl) { statusEl.textContent = '✓ Submitted for review. You\'ll be notified once confirmed.'; statusEl.style.color = '#18181B'; }
                   submitBtn.textContent = 'Submitted';
                 } else {
                   // Never render server error bodies verbatim — prior incident: the widget
@@ -2297,12 +2362,12 @@
                   if (/<html|<!DOCTYPE|requestUrl|responseBody/i.test(msg) || msg.length > 240) {
                     msg = 'We couldn\u2019t verify right now. Our scanner will keep watching — if the TX is on-chain, your order will confirm automatically within a minute.';
                   }
-                  if (statusEl) { statusEl.textContent = msg; statusEl.style.color = '#ef4444'; }
+                  if (statusEl) { statusEl.textContent = '! ' + msg; statusEl.style.color = '#18181B'; }
                   submitBtn.disabled = false;
                   submitBtn.textContent = 'Submit';
                 }
               } catch (err) {
-                if (statusEl) { statusEl.textContent = 'Network error — please try again'; statusEl.style.color = '#ef4444'; }
+                if (statusEl) { statusEl.textContent = '! Network error — please try again'; statusEl.style.color = '#18181B'; }
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Submit';
               }
@@ -2383,6 +2448,30 @@
 
       // Refresh native price when chain changes in crypto mode
       if (this.payMode === 'crypto') this.refreshNativePrice();
+
+      // FAST edit panel: if the send screen is currently shown, repaint the address/QR/amount for
+      // the newly-selected rail. Also refresh the per-rail native toggle visibility.
+      this._repaintSendScreenIfActive();
+    }
+
+    // Re-render the manual send screen (address/QR/amount/countdown) in place when the customer
+    // changes chain/token/pay-mode from the FAST 'Edit payment options' panel. No-op unless the
+    // send screen (step2) is currently visible. Idempotent for the stablecoin path; the native
+    // path re-runs the eager order creation as the spec intends.
+    _repaintSendScreenIfActive() {
+      if (this._variant !== 'fast') return;
+      const step2 = this.container.querySelector('#sp-send-step2');
+      if (!step2 || step2.style.display === 'none') return;
+      // Keep the per-rail native toggle in sync (show only when this rail accepts native).
+      const railAcceptsNative = !!(this.selectedChain && this.selectedChain.acceptNativeTokens && CHAIN_NATIVE_TOKEN[this.selectedChain.chain]);
+      const modeToggle = this.container.querySelector('#sp-pay-mode-toggle');
+      if (modeToggle) modeToggle.style.display = railAcceptsNative ? 'flex' : 'none';
+      // If this rail can't do native but we're in crypto mode, fall back to stable.
+      if (!railAcceptsNative && this.payMode === 'crypto' && typeof this.setPayMode === 'function') {
+        this.setPayMode('stable'); // setPayMode → selectChain → re-enters here in stable mode
+        return;
+      }
+      try { this.showManualPaymentDetails('send'); } catch (e) { console.warn('[SP] edit-panel repaint failed', e); }
     }
 
     selectToken(token) {
@@ -2401,6 +2490,9 @@
       // Re-check balance for new token
       if (this.connectedWallet) this.checkTokenBalance();
       else this.updatePayButton();
+
+      // FAST edit panel: repaint the send screen for the newly-selected coin if it's showing.
+      this._repaintSendScreenIfActive();
     }
 
     async fetchEURCRate() {
@@ -2651,8 +2743,8 @@
           statusDiv.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
               ${i < steps.length - 1
-                ? '<span class="sp-spinner" style="display:inline-block;width:14px;height:14px;border:2px solid var(--sp-border);border-top-color:#00E5FF;border-radius:50%;"></span>'
-                : '<span style="color:#22c55e;font-size:16px;font-weight:700;">✓</span>'}
+                ? '<span class="sp-spinner" style="display:inline-block;width:14px;height:14px;border:2px solid var(--sp-border);border-top-color:#18181B;border-radius:50%;"></span>'
+                : '<span style="color:#18181B;font-size:16px;font-weight:700;">✓</span>'}
               <span style="font-size: 11px; color: var(--sp-muted); font-weight: 600; text-transform: uppercase;">${steps[i].text}</span>
             </div>
             <div style="font-size: 10px; color: var(--sp-text); font-family: monospace; margin-top: 2px;">${shortAddr}</div>
@@ -2679,7 +2771,7 @@
       statusDiv.style.padding = '12px';
       statusDiv.innerHTML = `
         <div style="display: flex; align-items: center; gap: 8px;">
-          <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></div>
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: #71717A;"></div>
           <span style="font-size: 12px; color: var(--sp-muted); font-weight: 600;">Not connected</span>
         </div>
         <button id="sp-connect-btn" style="
@@ -2698,9 +2790,9 @@
       statusDiv.style.padding = '12px';
       statusDiv.innerHTML = `
         <div style="display: flex; align-items: center; gap: 8px;">
-          <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></div>
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: #18181B;"></div>
           <span style="font-size: 12px; color: var(--sp-text); font-family: monospace;">${shortAddr}</span>
-          <span style="font-size: 9px; color: #22c55e; font-weight: 700; text-transform: uppercase;">Verified</span>
+          <span style="font-size: 9px; color: #18181B; font-weight: 700; text-transform: uppercase;">✓ Verified</span>
         </div>
         <button id="sp-disconnect-btn" style="
           padding: 6px 12px;
@@ -2756,16 +2848,16 @@
           this.tokenBalance = balance;
           if (balance < amt) {
             payBtn.disabled = true;
-            payBtn.textContent = `Insufficient ${this.selectedToken} (${balance.toFixed(2)} available)`;
+            payBtn.textContent = `! Insufficient ${this.selectedToken} (${balance.toFixed(2)} available)`;
             this._track('INSUFFICIENT_BALANCE', { chain: this.selectedChain?.chain, token: this.selectedToken, balance, needed: amt });
-            payBtn.style.background = '#ef4444';
-            payBtn.style.color = '#fff';
+            payBtn.style.background = '#F4F4F5';
+            payBtn.style.color = '#18181B';
             return;
           }
           payBtn.disabled = false;
           payBtn.textContent = `Pay $${amt.toFixed(2)} in ${this.selectedToken} (${balance.toFixed(2)} available)`;
-          payBtn.style.background = '#00E5FF';
-          payBtn.style.color = '#000';
+          payBtn.style.background = '#18181B';
+          payBtn.style.color = '#fff';
         } else {
           this._enablePayBtn(payBtn, amt);
         }
@@ -2786,8 +2878,8 @@
       } else {
         payBtn.textContent = `Pay $${amt.toFixed(2)} ${this.selectedToken}`;
       }
-      payBtn.style.background = '#00E5FF';
-      payBtn.style.color = '#000';
+      payBtn.style.background = '#18181B';
+      payBtn.style.color = '#fff';
     }
 
     async _getEVMBalance(rpcUrl, tokenAddress, decimals) {
@@ -2850,17 +2942,17 @@
         payBtn.style.color = 'var(--sp-muted)';
       } else if (this.tokenBalance !== null && this.tokenBalance !== undefined && this.tokenBalance < amount) {
         payBtn.disabled = true;
-        payBtn.textContent = `Insufficient ${this.selectedToken} (${this.tokenBalance.toFixed(2)} available)`;
-        payBtn.style.background = '#ef4444';
-        payBtn.style.color = '#fff';
+        payBtn.textContent = `! Insufficient ${this.selectedToken} (${this.tokenBalance.toFixed(2)} available)`;
+        payBtn.style.background = '#F4F4F5';
+        payBtn.style.color = '#18181B';
       } else {
         payBtn.disabled = false;
         const displayAmt = (this.selectedToken === 'EURC' && this.eurcRate)
           ? `€${(amount / this.eurcRate).toFixed(2)}`
           : `$${amount.toFixed(2)}`;
         payBtn.textContent = this.options.buttonText || `Pay ${displayAmt} ${this.selectedToken}`;
-        payBtn.style.background = '#00E5FF';
-        payBtn.style.color = '#000';
+        payBtn.style.background = '#18181B';
+        payBtn.style.color = '#fff';
       }
     }
 
@@ -3351,7 +3443,7 @@
 
       this.container.querySelector('.sp-widget').innerHTML = `
         <div style="text-align: center; padding: 32px;">
-          <div style="width: 56px; height: 56px; background: #22c55e; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; margin-bottom: 16px;">&#10003;</div>
+          <div style="width: 56px; height: 56px; background: #18181B; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 16px;">&#10003;</div>
           <div style="font-size: 20px; font-weight: 700; color: var(--sp-text); margin-bottom: 4px; text-transform: uppercase;">
             Payment Confirmed
           </div>
@@ -3410,18 +3502,18 @@
         top: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background: #000;
+        background: #18181B;
         color: #fff;
         padding: 14px 24px;
-        border: 3px solid #ef4444;
+        border: 1px solid #D4D4D8;
         font-size: 13px;
         font-weight: 700;
         z-index: 999999;
-        box-shadow: 6px 6px 0px #ef4444;
+        box-shadow: 6px 6px 0px #000;
         max-width: 90vw;
         text-align: center;
       `;
-      errorDiv.textContent = message;
+      errorDiv.textContent = '⚠ ' + message;
       document.body.appendChild(errorDiv);
 
       setTimeout(() => errorDiv.remove(), 5000);
