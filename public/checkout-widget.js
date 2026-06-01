@@ -622,23 +622,15 @@
           }
           // Re-parent the grid into the panel.
           bodyWrap.appendChild(payGrid);
-          // Green "Save changes" button — the one deliberate splash of color. Staged edits apply
-          // when the panel closes (Save click OR collapse), so the send screen never flickers
-          // mid-change and the customer explicitly confirms.
+          // Green "Done" button — changes apply LIVE as you pick them (the send screen updates
+          // instantly), so this just confirms + collapses the panel. Green is the one color accent.
           const editSave = document.createElement('button');
           editSave.id = 'sp-edit-save';
           editSave.type = 'button';
-          editSave.textContent = 'Save changes';
-          editSave.style.cssText = 'display:none;width:100%;margin-top:12px;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;';
-          editSave.addEventListener('click', () => { details.open = false; }); // closing applies (see toggle)
+          editSave.textContent = 'Done';
+          editSave.style.cssText = 'width:100%;margin-top:12px;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;';
+          editSave.addEventListener('click', () => { details.open = false; });
           bodyWrap.appendChild(editSave);
-          details.addEventListener('toggle', () => {
-            if (!details.open && this._editDirty) {
-              this._editDirty = false;
-              editSave.style.display = 'none';
-              this._repaintSendScreenIfActive(); // panel now closed → applies the staged change
-            }
-          });
           sendPanel.parentNode.insertBefore(details, sendPanel);
         }
         // Neutral header (no step counter, no chromatic link). The edit panel replaces 'Change'.
@@ -2531,15 +2523,9 @@
       const railAcceptsNative = !!(this.selectedChain && this.selectedChain.acceptNativeTokens && CHAIN_NATIVE_TOKEN[this.selectedChain.chain]);
       const modeToggle = this.container.querySelector('#sp-pay-mode-toggle');
       if (modeToggle) modeToggle.style.display = railAcceptsNative ? 'flex' : 'none';
-      // Edit panel OPEN → the customer is STAGING a change. Don't rebuild the send screen yet;
-      // reveal the green Save button and apply only when the panel closes (Save click or collapse).
-      const editPanel = this.container.querySelector('#sp-edit-options');
-      if (editPanel && editPanel.open) {
-        this._editDirty = true;
-        const saveBtn = this.container.querySelector('#sp-edit-save');
-        if (saveBtn) saveBtn.style.display = 'block';
-        return;
-      }
+      // Edit-panel changes apply INSTANTLY (pick a chain/coin → the address + amount update right
+      // away). The earlier "stage until Save" gate made picking an option look broken (nothing
+      // changed) — removed. The panel's green "Done" button just closes it.
       // If this rail can't do native but we're in crypto mode, fall back to stable.
       if (!railAcceptsNative && this.payMode === 'crypto' && typeof this.setPayMode === 'function') {
         this.setPayMode('stable'); // setPayMode → selectChain → re-enters here in stable mode

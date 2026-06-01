@@ -2102,7 +2102,7 @@
                     <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:${muted};font-weight:700;margin:8px 0 6px;">Coin</p>
                     ${tokenRows}
                     ${payToggle}
-                    <button type="button" id="cpWizEditSave" data-wiz="edit-save" style="display:none;width:100%;margin-top:12px;padding:10px;background:#16a34a;color:#fff;border:none;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Save changes</button>
+                    <button type="button" id="cpWizEditSave" data-wiz="edit-save" style="width:100%;margin-top:12px;padding:10px;background:#16a34a;color:#fff;border:none;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Done</button>
                 </div>
             </details>`;
         }
@@ -2111,13 +2111,16 @@
             return (window._cpManualInfo && window._cpManualInfo.amtStr) ? window._cpManualInfo.amtStr : 'the converted amount';
         }
 
-        // STAGE an edit-panel change: mark the panel dirty and reveal the green "Save changes"
-        // button. We do NOT rebuild the send screen here — the staged change applies only when the
-        // panel closes (Save click OR collapse). Mirrors the widget's _editDirty + green Save gate.
+        // Apply an edit-panel change INSTANTLY: rebuild the send screen for the newly-selected
+        // rail/coin/pay-type right away. (This used to "stage until Save", which made picking an
+        // option look broken — the address/token/amount didn't change. Now it applies live; the
+        // green "Done" button just collapses the panel.)
         function cpWizStageEdit() {
-            window._cpEditDirty = true;
-            const saveBtn = document.getElementById('cpWizEditSave');
-            if (saveBtn) saveBtn.style.display = 'block';
+            // Eager-created orders are chain-locked; a chain/token change needs a FRESH order for the
+            // new selection (re-lock 400s and would reuse the old chain's address = misroute). Drop it
+            // so cpWizShowManualSend creates a new order matching the new selection.
+            if (window._cpEagerOrder) { window.currentOrderId = null; window._cpEagerOrder = false; }
+            cpWizShowManualSend();
         }
 
         // APPLY a staged edit-panel change: rebuild the send screen for the newly-selected
