@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { Keypair, Connection, VersionedTransaction } from '@solana/web3.js';
+import { Keypair, Connection, VersionedTransaction, PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import crypto from 'crypto';
 import { db } from '../config/database';
 import { logger } from '../utils/logger';
@@ -417,6 +417,16 @@ export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: 
 
   logger.info('swapAndForward split', { orderId, nativeAmt, swapNativeTarget, retainedNative, merchantUsd, nativePrice });
 
+  // Idempotency anchor against sequential double-swap: the order's nativeTokenAmount is a
+  // snapshot from when funds were first detected. If a prior swap (a retry after a
+  // mined-but-errored attempt, or the scanner's PROCESSING→PENDING revert) already consumed
+  // the wallet, re-swapping would drain it twice. Re-read the LIVE balance and refuse if it
+  // can no longer fund this swap. Protects every caller (live scanner + auto-recovery).
+  const liveNativeBal = await getReceiveWalletBalance(receiveWallet.address, chain);
+  if (swapNativeTarget > 0 && liveNativeBal + 1e-9 < swapNativeTarget) {
+    throw new Error(`swapAndForward: live balance ${liveNativeBal} < required ${swapNativeTarget} on ${chain} — prior swap likely already executed; refusing to re-swap (E_ALREADY_SWEPT)`);
+  }
+
   let swapTxHash: string;
   let stableReceived: number;
   let forwardTxHash: string;
@@ -457,4 +467,146 @@ export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: 
 
   logger.info('swapAndForward complete', { orderId, chain, nativeAmt, swapNativeTarget, retainedNative, stableReceived, swapTxHash, forwardTxHash });
   return { forwardTxHash };
+}
+
+// ─── Native balance + refund (shared by admin endpoint + auto-recovery) ─────────
+// Read the current native balance of a receive wallet (EVM or Solana), in whole units.
+// Returns 0 on any RPC error (caller treats unknown as "nothing to do").
+export async function getReceiveWalletBalance(address: string, chain: string): Promise<number> {
+  try {
+    if (chain.startsWith('SOLANA')) {
+      const conn = new Connection(SOL_RPC, 'confirmed');
+      const lamports = await conn.getBalance(new PublicKey(address));
+      return lamports / 1e9;
+    }
+    const conf = EVM_CHAIN[chain];
+    if (!conf) return 0;
+    const p = new ethers.JsonRpcProvider(conf.rpc);
+    try {
+      return Number(ethers.formatEther(await p.getBalance(address)));
+    } finally {
+      p.destroy();
+    }
+  } catch (e) {
+    logger.warn('getReceiveWalletBalance: RPC read failed, treating as 0 (skip, NOT confirmed-empty)', { address, chain, error: (e as Error).message });
+    return 0;
+  }
+}
+
+// Validate a refund/forward destination for a chain (EVM checksum or Solana base58).
+export function isValidNativeAddress(addr: string | null | undefined, chain: string): boolean {
+  if (!addr || typeof addr !== 'string') return false;
+  if (chain.startsWith('SOLANA')) {
+    try { new PublicKey(addr); return true; } catch { return false; }
+  }
+  return ethers.isAddress(addr);
+}
+
+// Sweep an order's receive-wallet native balance (minus gas) to a destination, then mark REFUNDED.
+// Single source of truth for BOTH the admin manual refund and the auto-recovery loop. Uses
+// decryptWalletKey (scrypt) — the SAME KDF encryptWalletKey/swapAndForward use, so it actually
+// decrypts the stored key (the old inline admin refund used sha256 and never decrypted correctly).
+export async function refundNativeToAddress(
+  orderId: string,
+  destinationAddress: string,
+): Promise<{ txHash: string; amount: string }> {
+  const order = await db.order.findUnique({ where: { id: orderId } });
+  if (!order) throw new Error(`Order ${orderId} not found`);
+  if (!order.nativeToken) throw new Error(`Order ${orderId} is not a native token order`);
+  const wallet = await db.nativeReceiveWallet.findUnique({ where: { orderId } });
+  if (!wallet) throw new Error(`No receive wallet for order ${orderId}`);
+
+  const chain = String(order.chain);
+
+  // Validate destination BEFORE any state change — a bad/wrong-chain/self address must never
+  // leave the order claimed-REFUNDED with funds stranded (the admin endpoint can pass arbitrary input).
+  if (!isValidNativeAddress(destinationAddress, chain)) {
+    throw new Error(`refundNativeToAddress: invalid destination address for ${chain}`);
+  }
+  const sameWallet = chain.startsWith('SOLANA')
+    ? destinationAddress === wallet.address
+    : destinationAddress.toLowerCase() === wallet.address.toLowerCase();
+  if (sameWallet) throw new Error('refundNativeToAddress: destination equals the receive wallet (self-send)');
+
+  // Pre-check: the wallet must actually hold funds (avoid claiming an empty/already-swept order).
+  const liveBal = await getReceiveWalletBalance(wallet.address, chain);
+  if (liveBal <= 0.0001) throw new Error('No funds to refund (receive wallet empty)');
+
+  // At-most-once: atomically claim REFUNDED BEFORE broadcasting. If another path (a concurrent
+  // cycle or the admin endpoint) already settled/refunded the order, abort — this guarantees we
+  // never broadcast two refunds for one order even under RPC flakiness / status-write failures.
+  const claim = await db.order.updateMany({
+    where: { id: orderId, status: { notIn: ['REFUNDED', 'CONFIRMED', 'CANCELLED'] } },
+    data: { status: 'REFUNDED' },
+  });
+  if (claim.count === 0) throw new Error(`Order ${orderId} not in a refundable state (already settled or refunded)`);
+
+  const privKey = decryptWalletKey(wallet.encryptedKey);
+  let txHash = '';
+  let amount = '0';
+  try {
+    if (chain.startsWith('SOLANA')) {
+      const conn = new Connection(SOL_RPC, 'confirmed');
+      const kp = Keypair.fromSecretKey(Buffer.from(privKey, 'hex'));
+      const bal = await conn.getBalance(kp.publicKey);
+      const fee = 10_000; // lamports — leaves enough for the transfer fee
+      if (bal <= fee) throw new Error('No funds to refund (below Solana tx fee)');
+      const lamports = bal - fee;
+      const tx = new Transaction().add(SystemProgram.transfer({
+        fromPubkey: kp.publicKey, toPubkey: new PublicKey(destinationAddress), lamports,
+      }));
+      txHash = await conn.sendTransaction(tx, [kp]);
+      await conn.confirmTransaction(txHash, 'confirmed');
+      amount = (lamports / 1e9).toString();
+    } else {
+      const conf = EVM_CHAIN[chain];
+      if (!conf) throw new Error(`refundNativeToAddress: unsupported chain ${chain}`);
+      const provider = new ethers.JsonRpcProvider(conf.rpc);
+      try {
+        const signer = new ethers.Wallet(privKey, provider);
+        const bal = await provider.getBalance(signer.address);
+        const feeData = await provider.getFeeData();
+        const gasPrice = feeData.gasPrice ?? ethers.parseUnits('1', 'gwei');
+        const gasCost = gasPrice * BigInt(21_000) * BigInt(2); // 2x buffer
+        if (bal <= gasCost) throw new Error('Not enough funds to cover refund gas');
+        const value = bal - gasCost;
+        const tx = await signer.sendTransaction({ to: destinationAddress, value });
+        await tx.wait();
+        txHash = tx.hash;
+        amount = ethers.formatEther(value);
+      } finally {
+        provider.destroy();
+      }
+    }
+  } catch (sendErr) {
+    // We already claimed REFUNDED. Distinguish two failure shapes so a human isn't misled into
+    // a manual double-refund:
+    //   • txHash set  → the transfer was BROADCAST and only confirmation failed; it may well have
+    //     landed. Record the hash and tell ops to verify on-chain BEFORE any manual action.
+    //   • txHash empty → nothing was sent; funds remain in the wallet (manual review).
+    // Either way we do NOT revert the REFUNDED claim (at-most-once).
+    const broadcast = !!txHash;
+    const m: any = (order.metadata && typeof order.metadata === 'object') ? { ...(order.metadata as any) } : {};
+    m.recovery = {
+      ...(m.recovery || {}),
+      refundError: ((sendErr as Error).message || '').slice(0, 300),
+      ...(broadcast ? { refundBroadcastUnconfirmed: true, refundTxHash: txHash } : { refundClaimedButFailed: true }),
+    };
+    await db.order.update({ where: { id: orderId }, data: { metadata: m } }).catch(() => {});
+    logger.error(
+      broadcast
+        ? 'refundNativeToAddress: refund BROADCAST but confirmation failed — VERIFY tx on-chain before any manual refund'
+        : 'refundNativeToAddress: claimed REFUNDED but send FAILED (no broadcast) — funds still in wallet, MANUAL review',
+      sendErr as Error, { orderId, destinationAddress, chain, txHash },
+    );
+    throw sendErr;
+  }
+
+  // Record the refund tx for idempotency/audit.
+  const m: any = (order.metadata && typeof order.metadata === 'object') ? { ...(order.metadata as any) } : {};
+  m.recovery = { ...(m.recovery || {}), refundTxHash: txHash, refundedAt: new Date().toISOString() };
+  await db.order.update({ where: { id: orderId }, data: { metadata: m } }).catch(() => {});
+
+  logger.security('Native refund executed', { orderId, destinationAddress, txHash, amount, chain, event: 'native.refund' });
+  return { txHash, amount };
 }

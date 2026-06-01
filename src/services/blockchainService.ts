@@ -555,15 +555,30 @@ export class BlockchainService {
         await db.order.update({ where: { id: order.id }, data: { nativeTokenAmount: received } });
 
         const { swapAndForward } = await import('./swapService');
+        let forwardTxHash = '';
         try {
-          const { forwardTxHash } = await swapAndForward(order.id);
-          await this.orderService.confirmOrder(order.id, { txHash: forwardTxHash });
+          ({ forwardTxHash } = await swapAndForward(order.id));
         } catch (swapErr: any) {
           console.error(`[scanner] native EVM swap failed for order ${order.id}:`, swapErr.message);
-          // Revert PROCESSING → PENDING so the next scan retries (unless it was a double-process skip)
+          // Re-expose to the next scan ONLY if nothing was forwarded. Never revert a PAID order
+          // (swap succeeded but confirm threw) — that would re-swap and double-pay the merchant.
           if (!swapErr.message.includes('already processing')) {
             await db.order.updateMany({ where: { id: order.id, status: 'PROCESSING' }, data: { status: 'PENDING' } });
           }
+          continue;
+        }
+        // Forward SUCCEEDED — merchant paid. Persist the durable success marker BEFORE confirming so
+        // a confirm failure can never revert/re-swap (auto-recovery reconciles via lastForwardTxHash).
+        try {
+          const o = await db.order.findUnique({ where: { id: order.id }, select: { metadata: true } });
+          const m: any = (o?.metadata && typeof o.metadata === 'object') ? { ...(o.metadata as any) } : {};
+          m.recovery = { ...(m.recovery || {}), lastForwardTxHash: forwardTxHash, resolved: 'swapped', resolvedAt: new Date().toISOString() };
+          await db.order.update({ where: { id: order.id }, data: { metadata: m } });
+        } catch { /* metadata best-effort */ }
+        try {
+          await this.orderService.confirmOrder(order.id, { txHash: forwardTxHash });
+        } catch (confirmErr: any) {
+          console.error(`[scanner] native EVM forwarded but confirm failed for order ${order.id} — will reconcile:`, confirmErr.message);
         }
       } catch (err: any) {
         console.error(`[scanner] native EVM scan error for order ${order.id}:`, err.message);
@@ -602,14 +617,29 @@ export class BlockchainService {
         await db.order.update({ where: { id: order.id }, data: { nativeTokenAmount: received } });
 
         const { swapAndForward } = await import('./swapService');
+        let forwardTxHash = '';
         try {
-          const { forwardTxHash } = await swapAndForward(order.id);
-          await this.orderService.confirmOrder(order.id, { txHash: forwardTxHash });
+          ({ forwardTxHash } = await swapAndForward(order.id));
         } catch (swapErr: any) {
           console.error(`[scanner] native SOL swap failed for order ${order.id}:`, swapErr.message);
+          // Re-expose only if nothing was forwarded. Never revert a PAID order (double-pay).
           if (!swapErr.message.includes('already processing')) {
             await db.order.updateMany({ where: { id: order.id, status: 'PROCESSING' }, data: { status: 'PENDING' } });
           }
+          continue;
+        }
+        // Forward SUCCEEDED — persist the success marker BEFORE confirming so a confirm failure
+        // can never revert/re-swap (auto-recovery reconciles via lastForwardTxHash).
+        try {
+          const o = await db.order.findUnique({ where: { id: order.id }, select: { metadata: true } });
+          const m: any = (o?.metadata && typeof o.metadata === 'object') ? { ...(o.metadata as any) } : {};
+          m.recovery = { ...(m.recovery || {}), lastForwardTxHash: forwardTxHash, resolved: 'swapped', resolvedAt: new Date().toISOString() };
+          await db.order.update({ where: { id: order.id }, data: { metadata: m } });
+        } catch { /* metadata best-effort */ }
+        try {
+          await this.orderService.confirmOrder(order.id, { txHash: forwardTxHash });
+        } catch (confirmErr: any) {
+          console.error(`[scanner] native SOL forwarded but confirm failed for order ${order.id} — will reconcile:`, confirmErr.message);
         }
       } catch (err: any) {
         console.error(`[scanner] native SOL scan error for order ${order.id}:`, err.message);

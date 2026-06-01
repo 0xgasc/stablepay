@@ -2018,16 +2018,37 @@ router.post('/orders/:orderId/force-swap', requireAdminKey, async (req, res) => 
     if (!['PENDING', 'EXPIRED', 'PROCESSING'].includes(order.status)) {
       return res.status(400).json({ error: `Cannot force-swap order in status ${order.status}` });
     }
-    // Re-mark as PENDING so swapAndForward's PROCESSING claim succeeds
+    // Re-mark as PENDING so swapAndForward's PROCESSING claim succeeds — but CONDITIONALLY, guarded
+    // on the snapshot status+updatedAt, so we never stomp a swap the live scanner / recovery loop is
+    // running right now (an unconditional flip would re-open the double-swap window).
     if (order.status !== 'PENDING') {
-      await db.order.update({ where: { id: orderId }, data: { status: 'PENDING' } });
+      const reopened = await db.order.updateMany({
+        where: { id: orderId, status: order.status as any, updatedAt: order.updatedAt },
+        data: { status: 'PENDING' },
+      });
+      if (reopened.count === 0) {
+        return res.status(409).json({ error: 'Order is actively processing or just changed — retry in a moment' });
+      }
     }
     const { swapAndForward } = await import('../services/swapService');
     const result = await swapAndForward(orderId);
 
-    // Mark CONFIRMED
+    // Forward succeeded (merchant paid). Persist the durable success marker BEFORE confirming so a
+    // confirm failure leaves an AUTO-RECONCILABLE order (recovery branch A) instead of a false 500 —
+    // mirrors the scanner + recovery loop.
+    try {
+      const o = await db.order.findUnique({ where: { id: orderId }, select: { metadata: true } });
+      const m: any = (o?.metadata && typeof o.metadata === 'object') ? { ...(o.metadata as any) } : {};
+      m.recovery = { ...(m.recovery || {}), lastForwardTxHash: result.forwardTxHash, resolved: 'swapped', resolvedAt: new Date().toISOString() };
+      await db.order.update({ where: { id: orderId }, data: { metadata: m } });
+    } catch { /* metadata best-effort */ }
+
     const { OrderService } = await import('../services/orderService');
-    await new OrderService().confirmOrder(orderId, { txHash: result.forwardTxHash });
+    try {
+      await new OrderService().confirmOrder(orderId, { txHash: result.forwardTxHash });
+    } catch (confirmErr: any) {
+      logger.error('Admin force-swap: forwarded but confirm failed — will auto-reconcile', confirmErr as Error, { orderId, txHash: result.forwardTxHash });
+    }
 
     logger.security('Admin force-swap', { orderId, txHash: result.forwardTxHash, event: 'admin.force_swap' });
     res.json({ success: true, txHash: result.forwardTxHash });
@@ -2054,59 +2075,17 @@ router.post('/orders/:orderId/refund-native', requireAdminKey, async (req, res) 
     const wallet = await db.nativeReceiveWallet.findUnique({ where: { orderId } });
     if (!wallet) return res.status(404).json({ error: 'No receive wallet found' });
 
-    // Decrypt the receive wallet key — same crypto pattern as swapService
-    const ENC_KEY = process.env.MANAGED_WALLET_ENCRYPTION_KEY || process.env.JWT_SECRET || process.env.AGENT_WALLET_KEY;
-    if (!ENC_KEY) return res.status(500).json({ error: 'Encryption key not configured' });
-    const crypto = await import('crypto');
-    const [ivHex, encrypted] = wallet.encryptedKey.split(':');
-    const decipher = crypto.createDecipheriv('aes-256-cbc', crypto.createHash('sha256').update(ENC_KEY).digest(), Buffer.from(ivHex, 'hex'));
-    const privKey = Buffer.concat([decipher.update(Buffer.from(encrypted, 'hex')), decipher.final()]).toString('utf8');
-
-    const chain = String(order.chain);
-    let txHash = '';
-
-    if (chain.startsWith('SOLANA')) {
-      const { Connection, Keypair, SystemProgram, Transaction, PublicKey } = await import('@solana/web3.js');
-      const conn = new Connection(process.env.SOLANA_MAINNET_RPC_URL || 'https://api.mainnet-beta.solana.com', 'confirmed');
-      const kp   = Keypair.fromSecretKey(Buffer.from(privKey, 'hex'));
-      const bal  = await conn.getBalance(kp.publicKey);
-      const fee  = 10_000;
-      if (bal <= fee) return res.status(400).json({ error: 'No funds to refund' });
-      const tx = new Transaction().add(SystemProgram.transfer({
-        fromPubkey: kp.publicKey, toPubkey: new PublicKey(destinationAddress), lamports: bal - fee,
-      }));
-      txHash = await conn.sendTransaction(tx, [kp]);
-      await conn.confirmTransaction(txHash, 'confirmed');
-    } else {
-      const { ethers } = await import('ethers');
-      const RPC: Record<string, string> = {
-        BASE_MAINNET:     'https://mainnet.base.org',
-        ETHEREUM_MAINNET: 'https://ethereum-rpc.publicnode.com',
-        POLYGON_MAINNET:  'https://polygon-bor-rpc.publicnode.com',
-        ARBITRUM_MAINNET: 'https://arbitrum-one-rpc.publicnode.com',
-        BNB_MAINNET:      'https://bsc-dataseed.binance.org',
-      };
-      const provider = new ethers.JsonRpcProvider(RPC[chain]);
-      const signer   = new ethers.Wallet(privKey, provider);
-      const bal      = await provider.getBalance(signer.address);
-      const feeData  = await provider.getFeeData();
-      const gasPrice = feeData.gasPrice ?? ethers.parseUnits('1', 'gwei');
-      const gasCost  = gasPrice * BigInt(21_000) * BigInt(2);
-      if (bal <= gasCost) {
-        provider.destroy();
-        return res.status(400).json({ error: 'Not enough funds to cover refund gas' });
-      }
-      const tx = await signer.sendTransaction({ to: destinationAddress, value: bal - gasCost });
-      await tx.wait();
-      txHash = tx.hash;
-      provider.destroy();
+    // Decrypt + sweep via the shared helper (uses decryptWalletKey/scrypt — the inline
+    // sha256 decrypt here was wrong and never decrypted the stored key). Marks REFUNDED.
+    const { refundNativeToAddress, isValidNativeAddress } = await import('../services/swapService');
+    // Validate destination up front for a clean 400 (the helper also asserts before claiming REFUNDED).
+    if (!isValidNativeAddress(destinationAddress, String(order.chain))) {
+      return res.status(400).json({ error: `Invalid destination address for ${order.chain}` });
     }
+    const { txHash, amount } = await refundNativeToAddress(orderId, destinationAddress);
 
-    // Mark order as REFUNDED
-    await db.order.update({ where: { id: orderId }, data: { status: 'REFUNDED' } });
-
-    logger.security('Admin native refund', { orderId, destinationAddress, txHash, event: 'admin.native_refund' });
-    res.json({ success: true, txHash });
+    logger.security('Admin native refund', { orderId, destinationAddress, txHash, amount, event: 'admin.native_refund' });
+    res.json({ success: true, txHash, amount });
   } catch (error: any) {
     logger.error('refund-native', error as Error, {});
     res.status(500).json({ error: error.message || 'Refund failed' });

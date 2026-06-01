@@ -67,6 +67,28 @@ setTimeout(() => {
   setInterval(driveMerchantAlerts, MERCHANT_ALERT_INTERVAL_MS);
 }, 5 * 60 * 1000);
 
+// Native stranded-fund auto-recovery. Reconciles native orders whose funds landed in a
+// receive wallet but never settled: retries the swap (pays the merchant), else refunds a
+// known customer wallet, else flags for manual review. Lives here on the long-running
+// worker. Idempotent + has a staleness guard so it never races the 15s payment scanner.
+const RECOVERY_INTERVAL_MS = 10 * 60 * 1000; // every 10 min
+async function driveStrandedRecovery() {
+  try {
+    const { recoverStrandedNative } = await import('./services/recoveryService');
+    const r = await recoverStrandedNative();
+    if (r.swapped > 0 || r.refunded > 0 || r.manualReview > 0 || r.errors > 0) {
+      console.log(`[recovery] scanned=${r.scanned} funds=${r.withFunds} swapped=${r.swapped} refunded=${r.refunded} manual=${r.manualReview} errors=${r.errors}`);
+    }
+  } catch (err: any) {
+    console.error('[recovery] driver error:', err?.message || err);
+  }
+}
+// Wait 90s on cold start so the worker isn't slammed during boot; then every 10 min.
+setTimeout(() => {
+  driveStrandedRecovery();
+  setInterval(driveStrandedRecovery, RECOVERY_INTERVAL_MS);
+}, 90 * 1000);
+
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('[scanner] Shutting down...');

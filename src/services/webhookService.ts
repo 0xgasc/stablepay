@@ -9,6 +9,7 @@ export type WebhookEventType =
   | 'order.expired'
   | 'order.swap_failed'
   | 'order.wrong_token'
+  | 'order.auto_refunded'
   | 'refund.requested'
   | 'refund.processed'
   | 'invoice.created'
