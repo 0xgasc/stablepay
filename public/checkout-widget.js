@@ -622,6 +622,23 @@
           }
           // Re-parent the grid into the panel.
           bodyWrap.appendChild(payGrid);
+          // Green "Save changes" button — the one deliberate splash of color. Staged edits apply
+          // when the panel closes (Save click OR collapse), so the send screen never flickers
+          // mid-change and the customer explicitly confirms.
+          const editSave = document.createElement('button');
+          editSave.id = 'sp-edit-save';
+          editSave.type = 'button';
+          editSave.textContent = 'Save changes';
+          editSave.style.cssText = 'display:none;width:100%;margin-top:12px;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;';
+          editSave.addEventListener('click', () => { details.open = false; }); // closing applies (see toggle)
+          bodyWrap.appendChild(editSave);
+          details.addEventListener('toggle', () => {
+            if (!details.open && this._editDirty) {
+              this._editDirty = false;
+              editSave.style.display = 'none';
+              this._repaintSendScreenIfActive(); // panel now closed → applies the staged change
+            }
+          });
           sendPanel.parentNode.insertBefore(details, sendPanel);
         }
         // Neutral header (no step counter, no chromatic link). The edit panel replaces 'Change'.
@@ -2116,8 +2133,11 @@
         if (!link) {
           link = document.createElement('a');
           link.className = 'mobile-wallet-link';
-          link.style.cssText = 'display:block;width:100%;padding:12px;margin-bottom:10px;background:var(--sp-card);color:var(--sp-text);border:2px solid var(--sp-border);font-weight:700;font-size:12px;text-align:center;text-decoration:none;text-transform:uppercase;cursor:pointer;';
-          link.textContent = 'Open in wallet';
+          // Quiet ghost styling — this is an OPTIONAL convenience, not the primary action.
+          // "I've sent the payment" is the only filled CTA; keep this low-key so it doesn't read
+          // as "tap me instead of scrolling to the real button".
+          link.style.cssText = 'display:block;width:100%;padding:8px;margin-bottom:10px;background:transparent;color:var(--sp-muted);border:1px solid var(--sp-border);font-weight:600;font-size:11px;text-align:center;text-decoration:none;text-transform:none;border-radius:6px;cursor:pointer;';
+          link.textContent = 'Open in your wallet app ↗';
           countdown.parentNode.insertBefore(link, countdown);
         }
         link.style.display = 'block';
@@ -2511,6 +2531,15 @@
       const railAcceptsNative = !!(this.selectedChain && this.selectedChain.acceptNativeTokens && CHAIN_NATIVE_TOKEN[this.selectedChain.chain]);
       const modeToggle = this.container.querySelector('#sp-pay-mode-toggle');
       if (modeToggle) modeToggle.style.display = railAcceptsNative ? 'flex' : 'none';
+      // Edit panel OPEN → the customer is STAGING a change. Don't rebuild the send screen yet;
+      // reveal the green Save button and apply only when the panel closes (Save click or collapse).
+      const editPanel = this.container.querySelector('#sp-edit-options');
+      if (editPanel && editPanel.open) {
+        this._editDirty = true;
+        const saveBtn = this.container.querySelector('#sp-edit-save');
+        if (saveBtn) saveBtn.style.display = 'block';
+        return;
+      }
       // If this rail can't do native but we're in crypto mode, fall back to stable.
       if (!railAcceptsNative && this.payMode === 'crypto' && typeof this.setPayMode === 'function') {
         this.setPayMode('stable'); // setPayMode → selectChain → re-enters here in stable mode
