@@ -770,7 +770,7 @@
                         </div>
                         <p class="text-sm font-bold text-black mt-3">Send exactly <span id="cpQRAmount" style="color: var(--mc-accent);">—</span></p>
                         <p class="text-xs text-gray-500 mt-1">Scan with your wallet app</p>
-                        <a id="cpWalletDeepLink" class="mobile-wallet-link w-full text-center py-3 px-4 font-bold text-sm border-2 border-black mt-3" style="display:none;background:#fff;color:#000;text-decoration:none;">📲 Open in wallet</a>
+                        <a id="cpWalletDeepLink" class="mobile-wallet-link w-full text-center mt-3" style="display:none;background:transparent;color:#71717A;border:1px solid #D4D4D8;border-radius:6px;padding:8px;font-weight:600;font-size:11px;text-transform:none;text-decoration:none;">Open in your wallet app ↗</a>
                     </div>
 
                     <!-- Address view -->
@@ -1221,22 +1221,24 @@
             else if (key === 'verify-tx') cpWizVerifyManualTx();
             else if (key === 'fast-save-wallet') cpWizFastSaveContact('wallet');
             else if (key === 'fast-save-email')  cpWizFastSaveContact('email');
-            // Edit-payment-options panel (fast send screen). Re-seed state then re-run the full
-            // send-rebuild (cpWizShowManualSend) so the chain re-lock / 409-fallback, EURC and
-            // native-amount branches all fire and the QR/address/countdown repaint.
+            // Edit-payment-options panel (fast send screen). STAGE the change into cpWizState but
+            // do NOT rebuild the send screen yet — reveal the green "Save changes" button and apply
+            // (cpWizShowManualSend, then close the panel) only when the panel closes (Save click OR
+            // collapse). This way the send screen never flickers mid-change and the customer
+            // explicitly confirms. Mirrors the widget's _repaintSendScreenIfActive staging gate.
             else if (key === 'edit-chain') {
                 if (val && val !== cpWizState.chain) {
                     cpWizState.chain = val;
                     cpWizState.token = cpWizGetTokens()[0] || null;
                     cpWizTrack('WIZARD_ANSWER', { key: 'chain', value: val, step: 'edit-panel' });
-                    cpWizShowManualSend();
+                    cpWizStageEdit();
                 }
             }
             else if (key === 'edit-token') {
                 if (val && val !== cpWizState.token) {
                     cpWizState.token = val;
                     cpWizTrack('WIZARD_ANSWER', { key: 'token', value: val, step: 'edit-panel' });
-                    cpWizShowManualSend();
+                    cpWizStageEdit();
                 }
             }
             else if (key === 'edit-paytype') {
@@ -1250,8 +1252,14 @@
                     cpWizState.token = cpWizGetTokens()[0] || null;
                     if (val === 'native') setPayMode('crypto'); else setPayMode('stable');
                     cpWizTrack('WIZARD_ANSWER', { key: 'payType', value: val, step: 'edit-panel' });
-                    cpWizShowManualSend();
+                    cpWizStageEdit();
                 }
+            }
+            // Green "Save changes" click — closing the panel applies the staged edit (see the
+            // <details> 'toggle' handler wired in cpWizPaintAddressScreen).
+            else if (key === 'edit-save') {
+                const det = document.getElementById('cpWizEditOptions');
+                if (det) det.open = false;
             }
             else if (key === 'copy') {
                 cpCopyToClipboard(val, btn).then((ok) => {
@@ -1587,9 +1595,9 @@
                             <p id="cpWizScanTimer" class="text-xs text-gray-500">This can take up to a minute</p>
                         </div>
                         <div id="cpWizManualTx" class="hidden bg-gray-50 border-2 border-black p-3 mt-4">
-                            <p class="text-xs font-bold text-black mb-2">Still waiting? Paste your transaction ID:</p>
+                            <p class="text-xs font-bold text-black mb-2">Still waiting? Paste your transaction, link, or wallet address:</p>
                             <div class="flex gap-2">
-                                <input id="cpWizManualTxInput" type="text" placeholder="0x... transaction hash" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
+                                <input id="cpWizManualTxInput" type="text" placeholder="Paste your transaction, link, or wallet address" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
                                 <button data-wiz="verify-tx" style="padding:8px 12px;font-weight:700;font-size:12px;color:#fff;background:#000;border:none;cursor:pointer;">VERIFY</button>
                             </div>
                             <p id="cpWizManualTxStatus" class="text-xs text-gray-500 mt-1 hidden"></p>
@@ -1610,9 +1618,9 @@
                         <p id="cpWizScanTimer" class="text-xs text-gray-500 mb-4 text-center">Paste your TX below to confirm instantly</p>
 
                         <div class="bg-gray-50 border-2 border-black p-3 mb-3">
-                            <p class="text-xs font-bold text-black mb-2">Paste your transaction ID (fastest)</p>
+                            <p class="text-xs font-bold text-black mb-2">Paste your transaction, link, or wallet address</p>
                             <div class="flex gap-2">
-                                <input id="cpWizManualTxInput" type="text" placeholder="0x... or Solana tx signature" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
+                                <input id="cpWizManualTxInput" type="text" placeholder="Paste your transaction, link, or wallet address" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
                                 <button data-wiz="verify-tx" style="padding:8px 12px;font-weight:700;font-size:12px;color:#fff;background:#000;border:none;cursor:pointer;">VERIFY</button>
                             </div>
                             <p id="cpWizManualTxStatus" class="text-xs text-gray-500 mt-1 hidden"></p>
@@ -1948,8 +1956,17 @@
                     if (!orderData.success) {
                         // Re-entry: order is already chain-locked. Reuse its existing address instead of erroring.
                         const cur = await (await fetch('/api/embed/order/' + window.currentOrderId)).json();
-                        if (cur && cur.paymentAddress) orderData = cur;
-                        else throw new Error(orderData.error || 'Failed to lock chain');
+                        if (cur && cur.paymentAddress) {
+                            orderData = cur;
+                            // MISROUTE GUARD: the order is locked to its ORIGINAL chain/token. Reconcile the
+                            // wizard state to those actual values so the repainted screen (chain name, QR /
+                            // deep-link URI, amount, token) can never show a different chain/token than the
+                            // address truly belongs to. Without this, an edit-panel chain/token change that
+                            // can't re-lock would tell the customer "send <new> to this address" while the
+                            // address is the OLD chain's — funds sent to the wrong chain / never confirm.
+                            if (cur.chain) cpWizState.chain = cur.chain;
+                            if (cur.token) cpWizState.token = cur.token;
+                        } else throw new Error(orderData.error || 'Failed to lock chain');
                     }
                 } else {
                     // No order yet (product / tip checkout): create one NOW for this chain/token,
@@ -1977,6 +1994,7 @@
                     const data = await res.json();
                     if (!data.success || !data.order) throw new Error(data.error || 'Failed to create order');
                     window.currentOrderId = data.order.id;
+                    window._cpEagerOrder = true; // WE created this (not an orderId link) — safe to replace on chain/token edit
                     orderData = data.order; // {id, paymentAddress, amount, token, chain, nativeSendAmount, expiresAt}
                 }
                 // Patch sender wallet onto the order (either path) when we captured one.
@@ -2084,12 +2102,38 @@
                     <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:${muted};font-weight:700;margin:8px 0 6px;">Coin</p>
                     ${tokenRows}
                     ${payToggle}
+                    <button type="button" id="cpWizEditSave" data-wiz="edit-save" style="display:none;width:100%;margin-top:12px;padding:10px;background:#16a34a;color:#fff;border:none;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;">Save changes</button>
                 </div>
             </details>`;
         }
         // tiny helper so the fee note can reference the current amount string without recomputing
         function info_amtStrPlaceholder() {
             return (window._cpManualInfo && window._cpManualInfo.amtStr) ? window._cpManualInfo.amtStr : 'the converted amount';
+        }
+
+        // STAGE an edit-panel change: mark the panel dirty and reveal the green "Save changes"
+        // button. We do NOT rebuild the send screen here — the staged change applies only when the
+        // panel closes (Save click OR collapse). Mirrors the widget's _editDirty + green Save gate.
+        function cpWizStageEdit() {
+            window._cpEditDirty = true;
+            const saveBtn = document.getElementById('cpWizEditSave');
+            if (saveBtn) saveBtn.style.display = 'block';
+        }
+
+        // APPLY a staged edit-panel change: rebuild the send screen for the newly-selected
+        // rail/coin/pay-type via cpWizShowManualSend (which re-runs the chain re-lock / 409-fallback,
+        // EURC and native-amount branches and repaints QR/address/countdown). Called when the
+        // edit panel closes. No-op unless a change is actually staged.
+        function cpWizApplyStagedEdit() {
+            if (!window._cpEditDirty) return;
+            window._cpEditDirty = false;
+            // If WE eagerly created this order, a chain/token change needs a FRESH order for the new
+            // selection — the existing order is chain-locked, re-locking 400s, and reusing the old
+            // chain's address would misroute. Drop it so cpWizShowManualSend creates a new order
+            // matching the staged chain/token. (orderId-link orders keep their id; the re-lock
+            // fallback's misroute guard keeps those safe.)
+            if (window._cpEagerOrder) { window.currentOrderId = null; window._cpEagerOrder = false; }
+            cpWizShowManualSend();
         }
 
         // Renders the "Send exactly / address / QR / countdown / I've sent" screen from a cached
@@ -2101,6 +2145,11 @@
             const expiresAt = info.expiresAt instanceof Date ? info.expiresAt : new Date(info.expiresAt);
             const _isFast = window._spVariant === 'fast';
             const _merchantLabel = (window._merchantDisplayName || currentProduct?.name || 'Payment');
+            // Mobile address-first: a QR you can't scan from the device you're holding is dead weight,
+            // so on mobile lead with the copyable address + amount and hide the QR. QR-first on desktop
+            // (you scan it with a separate phone). Mirrors the widget's send-screen toggle default.
+            const _isMobile = /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent || '')
+                || (window.matchMedia && window.matchMedia('(max-width: 600px)').matches);
             // White merchant header band for fast (no headerColor fill): product/merchant + amount.
             const headerBand = _isFast ? `
                 <div style="background:#FFFFFF;border:1px solid #D4D4D8;padding:14px 16px;margin-bottom:16px;text-align:center;">
@@ -2111,7 +2160,7 @@
                 ${headerBand}
                 <h2 class="text-xl font-bold text-black mb-1 text-center">Send exactly</h2>
                 <p class="text-2xl font-bold text-center mb-4" style="color:#18181B;">${info.amtStr}</p>
-                <div class="text-center mb-4">
+                <div class="text-center mb-4"${_isMobile ? ' style="display:none;"' : ''}>
                     <img src="${info.qrUrl}" width="180" height="180" alt="QR" class="mx-auto border-2 border-black" />
                 </div>
                 <div class="border-2 border-black p-3 mb-3" style="background:#F4F4F5;">
@@ -2122,7 +2171,7 @@
                     </div>
                 </div>
                 ${cpWizState.senderWallet ? `<p class="text-xs mb-3 text-center" style="color:#71717A;">Sending from: <code class="font-mono">${cpWizState.senderWallet.slice(0,6)}...${cpWizState.senderWallet.slice(-4)}</code></p>` : ''}
-                ${info.payUri ? `<a href="${info.payUri}" class="mobile-wallet-link w-full text-center py-3 px-4 font-bold text-sm border-2 mb-3" style="border-color:#18181B;background:#fff;color:#18181B;text-decoration:none;">📲 Open in wallet</a>` : ''}
+                ${info.payUri ? `<a href="${info.payUri}" class="mobile-wallet-link w-full text-center mb-3" style="background:transparent;color:#71717A;border:1px solid #D4D4D8;border-radius:6px;padding:8px;font-weight:600;font-size:11px;text-transform:none;text-decoration:none;">Open in your wallet app ↗</a>` : ''}
                 ${_isFast ? cpWizEditPanelHTML() : ''}
                 <div class="text-center mb-4">
                     <p class="text-xs" style="color:#71717A;">Expires in <span id="cpWizManualCountdown" class="font-bold" style="color:#18181B;">--:--</span></p>
@@ -2163,6 +2212,18 @@
                     cpWizStartScanning();
                 }
             };
+
+            // Edit-panel staging gate: apply the staged change (rebuild send screen) when the
+            // <details> closes — whether via the green "Save changes" button or by collapsing the
+            // summary. Reset the dirty flag fresh on each paint. Mirrors the widget's details
+            // 'toggle' apply-on-close handler.
+            window._cpEditDirty = false;
+            const editDetails = document.getElementById('cpWizEditOptions');
+            if (editDetails) {
+                editDetails.addEventListener('toggle', () => {
+                    if (!editDetails.open) cpWizApplyStagedEdit(); // closing applies the staged edit
+                });
+            }
         }
 
         // "Didn't send yet?" — bring the customer back to the address/QR screen from the
@@ -2279,19 +2340,63 @@
             return m ? m[1] : str.split(/[?#]/)[0];
         }
 
+        // Smart proof input: ONE field accepts a tx hash, an explorer link, OR a wallet address.
+        // Auto-detect which (per chain type) and route to the SAFEST detection method:
+        //   tx hash / explorer link -> POST /tx          (direct verify — instant, exact)
+        //   wallet address          -> POST /contact     (scanner FROM-matches the payment)
+        // Mirrors the widget's _revealManualTxPaste classification + routing.
         async function cpWizVerifyManualTx() {
             const input = document.getElementById('cpWizManualTxInput');
             const status = document.getElementById('cpWizManualTxStatus');
-            const val = cpExtractTxId(input?.value?.trim());
-            if (!val || !window.currentOrderId) return;
-            // Fast-variant telemetry: only fire when this session IS fast (was firing for all
-            // variants, polluting the fast paste-rate metric).
-            if (window._spVariant === 'fast') {
-                cpWizTrack('FAST_CONFIRMATION_PROVIDED', { type: 'tx_hash', variant: window._spVariant });
+            const raw = input?.value?.trim();
+            if (!raw || !window.currentOrderId) return;
+            const isLink = raw.startsWith('http');
+            const ct = CHAIN_CONFIG[cpWizState.chain]?.type;
+            let kind = null; // 'link' | 'txhash' | 'wallet'
+            if (isLink) {
+                kind = 'link';
+            } else if (ct === 'evm') {
+                if (/^0x[0-9a-fA-F]{64}$/.test(raw)) kind = 'txhash';        // 0x + 64 hex
+                else if (/^0x[0-9a-fA-F]{40}$/.test(raw)) kind = 'wallet';   // 0x + 40 hex
+            } else if (ct === 'solana') {
+                // base58, no 0x. Signatures are ~87-88 chars; addresses 32-44. Split on length.
+                if (/^[1-9A-HJ-NP-Za-km-z]{32,90}$/.test(raw)) kind = (raw.length >= 64) ? 'txhash' : 'wallet';
+            } else if (ct === 'tron') {
+                if (/^[0-9a-fA-F]{64}$/.test(raw)) kind = 'txhash';
+                else if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(raw)) kind = 'wallet';
+            } else {
+                kind = (raw.length >= 60) ? 'txhash' : 'wallet';
             }
-            status.classList.remove('hidden');
-            status.textContent = 'Verifying...'; status.style.color = '';
+            if (!kind) {
+                if (status) { status.classList.remove('hidden'); status.textContent = "! That doesn't look like a transaction, link, or wallet address"; status.style.color = '#18181B'; }
+                return;
+            }
+            // Fast-variant telemetry: only fire when this session IS fast (was firing for all
+            // variants, polluting the fast paste-rate metric). Type 'wallet' vs 'tx_hash'.
+            if (window._spVariant === 'fast') {
+                cpWizTrack('FAST_CONFIRMATION_PROVIDED', { type: kind === 'wallet' ? 'wallet' : 'tx_hash', variant: window._spVariant });
+            }
+            if (status) { status.classList.remove('hidden'); status.style.color = ''; }
             try {
+                // Wallet address -> register it for FROM-matching; the scanner confirms when the
+                // matching transfer lands. Safest path when the customer doesn't have the tx hash.
+                if (kind === 'wallet') {
+                    if (status) status.textContent = 'Saving your wallet...';
+                    const r = await fetch('/api/embed/order/' + window.currentOrderId + '/contact', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ customerWallet: raw }),
+                    });
+                    if (r.ok) {
+                        cpWizState.senderWallet = raw;
+                        if (status) { status.textContent = "✓ Got your wallet — we'll confirm the moment your payment lands."; status.style.color = '#18181B'; }
+                    } else {
+                        if (status) { status.textContent = '! Could not save your wallet — try again or paste the transaction.'; status.style.color = '#18181B'; }
+                    }
+                    return;
+                }
+                // tx hash / explorer link -> direct /tx verify (instant, exact).
+                if (status) status.textContent = 'Verifying...';
+                const val = cpExtractTxId(raw);
                 const res = await fetch('/api/embed/order/' + window.currentOrderId + '/tx', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ txHash: val }),
