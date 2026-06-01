@@ -1103,7 +1103,7 @@
                 <!-- Manual TX (hidden until 15s) -->
                 <div id="sp-manual-tx" style="display: none; margin-top: 16px; text-align: left;">
                   <div style="background: var(--sp-card); border: 1px solid var(--sp-border); padding: 10px; border-radius: 4px;">
-                    <p style="font-size: 11px; font-weight: 600; color: var(--sp-text); margin-bottom: 6px;">Paste your transaction ID</p>
+                    <p style="font-size: 11px; font-weight: 600; color: var(--sp-text); margin-bottom: 6px;">Paste your transaction, link, or wallet address</p>
                     <div style="display: flex; gap: 6px;">
                       <input id="sp-manual-tx-input" type="text" placeholder="" style="
                         flex: 1; padding: 8px; font-size: 14px; font-family: inherit; border: 1px solid var(--sp-border);
@@ -2292,11 +2292,11 @@
       const chain = this.selectedChain?.chain;
       const chainType = this.selectedChain?.config?.type;
       if (txInput) {
-        txInput.placeholder = chainType === 'solana' ? 'TX signature or link...' : 'TX hash or link...';
+        txInput.placeholder = chainType === 'solana' ? 'TX signature, link, or your wallet…' : 'TX hash, link, or your wallet…';
       }
       if (txHint) {
         const explorerNames = { BASE_MAINNET: 'basescan.org', ETHEREUM_MAINNET: 'etherscan.io', POLYGON_MAINNET: 'polygonscan.com', ARBITRUM_MAINNET: 'arbiscan.io', BNB_MAINNET: 'bscscan.com', SOLANA_MAINNET: 'solscan.io', TRON_MAINNET: 'tronscan.org' };
-        txHint.textContent = `Paste from ${explorerNames[chain] || 'your block explorer'}`;
+        txHint.textContent = `A tx/link from ${explorerNames[chain] || 'your explorer'}, or your wallet address`;
       }
       const submitBtn = this.container.querySelector('#sp-manual-tx-btn');
       if (submitBtn) {
@@ -2305,35 +2305,57 @@
           const statusEl = this.container.querySelector('#sp-manual-tx-status');
           const value = input?.value?.trim();
           if (!value) return;
+          // Classify what they pasted so we route to the SAFEST detection method:
+          //   explorer link / tx hash -> direct /tx verify (instant, exact)
+          //   wallet address          -> register it so the scanner FROM-matches their payment
+          const isLink = value.startsWith('http');
+          const ct = this.selectedChain?.config?.type;
+          let kind = null; // 'link' | 'txhash' | 'wallet'
+          if (isLink) {
+            kind = 'link';
+          } else if (ct === 'evm') {
+            if (/^0x[0-9a-fA-F]{64}$/.test(value)) kind = 'txhash';        // 0x + 64 hex
+            else if (/^0x[0-9a-fA-F]{40}$/.test(value)) kind = 'wallet';   // 0x + 40 hex
+          } else if (ct === 'solana') {
+            // base58, no 0x. Signatures are ~87-88 chars; addresses 32-44. Split on length.
+            if (/^[1-9A-HJ-NP-Za-km-z]{32,90}$/.test(value)) kind = (value.length >= 64) ? 'txhash' : 'wallet';
+          } else if (ct === 'tron') {
+            if (/^[0-9a-fA-F]{64}$/.test(value)) kind = 'txhash';
+            else if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(value)) kind = 'wallet';
+          } else {
+            kind = (value.length >= 60) ? 'txhash' : 'wallet';
+          }
+          if (!kind) {
+            if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = "! That doesn't look like a transaction hash, link, or wallet address"; statusEl.style.color = '#18181B'; }
+            return;
+          }
           // Gated on variant — only count as fast-conversion when this IS the fast arm.
           if (this._variant === 'fast') {
-            this._track('FAST_CONFIRMATION_PROVIDED', { type: 'tx_hash', variant: this._variant });
+            this._track('FAST_CONFIRMATION_PROVIDED', { type: kind === 'wallet' ? 'wallet' : 'tx_hash', variant: this._variant });
           }
-
-          // Basic format validation
-          const isLink = value.startsWith('http');
-              if (!isLink) {
-                // TX hash validation per chain
-                const ct = this.selectedChain?.config?.type;
-                if (ct === 'evm' && (!value.startsWith('0x') || value.length !== 66)) {
-                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '! EVM transaction hashes start with 0x and are 66 characters'; statusEl.style.color = '#18181B'; }
-                  return;
-                }
-                if (ct === 'solana' && (value.startsWith('0x') || value.length < 40)) {
-                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '! Solana signatures are base58 encoded, ~88 characters'; statusEl.style.color = '#18181B'; }
-                  return;
-                }
-                if (value.length < 20) {
-                  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '! That doesn\'t look like a transaction hash'; statusEl.style.color = '#18181B'; }
-                  return;
-                }
-              }
 
               submitBtn.disabled = true;
               submitBtn.textContent = '...';
-              if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Verifying on-chain...'; statusEl.style.color = 'var(--sp-muted)'; }
+              if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = kind === 'wallet' ? 'Saving your wallet…' : 'Verifying on-chain…'; statusEl.style.color = 'var(--sp-muted)'; }
 
               try {
+                // Wallet address -> register it for FROM-matching; the scanner confirms when the
+                // matching transfer lands. Safest path when the customer doesn't have the tx hash.
+                if (kind === 'wallet') {
+                  const r = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}/contact`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customerWallet: value }),
+                  });
+                  if (r.ok) {
+                    this.customerWallet = value;
+                    if (statusEl) { statusEl.textContent = "✓ Got your wallet — we'll confirm the moment your payment lands."; statusEl.style.color = '#18181B'; }
+                    submitBtn.textContent = 'Saved';
+                  } else {
+                    if (statusEl) { statusEl.textContent = '! Could not save your wallet — try again or paste the transaction.'; statusEl.style.color = '#18181B'; }
+                    submitBtn.disabled = false; submitBtn.textContent = 'Submit';
+                  }
+                  return;
+                }
 
                 // Validate explorer URL matches selected chain
                 if (isLink) {
