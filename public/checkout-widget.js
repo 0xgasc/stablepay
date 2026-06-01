@@ -1110,6 +1110,7 @@
                   width: 100%; padding: 8px; background: transparent; color: var(--sp-muted); border: none;
                   font-size: 11px; cursor: pointer; margin-top: 6px; text-decoration: underline;
                 ">← Change wallet address</button>
+                <p style="font-size: 9px; color: var(--sp-muted); margin-top: 10px; text-align: center; line-height: 1.4;">🔒 No signup — what you paste is only used to confirm your payment, never sold or shared.</p>
               </div>
               <!-- Step 3: Verification -->
               <div id="sp-send-step3" style="display: none; padding: 20px;">
@@ -1125,24 +1126,25 @@
                   <p id="sp-poll-timer" style="font-size: 9px; color: var(--sp-muted);">This can take up to a minute</p>
                 </div>
 
-                <!-- Manual TX (hidden until 15s) -->
+                <!-- Manual paste (hidden until 15s) -->
                 <div id="sp-manual-tx" style="display: none; margin-top: 16px; text-align: left;">
                   <div style="background: var(--sp-card); border: 1px solid var(--sp-border); padding: 10px; border-radius: 4px;">
-                    <p style="font-size: 11px; font-weight: 600; color: var(--sp-text); margin-bottom: 6px;">Paste your transaction, link, or wallet address</p>
+                    <p style="font-size: 11px; font-weight: 600; color: var(--sp-text); margin-bottom: 6px;">Already sent it? Paste your confirmation —</p>
                     <div style="display: flex; gap: 6px;">
-                      <input id="sp-manual-tx-input" type="text" placeholder="" style="
+                      <input id="sp-manual-tx-input" type="text" placeholder="Paste your transaction link / ID / wallet address" style="
                         flex: 1; padding: 8px; font-size: 14px; font-family: inherit; border: 1px solid var(--sp-border);
                         background: var(--sp-bg); color: var(--sp-text); outline: none;
                         text-overflow: ellipsis; overflow: hidden; border-radius: 3px;
                       ">
-                      <button id="sp-manual-tx-btn" style="
+                      <button id="sp-manual-tx-btn" type="button" style="
                         padding: 8px 12px; background: #000; color: #fff; border: none;
                         font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase;
                         border-radius: 3px; flex-shrink: 0;
-                      ">Verify</button>
+                      ">📋 Paste</button>
                     </div>
-                    <p id="sp-manual-tx-hint" style="font-size: 9px; color: var(--sp-muted); margin-top: 3px;"></p>
+                    <p id="sp-manual-tx-hint" style="font-size: 9px; color: var(--sp-muted); margin-top: 3px;">a transaction link, ID, or your wallet address — we'll find your payment.</p>
                     <p id="sp-manual-tx-status" style="font-size: 9px; color: var(--sp-muted); margin-top: 3px; display: none;"></p>
+                    <p style="font-size: 9px; color: var(--sp-muted); margin-top: 6px; line-height: 1.4;">🔒 No signup — what you paste is only used to confirm your payment, never sold or shared.</p>
                   </div>
                 </div>
 
@@ -1548,7 +1550,7 @@
                 wrap.id = 'sp-fast-fallback';
                 wrap.style.cssText = 'margin-top:10px;border:1px solid var(--sp-border);padding:8px 10px;font-size:11px;border-radius:4px;';
                 wrap.innerHTML = `
-                  <summary style="cursor:pointer;font-weight:600;color:var(--sp-muted);">Can't find your TX? — help us reach you ▾</summary>
+                  <summary style="cursor:pointer;font-weight:600;color:var(--sp-muted);">Can't find your confirmation? — help us reach you ▾</summary>
                   <div style="margin-top:8px;">
                     <p style="color:var(--sp-muted);margin-bottom:6px;font-size:10px;">Give us your sender wallet (auto-match) OR email (we contact you):</p>
                     <div style="margin-bottom:6px;">
@@ -2231,8 +2233,8 @@
       const statusMessages = [
         { at: 0, text: 'Stablo is scanning the blockchain...' },
         { at: 5, text: 'Checking the public ledger...' },
-        { at: 10, text: 'Verifying your transaction...' },
-        { at: 15, text: 'Still looking — paste your TX below to help Stablo find it' },
+        { at: 10, text: 'Confirming your payment...' },
+        { at: 15, text: 'Still looking — paste your confirmation below to help Stablo find it' },
       ];
 
       // Timer display + progress bar
@@ -2317,25 +2319,58 @@
         const pollStatus = this.container.querySelector('#sp-poll-status');
         if (pollStatus) pollStatus.textContent = 'Stablo couldn\'t find it automatically';
         const pollTimer = this.container.querySelector('#sp-poll-timer');
-        if (pollTimer) pollTimer.textContent = 'Paste your transaction ID below to verify';
+        if (pollTimer) pollTimer.textContent = 'Paste your confirmation below — we\'ll find your payment';
       }
       const txInput = this.container.querySelector('#sp-manual-tx-input');
-      const txHint = this.container.querySelector('#sp-manual-tx-hint');
-      const chain = this.selectedChain?.chain;
-      const chainType = this.selectedChain?.config?.type;
       if (txInput) {
-        txInput.placeholder = chainType === 'solana' ? 'TX signature, link, or your wallet…' : 'TX hash, link, or your wallet…';
+        txInput.placeholder = 'Paste your transaction link / ID / wallet address';
       }
-      if (txHint) {
-        const explorerNames = { BASE_MAINNET: 'basescan.org', ETHEREUM_MAINNET: 'etherscan.io', POLYGON_MAINNET: 'polygonscan.com', ARBITRUM_MAINNET: 'arbiscan.io', BNB_MAINNET: 'bscscan.com', SOLANA_MAINNET: 'solscan.io', TRON_MAINNET: 'tronscan.org' };
-        txHint.textContent = `A tx/link from ${explorerNames[chain] || 'your explorer'}, or your wallet address`;
-      }
-      const submitBtn = this.container.querySelector('#sp-manual-tx-btn');
-      if (submitBtn) {
-        submitBtn.addEventListener('click', async () => {
+      const pasteBtn = this.container.querySelector('#sp-manual-tx-btn');
+      const focusManual = (hint) => {
+        // Clipboard read failed/blocked (in-app webviews) — guide them to the box, never throw.
+        const input = this.container.querySelector('#sp-manual-tx-input');
+        const statusEl = this.container.querySelector('#sp-manual-tx-status');
+        if (input) { try { input.focus(); } catch {} }
+        if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = 'var(--sp-muted)'; statusEl.textContent = hint || 'Paste it in the box above'; }
+      };
+      if (pasteBtn) {
+        pasteBtn.addEventListener('click', async () => {
+          let text = '';
+          try {
+            // In-app webviews (Instagram/FB) block clipboard reads — must try/catch + fall back.
+            if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+              text = (await navigator.clipboard.readText()) || '';
+            }
+          } catch { text = ''; }
+          text = (text || '').trim();
+          if (!text) { focusManual('Paste it in the box above'); return; }
           const input = this.container.querySelector('#sp-manual-tx-input');
+          if (input) input.value = text;
+          this._routePastedProof(text);
+        });
+      }
+      if (txInput) {
+        // AUTO-route on manual paste / input so no separate button press is needed.
+        txInput.addEventListener('paste', (e) => {
+          const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+          const v = pasted.trim();
+          if (v) { setTimeout(() => { txInput.value = v; this._routePastedProof(v); }, 0); }
+        });
+        // Enter also routes (keyboard users / typed-then-Enter).
+        txInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); const v = txInput.value?.trim(); if (v) this._routePastedProof(v); }
+        });
+      }
+    }
+
+    // Classify a pasted proof string + route it through the EXISTING payment endpoints:
+    //   explorer link / tx hash -> POST /tx     (direct verify — instant, exact)
+    //   wallet address          -> POST /contact (scanner FROM-matches the payment)
+    // Shared by the Paste button + manual input auto-paste. Never throws.
+    async _routePastedProof(value) {
+          value = (value || '').trim();
           const statusEl = this.container.querySelector('#sp-manual-tx-status');
-          const value = input?.value?.trim();
+          const submitBtn = this.container.querySelector('#sp-manual-tx-btn');
           if (!value) return;
           // Classify what they pasted so we route to the SAFEST detection method:
           //   explorer link / tx hash -> direct /tx verify (instant, exact)
@@ -2358,7 +2393,7 @@
             kind = (value.length >= 60) ? 'txhash' : 'wallet';
           }
           if (!kind) {
-            if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = "! That doesn't look like a transaction hash, link, or wallet address"; statusEl.style.color = '#18181B'; }
+            if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = "! That doesn't look like a transaction link, ID, or wallet address"; statusEl.style.color = '#18181B'; }
             return;
           }
           // Gated on variant — only count as fast-conversion when this IS the fast arm.
@@ -2366,9 +2401,9 @@
             this._track('FAST_CONFIRMATION_PROVIDED', { type: kind === 'wallet' ? 'wallet' : 'tx_hash', variant: this._variant });
           }
 
-              submitBtn.disabled = true;
-              submitBtn.textContent = '...';
-              if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = kind === 'wallet' ? 'Saving your wallet…' : 'Verifying on-chain…'; statusEl.style.color = 'var(--sp-muted)'; }
+              submitBtn && (submitBtn.disabled = true);
+              submitBtn && (submitBtn.textContent = '...');
+              if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = kind === 'wallet' ? 'Saving your wallet…' : 'Confirming your payment…'; statusEl.style.color = 'var(--sp-muted)'; }
 
               try {
                 // Wallet address -> register it for FROM-matching; the scanner confirms when the
@@ -2381,17 +2416,16 @@
                   if (r.ok) {
                     this.customerWallet = value;
                     if (statusEl) { statusEl.textContent = "✓ Got your wallet — we'll confirm the moment your payment lands."; statusEl.style.color = '#18181B'; }
-                    submitBtn.textContent = 'Saved';
+                    if (submitBtn) submitBtn.textContent = '✓ Saved';
                   } else {
-                    if (statusEl) { statusEl.textContent = '! Could not save your wallet — try again or paste the transaction.'; statusEl.style.color = '#18181B'; }
-                    submitBtn.disabled = false; submitBtn.textContent = 'Submit';
+                    if (statusEl) { statusEl.textContent = '! Could not save your wallet — try again or paste your confirmation.'; statusEl.style.color = '#18181B'; }
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '📋 Paste'; }
                   }
                   return;
                 }
 
                 // Validate explorer URL matches selected chain
                 if (isLink) {
-                  const chainType = this.selectedChain?.config?.type;
                   const chain = this.selectedChain?.chain;
                   const validExplorers = {
                     BASE_MAINNET: 'basescan.org', ETHEREUM_MAINNET: 'etherscan.io',
@@ -2402,8 +2436,7 @@
                   const expected = validExplorers[chain];
                   if (expected && !value.includes(expected)) {
                     if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = `! Wrong explorer — use ${expected} for ${this.selectedChain?.config?.chainName}`; statusEl.style.color = '#18181B'; }
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Submit';
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '📋 Paste'; }
                     return;
                   }
                 }
@@ -2429,28 +2462,24 @@
                 } else if (data.success) {
                   // Queued for review
                   if (statusEl) { statusEl.textContent = '✓ Submitted for review. You\'ll be notified once confirmed.'; statusEl.style.color = '#18181B'; }
-                  submitBtn.textContent = 'Submitted';
+                  if (submitBtn) submitBtn.textContent = '✓ Submitted';
                 } else {
                   // Never render server error bodies verbatim — prior incident: the widget
                   // displayed a full Cloudflare challenge HTML page to a customer. Strip
                   // HTML-ish content and cap to a short message, fall back to a generic
                   // reassurance if the server blob isn't human-friendly.
-                  let msg = typeof data.error === 'string' ? data.error : 'Verification failed';
+                  let msg = typeof data.error === 'string' ? data.error : 'Could not confirm yet';
                   if (/<html|<!DOCTYPE|requestUrl|responseBody/i.test(msg) || msg.length > 240) {
-                    msg = 'We couldn\u2019t verify right now. Our scanner will keep watching — if the TX is on-chain, your order will confirm automatically within a minute.';
+                    msg = 'We couldn\u2019t confirm right now. Our scanner will keep watching — if your payment is on-chain, your order will confirm automatically within a minute.';
                   }
                   if (statusEl) { statusEl.textContent = '! ' + msg; statusEl.style.color = '#18181B'; }
-                  submitBtn.disabled = false;
-                  submitBtn.textContent = 'Submit';
+                  if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '📋 Paste'; }
                 }
               } catch (err) {
                 if (statusEl) { statusEl.textContent = '! Network error — please try again'; statusEl.style.color = '#18181B'; }
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit';
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '📋 Paste'; }
               }
-            });
-          }
-        }
+    }
 
     selectChain(chainKey) {
       const prevType = this.selectedChain?.config?.type;

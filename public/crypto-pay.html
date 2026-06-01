@@ -802,6 +802,7 @@
                             class="w-full px-6 py-3 font-bold text-black border-4 border-black btn-brutal mc-accent-bg">
                         I've sent the payment
                     </button>
+                    <p class="text-center" style="font-size:10px;color:#71717A;margin-top:10px;line-height:1.4;">🔒 No signup — what you paste is only used to confirm your payment, never sold or shared.</p>
                     <button onclick="cpManualBack()" class="w-full text-xs text-gray-500 underline mt-2">
                         ← Change wallet, network, or token
                     </button>
@@ -845,15 +846,19 @@
                         <p id="cpPollTimer" class="text-xs text-gray-500">This can take up to a minute</p>
                     </div>
 
-                    <!-- Manual TX paste (shown after 45s) -->
+                    <!-- Manual paste (shown after 45s) -->
                     <div id="cpManualTxBox" class="hidden bg-gray-50 border-2 border-black p-3 mt-4">
-                        <p class="text-xs font-bold text-black mb-2">Still waiting? Paste your transaction ID:</p>
+                        <p class="text-xs font-bold text-black mb-2">Already sent it? Paste your confirmation —</p>
                         <div class="flex gap-2">
-                            <input id="cpManualTxInput" type="text" placeholder="0x... transaction hash"
+                            <input id="cpManualTxInput" type="text" placeholder="Paste your transaction link / ID / wallet address"
+                                   onpaste="setTimeout(function(){cpVerifyManualTx();},0)"
+                                   onkeydown="if(event.key==='Enter'){event.preventDefault();cpVerifyManualTx();}"
                                    class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
-                            <button onclick="cpVerifyManualTx()" class="px-3 py-2 font-bold text-xs text-white" style="background: #000;">VERIFY</button>
+                            <button onclick="cpPasteManualTx()" class="px-3 py-2 font-bold text-xs text-white" style="background: #000;">📋 Paste</button>
                         </div>
+                        <p class="text-[10px] text-gray-500 mt-1">a transaction link, ID, or your wallet address — we'll find your payment.</p>
                         <p id="cpManualTxStatus" class="text-xs text-gray-500 mt-2 hidden"></p>
+                        <p class="text-[10px] text-gray-500 mt-2 leading-snug">🔒 No signup — what you paste is only used to confirm your payment, never sold or shared.</p>
                     </div>
 
                     <button onclick="cpManualBack()" class="w-full text-xs text-gray-500 underline mt-4">
@@ -1219,6 +1224,7 @@
             else if (key === 'show-address') cpWizShowAddressAgain();
             else if (key === 'skip') cpWizSkip();
             else if (key === 'verify-tx') cpWizVerifyManualTx();
+            else if (key === 'paste-proof') cpWizPasteProof();
             else if (key === 'fast-save-wallet') cpWizFastSaveContact('wallet');
             else if (key === 'fast-save-email')  cpWizFastSaveContact('email');
             // Edit-payment-options panel (fast send screen). STAGE the change into cpWizState but
@@ -1266,6 +1272,23 @@
                     if (ok) cpWizTrack('ADDRESS_COPIED', { chain: cpWizState.chain });
                 });
             }
+        });
+
+        // AUTO-route the manual proof box on paste / Enter so no separate button press is needed.
+        // Delegated on the wizard container (the box is re-rendered per step).
+        document.getElementById('cpWizard').addEventListener('paste', (e) => {
+            const input = e.target.closest('#cpWizManualTxInput');
+            if (!input) return;
+            const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+            const v = pasted.trim();
+            if (v) setTimeout(() => { input.value = v; cpWizVerifyManualTx(v); }, 0);
+        });
+        document.getElementById('cpWizard').addEventListener('keydown', (e) => {
+            const input = e.target.closest('#cpWizManualTxInput');
+            if (!input || e.key !== 'Enter') return;
+            e.preventDefault();
+            const v = input.value?.trim();
+            if (v) cpWizVerifyManualTx(v);
         });
 
         function cpWizStepCount() {
@@ -1430,7 +1453,7 @@
             if (step === 'manual-send') lines.push('Send the exact amount to the shown address. Then click "I\'ve sent the payment" — we\'ll detect it within seconds.');
             if (step === 'connect-pay')  lines.push('Connect your wallet and confirm the transaction. We\'ll handle the rest.');
             if (step === 'scanning') lines.push('We\'re watching the blockchain. Most payments confirm in 10–60 seconds.');
-            if (step === 'paste-confirm') lines.push('You said you sent the payment. Paste your transaction ID for instant confirmation, or give us your wallet/email so we can match + reach you.');
+            if (step === 'paste-confirm') lines.push('You said you sent the payment. Paste your transaction link, ID, or wallet address for instant confirmation, or give us your wallet/email so we can match + reach you.');
             lines.push(' ');
             lines.push('Journey: ' + journey.slice(0, total).join(' → '));
             return lines.join('\n');
@@ -1598,12 +1621,14 @@
                             <p id="cpWizScanTimer" class="text-xs text-gray-500">This can take up to a minute</p>
                         </div>
                         <div id="cpWizManualTx" class="hidden bg-gray-50 border-2 border-black p-3 mt-4">
-                            <p class="text-xs font-bold text-black mb-2">Still waiting? Paste your transaction, link, or wallet address:</p>
+                            <p class="text-xs font-bold text-black mb-2">Already sent it? Paste your confirmation —</p>
                             <div class="flex gap-2">
-                                <input id="cpWizManualTxInput" type="text" placeholder="Paste your transaction, link, or wallet address" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
-                                <button data-wiz="verify-tx" style="padding:8px 12px;font-weight:700;font-size:12px;color:#fff;background:#000;border:none;cursor:pointer;">VERIFY</button>
+                                <input id="cpWizManualTxInput" type="text" placeholder="Paste your transaction link / ID / wallet address" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
+                                <button data-wiz="paste-proof" style="padding:8px 12px;font-weight:700;font-size:12px;color:#fff;background:#000;border:none;cursor:pointer;">📋 Paste</button>
                             </div>
+                            <p class="text-[10px] text-gray-500 mt-1">a transaction link, ID, or your wallet address — we'll find your payment.</p>
                             <p id="cpWizManualTxStatus" class="text-xs text-gray-500 mt-1 hidden"></p>
+                            <p class="text-[10px] text-gray-500 mt-2 leading-snug">🔒 No signup — what you paste is only used to confirm your payment, never sold or shared.</p>
                         </div>
                         <div class="text-center mt-4">
                             <button data-wiz="show-address" style="font-size:12px;color:#6b7280;background:none;border:none;text-decoration:underline;cursor:pointer;">Didn't send yet? Show the address again</button>
@@ -1618,19 +1643,21 @@
                         <div id="cpWizExpiryWarning" style="display:none;"></div>
                         <div class="w-full h-1 mb-3 overflow-hidden" style="background:#F4F4F5;"><div id="cpWizScanBar" class="h-full transition-all duration-1000" style="width:0%;background:#18181B;"></div></div>
                         <p id="cpWizScanStatus" class="text-sm font-bold text-black mb-1 text-center">Scanning the blockchain for your payment...</p>
-                        <p id="cpWizScanTimer" class="text-xs text-gray-500 mb-4 text-center">Paste your TX below to confirm instantly</p>
+                        <p id="cpWizScanTimer" class="text-xs text-gray-500 mb-4 text-center">Paste your confirmation below to confirm instantly</p>
 
                         <div class="bg-gray-50 border-2 border-black p-3 mb-3">
-                            <p class="text-xs font-bold text-black mb-2">Paste your transaction, link, or wallet address</p>
+                            <p class="text-xs font-bold text-black mb-2">Already sent it? Paste your confirmation —</p>
                             <div class="flex gap-2">
-                                <input id="cpWizManualTxInput" type="text" placeholder="Paste your transaction, link, or wallet address" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
-                                <button data-wiz="verify-tx" style="padding:8px 12px;font-weight:700;font-size:12px;color:#fff;background:#000;border:none;cursor:pointer;">VERIFY</button>
+                                <input id="cpWizManualTxInput" type="text" placeholder="Paste your transaction link / ID / wallet address" class="flex-1 px-3 py-2 border-2 border-black text-xs font-mono outline-none" />
+                                <button data-wiz="paste-proof" style="padding:8px 12px;font-weight:700;font-size:12px;color:#fff;background:#000;border:none;cursor:pointer;">📋 Paste</button>
                             </div>
+                            <p class="text-[10px] text-gray-500 mt-1">a transaction link, ID, or your wallet address — we'll find your payment.</p>
                             <p id="cpWizManualTxStatus" class="text-xs text-gray-500 mt-1 hidden"></p>
+                            <p class="text-[10px] text-gray-500 mt-2 leading-snug">🔒 No signup — what you paste is only used to confirm your payment, never sold or shared.</p>
                         </div>
 
                         <details id="cpWizFastFallback" style="border:2px solid #e5e7eb;padding:10px 12px;font-size:12px;">
-                            <summary style="cursor:pointer;font-weight:600;color:#374151;">Can't find your TX? Help us find it ▾</summary>
+                            <summary style="cursor:pointer;font-weight:600;color:#374151;">Can't find your confirmation? Help us find it ▾</summary>
                             <div style="margin-top:10px;">
                                 <p style="color:#6b7280;margin-bottom:6px;font-size:11px;">Give us EITHER your sender wallet (for automatic matching) OR your email (so we can reach you):</p>
                                 <div style="margin-bottom:8px;">
@@ -2070,7 +2097,8 @@
                 for (const mc of chains) {
                     const sel = mc.chain === cpWizState.chain;
                     const name = CHAIN_CONFIG[mc.chain]?.chainName || mc.chain;
-                    chainRows += `<button type="button" data-wiz="edit-chain" data-val="${mc.chain}" style="display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;border:1px solid ${border};background:${sel ? surface : '#FFFFFF'};color:${ink};font-weight:${sel ? '700' : '500'};font-size:13px;cursor:pointer;">${sel ? '✓ ' : ''}${name}</button>`;
+                    const icon = getChainIcon(mc.chain);
+                    chainRows += `<button type="button" data-wiz="edit-chain" data-val="${mc.chain}" style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;border:1px solid ${border};background:${sel ? surface : '#FFFFFF'};color:${ink};font-weight:${sel ? '700' : '500'};font-size:13px;cursor:pointer;">${sel ? '<span>✓</span>' : ''}${icon ? `<img src="${icon}" style="width:18px;height:18px;border-radius:50%;flex-shrink:0;" onerror="this.style.display='none'">` : ''}<span>${name}</span></button>`;
                 }
             }
             // Coin rows — supportedTokens order, no fee steering.
@@ -2185,7 +2213,8 @@
                 <button id="cpWizSentBtn" class="w-full py-4 px-4 font-bold text-base border-4 transition" style="border-color:#18181B;background:#18181B;color:#fff;">
                     I've sent the payment →
                 </button>
-                ${info.payUri ? `<a href="${info.payUri}" class="mobile-wallet-link w-full text-center" style="display:block;background:transparent;color:#71717A;border:none;padding:6px;margin-top:8px;font-weight:600;font-size:11px;text-transform:none;text-decoration:underline;">Open in your wallet app ↗</a>` : ''}`;
+                ${info.payUri ? `<a href="${info.payUri}" class="mobile-wallet-link w-full text-center" style="display:block;background:transparent;color:#71717A;border:none;padding:6px;margin-top:8px;font-weight:600;font-size:11px;text-transform:none;text-decoration:underline;">Open in your wallet app ↗</a>` : ''}
+                <p class="text-center" style="font-size:10px;color:#71717A;margin-top:10px;line-height:1.4;">🔒 No signup — what you paste is only used to confirm your payment, never sold or shared.</p>`;
 
             const countdownEl = document.getElementById('cpWizManualCountdown');
             const warnEl = document.getElementById('cpWizManualExpWarning');
@@ -2250,8 +2279,8 @@
             const statuses = [
                 { at: 0, text: 'Scanning the blockchain...' },
                 { at: 5000, text: 'Checking the public ledger...' },
-                { at: 10000, text: 'Verifying your transaction...' },
-                { at: 15000, text: 'Still looking — paste your TX below' },
+                { at: 10000, text: 'Confirming your payment...' },
+                { at: 15000, text: 'Still looking — paste your confirmation below' },
             ];
             let statusIdx = 0;
 
@@ -2268,10 +2297,10 @@
 
                 if (elapsed > 15000) {
                     document.getElementById('cpWizManualTx')?.classList.remove('hidden');
-                    if (timerEl) timerEl.textContent = 'Paste your TX below to speed this up';
+                    if (timerEl) timerEl.textContent = 'Paste your confirmation below to speed this up';
                 } else {
                     const sl = Math.max(1, Math.ceil((15000 - elapsed) / 1000));
-                    if (timerEl) timerEl.textContent = `Manual TX paste in ${sl}s`;
+                    if (timerEl) timerEl.textContent = `Manual paste in ${sl}s`;
                 }
             }, 1000);
 
@@ -2349,10 +2378,32 @@
         //   tx hash / explorer link -> POST /tx          (direct verify — instant, exact)
         //   wallet address          -> POST /contact     (scanner FROM-matches the payment)
         // Mirrors the widget's _revealManualTxPaste classification + routing.
-        async function cpWizVerifyManualTx() {
+        // 📋 Paste button: read the clipboard (try/catch — in-app webviews block it), drop the
+        // text into the manual box, then route it. On failure/empty, focus the box + show a hint;
+        // NEVER throw.
+        async function cpWizPasteProof() {
             const input = document.getElementById('cpWizManualTxInput');
             const status = document.getElementById('cpWizManualTxStatus');
-            const raw = input?.value?.trim();
+            let text = '';
+            try {
+                if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+                    text = (await navigator.clipboard.readText()) || '';
+                }
+            } catch { text = ''; }
+            text = (text || '').trim();
+            if (!text) {
+                if (input) { try { input.focus(); } catch {} }
+                if (status) { status.classList.remove('hidden'); status.style.color = '#71717A'; status.textContent = 'Paste it in the box above'; }
+                return;
+            }
+            if (input) input.value = text;
+            cpWizVerifyManualTx(text);
+        }
+
+        async function cpWizVerifyManualTx(passedValue) {
+            const input = document.getElementById('cpWizManualTxInput');
+            const status = document.getElementById('cpWizManualTxStatus');
+            const raw = (typeof passedValue === 'string' ? passedValue : input?.value || '').trim();
             if (!raw || !window.currentOrderId) return;
             const isLink = raw.startsWith('http');
             const ct = CHAIN_CONFIG[cpWizState.chain]?.type;
@@ -2372,7 +2423,7 @@
                 kind = (raw.length >= 60) ? 'txhash' : 'wallet';
             }
             if (!kind) {
-                if (status) { status.classList.remove('hidden'); status.textContent = "! That doesn't look like a transaction, link, or wallet address"; status.style.color = '#18181B'; }
+                if (status) { status.classList.remove('hidden'); status.textContent = "! That doesn't look like a transaction link, ID, or wallet address"; status.style.color = '#18181B'; }
                 return;
             }
             // Fast-variant telemetry: only fire when this session IS fast (was firing for all
@@ -2399,7 +2450,7 @@
                     return;
                 }
                 // tx hash / explorer link -> direct /tx verify (instant, exact).
-                if (status) status.textContent = 'Verifying...';
+                if (status) status.textContent = 'Confirming your payment...';
                 const val = cpExtractTxId(raw);
                 const res = await fetch('/api/embed/order/' + window.currentOrderId + '/tx', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -5735,14 +5786,14 @@
         const CP_STATUS_TIMELINE = [
             { at: 0, text: 'Scanning the blockchain...' },
             { at: 5000, text: 'Checking the public ledger...' },
-            { at: 10000, text: 'Verifying your transaction...' },
-            { at: 15000, text: "Still looking — paste your TX below to help us find it" },
+            { at: 10000, text: 'Confirming your payment...' },
+            { at: 15000, text: "Still looking — paste your confirmation below to help us find it" },
         ];
 
-        // Chain-specific manual TX validation
+        // Chain-specific manual proof validation
         function cpValidateTxHash(input, chainKey) {
             const trimmed = input.trim();
-            if (!trimmed) return { ok: false, error: 'Paste your transaction hash or explorer link' };
+            if (!trimmed) return { ok: false, error: 'Paste your transaction link or ID' };
 
             // If they pasted an explorer URL, extract the hash AND validate it's the right chain
             const urlMatch = trimmed.match(/(?:\/tx\/|\/transaction\/)([a-zA-Z0-9]+)/);
@@ -5770,15 +5821,15 @@
             const config = CHAIN_CONFIG[chainKey];
             if (config?.type === 'solana') {
                 if (!/^[1-9A-HJ-NP-Za-km-z]{60,90}$/.test(hash)) {
-                    return { ok: false, error: 'Solana transaction signatures are ~88 base58 characters' };
+                    return { ok: false, error: "That doesn't look right for Solana — paste the link or ID from solscan.io" };
                 }
             } else if (config?.type === 'tron') {
                 if (!/^[a-fA-F0-9]{64}$/.test(hash)) {
-                    return { ok: false, error: 'TRON transaction hash should be 64 hex chars' };
+                    return { ok: false, error: "That doesn't look right for TRON — paste the link or ID from tronscan.org" };
                 }
             } else {
                 if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) {
-                    return { ok: false, error: 'EVM transaction hash should be 0x followed by 64 hex chars' };
+                    return { ok: false, error: "That doesn't look right — paste a link starting with 0x or an explorer link" };
                 }
             }
             return { ok: true, hash };
@@ -5797,9 +5848,7 @@
             const config = chainKey ? CHAIN_CONFIG[chainKey] : null;
             const txInput = document.getElementById('cpManualTxInput');
             if (txInput) {
-                txInput.placeholder = config?.type === 'solana' ? 'TX signature or solscan.io link'
-                    : config?.type === 'tron' ? 'TX hash or tronscan.org link'
-                    : '0x... or explorer link';
+                txInput.placeholder = 'Paste your transaction link / ID / wallet address';
             }
 
             window._cpProgressLocked = false;
@@ -5822,14 +5871,14 @@
 
                 if (elapsed > 15000) {
                     document.getElementById('cpManualTxBox').classList.remove('hidden');
-                    if (timerEl) timerEl.textContent = 'Pasting your TX below speeds this up';
+                    if (timerEl) timerEl.textContent = 'Pasting your confirmation below speeds this up';
                 } else {
                     const secsLeft = Math.max(1, Math.ceil((15000 - elapsed) / 1000));
-                    if (timerEl) timerEl.textContent = `Manual TX paste unlocks in ${secsLeft}s`;
+                    if (timerEl) timerEl.textContent = `Manual paste unlocks in ${secsLeft}s`;
                 }
                 if (elapsed > TIMEOUT_MS) {
                     if (statusEl) statusEl.textContent = 'Still scanning...';
-                    if (timerEl) timerEl.textContent = 'Paste your transaction ID below to verify manually';
+                    if (timerEl) timerEl.textContent = 'Paste your confirmation below to find your payment';
                 }
             }, 1000);
 
@@ -5904,6 +5953,27 @@
             }, 4000);
         }
 
+        // 📋 Paste button (classic surface): read clipboard (try/catch — in-app webviews block it),
+        // fill the box, then verify. On failure/empty: focus the box + show a hint. Never throws.
+        async function cpPasteManualTx() {
+            const input = document.getElementById('cpManualTxInput');
+            const status = document.getElementById('cpManualTxStatus');
+            let text = '';
+            try {
+                if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+                    text = (await navigator.clipboard.readText()) || '';
+                }
+            } catch { text = ''; }
+            text = (text || '').trim();
+            if (!text) {
+                if (input) { try { input.focus(); } catch {} }
+                if (status) { status.classList.remove('hidden'); status.style.color = '#64748b'; status.textContent = 'Paste it in the box above'; }
+                return;
+            }
+            if (input) input.value = text;
+            cpVerifyManualTx();
+        }
+
         async function cpVerifyManualTx() {
             const raw = document.getElementById('cpManualTxInput').value;
             const status = document.getElementById('cpManualTxStatus');
@@ -5917,7 +5987,7 @@
                 return;
             }
 
-            status.textContent = 'Verifying on-chain...';
+            status.textContent = 'Confirming your payment...';
             status.style.color = '#64748b';
             status.classList.remove('hidden');
             try {
@@ -5928,10 +5998,10 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    status.textContent = 'Verified! Confirming...';
+                    status.textContent = 'Confirmed! Finishing up...';
                     status.style.color = '#16a34a';
                 } else {
-                    status.textContent = data.error || data.message || 'Could not verify this transaction';
+                    status.textContent = data.error || data.message || 'Could not confirm your payment yet';
                     status.style.color = '#dc2626';
                 }
             } catch (err) {
