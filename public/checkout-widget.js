@@ -1661,6 +1661,16 @@
           toggleAddr.style.background = '#18181B'; toggleAddr.style.color = '#fff';
           toggleQR.style.background = 'var(--sp-card)'; toggleQR.style.color = 'var(--sp-muted)';
         });
+        // Default view: address-first on mobile (a QR you can't scan from the device you're on is
+        // dead weight — copy + "Open in Wallet" is better), QR-first on desktop (scan with a phone).
+        const isMobile = /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent || '')
+          || (window.matchMedia && window.matchMedia('(max-width: 600px)').matches);
+        if (isMobile) {
+          this.container.querySelector('#sp-send-view-qr').style.display = 'none';
+          this.container.querySelector('#sp-send-view-addr').style.display = 'block';
+          toggleAddr.style.background = '#18181B'; toggleAddr.style.color = '#fff';
+          toggleQR.style.background = 'var(--sp-card)'; toggleQR.style.color = 'var(--sp-muted)';
+        }
       }
 
       // Copy buttons (delegated). navigator.clipboard.writeText() rejects in many in-app webviews
