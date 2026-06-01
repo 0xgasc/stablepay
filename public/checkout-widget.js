@@ -638,6 +638,10 @@
           editSave.style.cssText = 'width:100%;margin-top:12px;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;';
           editSave.addEventListener('click', () => { details.open = false; });
           bodyWrap.appendChild(editSave);
+          // Telemetry: measure how often customers actually open the edit panel.
+          details.addEventListener('toggle', () => {
+            if (details.open) this._track('EDIT_PANEL_OPENED', { chain: this.selectedChain?.chain, token: this.selectedToken });
+          });
           sendPanel.parentNode.insertBefore(details, sendPanel);
         }
         // Neutral header (no step counter, no chromatic link). The edit panel replaces 'Change'.

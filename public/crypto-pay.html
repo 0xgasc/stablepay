@@ -2219,15 +2219,12 @@
                 }
             };
 
-            // Edit-panel staging gate: apply the staged change (rebuild send screen) when the
-            // <details> closes — whether via the green "Save changes" button or by collapsing the
-            // summary. Reset the dirty flag fresh on each paint. Mirrors the widget's details
-            // 'toggle' apply-on-close handler.
-            window._cpEditDirty = false;
+            // Edit-panel telemetry: measure how often customers expand "Edit payment options".
+            // (Changes apply live now — no staging/close-to-apply.)
             const editDetails = document.getElementById('cpWizEditOptions');
             if (editDetails) {
                 editDetails.addEventListener('toggle', () => {
-                    if (!editDetails.open) cpWizApplyStagedEdit(); // closing applies the staged edit
+                    if (editDetails.open) cpWizTrack('EDIT_PANEL_OPENED', { chain: cpWizState.chain, token: cpWizState.token });
                 });
             }
         }

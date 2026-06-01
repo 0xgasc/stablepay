@@ -1401,6 +1401,8 @@ const ALLOWED_WIDGET_EVENTS = new Set([
   'CANCEL_CLICKED',           // customer clicked Cancel Payment
   'BACK_CLICKED',             // customer clicked Back to merchant
   'PAGE_HIDDEN',              // browser tab became hidden (proxy for distraction/abandonment)
+  'MOBILE_WALLET_LINK_CLICKED', // customer tapped the "Open in wallet" deep-link (was fired but not allowlisted → dropped)
+  'EDIT_PANEL_OPENED',        // customer expanded "Edit payment options" (measures edit-panel usage)
 ]);
 
 router.post('/event', async (req, res) => {
