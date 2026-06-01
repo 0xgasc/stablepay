@@ -196,20 +196,27 @@ async function ensureGas(address: string, chain: string): Promise<void> {
   logger.info('Gas funded for native receive wallet', { address, chain, amount: fundAmt.toFixed(6) });
 }
 
-async function ensureSolGas(receivePubkey: string): Promise<void> {
+async function ensureSolGas(receivePubkey: string, minLamports?: number): Promise<void> {
   const { PublicKey, SystemProgram, Transaction } = await import('@solana/web3.js');
   const conn    = new Connection(SOL_RPC, 'confirmed');
   const target  = new PublicKey(receivePubkey);
   const balance = await conn.getBalance(target);
-  if (balance >= SOL_GAS_THRESHOLD_LAMPORTS) return;
+  // Default: keep a small gas floor. When minLamports is passed (swap amount + wSOL/ATA rent + fee
+  // overhead), ensure the wallet holds at least that much — enough to fund the swap's wrap + ATA
+  // rents + fees even when (nearly) the whole deposit is being swapped. Without this, a
+  // 100%-of-deposit swap fails with SPL Token error 0x1 (insufficient funds for rent/fees).
+  const needed = minLamports ?? SOL_GAS_THRESHOLD_LAMPORTS;
+  if (balance >= needed) return;
 
+  const shortfall = needed - balance;
+  const fund = shortfall + SOL_GAS_FUND_LAMPORTS; // cover the shortfall plus a buffer
   const agent = await getSolAgentKeypair();
   const tx    = new Transaction().add(SystemProgram.transfer({
-    fromPubkey: agent.publicKey, toPubkey: target, lamports: SOL_GAS_FUND_LAMPORTS,
+    fromPubkey: agent.publicKey, toPubkey: target, lamports: fund,
   }));
   const sig = await conn.sendTransaction(tx, [agent]);
   await conn.confirmTransaction(sig, 'confirmed');
-  logger.info('SOL gas funded', { address: receivePubkey, lamports: SOL_GAS_FUND_LAMPORTS });
+  logger.info('SOL gas funded', { address: receivePubkey, fundedLamports: fund, neededLamports: needed });
 }
 
 async function sweepSolDust(receiveKp: any): Promise<void> {
@@ -433,9 +440,13 @@ export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: 
 
   try {
     if (isSolana) {
-      await ensureSolGas(receiveWallet.address);
       const lamports = Math.round(swapNativeTarget * 1e9);
       if (lamports <= 0) throw new Error('SOL swap amount is zero');
+      // Fund the swap amount PLUS wSOL wrap + ATA rents + fees on top, so a swap of (nearly) the
+      // whole deposit doesn't fail with SPL Token error 0x1. Overhead is sponsored by the SOL
+      // agent and largely recovered by the post-swap dust sweep.
+      const SOL_SWAP_OVERHEAD = 12_000_000; // ~0.012 SOL: wSOL ATA + output ATA rent + fees + buffer
+      await ensureSolGas(receiveWallet.address, lamports + SOL_SWAP_OVERHEAD);
       ({ txHash: swapTxHash, stableReceived } = await executeJupiterSwap(lamports, targetStable, privKey));
       await ensureSolGas(receiveWallet.address);
       forwardTxHash = await forwardSolToMerchant(targetStable, privKey, merchantWallet.address);
