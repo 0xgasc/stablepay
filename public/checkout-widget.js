@@ -1993,8 +1993,13 @@
 
       // ── Stablecoin path: store pending payment, create order on "I've sent it" ──
       let amount = parseFloat(this.options.amount || 0);
-      if (this.selectedToken === 'EURC' && this.eurcRate) {
-        amount = parseFloat((amount / this.eurcRate).toFixed(2));
+      if (this.selectedToken === 'EURC') {
+        // AWAIT the EUR rate. fetchEURCRate() is async and was frequently unresolved here (race),
+        // so `&& this.eurcRate` silently skipped conversion and charged EURC as raw USD (~8% overpay
+        // + an amount the scanner could never match). Load it if missing (it sets a 1.15 fallback
+        // on failure), then always convert.
+        if (!this.eurcRate) { try { await this.fetchEURCRate(); } catch (e) { /* sets 1.15 fallback */ } }
+        if (this.eurcRate) amount = parseFloat((amount / this.eurcRate).toFixed(2));
       }
 
       this._pendingPayment = {
