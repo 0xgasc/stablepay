@@ -317,7 +317,7 @@
       // to the send screen (_wizComplete → showManualPaymentDetails('send')).
       if (this._variant === 'fast') {
         this._wizardState.payType = 'stable';
-        this._selectWizChain((this.merchantChains[0] || {}).chain);
+        this._selectWizChain(this._defaultChainKey());
         this._wizardState.method = 'manual';
         return this._wizComplete();
       }
@@ -326,7 +326,7 @@
       if (anyNative) { this._wizGoStep('1'); return; }
       this._wizardState.payType = 'stable';
       if (multiChain) { this._wizGoStep('network'); return; }
-      this._selectWizChain((this.merchantChains[0] || {}).chain);
+      this._selectWizChain(this._defaultChainKey());
       this._wizGoStep('2');
     }
 
@@ -337,6 +337,13 @@
         if (type === 'solana') return !!(window.phantom?.solana || window.solflare?.isSolflare || window.solana);
         return !!(window.ethereum || window.phantom?.ethereum || (typeof this.detectEVMProviders === 'function' && this.detectEVMProviders().length));
       } catch { return false; }
+    }
+
+    // Default rail = prefer Solana (fast, cheap, gas funded, proven) when the merchant supports it,
+    // else the merchant's first-configured chain. Customers can still switch via the edit panel.
+    _defaultChainKey() {
+      const chains = this.merchantChains || [];
+      return ((chains.find(c => c.chain === 'SOLANA_MAINNET')) || chains[0] || {}).chain;
     }
 
     // Lock the wizard's chosen chain + a default token onto instance state.
@@ -501,7 +508,7 @@
       this._track('WIZARD_ANSWER', { key, value, step: String(this._wizardState.step) });
       if (key === 'payType') {
         if ((this.merchantChains || []).length > 1) return this._wizGoStep('network');
-        this._selectWizChain((this.merchantChains[0] || {}).chain);
+        this._selectWizChain(this._defaultChainKey());
         return this._wizGoStep('2');
       }
       if (key === 'chain') { this._selectWizChain(value); return this._wizGoStep('2'); }

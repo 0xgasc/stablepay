@@ -29,6 +29,7 @@ const stableDecimals = (chain: string) => chain === 'BNB_MAINNET' ? 18 : 6;
 const SOL_STABLES: Record<string, string> = {
   USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
   USDT: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+  EURC: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr', // Circle EURC on Solana — was missing, so a native SOL→EURC swap target fell back
 };
 
 const ERC20_ABI = [

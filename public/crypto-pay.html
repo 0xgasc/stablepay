@@ -1344,13 +1344,16 @@
             }
             window._cpFastStarted = true;
             try {
+                // Default rail = prefer Solana (fast/cheap/gas-funded/proven) when the merchant
+                // supports it, else the first-configured chain. Customer can switch via edit panel.
+                const pickDefault = (cs) => (cs.find(c => c.chain === 'SOLANA_MAINNET') || cs[0]);
                 if (cpWizState.payType !== 'native') cpWizState.payType = 'stable';
                 let chains = cpWizGetChains();
-                cpWizState.chain = chains[0].chain;
+                cpWizState.chain = pickDefault(chains).chain;
                 if (!cpWizGetTokens().length && cpWizState.payType !== 'native') {
                     cpWizState.payType = 'native';
                     chains = cpWizGetChains();
-                    if (chains.length) cpWizState.chain = chains[0].chain;
+                    if (chains.length) cpWizState.chain = pickDefault(chains).chain;
                 }
                 cpWizState.token = cpWizGetTokens()[0] || null;
                 cpWizState.method = 'manual';
