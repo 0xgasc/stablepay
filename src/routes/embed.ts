@@ -54,10 +54,12 @@ const checkoutSchema = z.object({
   amount: z.number().positive(),
   chain: z.string().min(1).optional(),  // Optional: omit to let customer pick from merchant's active chains
   token: z.enum(['USDC', 'USDT', 'EURC', 'ETH', 'SOL', 'BNB', 'MATIC']).default('USDC'), // ARB removed (B3): Arbitrum native is ETH
-  customerEmail: z.string().email().optional().or(z.literal('')),
-  customerName: z.string().optional(),
-  customerWallet: z.string().optional(),  // Customer's wallet for precise FROM matching
-  paymentMethod: z.enum(['WALLET_CONNECT', 'MANUAL_SEND']).optional(),
+  // .nullable() throughout: the widget sends `field || null` for unset values, and z.optional()
+  // alone REJECTS null (only allows absent/undefined) — that 400'd every wallet-less manual checkout.
+  customerEmail: z.string().email().optional().or(z.literal('')).nullable(),
+  customerName: z.string().optional().nullable(),
+  customerWallet: z.string().optional().nullable(),  // Customer's wallet for precise FROM matching
+  paymentMethod: z.enum(['WALLET_CONNECT', 'MANUAL_SEND']).optional().nullable(),
   source: z.enum(['EMBED_WIDGET', 'CHECKOUT_LINK', 'DASHBOARD', 'API', 'INVOICE']).optional(),
   productName: z.string().optional(),
   externalId: z.string().optional(),   // Merchant's own order/reference ID

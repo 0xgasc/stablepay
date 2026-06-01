@@ -187,6 +187,10 @@
 
       // 50/50 A/B: guided wizard vs classic. ?sp_variant=guided|control override for QA.
       this._variant = this._assignVariant();
+      // The 'fast' redesign is a fixed clean gray/white surface. Never inherit a merchant's dark
+      // theme (e.g. unlockriver sets theme:'dark'), which rendered the body navy while the header
+      // was forced white — the ugly half-and-half look. Force light for fast so the whole card is clean.
+      if (this._variant === 'fast') this.options.theme = 'light';
       this._wizardState = { payType: null, method: null, step: 1, done: false };
 
       this.init();
@@ -1877,7 +1881,7 @@
               token: nativeToken,
               customerEmail: this.options.customerEmail,
               productName: this.options.productName,
-              customerWallet: this.connectedWallet || null,
+              customerWallet: this.connectedWallet || undefined,
               paymentMethod: 'MANUAL_SEND',
               source: 'EMBED_WIDGET',
             })
@@ -1885,7 +1889,11 @@
           const data = await res.json();
           if (!data.success) {
             if (step1 && prevStep1Html) step1.innerHTML = prevStep1Html;
-            this.showError(data.error || 'Failed to create payment');
+            // Surface the real reason — server returns {error, details:[...]} for Zod 400s; show the
+            // first detail so failures aren't an opaque "Validation error".
+            const detail = Array.isArray(data.details) && data.details[0]
+              ? ': ' + (data.details[0].message || (data.details[0].path || []).join('.')) : '';
+            this.showError((data.error || 'Failed to create payment') + detail);
             return;
           }
 
