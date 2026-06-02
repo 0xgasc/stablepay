@@ -254,7 +254,7 @@ router.post('/v1/signup-test-DISABLED', async (req: any, res: any) => {
         companyName,
         contactName,
         plan: 'FREE',
-        networkMode: 'TESTNET',
+        networkMode: 'MAINNET', // full production — testnet retired
         paymentMode: 'DIRECT',
         isActive: false,
         setupCompleted: false,
@@ -321,7 +321,7 @@ router.post('/v1/signup', rateLimit({
         companyName,
         contactName,
         plan: merchantPlan,
-        networkMode: 'TESTNET',
+        networkMode: 'MAINNET', // full production — testnet retired
         paymentMode: 'DIRECT',
         isActive: false,
         setupCompleted: false,

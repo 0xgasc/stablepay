@@ -339,7 +339,7 @@ router.post('/', async (req, res) => {
           companyName,
           contactName,
           plan: plan || 'STARTER',
-          networkMode: networkMode || 'TESTNET',
+          networkMode: networkMode || 'MAINNET', // full production — testnet retired
           paymentMode: paymentMode || 'DIRECT',
           isActive: isActive || false,
           ...(loginToken && { loginToken }),
