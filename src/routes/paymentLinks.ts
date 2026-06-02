@@ -13,7 +13,7 @@ function generateSlug(): string {
 }
 
 const createLinkSchema = z.object({
-  amount: z.number().positive(),
+  amount: z.number().positive().max(1_000_000, 'Amount exceeds the maximum allowed ($1,000,000)'),
   token: z.enum(['USDC', 'USDT', 'EURC']).default('USDC'),
   chains: z.array(z.string()).optional(),
   productName: z.string().optional(),

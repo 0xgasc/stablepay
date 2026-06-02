@@ -51,7 +51,7 @@ router.use((req, res, next) => {
 const checkoutSchema = z.object({
   merchantId: z.string().min(1),
   storeId: z.string().optional(),  // Scope order to a merchant's sub-brand for webhook/branding isolation
-  amount: z.number().positive(),
+  amount: z.number().positive().max(1_000_000, 'Amount exceeds the maximum allowed ($1,000,000)'),
   chain: z.string().min(1).optional(),  // Optional: omit to let customer pick from merchant's active chains
   token: z.enum(['USDC', 'USDT', 'EURC', 'ETH', 'SOL', 'BNB', 'MATIC']).default('USDC'), // ARB removed (B3): Arbitrum native is ETH
   // .nullable() throughout: the widget sends `field || null` for unset values, and z.optional()

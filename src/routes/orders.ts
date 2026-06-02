@@ -11,7 +11,7 @@ const router = Router();
 const orderService = new OrderService();
 
 const createOrderSchema = z.object({
-  amount: z.number().positive(),
+  amount: z.number().positive().max(1_000_000, 'Amount exceeds the maximum allowed ($1,000,000)'),
   chain: z.enum([
     'BASE_MAINNET', 'BASE_SEPOLIA',
     'ETHEREUM_MAINNET', 'ETHEREUM_SEPOLIA',
