@@ -1061,6 +1061,12 @@
                   <button id="sp-send-toggle-addr" style="flex:1; padding: 6px; font-size: 9px; font-weight: 700; border: none; border-left: 2px solid var(--sp-border); background: var(--sp-card); color: var(--sp-muted); cursor: pointer; text-transform: uppercase;">Copy Address</button>
                 </div>
 
+                <!-- Asset/chain safety warning — populated with the exact coin+network in showManualPaymentDetails -->
+                <div style="display:flex;gap:6px;align-items:flex-start;border:1px solid var(--sp-border);background:var(--sp-card);padding:8px 10px;margin-bottom:12px;">
+                  <span style="font-size:12px;line-height:1.4;">⚠️</span>
+                  <span id="sp-send-warning" style="font-size:10px;line-height:1.4;color:var(--sp-text);"></span>
+                </div>
+
                 <!-- QR View (default) -->
                 <div id="sp-send-view-qr" style="text-align: center; margin-bottom: 12px;">
                   <!-- Solana Pay toggle (only visible on Solana) -->
@@ -1957,6 +1963,8 @@
           if (payAddress) payAddress.textContent = receiveAddress;
           if (payAmount) payAmount.textContent = sendAmtStr;
           if (sendAmountDisplay) sendAmountDisplay.textContent = sendAmtStr;
+          const sendWarningN = this.container.querySelector('#sp-send-warning');
+          if (sendWarningN) sendWarningN.innerHTML = `Send <strong>only ${nativeToken}</strong> on <strong>${chain.config?.chainName || 'this network'}</strong> — a different coin or network may be permanently lost.`;
 
           // Expiry countdown in fee banner
           if (expiresAt) {
@@ -2053,6 +2061,8 @@
       if (payAddress) payAddress.textContent = walletAddr;
       if (payAmount) payAmount.textContent = `${amount} ${this.selectedToken}`;
       if (sendAmountDisplay) sendAmountDisplay.textContent = `${amount} ${this.selectedToken}`;
+      const sendWarning = this.container.querySelector('#sp-send-warning');
+      if (sendWarning) sendWarning.innerHTML = `Send <strong>only ${this.selectedToken}</strong> on <strong>${this.selectedChain?.config?.chainName || 'this network'}</strong> — a different coin or network may be permanently lost.`;
 
       const canvas = this.container.querySelector('#sp-qr-canvas');
       const chainConfig = this.selectedChain?.config;

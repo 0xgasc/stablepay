@@ -2204,6 +2204,10 @@
                         <button data-wiz="copy" data-val="${info.addr}" style="padding:4px 8px;font-size:12px;font-weight:700;border:2px solid #18181B;background:#fff;color:#18181B;cursor:pointer;">COPY</button>
                     </div>
                 </div>
+                <div style="display:flex;gap:6px;align-items:flex-start;border:1px solid #D4D4D8;background:#F4F4F5;padding:8px 10px;margin-bottom:12px;">
+                    <span style="font-size:12px;line-height:1.4;">⚠️</span>
+                    <span style="font-size:10px;line-height:1.4;color:#18181B;">Send <strong>only ${cpWizState.token}</strong> on <strong>${info.chainName}</strong> — a different coin or network may be permanently lost.</span>
+                </div>
                 ${cpWizState.senderWallet ? `<p class="text-xs mb-3 text-center" style="color:#71717A;">Sending from: <code class="font-mono">${cpWizState.senderWallet.slice(0,6)}...${cpWizState.senderWallet.slice(-4)}</code></p>` : ''}
                 ${_isFast ? cpWizEditPanelHTML() : ''}
                 <div class="text-center mb-4">
