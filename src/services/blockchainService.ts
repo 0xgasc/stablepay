@@ -286,6 +286,10 @@ export class BlockchainService {
           // because FROM differs. Collect all (address+token+amount) candidates, then use FROM
           // only to disambiguate when MULTIPLE orders collide.
           const candidates: { order: typeof pendingOrders[number]; txAmount: number }[] = [];
+          // Wrong-token orders are collected here, then AT MOST ONE is flagged after the loop (the
+          // amount-matched payer). Flagging inside the loop fanned one wrong-coin transfer across
+          // every open order at the shared address — over-counting + firing duplicate webhooks.
+          const wrongTokenOrders: (typeof pendingOrders[number])[] = [];
           for (const order of pendingOrders) {
             if (order.paymentAddress.toLowerCase() !== toAddress) continue;
 
@@ -293,16 +297,7 @@ export class BlockchainService {
             // Protects against USDT-for-USDC (or EURC-for-USDC, different currency) false positives.
             const expectedContract = (CHAIN_STABLES[chain]?.[order.token] || '').toLowerCase();
             if (!expectedContract || logContract !== expectedContract) {
-              logger.warn('scanner skipped wrong-token transfer', {
-                event: 'scanner.skip.wrong_token',
-                orderId: order.id,
-                chain,
-                expectedToken: order.token,
-                expectedContract,
-                logContract,
-                txHash,
-              });
-              flagWrongToken(order.id, order.merchantId, order.token, reverseTokenLookup(chain, logContract), txHash, chain);
+              wrongTokenOrders.push(order);
               continue;
             }
 
@@ -322,6 +317,30 @@ export class BlockchainService {
             }
 
             candidates.push({ order, txAmount });
+          }
+
+          // Wrong-token: flag only the single order whose amount matches this transfer (the real
+          // payer), and only when nothing matched correctly. Prevents the fan-out and the spurious
+          // flag on unrelated orders when a *correct* payment also landed.
+          // Heuristic caveat: on a shared address with colliding amounts this advisory can attach to
+          // the wrong order — acceptable because it's metadata-only (no money moves) and strictly
+          // better than the old flag-every-open-order behavior.
+          if (candidates.length === 0 && wrongTokenOrders.length > 0) {
+            const received = reverseTokenLookup(chain, logContract);
+            if (received) {
+              const sentDecimals = getTokenDecimals(chain, received);
+              const eventAmount = Number(ethers.formatUnits(log.args.value, sentDecimals));
+              const best = wrongTokenOrders
+                .map(o => ({ o, diff: Math.abs(Number(o.amount) - eventAmount) }))
+                .sort((a, b) => a.diff - b.diff)[0];
+              if (best && best.diff <= Math.max(0.05 * eventAmount, 0.01)) {
+                logger.warn('scanner skipped wrong-token transfer', {
+                  event: 'scanner.skip.wrong_token', orderId: best.o.id, chain,
+                  expectedToken: best.o.token, receivedToken: received, txHash,
+                });
+                flagWrongToken(best.o.id, best.o.merchantId, best.o.token, received, txHash, chain);
+              }
+            }
           }
 
           // Disambiguate candidates by FROM (tiebreaker). When several pending orders collide on
@@ -819,24 +838,12 @@ export class BlockchainService {
               // a different wallet than the one the customer connected is still valid and must not
               // be dropped. FROM is used only to disambiguate colliding orders.
               const solCandidates: typeof orders = [];
+              const wrongTokenOrders: typeof orders = [];
               for (const order of orders) {
                 // Token mint must match order's expected token
                 const expectedMint = SOLANA_TOKEN_MINTS[order.token];
                 if (!expectedMint || info.mint !== expectedMint) {
-                  logger.warn('scanner skipped wrong-token SPL transfer', {
-                    event: 'scanner.skip.wrong_token',
-                    orderId: order.id,
-                    chain: 'SOLANA_MAINNET',
-                    expectedToken: order.token,
-                    expectedMint,
-                    actualMint: info.mint,
-                    txHash,
-                  });
-                  // Only flag a genuine wrong-STABLECOIN payment (e.g. USDT sent to a USDC order).
-                  // Solana addresses get spammed with junk/airdrop SPL tokens; an unrecognized mint
-                  // (reverse lookup = null) is noise — skip it silently, don't scare the customer.
-                  const receivedTok = reverseSolanaMintLookup(info.mint);
-                  if (receivedTok) flagWrongToken(order.id, order.merchantId, order.token, receivedTok, txHash, 'SOLANA_MAINNET');
+                  wrongTokenOrders.push(order);
                   continue;
                 }
 
@@ -853,6 +860,24 @@ export class BlockchainService {
                   continue;
                 }
                 solCandidates.push(order);
+              }
+
+              // Wrong-token: flag only the amount-matched order, once, and only when nothing matched
+              // correctly. Junk/airdrop SPL with an unrecognized mint is ignored (reverse lookup null).
+              if (solCandidates.length === 0 && wrongTokenOrders.length > 0) {
+                const receivedTok = reverseSolanaMintLookup(info.mint);
+                if (receivedTok) {
+                  const best = wrongTokenOrders
+                    .map(o => ({ o, diff: Math.abs(Number(o.amount) - amount) }))
+                    .sort((a, b) => a.diff - b.diff)[0];
+                  if (best && best.diff <= Math.max(0.05 * amount, 0.01)) {
+                    logger.warn('scanner skipped wrong-token SPL transfer', {
+                      event: 'scanner.skip.wrong_token', orderId: best.o.id, chain: 'SOLANA_MAINNET',
+                      expectedToken: best.o.token, actualMint: info.mint, receivedToken: receivedTok, txHash,
+                    });
+                    flagWrongToken(best.o.id, best.o.merchantId, best.o.token, receivedTok, txHash, 'SOLANA_MAINNET');
+                  }
+                }
               }
 
               if (solCandidates.length > 0) {
@@ -976,18 +1001,11 @@ export class BlockchainService {
             // different wallet than the one captured is still valid and must not be dropped. FROM
             // is used only to disambiguate colliding orders.
             const tronCandidates: typeof orders = [];
+            const wrongTokenOrders: typeof orders = [];
             for (const order of orders) {
               // Token must match (e.g. order for USDC should not confirm on USDT deposit)
               if (tokenName !== order.token) {
-                logger.warn('scanner skipped wrong-token TRC20 transfer', {
-                  event: 'scanner.skip.wrong_token',
-                  orderId: order.id,
-                  chain: 'TRON_MAINNET',
-                  expectedToken: order.token,
-                  actualToken: tokenName,
-                  txHash,
-                });
-                flagWrongToken(order.id, order.merchantId, order.token, tokenName, txHash, 'TRON_MAINNET');
+                wrongTokenOrders.push(order);
                 continue;
               }
 
@@ -1004,6 +1022,20 @@ export class BlockchainService {
                 continue;
               }
               tronCandidates.push(order);
+            }
+
+            // Wrong-token: flag only the amount-matched order, once, and only when nothing matched right.
+            if (tronCandidates.length === 0 && wrongTokenOrders.length > 0) {
+              const best = wrongTokenOrders
+                .map(o => ({ o, diff: Math.abs(Number(o.amount) - amount) }))
+                .sort((a, b) => a.diff - b.diff)[0];
+              if (best && best.diff <= Math.max(0.05 * amount, 0.01)) {
+                logger.warn('scanner skipped wrong-token TRC20 transfer', {
+                  event: 'scanner.skip.wrong_token', orderId: best.o.id, chain: 'TRON_MAINNET',
+                  expectedToken: best.o.token, actualToken: tokenName, txHash,
+                });
+                flagWrongToken(best.o.id, best.o.merchantId, best.o.token, tokenName, txHash, 'TRON_MAINNET');
+              }
             }
 
             if (tronCandidates.length > 0) {
