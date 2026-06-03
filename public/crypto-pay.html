@@ -2003,6 +2003,9 @@
                     // so we get a real paymentAddress. Previously this path was skipped entirely,
                     // leaving the address blank on product links.
                     const _params = new URLSearchParams(window.location.search);
+                    // Merchant-supplied email via ?email= on the checkout link; we never prompt the customer for it.
+                    const _emailRaw = (_params.get('email') || _params.get('customer_email') || _params.get('customerEmail') || '').trim();
+                    const _customerEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_emailRaw) ? _emailRaw : undefined;
                     const amountToCharge = (cpWizState.token === 'EURC' && info.amount)
                         ? info.amount
                         : parseFloat(currentProduct?.price ?? _params.get('price') ?? _params.get('amount') ?? 0);
@@ -2015,6 +2018,7 @@
                             token: cpWizState.token,
                             productName: currentProduct?.name || _params.get('productName') || 'Payment',
                             customerWallet: cpWizState.senderWallet || undefined,
+                            customerEmail: _customerEmail,
                             externalId: _params.get('externalId') || undefined,
                             linkId: _params.get('linkId') || undefined,
                             paymentMethod: 'MANUAL_SEND',
@@ -5403,6 +5407,9 @@
                     } else {
                         // Fresh order: create now
                         const externalId = params.get('externalId') || undefined;
+                        // Merchant-supplied email via ?email= on the checkout link; never prompted from the customer.
+                        const _emailRaw2 = (params.get('email') || params.get('customer_email') || params.get('customerEmail') || '').trim();
+                        const _customerEmail2 = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_emailRaw2) ? _emailRaw2 : undefined;
                         const res = await fetch('/api/embed/checkout', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -5413,6 +5420,7 @@
                                 token,
                                 productName: currentProduct.name,
                                 customerWallet: addr,
+                                customerEmail: _customerEmail2,
                                 externalId,
                                 paymentMethod: 'MANUAL_SEND',
                                 source: 'CHECKOUT_LINK',

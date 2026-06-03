@@ -139,7 +139,7 @@
   "amount": 99.99,                     // Required — in USD
   "chain": "BASE_MAINNET",            // Optional — customer picks if omitted
   "token": "USDC",                    // Optional — defaults to USDC
-  "customerEmail": "buyer@email.com", // Optional
+  "customerEmail": "buyer@email.com", // Recommended — ties the order to a customer + emails them a receipt (else shows as Anonymous)
   "customerWallet": "0xabc...",       // Optional — customer's wallet for precise matching
   "productName": "Order #1234"        // Optional
 }</pre>
@@ -163,6 +163,13 @@
                     <strong class="text-white">After creating the order, redirect the customer to:</strong><br>
                     <code class="text-cyan-400">https://wetakestables.shop/checkout?orderId=ORDER_ID</code><br><br>
                     This resolves the order and loads the full checkout UI (chain selector, wallet connect, QR code, manual send).
+                </div>
+
+                <div class="mt-4 p-3 bg-slate-800 border border-slate-700 text-sm text-slate-300">
+                    <strong class="text-white">Hosted checkout link — pass the customer email:</strong><br>
+                    Linking customers straight to a hosted checkout (no pre-created order) works too — include their email so the order isn't recorded as <em>Anonymous</em> and they receive a receipt:<br><br>
+                    <code class="text-cyan-400">https://wetakestables.shop/checkout?merchantId=YOUR_ID&amp;amount=25.00&amp;email=buyer@email.com</code><br><br>
+                    Accepts <code>email</code> (alias <code>customer_email</code>). <strong class="text-white">You</strong> supply it from your system — we never prompt the customer for it. This is the same value as the <code>customerEmail</code> field on the API and the <code>data-customer-email</code> attribute on the embed script.
                 </div>
             </div>
 

@@ -141,9 +141,12 @@ window.location.href = paymentUrl;
 <div class="stablepay-checkout"
      data-merchant="YOUR_MERCHANT_ID"
      data-amount="10.00"
-     data-chain="BASE_SEPOLIA">
+     data-chain="BASE_SEPOLIA"
+     data-customer-email="customer@example.com">
 </div>
 ```
+
+> **💡 Always pass the customer's email.** Supply it via `customerEmail` (API), `data-customer-email` (embed script), or `&email=` on a hosted checkout link (`/checkout?merchantId=...&amount=...&email=buyer@example.com`). **You** supply it from your system — we never prompt the customer. Without it, the order shows as **Anonymous** and the customer gets no receipt.
 
 **Note**: Widget is in development. Use hosted page for now.
 
