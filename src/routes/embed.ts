@@ -1411,7 +1411,13 @@ router.post('/event', async (req, res) => {
     if (!sessionId || typeof sessionId !== 'string' || sessionId.length > 64) return res.json({ ok: false });
     if (!action || !ALLOWED_WIDGET_EVENTS.has(action)) return res.json({ ok: false });
 
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket?.remoteAddress || null;
+    // Real client IP. Behind Cloudflare, x-forwarded-for[0] / socket.remoteAddress resolve to a
+    // Cloudflare edge IP (172.64-71.x, 198.41.x), not the visitor — so prefer CF's real-client header.
+    // Best-effort identity signal for attribution, not an auth control, so trusting the CF header is fine.
+    const ip = (req.headers['cf-connecting-ip'] as string)?.trim()
+      || (req.headers['true-client-ip'] as string)?.trim()
+      || (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+      || req.socket?.remoteAddress || null;
     const userAgent = (req.headers['user-agent'] as string)?.slice(0, 300) ?? null;
     const safeDetails = (details && typeof details === 'object') ? details : {};
 
