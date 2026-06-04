@@ -69,6 +69,27 @@ function reverseSolanaMintLookup(mint: string): string | null {
   return null;
 }
 
+// Cross-stablecoin acceptance (global policy, approved): USDC and USDT are both USD-pegged ~1:1,
+// so a USD-stablecoin order accepts either interchangeably — a customer who sends USDT to a USDC
+// order (or vice-versa) gets credited instead of stranded. EURC is EUR, a genuinely different
+// currency/value, so it is NEVER cross-accepted (the wrong-token guard stays for it).
+function isUsdStable(token: string | null | undefined): boolean {
+  return token === 'USDC' || token === 'USDT';
+}
+
+// Record on the order (metadata) when it settled in a different-but-equivalent stablecoin than
+// ordered, so the merchant's books reflect what actually landed in their wallet.
+async function flagSettledInToken(orderId: string, expected: string, received: string, txHash: string, chain: string) {
+  try {
+    const existing = await db.order.findUnique({ where: { id: orderId }, select: { metadata: true } });
+    const meta = (existing?.metadata as Record<string, unknown>) || {};
+    await db.order.update({
+      where: { id: orderId },
+      data: { metadata: { ...meta, settledInToken: { expected, received, txHash, chain, at: new Date().toISOString() } } },
+    });
+  } catch (e) { logger.warn('flagSettledInToken failed', { orderId, error: (e as Error).message }); }
+}
+
 async function flagWrongToken(orderId: string, merchantId: string | null, expected: string, received: string | null, txHash: string, chain: string) {
   try {
     const existing = await db.order.findUnique({ where: { id: orderId }, select: { metadata: true } });
@@ -285,7 +306,10 @@ export class BlockchainService {
           // correct token+amount to the correct address — we must NOT drop that payment just
           // because FROM differs. Collect all (address+token+amount) candidates, then use FROM
           // only to disambiguate when MULTIPLE orders collide.
-          const candidates: { order: typeof pendingOrders[number]; txAmount: number }[] = [];
+          // Actual token sent (the scanned contract that emitted this Transfer). On EVM we only scan
+          // CHAIN_STABLES contracts, so this resolves to a known stable.
+          const sentToken = reverseTokenLookup(chain, logContract);
+          const candidates: { order: typeof pendingOrders[number]; txAmount: number; exact: boolean }[] = [];
           // Wrong-token orders are collected here, then AT MOST ONE is flagged after the loop (the
           // amount-matched payer). Flagging inside the loop fanned one wrong-coin transfer across
           // every open order at the shared address — over-counting + firing duplicate webhooks.
@@ -293,15 +317,19 @@ export class BlockchainService {
           for (const order of pendingOrders) {
             if (order.paymentAddress.toLowerCase() !== toAddress) continue;
 
-            // Enforce token match: the contract that emitted this Transfer MUST be the order's expected token.
-            // Protects against USDT-for-USDC (or EURC-for-USDC, different currency) false positives.
+            // Token must equal the order's expected stable — OR be its USD-stable counterpart
+            // (USDC<->USDT ~1:1). EURC is never cross-accepted, so EURC-for-USDC still falls through
+            // to the wrong-token path (different currency, real value mismatch).
             const expectedContract = (CHAIN_STABLES[chain]?.[order.token] || '').toLowerCase();
-            if (!expectedContract || logContract !== expectedContract) {
+            const tokenMatches = !!expectedContract && logContract === expectedContract;
+            const crossStableOk = !tokenMatches && isUsdStable(sentToken) && isUsdStable(order.token);
+            if (!tokenMatches && !crossStableOk) {
               wrongTokenOrders.push(order);
               continue;
             }
 
-            const decimals = getTokenDecimals(chain, order.token);
+            // Parse with the SENT token's decimals (correct for both exact and cross-stable matches).
+            const decimals = getTokenDecimals(chain, sentToken || order.token);
             const txAmount = Number(ethers.formatUnits(log.args.value, decimals));
             const orderAmount = Number(order.amount);
             if (!amountWithinTolerance(txAmount, orderAmount)) {
@@ -316,7 +344,7 @@ export class BlockchainService {
               continue;
             }
 
-            candidates.push({ order, txAmount });
+            candidates.push({ order, txAmount, exact: tokenMatches });
           }
 
           // Wrong-token: flag only the single order whose amount matches this transfer (the real
@@ -351,11 +379,16 @@ export class BlockchainService {
           let senderMismatch = false;
           if (candidates.length > 0) {
             const fromLower = (fromAddress || '').toLowerCase();
-            const byFrom = candidates.find(c =>
+            // FROM-wallet is the strongest intent signal (the customer bound this order to their
+            // wallet), so honor it FIRST; within the chosen tier prefer an exact-token match over a
+            // cross-stable one. This avoids both crediting someone else's same-token order AND
+            // overriding a payer's explicit wallet binding with a token-exactness heuristic.
+            const fromCands = candidates.filter(c =>
               c.order.customerWallet && c.order.customerWallet.startsWith('0x') &&
               c.order.customerWallet.toLowerCase() === fromLower
             );
-            const chosen = byFrom || candidates[0];
+            const tier = fromCands.length > 0 ? fromCands : candidates;
+            const chosen = tier.find(c => c.exact) || tier[0];
             matchedOrder = chosen.order;
             matchedAmount = chosen.txAmount.toString();
             // Advisory flag (non-blocking): confirmed despite the sender differing from the captured wallet.
@@ -437,6 +470,12 @@ export class BlockchainService {
                     data: { metadata: { ...meta, senderMismatch: { capturedWallet: matchedOrder.customerWallet, actualFrom: fromAddress, txHash, chain, detectedAt: new Date().toISOString() } } },
                   });
                 } catch (e) { logger.warn('failed to flag sender mismatch', { orderId: matchedOrder.id, error: (e as Error).message }); }
+              }
+
+              // Cross-stablecoin settlement: order was for one USD-stable, paid in the other (USDC<->USDT).
+              if (sentToken && sentToken !== matchedOrder.token) {
+                await flagSettledInToken(matchedOrder.id, matchedOrder.token, sentToken, txHash, chain);
+                logger.warn('scanner cross-stable settlement', { event: 'scanner.cross_stable', orderId: matchedOrder.id, chain, expected: matchedOrder.token, received: sentToken, txHash });
               }
 
               await this.orderService.confirmOrder(matchedOrder.id, {
@@ -837,12 +876,17 @@ export class BlockchainService {
               // customerWallet (captured FROM) is a TIEBREAKER, not a hard filter — a payment from
               // a different wallet than the one the customer connected is still valid and must not
               // be dropped. FROM is used only to disambiguate colliding orders.
+              // Actual token sent (USDC/USDT/EURC) or null for junk/unrecognized SPL.
+              const sentTok = reverseSolanaMintLookup(info.mint);
               const solCandidates: typeof orders = [];
               const wrongTokenOrders: typeof orders = [];
               for (const order of orders) {
-                // Token mint must match order's expected token
+                // Mint must equal the order's expected token — OR be its USD-stable counterpart
+                // (USDC<->USDT ~1:1). EURC is never cross-accepted.
                 const expectedMint = SOLANA_TOKEN_MINTS[order.token];
-                if (!expectedMint || info.mint !== expectedMint) {
+                const mintMatches = !!expectedMint && info.mint === expectedMint;
+                const crossStableOk = !mintMatches && isUsdStable(sentTok) && isUsdStable(order.token);
+                if (!mintMatches && !crossStableOk) {
                   wrongTokenOrders.push(order);
                   continue;
                 }
@@ -865,7 +909,7 @@ export class BlockchainService {
               // Wrong-token: flag only the amount-matched order, once, and only when nothing matched
               // correctly. Junk/airdrop SPL with an unrecognized mint is ignored (reverse lookup null).
               if (solCandidates.length === 0 && wrongTokenOrders.length > 0) {
-                const receivedTok = reverseSolanaMintLookup(info.mint);
+                const receivedTok = sentTok;
                 if (receivedTok) {
                   const best = wrongTokenOrders
                     .map(o => ({ o, diff: Math.abs(Number(o.amount) - amount) }))
@@ -881,10 +925,11 @@ export class BlockchainService {
               }
 
               if (solCandidates.length > 0) {
-                // Tiebreaker: prefer the order whose captured customerWallet == actual sender;
-                // otherwise take the first (preserves prior iteration order).
-                const byFrom = solCandidates.find(o => o.customerWallet && o.customerWallet === from);
-                const order = byFrom || solCandidates[0];
+                // FROM-wallet (explicit binding) wins first; within that tier prefer an exact-token
+                // match over a cross-stable one, else the first.
+                const fromCands = solCandidates.filter(o => o.customerWallet && o.customerWallet === from);
+                const tier = fromCands.length > 0 ? fromCands : solCandidates;
+                const order = tier.find(o => o.token === sentTok) || tier[0];
                 const senderMismatch = !!(order.customerWallet && order.customerWallet !== from);
                 if (senderMismatch) {
                   logger.warn('scanner confirming FROM-mismatched payment (customerWallet is a tiebreaker, not a filter)', {
@@ -922,6 +967,11 @@ export class BlockchainService {
                 const screening = await complianceService.screenTransaction(order.id, from);
 
                 if (screening.riskLevel !== 'BLOCKED') {
+                  // Cross-stablecoin settlement: order was for one USD-stable, paid in the other (USDC<->USDT).
+                  if (sentTok && sentTok !== order.token) {
+                    await flagSettledInToken(order.id, order.token, sentTok, txHash, 'SOLANA_MAINNET');
+                    logger.warn('scanner cross-stable settlement', { event: 'scanner.cross_stable', orderId: order.id, chain: 'SOLANA_MAINNET', expected: order.token, received: sentTok, txHash });
+                  }
                   await this.orderService.confirmOrder(order.id, { txHash });
                   console.log(`[scanner] ✅ Solana confirmed ${order.id} — ${amount} ${tokenName || 'SPL'}`);
                 } else {
@@ -1003,8 +1053,11 @@ export class BlockchainService {
             const tronCandidates: typeof orders = [];
             const wrongTokenOrders: typeof orders = [];
             for (const order of orders) {
-              // Token must match (e.g. order for USDC should not confirm on USDT deposit)
-              if (tokenName !== order.token) {
+              // Token must equal the order's expected stable — OR be its USD-stable counterpart
+              // (USDC<->USDT ~1:1). EURC is never cross-accepted.
+              const tokenMatches = tokenName === order.token;
+              const crossStableOk = !tokenMatches && isUsdStable(tokenName) && isUsdStable(order.token);
+              if (!tokenMatches && !crossStableOk) {
                 wrongTokenOrders.push(order);
                 continue;
               }
@@ -1039,10 +1092,11 @@ export class BlockchainService {
             }
 
             if (tronCandidates.length > 0) {
-              // Tiebreaker: prefer the order whose captured customerWallet == actual sender;
-              // otherwise take the first (preserves prior iteration order).
-              const byFrom = tronCandidates.find(o => o.customerWallet && o.customerWallet === fromAddress);
-              const order = byFrom || tronCandidates[0];
+              // FROM-wallet (explicit binding) wins first; within that tier prefer an exact-token
+              // match over a cross-stable one, else the first.
+              const fromCands = tronCandidates.filter(o => o.customerWallet && o.customerWallet === fromAddress);
+              const tier = fromCands.length > 0 ? fromCands : tronCandidates;
+              const order = tier.find(o => o.token === tokenName) || tier[0];
               const senderMismatch = !!(order.customerWallet && order.customerWallet !== fromAddress);
               if (senderMismatch) {
                 logger.warn('scanner confirming FROM-mismatched payment (customerWallet is a tiebreaker, not a filter)', {
@@ -1086,6 +1140,11 @@ export class BlockchainService {
               const screening = await complianceService.screenTransaction(order.id, fromAddress);
 
               if (screening.riskLevel !== 'BLOCKED') {
+                // Cross-stablecoin settlement: order was for one USD-stable, paid in the other (USDC<->USDT).
+                if (tokenName && tokenName !== order.token) {
+                  await flagSettledInToken(order.id, order.token, tokenName, txHash, 'TRON_MAINNET');
+                  logger.warn('scanner cross-stable settlement', { event: 'scanner.cross_stable', orderId: order.id, chain: 'TRON_MAINNET', expected: order.token, received: tokenName, txHash });
+                }
                 await this.orderService.confirmOrder(order.id, { txHash });
                 console.log(`[scanner] ✅ TRON confirmed order ${order.id} — ${amount} ${tokenName}`);
               } else {
