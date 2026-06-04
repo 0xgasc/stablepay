@@ -15,8 +15,10 @@ dotenv.config();
 const BASE = process.env.SMOKE_BASE || 'https://wetakestables.shop';
 const ADMIN_KEY = process.env.ADMIN_API_KEY || process.env.ADMIN_AUTH_TOKEN || '';
 
-// OneTeaseTech merchant we know exists in prod
-const KNOWN_MERCHANT_ID = 'cmnem8xia00008da9g8o13tp4';
+// Dedicated smoke-test merchant: OFFSET (offsetworks, gasolomonc@gmail.com).
+// MUST NOT be a real customer merchant — smoke runs create SMOKE_/SMOKE_NAT_ orders and fire
+// confirmation webhooks. Previously pointed at OneTease (cmnem8xia…), polluting their real dashboard.
+const KNOWN_MERCHANT_ID = 'cmn979jnf0000110ntpw8x6fi';
 
 interface Result { name: string; ok: boolean; ms: number; detail?: string; }
 const results: Result[] = [];
