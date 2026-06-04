@@ -878,7 +878,10 @@
                 <!-- Orders Tab -->
                 <div id="ordersTab" class="tab-content">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-semibold text-white">Recent Orders</h3>
+                        <div class="flex items-center gap-3">
+                            <h3 class="text-lg font-semibold text-white">Recent Orders</h3>
+                            <button id="toggleTestOrdersBtn" onclick="window._showTestOrders=!window._showTestOrders;loadOrders()" class="text-[11px] text-slate-500 hover:text-slate-300 border border-slate-800 px-2 py-1 rounded" title="Smoke tests, $0.05 test orders, and platform-wallet payments are hidden by default"></button>
+                        </div>
                         <div class="flex gap-3">
                             <input
                                 type="text"
@@ -3429,8 +3432,11 @@ onMounted(() => {
                     const data = await response.json();
                     const orders = data.orders || data;
                     allOrders = Array.isArray(orders) ? orders : [];
-                    updateStats({ orders: allOrders, pagination: { total: data.total || allOrders.length } });
-                    renderOrdersTable(allOrders);
+                    const _visible = window._showTestOrders ? allOrders : allOrders.filter(o => !isTestOrder(o));
+                    const _hidden = allOrders.length - _visible.length;
+                    updateStats({ orders: _visible, pagination: { total: (data.total || allOrders.length) - (window._showTestOrders ? 0 : _hidden) } });
+                    renderOrdersTable(_visible);
+                    updateTestToggle(_hidden);
                 } else {
                     // No orders yet
                     allOrders = [];
@@ -3998,6 +4004,26 @@ onMounted(() => {
             SOLANA_MAINNET:   { confs: 32, blockSec: 0.4 },
             TRON_MAINNET:     { confs: 19, blockSec: 3 },
         };
+
+        // Client-side test-order filter (no DB writes). Hides smoke tests, micro-amount test
+        // orders, and platform-wallet payments from the merchant view by default. Reversible toggle.
+        function isTestOrder(o) {
+            if (!o) return false;
+            if (o.metadata && o.metadata.isTest) return true;
+            if (String(o.externalId || '').indexOf('SMOKE') === 0) return true;
+            const amt = parseFloat(typeof o.amount === 'object' ? o.amount.toString() : o.amount);
+            if (!isNaN(amt) && amt <= 0.05) return true;
+            const PLAT = ['ecj9rzcpeygb5kdbuqyax9ygxnfdqtntgh1vbumhdpus', '0x2e8d1ead7ba51e04c2a8ec40a8a3ed49cc4e1cef'];
+            const wallets = [o.customerWallet].concat((o.transactions || []).map(t => t.fromAddress)).filter(Boolean).map(w => String(w).toLowerCase());
+            if (wallets.some(w => PLAT.indexOf(w) >= 0)) return true;
+            return false;
+        }
+        function updateTestToggle(hiddenCount) {
+            const btn = document.getElementById('toggleTestOrdersBtn');
+            if (!btn) return;
+            if (window._showTestOrders) { btn.textContent = 'Hide test orders'; }
+            else { btn.textContent = hiddenCount > 0 ? (hiddenCount + ' test hidden — show') : 'No test orders'; }
+        }
 
         function renderOrdersTable(orders) {
             const tbody = document.getElementById('ordersTableBody');
