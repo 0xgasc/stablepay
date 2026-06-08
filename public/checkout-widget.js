@@ -3759,5 +3759,21 @@
       });
       return spCheckout;
     },
+
+    link: (opts) => {
+      if (!opts || !opts.merchantId) throw new Error('StablePay.link(): merchantId is required');
+      if (!opts.amount) throw new Error('StablePay.link(): amount is required');
+      const base = (typeof STABLEPAY_URL !== 'undefined' ? STABLEPAY_URL : 'https://wetakestables.shop') + '/crypto-pay.html';
+      const p = new URLSearchParams();
+      p.set('merchant', opts.merchantId);
+      p.set('amount', String(opts.amount));
+      if (opts.token) p.set('token', opts.token);
+      if (opts.chain) p.set('chain', opts.chain);
+      if (opts.email) p.set('email', opts.email);
+      if (opts.externalId) p.set('externalId', opts.externalId);
+      if (opts.returnUrl) p.set('returnUrl', opts.returnUrl);
+      if (opts.theme) p.set('theme', opts.theme);
+      return base + '?' + p.toString();
+    },
   };
 })();
