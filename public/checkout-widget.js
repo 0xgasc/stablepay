@@ -2290,6 +2290,7 @@
           </div>
         </div>
       `);
+      this._track('STABLO_RENDERED', { surface: 'widget' });
       const btn = w.querySelector('[data-stablo="btn"]');
       const close = w.querySelector('[data-stablo="close"]');
       const send = w.querySelector('[data-stablo="send"]');
@@ -2312,6 +2313,7 @@
       const panel = this.container.querySelector('[data-stablo="panel"]');
       if (panel) panel.classList.toggle('sp-hidden', !this._stabloOpen);
       if (this._stabloOpen) {
+        this._track('STABLO_OPENED', { trigger: 'manual' });
         const input = this.container.querySelector('[data-stablo="input"]');
         if (input) input.focus();
       }
@@ -2346,6 +2348,7 @@
       if (this._stabloNudged) return;
       this._stabloNudged = true;
       this._stabloInject();
+      this._track('STABLO_NUDGE_FIRED', { msg: msg.slice(0, 60) });
       const btn = this.container.querySelector('[data-stablo="btn"]');
       if (btn) { btn.style.animation = 'none'; btn.offsetHeight; btn.style.animation = 'sp-stablo-pulse 1.5s ease-in-out 3'; }
       if (!this._stabloOpen) {
@@ -2372,7 +2375,7 @@
             ]
           );
         }
-      }, 45000);
+      }, 10000);
     }
 
     _stabloOnRetry() {
@@ -2413,6 +2416,7 @@
     _stabloPost(text) {
       if (this._stabloLoading) return;
       this._stabloLoading = true;
+      this._track('STABLO_MESSAGE_SENT', { len: text.length });
       const msgs = this.container.querySelector('[data-stablo="msgs"]');
       if (!msgs) { this._stabloLoading = false; return; }
       const userEl = document.createElement('div');

@@ -1403,6 +1403,10 @@ const ALLOWED_WIDGET_EVENTS = new Set([
   'PAGE_HIDDEN',              // browser tab became hidden (proxy for distraction/abandonment)
   'MOBILE_WALLET_LINK_CLICKED', // customer tapped the "Open in wallet" deep-link (was fired but not allowlisted → dropped)
   'EDIT_PANEL_OPENED',        // customer expanded "Edit payment options" (measures edit-panel usage)
+  'STABLO_RENDERED',          // Stablo help button appeared on screen
+  'STABLO_OPENED',            // customer opened the Stablo chat panel
+  'STABLO_NUDGE_FIRED',       // proactive nudge auto-opened the panel
+  'STABLO_MESSAGE_SENT',      // customer sent a message to Stablo
 ]);
 
 router.post('/event', async (req, res) => {

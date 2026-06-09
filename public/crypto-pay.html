@@ -6177,11 +6177,15 @@
             let stabloLoading = false;
             let stabloNudged = false;
             let stabloPayScreenTs = 0;
+            if (typeof cpWizTrack === 'function') cpWizTrack('STABLO_RENDERED', { surface: 'hosted' });
 
             window.stabloToggle = function() {
                 stabloOpen = !stabloOpen;
                 document.getElementById('stabloPanel').classList.toggle('hidden', !stabloOpen);
-                if (stabloOpen) document.getElementById('stabloInput').focus();
+                if (stabloOpen) {
+                    document.getElementById('stabloInput').focus();
+                    if (typeof cpWizTrack === 'function') cpWizTrack('STABLO_OPENED', { trigger: 'manual' });
+                }
             };
 
             function stabloSetChips(chips) {
@@ -6206,6 +6210,7 @@
             function stabloNudge(msg, chips) {
                 if (stabloNudged) return;
                 stabloNudged = true;
+                if (typeof cpWizTrack === 'function') cpWizTrack('STABLO_NUDGE_FIRED', { msg: msg.slice(0, 60) });
                 const btn = document.getElementById('stabloBtn');
                 if (btn) { btn.style.animation = 'none'; btn.offsetHeight; btn.style.animation = 'stabloPulse 1.5s ease-in-out 3'; }
                 if (!stabloOpen) {
@@ -6230,7 +6235,7 @@
                             ]
                         );
                     }
-                }, 45000);
+                }, 10000);
             };
 
             window.stabloOnRetry = function() {
@@ -6272,6 +6277,7 @@
             function stabloPost(text) {
                 if (stabloLoading) return;
                 stabloLoading = true;
+                if (typeof cpWizTrack === 'function') cpWizTrack('STABLO_MESSAGE_SENT', { len: text.length });
 
                 const msgs = document.getElementById('stabloMessages');
                 const userEl = document.createElement('div');
