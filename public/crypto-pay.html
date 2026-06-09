@@ -541,6 +541,7 @@
             100% { box-shadow: 0 0 0 0   rgba(79, 195, 247, 0); }
         }
 
+        @keyframes stabloPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
         /* ── Stablo chat widget ── */
         #stabloBtn {
             position: fixed; bottom: 20px; right: 20px; z-index: 999;
@@ -2028,8 +2029,12 @@
                     const data = await res.json();
                     if (!data.success || !data.order) throw new Error(data.error || 'Failed to create order');
                     window.currentOrderId = data.order.id;
-                    window._cpEagerOrder = true; // WE created this (not an orderId link) — safe to replace on chain/token edit
-                    orderData = data.order; // {id, paymentAddress, amount, token, chain, nativeSendAmount, expiresAt}
+                    window._cpOrderId = data.order.id;
+                    window._cpEagerOrder = true;
+                    orderData = data.order;
+                    var _sc = parseInt(sessionStorage.getItem('sp_order_count') || '0', 10) + 1;
+                    sessionStorage.setItem('sp_order_count', String(_sc));
+                    if (_sc >= 2 && typeof stabloOnRetry === 'function') stabloOnRetry();
                 }
                 // Patch sender wallet onto the order (either path) when we captured one.
                 if (cpWizState.senderWallet && window.currentOrderId) {
@@ -2084,6 +2089,7 @@
             // so "Didn't send yet? Show the address again" can bring the customer back here.
             window._cpManualInfo = { addr, amtStr, qrUrl, payUri, chainName, expiresAt };
             cpWizPaintAddressScreen(window._cpManualInfo);
+            if (typeof stabloOnPayScreen === 'function') stabloOnPayScreen();
         }
 
         // Builds the COLLAPSED "Edit payment options" panel for the send screen: network list
@@ -2232,10 +2238,10 @@
                 if (countdownEl) countdownEl.textContent = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
                 if (secs <= 0) { clearInterval(window._cpWizCountdown); window._cpWizCountdown = null; if (countdownEl) countdownEl.textContent = 'Expired'; }
                 if (warnEl) {
-                    // Urgency via weight + clock glyph, never color.
                     if (secs <= 60 && secs > 0) { warnEl.style.cssText = 'display:block;background:#F4F4F5;border:1px solid #D4D4D8;color:#18181B;padding:6px 10px;font-size:12px;font-weight:700;text-align:center;margin-top:6px;'; warnEl.textContent = '⏱ Less than 1 minute!'; }
                     else if (secs <= 300) { warnEl.style.cssText = 'display:block;background:#F4F4F5;border:1px solid #D4D4D8;color:#18181B;padding:6px 10px;font-size:12px;font-weight:600;text-align:center;margin-top:6px;'; warnEl.textContent = '⏱ Less than 5 minutes remaining'; }
                     else { warnEl.style.display = 'none'; }
+                    if (secs <= 180 && secs > 0 && typeof stabloOnExpirySoon === 'function') stabloOnExpirySoon();
                 }
             }, 1000);
 
@@ -4605,6 +4611,10 @@
                             orderData = apiResponse.order || apiResponse;
                             orderData.usdcAddress = tokenConfig.address;
                             orderData.paymentAddress = orderData.paymentAddress || selectedChainData?.address;
+                            if (orderData.id) window._cpOrderId = orderData.id;
+                            var _sc2 = parseInt(sessionStorage.getItem('sp_order_count') || '0', 10) + 1;
+                            sessionStorage.setItem('sp_order_count', String(_sc2));
+                            if (_sc2 >= 2 && typeof stabloOnRetry === 'function') stabloOnRetry();
                             console.log('[SUCCESS] Order created via API:', orderData);
                         } else {
                             const errorText = await response.text();
@@ -6145,10 +6155,10 @@
             <div class="stablo-msg bot">Hey! I'm Stablo. Having trouble paying? Ask me anything — I'll help you through it.</div>
         </div>
         <div class="stablo-chips" id="stabloChips">
+            <button class="stablo-chip" onclick="stabloSendQuick('I don\'t have any crypto — how do I pay?')">No crypto yet</button>
+            <button class="stablo-chip" onclick="stabloSendQuick('What wallet should I use to send this?')">Which wallet?</button>
+            <button class="stablo-chip" onclick="stabloSendQuick('I already sent the payment but it\'s not confirming')">I sent it</button>
             <button class="stablo-chip" onclick="stabloSendQuick('Is this safe?')">Is this safe?</button>
-            <button class="stablo-chip" onclick="stabloSendQuick('Will I get a receipt?')">Receipt?</button>
-            <button class="stablo-chip" onclick="stabloSendQuick('What crypto do you accept?')">What crypto?</button>
-            <button class="stablo-chip" onclick="stabloSendQuick('My payment isn\'t going through')">Payment stuck</button>
         </div>
         <div id="stabloInputRow">
             <input id="stabloInput" type="text" placeholder="Ask anything…" maxlength="500"
@@ -6161,11 +6171,84 @@
         (function() {
             let stabloOpen = false;
             let stabloLoading = false;
+            let stabloNudged = false;
+            let stabloPayScreenTs = 0;
 
             window.stabloToggle = function() {
                 stabloOpen = !stabloOpen;
                 document.getElementById('stabloPanel').classList.toggle('hidden', !stabloOpen);
                 if (stabloOpen) document.getElementById('stabloInput').focus();
+            };
+
+            function stabloSetChips(chips) {
+                const el = document.getElementById('stabloChips');
+                if (!el) return;
+                el.style.display = 'flex';
+                el.innerHTML = chips.map(c =>
+                    `<button class="stablo-chip" onclick="stabloSendQuick('${c.q}')">${c.label}</button>`
+                ).join('');
+            }
+
+            function stabloBotMsg(text) {
+                const msgs = document.getElementById('stabloMessages');
+                if (!msgs) return;
+                const el = document.createElement('div');
+                el.className = 'stablo-msg bot';
+                el.textContent = text;
+                msgs.appendChild(el);
+                msgs.scrollTop = msgs.scrollHeight;
+            }
+
+            function stabloNudge(msg, chips) {
+                if (stabloNudged) return;
+                stabloNudged = true;
+                const btn = document.getElementById('stabloBtn');
+                if (btn) { btn.style.animation = 'none'; btn.offsetHeight; btn.style.animation = 'stabloPulse 1.5s ease-in-out 3'; }
+                if (!stabloOpen) {
+                    stabloOpen = true;
+                    document.getElementById('stabloPanel').classList.remove('hidden');
+                }
+                stabloBotMsg(msg);
+                if (chips) stabloSetChips(chips);
+            }
+
+            // Proactive triggers
+            window.stabloOnPayScreen = function() {
+                stabloPayScreenTs = Date.now();
+                setTimeout(() => {
+                    if (!stabloNudged && !stabloOpen) {
+                        stabloNudge(
+                            "Looks like you're on the payment screen — need a hand? Most people pay in under 2 minutes.",
+                            [
+                                { label: "I don't have crypto", q: "I don't have any crypto — how do I pay?" },
+                                { label: "Which wallet?", q: "What wallet should I use to send this?" },
+                                { label: "I sent it but nothing happened", q: "I already sent the payment but it's not confirming" },
+                            ]
+                        );
+                    }
+                }, 45000);
+            };
+
+            window.stabloOnRetry = function() {
+                stabloNudge(
+                    "I see you're trying again — let me help. What went wrong with your last attempt?",
+                    [
+                        { label: "I don't know how to send", q: "I'm confused about how to actually send the crypto" },
+                        { label: "Wrong amount/token", q: "I think I sent the wrong amount or token" },
+                        { label: "It expired", q: "My order expired before I could pay" },
+                    ]
+                );
+            };
+
+            window.stabloOnExpirySoon = function() {
+                if (stabloNudged) return;
+                stabloNudge(
+                    "Your order expires soon! If you need more time, you can start a new checkout after this one expires.",
+                    [
+                        { label: "How do I send faster?", q: "How do I send the payment quickly before it expires?" },
+                        { label: "I already sent", q: "I already sent the payment — why isn't it confirming?" },
+                    ]
+                );
             };
 
             window.stabloSendQuick = function(text) {
@@ -6198,8 +6281,7 @@
                 msgs.appendChild(loadEl);
                 msgs.scrollTop = msgs.scrollHeight;
 
-                // Get orderId from URL
-                const orderId = new URLSearchParams(window.location.search).get('orderId') || '';
+                const orderId = new URLSearchParams(window.location.search).get('orderId') || window._cpOrderId || '';
 
                 fetch('/api/embed/support', {
                     method: 'POST',
