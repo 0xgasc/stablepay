@@ -1550,39 +1550,43 @@ const stabloRateMap = new Map<string, { count: number; resetAt: number }>();
 router.post('/support', async (req, res) => {
   try {
     const { orderId, message } = req.body || {};
-    if (!orderId || typeof orderId !== 'string') return res.status(400).json({ error: 'orderId required' });
     if (!message || typeof message !== 'string' || !message.trim()) return res.status(400).json({ error: 'message required' });
     if (message.length > 500) return res.status(400).json({ error: 'Message too long' });
 
-    // Rate limit: 20 msgs per orderId per hour
+    const rateLimitKey = (orderId && typeof orderId === 'string') ? orderId : (req.ip || 'anon');
     const now = Date.now();
-    const rl = stabloRateMap.get(orderId);
+    const rl = stabloRateMap.get(rateLimitKey);
     if (rl && rl.resetAt > now && rl.count >= 20) {
       return res.json({ reply: "You've sent a lot of messages — take a breath and try again in a bit. If you're really stuck, contact the store directly." });
     }
     if (!rl || rl.resetAt <= now) {
-      stabloRateMap.set(orderId, { count: 1, resetAt: now + 60 * 60 * 1000 });
+      stabloRateMap.set(rateLimitKey, { count: 1, resetAt: now + 60 * 60 * 1000 });
     } else {
       rl.count++;
     }
 
-    const order = await db.order.findUnique({
-      where: { id: orderId },
-      select: { amount: true, token: true, chain: true, status: true, expiresAt: true, nativeToken: true },
-    });
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    let order: { amount: any; token: string | null; chain: string; status: string; expiresAt: Date | null; nativeToken: string | null } | null = null;
+    if (orderId && typeof orderId === 'string') {
+      order = await db.order.findUnique({
+        where: { id: orderId },
+        select: { amount: true, token: true, chain: true, status: true, expiresAt: true, nativeToken: true },
+      });
+    }
 
     const Anthropic = (await import('@anthropic-ai/sdk')).default;
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const expiresIn = order.expiresAt
+    const expiresIn = order?.expiresAt
       ? Math.max(0, Math.round((new Date(order.expiresAt).getTime() - now) / 60000))
       : null;
 
-    const isNativeOrder = order.nativeToken != null;
+    const isNativeOrder = order?.nativeToken != null;
+    const orderContext = order
+      ? `THIS ORDER: $${Number(order.amount).toFixed(2)} — paying with ${order.nativeToken || order.token} on ${String(order.chain).replace(/_/g, ' ')} — status: ${order.status}${expiresIn !== null ? `, expires in ${expiresIn} min` : ''}.${isNativeOrder ? `\nThis is a NATIVE TOKEN order: customer sends ${order.nativeToken}, which is automatically swapped to stablecoin — they absorb a 1.5% conversion fee.` : ''}`
+      : 'No order created yet — the customer is still on the checkout screen deciding how to pay.';
     const systemPrompt = `You are Stablo, StablePay's payment assistant. Friendly, confident, and to the point. Max 2 sentences per reply.
 
-THIS ORDER: $${Number(order.amount).toFixed(2)} — paying with ${order.nativeToken || order.token} on ${String(order.chain).replace(/_/g, ' ')} — status: ${order.status}${expiresIn !== null ? `, expires in ${expiresIn} min` : ''}.${isNativeOrder ? `\nThis is a NATIVE TOKEN order: customer sends ${order.nativeToken}, which is automatically swapped to ${(order as any).nativeReceiveWallet ? 'stablecoin' : 'USDC'} — they absorb a 1.5% conversion fee.` : ''}
+${orderContext}
 
 KNOW THESE ANSWERS COLD:
 
@@ -1598,8 +1602,8 @@ What crypto do you accept?
 Can I pay with ETH / SOL / BNB / other native coins?
 "Yes — select ETH, SOL, or BNB in the token selector and we'll handle the conversion automatically. A 1.5% conversion fee applies; use USDC to skip it."
 
-I'm paying with ${isNativeOrder ? order.nativeToken : 'native token'} — what happens?
-"You send ${isNativeOrder ? order.nativeToken : 'the native token'} to the address shown; we automatically swap it to a stablecoin and deliver it to the merchant. The price is locked for 15 minutes — complete your payment before it expires."
+I'm paying with ${isNativeOrder ? order!.nativeToken : 'native token'} — what happens?
+"You send ${isNativeOrder ? order!.nativeToken : 'the native token'} to the address shown; we automatically swap it to a stablecoin and deliver it to the merchant. The price is locked for 15 minutes — complete your payment before it expires."
 
 How long does it take?
 "Usually under 60 seconds on Base or Polygon. Ethereum can take 2–5 minutes. ${isNativeOrder ? 'Native token orders add ~10–30 seconds for the on-chain swap.' : ''}"
@@ -1622,13 +1626,14 @@ MORE RULES:
 
     const reply = response.content[0]?.type === 'text' ? response.content[0].text : "Sorry, I couldn't process that. Try refreshing the page.";
 
-    // Persist both turns — fire and forget, never block the response
-    db.stabloChat.createMany({
-      data: [
-        { orderId, role: 'user', content: message.trim() },
-        { orderId, role: 'bot', content: reply },
-      ],
-    }).catch(e => console.warn('Stablo persist failed:', e instanceof Error ? e.message : e));
+    if (orderId && typeof orderId === 'string') {
+      db.stabloChat.createMany({
+        data: [
+          { orderId, role: 'user', content: message.trim() },
+          { orderId, role: 'bot', content: reply },
+        ],
+      }).catch(e => console.warn('Stablo persist failed:', e instanceof Error ? e.message : e));
+    }
 
     res.json({ reply });
   } catch (err) {

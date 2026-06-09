@@ -710,7 +710,32 @@
         .sp-pay-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .sp-spinner { animation: sp-spin 1s linear infinite; }
         @keyframes sp-spin { to { transform: rotate(360deg); } }
+        @keyframes sp-stablo-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
         .sp-widget select { font-family: 'Space Grotesk', system-ui, sans-serif; }
+        .sp-stablo-btn { position:absolute;bottom:8px;right:8px;z-index:20;display:flex;align-items:center;gap:6px;padding:8px 14px;font-size:12px;font-weight:800;background:#00E5FF;color:#000;border:2px solid #000;box-shadow:2px 2px 0 #000;cursor:pointer;white-space:nowrap;font-family:inherit; }
+        .sp-stablo-btn:hover { transform:translate(-1px,-1px);box-shadow:3px 3px 0 #000; }
+        .sp-stablo-panel { position:absolute;bottom:48px;right:8px;left:8px;z-index:20;max-height:320px;background:#fff;border:2px solid #000;box-shadow:3px 3px 0 #000;display:flex;flex-direction:column;overflow:hidden; }
+        .sp-stablo-panel.sp-hidden { display:none; }
+        .sp-stablo-hdr { display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:2px solid #000;background:#00E5FF;font-weight:800;font-size:12px; }
+        .sp-stablo-close { font-size:18px;cursor:pointer;line-height:1;font-weight:900;background:none;border:none;padding:4px; }
+        .sp-stablo-msgs { flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:13px;min-height:80px;max-height:200px; }
+        .sp-stablo-msg { max-width:85%;padding:7px 10px;line-height:1.4;word-break:break-word; }
+        .sp-stablo-msg.bot { background:#f3f3f3;border:2px solid #000;align-self:flex-start; }
+        .sp-stablo-msg.user { background:#00E5FF;border:2px solid #000;align-self:flex-end; }
+        .sp-stablo-chips { display:flex;flex-wrap:wrap;gap:5px;padding:0 10px 8px; }
+        .sp-stablo-chip { font-size:12px;font-weight:700;padding:7px 10px;border:2px solid #000;background:#fff;cursor:pointer;min-height:36px;display:flex;align-items:center;font-family:inherit; }
+        .sp-stablo-chip:hover { background:#f3f3f3; }
+        .sp-stablo-input-row { display:flex;border-top:2px solid #000; }
+        .sp-stablo-input { flex:1;padding:10px;border:none;outline:none;font-size:14px;font-family:inherit;min-width:0; }
+        .sp-stablo-send { padding:10px 14px;font-weight:800;font-size:13px;background:#000;color:#00E5FF;border:none;cursor:pointer;min-width:44px;min-height:44px; }
+        .sp-widget.dark .sp-stablo-panel { background:#1a1a1a;border-color:#444;box-shadow:3px 3px 0 #444; }
+        .sp-widget.dark .sp-stablo-hdr { background:#005f6b;border-color:#444;color:#fff; }
+        .sp-widget.dark .sp-stablo-msg.bot { background:#2a2a2a;border-color:#444;color:#ddd; }
+        .sp-widget.dark .sp-stablo-msg.user { background:#005f6b;border-color:#444;color:#fff; }
+        .sp-widget.dark .sp-stablo-chip { background:#2a2a2a;border-color:#555;color:#ccc; }
+        .sp-widget.dark .sp-stablo-chip:hover { background:#333; }
+        .sp-widget.dark .sp-stablo-input { background:#1a1a1a;color:#eee; }
+        .sp-widget.dark .sp-stablo-input-row { border-color:#444; }
       `;
       document.head.appendChild(style);
     }
@@ -2017,6 +2042,7 @@
           if (cdEl) cdEl.style.display = 'none';
 
           this.lockSelectors();
+          this._stabloOnPayScreen();
           return;
         } catch (err) {
           console.error('Failed to create native order:', err);
@@ -2122,9 +2148,8 @@
       this._renderMobileWalletLink(paymentUri, walletAddr);
 
       this.lockSelectors();
-      // The stablecoin order is created later (on "I've sent it"), so no real expiresAt yet — show a
-      // calm placeholder window and reconcile to the server expiresAt once the order is created.
       this.startCountdown();
+      this._stabloOnPayScreen();
     }
 
     // Inject/refresh a tappable "Open in wallet" deep-link button on the send screen. Uses the
@@ -2206,6 +2231,7 @@
         timerEl.style.color = 'var(--sp-text)';
         timerEl.style.fontWeight = urgent ? '900' : '800';
         timerEl.style.fontSize = seconds <= 60 ? '26px' : '22px';
+        if (seconds <= 180 && seconds > 0) this._stabloOnExpiry();
 
         if (seconds <= 0) {
           clearInterval(this._countdownInterval);
@@ -2232,6 +2258,184 @@
       if (!expiresAt) return;
       this._countdownExpiryMs = new Date(expiresAt).getTime();
     }
+
+    // ── Stablo in-widget AI help ─────────────────────────────────────────────
+    _stabloInject() {
+      if (this._stabloInjected) return;
+      this._stabloInjected = true;
+      this._stabloOpen = false;
+      this._stabloLoading = false;
+      this._stabloNudged = false;
+      const w = this.container.querySelector('.sp-widget');
+      if (!w) return;
+      w.style.position = 'relative';
+      w.insertAdjacentHTML('beforeend', `
+        <button class="sp-stablo-btn" data-stablo="btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          Help
+        </button>
+        <div class="sp-stablo-panel sp-hidden" data-stablo="panel">
+          <div class="sp-stablo-hdr"><span>Stablo</span><button class="sp-stablo-close" data-stablo="close">&times;</button></div>
+          <div class="sp-stablo-msgs" data-stablo="msgs">
+            <div class="sp-stablo-msg bot">Hey! I'm Stablo. Need help paying? Ask me anything.</div>
+          </div>
+          <div class="sp-stablo-chips" data-stablo="chips">
+            <button class="sp-stablo-chip" data-sq="I don't have any crypto — how do I pay?">No crypto yet</button>
+            <button class="sp-stablo-chip" data-sq="What wallet should I use to send this?">Which wallet?</button>
+            <button class="sp-stablo-chip" data-sq="I already sent the payment but it's not confirming">I sent it</button>
+          </div>
+          <div class="sp-stablo-input-row">
+            <input class="sp-stablo-input" data-stablo="input" type="text" placeholder="Ask anything…" maxlength="500" />
+            <button class="sp-stablo-send" data-stablo="send">&rarr;</button>
+          </div>
+        </div>
+      `);
+      const btn = w.querySelector('[data-stablo="btn"]');
+      const close = w.querySelector('[data-stablo="close"]');
+      const send = w.querySelector('[data-stablo="send"]');
+      const input = w.querySelector('[data-stablo="input"]');
+      btn.addEventListener('click', () => this._stabloToggle());
+      close.addEventListener('click', () => this._stabloToggle());
+      send.addEventListener('click', () => this._stabloSend());
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._stabloSend(); });
+      w.querySelectorAll('[data-sq]').forEach(c => {
+        c.addEventListener('click', () => {
+          const chips = w.querySelector('[data-stablo="chips"]');
+          if (chips) chips.style.display = 'none';
+          this._stabloPost(c.dataset.sq);
+        });
+      });
+    }
+
+    _stabloToggle() {
+      this._stabloOpen = !this._stabloOpen;
+      const panel = this.container.querySelector('[data-stablo="panel"]');
+      if (panel) panel.classList.toggle('sp-hidden', !this._stabloOpen);
+      if (this._stabloOpen) {
+        const input = this.container.querySelector('[data-stablo="input"]');
+        if (input) input.focus();
+      }
+    }
+
+    _stabloBotMsg(text) {
+      const msgs = this.container.querySelector('[data-stablo="msgs"]');
+      if (!msgs) return;
+      const el = document.createElement('div');
+      el.className = 'sp-stablo-msg bot';
+      el.textContent = text;
+      msgs.appendChild(el);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    _stabloSetChips(chips) {
+      const el = this.container.querySelector('[data-stablo="chips"]');
+      if (!el) return;
+      el.style.display = 'flex';
+      el.innerHTML = chips.map(c =>
+        `<button class="sp-stablo-chip" data-sq="${c.q}">${c.label}</button>`
+      ).join('');
+      el.querySelectorAll('[data-sq]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          el.style.display = 'none';
+          this._stabloPost(btn.dataset.sq);
+        });
+      });
+    }
+
+    _stabloNudge(msg, chips) {
+      if (this._stabloNudged) return;
+      this._stabloNudged = true;
+      this._stabloInject();
+      const btn = this.container.querySelector('[data-stablo="btn"]');
+      if (btn) { btn.style.animation = 'none'; btn.offsetHeight; btn.style.animation = 'sp-stablo-pulse 1.5s ease-in-out 3'; }
+      if (!this._stabloOpen) {
+        this._stabloOpen = true;
+        const panel = this.container.querySelector('[data-stablo="panel"]');
+        if (panel) panel.classList.remove('sp-hidden');
+      }
+      this._stabloBotMsg(msg);
+      if (chips) this._stabloSetChips(chips);
+    }
+
+    _stabloOnPayScreen() {
+      this._stabloInject();
+      this._stabloPayScreenTs = Date.now();
+      if (this._stabloIdleTimer) clearTimeout(this._stabloIdleTimer);
+      this._stabloIdleTimer = setTimeout(() => {
+        if (!this._stabloNudged && !this._stabloOpen) {
+          this._stabloNudge(
+            "Looks like you're on the payment screen — need a hand? Most people pay in under 2 minutes.",
+            [
+              { label: "I don't have crypto", q: "I don't have any crypto — how do I pay?" },
+              { label: "Which wallet?", q: "What wallet should I use to send this?" },
+              { label: "I sent but nothing happened", q: "I already sent the payment but it's not confirming" },
+            ]
+          );
+        }
+      }, 45000);
+    }
+
+    _stabloOnRetry() {
+      this._stabloInject();
+      this._stabloNudge(
+        "I see you're trying again — let me help. What went wrong with your last attempt?",
+        [
+          { label: "I don't know how to send", q: "I'm confused about how to actually send the crypto" },
+          { label: "Wrong amount/token", q: "I think I sent the wrong amount or token" },
+          { label: "It expired", q: "My order expired before I could pay" },
+        ]
+      );
+    }
+
+    _stabloOnExpiry() {
+      if (this._stabloNudged) return;
+      this._stabloInject();
+      this._stabloNudge(
+        "Your order expires soon! If you need more time, you can start a new checkout after this one expires.",
+        [
+          { label: "How do I send faster?", q: "How do I send the payment quickly before it expires?" },
+          { label: "I already sent", q: "I already sent the payment — why isn't it confirming?" },
+        ]
+      );
+    }
+
+    _stabloSend() {
+      const input = this.container.querySelector('[data-stablo="input"]');
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text || this._stabloLoading) return;
+      input.value = '';
+      const chips = this.container.querySelector('[data-stablo="chips"]');
+      if (chips) chips.style.display = 'none';
+      this._stabloPost(text);
+    }
+
+    _stabloPost(text) {
+      if (this._stabloLoading) return;
+      this._stabloLoading = true;
+      const msgs = this.container.querySelector('[data-stablo="msgs"]');
+      if (!msgs) { this._stabloLoading = false; return; }
+      const userEl = document.createElement('div');
+      userEl.className = 'sp-stablo-msg user';
+      userEl.textContent = text;
+      msgs.appendChild(userEl);
+      const loadEl = document.createElement('div');
+      loadEl.className = 'sp-stablo-msg bot';
+      loadEl.textContent = '…';
+      msgs.appendChild(loadEl);
+      msgs.scrollTop = msgs.scrollHeight;
+      const orderId = this.currentOrderId || '';
+      fetch(`${STABLEPAY_URL}/api/embed/support`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, message: text }),
+      })
+      .then(r => r.json())
+      .then(data => { loadEl.textContent = data.reply || 'Something went wrong — try refreshing.'; msgs.scrollTop = msgs.scrollHeight; })
+      .catch(() => { loadEl.textContent = 'Network error. Try again in a second.'; })
+      .finally(() => { this._stabloLoading = false; });
+    }
+    // ── end Stablo ───────────────────────────────────────────────────────────
 
     startPaymentPolling() {
       if (this._pollingInterval) return; // Don't double-poll
