@@ -319,7 +319,9 @@
         this._wizardState.payType = 'stable';
         this._selectWizChain(this._defaultChainKey());
         this._wizardState.method = 'manual';
-        return this._wizComplete();
+        // Segment first: "Where's your crypto?" — wallet holders proceed as before, exchange
+        // holders get send instructions, no-crypto gets a get-USDC guide instead of an address.
+        return this._wizGoStep('source');
       }
       const anyNative = (this.merchantChains || []).some(mc => mc.acceptNativeTokens && CHAIN_NATIVE_TOKEN[mc.chain]);
       const multiChain = (this.merchantChains || []).length > 1;
@@ -424,6 +426,38 @@
             <button class="sp-wiz-ans" data-key="method" data-value="manual" style="${secondaryBtnStyle};margin-top:${canConnect ? '10px' : '0'};"><span><span style="display:block">Send manually</span><span style="${subStyle}">Copy address or scan a QR — works from any wallet or exchange</span></span><span>→</span></button>
             ${canConnect ? '' : `<p style="font-size:11px;text-align:center;color:${isDark ? '#777' : '#9ca3af'};margin-top:14px;">No browser wallet detected — sending manually works from any wallet.</p>`}`;
         }
+        // FAST first screen: segment by where the customer's crypto lives (see _wizStart).
+        case 'source':
+          return `
+            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">Where's your crypto?</h2>
+            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">To pay $${usd} you'll send ${this.selectedToken || 'USDC'} — we'll guide you.</p>
+            <button class="sp-wiz-ans" data-key="source" data-value="wallet" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">In my own wallet</span><span style="${subStyle}">Phantom, MetaMask, Trust, Coinbase Wallet…</span></span><span>→</span></button>
+            <button class="sp-wiz-ans" data-key="source" data-value="exchange" style="${secondaryBtnStyle};"><span><span style="display:block">On an exchange</span><span style="${subStyle}">Coinbase, Binance, Kraken, Crypto.com…</span></span><span>→</span></button>
+            <button class="sp-wiz-ans" data-key="source" data-value="none" style="${secondaryBtnStyle};"><span><span style="display:block">I don't have crypto yet</span><span style="${subStyle}">We'll show you the fastest way to get it</span></span><span>→</span></button>`;
+        case 'exchange-pick':
+          return `
+            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">Which exchange?</h2>
+            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 18px;">We'll show you exactly how to send from it</p>
+            <button class="sp-wiz-ans" data-key="exchange" data-value="coinbase" style="${secondaryBtnStyle};margin-top:0;"><span><span style="display:block">Coinbase</span><span style="${subStyle}">Send crypto from the Coinbase app</span></span><span>→</span></button>
+            <button class="sp-wiz-ans" data-key="exchange" data-value="binance" style="${secondaryBtnStyle};"><span><span style="display:block">Binance</span><span style="${subStyle}">Withdraw from the Binance app</span></span><span>→</span></button>
+            <button class="sp-wiz-ans" data-key="exchange" data-value="cashapp" style="${secondaryBtnStyle};"><span><span style="display:block">Cash App</span></span><span>→</span></button>
+            <button class="sp-wiz-ans" data-key="exchange" data-value="other" style="${secondaryBtnStyle};"><span><span style="display:block">Another exchange</span><span style="${subStyle}">Kraken, Crypto.com, OKX, Bybit…</span></span><span>→</span></button>`;
+        // No-crypto guide. Instruct only — no embedded onramp; telemetry shows who stalls here.
+        case 'get-crypto': {
+          const tok = this.selectedToken || 'USDC';
+          const cashappNote = this._wizardState.noCryptoReason === 'cashapp'
+            ? `<div style="border:2px solid ${isDark ? '#666' : '#18181B'};background:${isDark ? '#2a2a2a' : '#F4F4F5'};padding:10px 12px;margin:0 0 14px;font-size:12px;"><strong>Heads up:</strong> Cash App can only send Bitcoin — it can't send ${tok}. Use one of the options below instead.</div>`
+            : '';
+          const linkStyle = `display:block;width:100%;padding:12px;background:${isDark ? '#2a2a2a' : '#fff'};color:${isDark ? '#fff' : '#000'};border:3px solid ${isDark ? '#666' : '#000'};text-decoration:none;box-sizing:border-box;margin-bottom:10px;`;
+          return `
+            <h2 style="font-size:20px;font-weight:700;text-align:center;margin:0 0 6px;">Get ${tok} in ~10 minutes</h2>
+            <p style="font-size:12px;text-align:center;color:${isDark ? '#999' : '#666'};margin:0 0 14px;">${tok} is a digital dollar — $1 = 1 ${tok}. You need about $${usd}, plus ~$2 extra for fees.</p>
+            ${cashappNote}
+            <a href="https://www.coinbase.com/" target="_blank" rel="noopener" style="${linkStyle}"><span style="font-weight:700;">Coinbase <span style="font-weight:400;font-size:11px;color:${isDark ? '#999' : '#666'};">— easiest</span></span><span style="display:block;font-size:11px;color:${isDark ? '#999' : '#666'};margin-top:2px;">Create account → buy ${tok} with your card → come back here</span></a>
+            <a href="https://www.binance.com/" target="_blank" rel="noopener" style="${linkStyle}"><span style="font-weight:700;">Binance</span><span style="display:block;font-size:11px;color:${isDark ? '#999' : '#666'};margin-top:2px;">Largest exchange — buy ${tok} with card or bank</span></a>
+            <p style="font-size:11px;color:${isDark ? '#999' : '#666'};line-height:1.5;margin:4px 0 14px;">First-time signup needs ID verification (a few minutes). Once you have ${tok}, come back — this checkout keeps working.</p>
+            <button class="sp-wiz-goto" data-step="source" style="${primaryBtnStyle};justify-content:center;"><span>I have crypto now →</span></button>`;
+        }
         default: return '';
       }
     }
@@ -431,6 +465,8 @@
     _wizBackTarget(fromStep) {
       const s = String(fromStep);
       if (s === '1b') return '1';
+      if (s === 'exchange-pick') return 'source';
+      if (s === 'get-crypto') return 'source';
       // Walk the actual step order so back works through payType → network → method.
       const order = this._wizStepOrder();
       const idx = order.indexOf(s);
@@ -442,6 +478,9 @@
     _wizInfoText(step) {
       const s = String(step);
       const map = {
+        'source': ['Where does your crypto live?', 'We tailor the send instructions to your answer.'],
+        'exchange-pick': ['Pick your exchange.', 'Each app has a slightly different send/withdraw flow.'],
+        'get-crypto': ['You need USDC to pay.', 'Buy it on an exchange, then come back — this checkout keeps working.'],
         '1':  ['Choose how to pay.', 'Stablecoin (USDC/USDT — no fee) or native crypto (auto-converted to USDC for the merchant).'],
         '1b': ['Need a wallet first?', 'These are all free. Download one, fund it, then come back.'],
         'network': ['Pick your network.', 'Choose the chain your funds are on.'],
@@ -506,6 +545,24 @@
     _wizAnswer(key, value) {
       this._wizardState[key] = value;
       this._track('WIZARD_ANSWER', { key, value, step: String(this._wizardState.step) });
+      if (key === 'source') {
+        this._track('HAS_CRYPTO_ANSWERED', { answer: value, variant: this._variant });
+        if (value === 'wallet') return this._wizComplete();
+        if (value === 'exchange') return this._wizGoStep('exchange-pick');
+        this._wizardState.noCryptoReason = null;
+        this._track('GET_CRYPTO_GUIDE_VIEWED', { reason: 'no_crypto' });
+        return this._wizGoStep('get-crypto');
+      }
+      if (key === 'exchange') {
+        this._track('EXCHANGE_GUIDE_VIEWED', { exchange: value });
+        if (value === 'cashapp') {
+          // Cash App is Bitcoin-only — sending USDC from it is impossible.
+          this._wizardState.noCryptoReason = 'cashapp';
+          this._track('GET_CRYPTO_GUIDE_VIEWED', { reason: 'cashapp' });
+          return this._wizGoStep('get-crypto');
+        }
+        return this._wizComplete();
+      }
       if (key === 'payType') {
         if ((this.merchantChains || []).length > 1) return this._wizGoStep('network');
         this._selectWizChain(this._defaultChainKey());
@@ -1133,10 +1190,20 @@
                   <div id="sp-countdown-time" style="font-size: 22px; font-weight: 800; color: var(--sp-text); font-family: monospace; margin-top: 2px;">5:00</div>
                 </div>
 
+                <!-- Exchange/wallet how-to — populated per chain/token in showManualPaymentDetails -->
+                <details id="sp-howto" style="border:1px solid var(--sp-border);background:var(--sp-card);padding:8px 10px;margin-bottom:10px;">
+                  <summary id="sp-howto-summary" style="cursor:pointer;font-weight:700;font-size:11px;color:var(--sp-text);">How to send ▾</summary>
+                  <ol id="sp-howto-steps" style="margin:8px 0 0;padding-left:16px;font-size:10px;color:var(--sp-text);line-height:1.6;"></ol>
+                </details>
                 <button id="sp-send-sent-btn" style="
                   width: 100%; padding: 12px; background: #18181B; color: #fff; border: 3px solid var(--sp-border);
                   font-weight: 700; font-size: 12px; cursor: pointer; text-transform: uppercase; box-shadow: 4px 4px 0px #000;
                 ">I've Sent the Payment</button>
+                <div id="sp-sent-gate" style="display:none;border:3px solid var(--sp-border);background:var(--sp-card);padding:12px;">
+                  <p id="sp-sent-gate-q" style="font-size:12px;font-weight:700;color:var(--sp-text);margin-bottom:8px;text-align:center;">Quick check — did the payment actually leave your wallet?</p>
+                  <button id="sp-gate-yes" style="width:100%;padding:11px;font-weight:700;font-size:12px;border:3px solid var(--sp-border);background:#18181B;color:#fff;cursor:pointer;text-transform:uppercase;margin-bottom:6px;">Yes — I sent it ✓</button>
+                  <button id="sp-gate-no" style="width:100%;padding:9px;font-weight:600;font-size:11px;border:1px solid var(--sp-border);background:var(--sp-bg);color:var(--sp-text);cursor:pointer;">Not yet — show me how</button>
+                </div>
                 <button id="sp-send-back-btn" style="
                   width: 100%; padding: 8px; background: transparent; color: var(--sp-muted); border: none;
                   font-size: 11px; cursor: pointer; margin-top: 6px; text-decoration: underline;
@@ -1508,10 +1575,45 @@
         sendWalletInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendWalletBtn.click(); });
       }
 
-      // "I've sent it" button — creates order + starts polling
+      // "I've sent it" button — gated behind a did-you-actually-send check (on-chain data showed
+      // ~all clicks had no matching transfer), then creates order + starts polling.
       const sentBtn = this.container.querySelector('#sp-send-sent-btn');
+      const sentGate = this.container.querySelector('#sp-sent-gate');
+      const gateYes = this.container.querySelector('#sp-gate-yes');
+      const gateNo = this.container.querySelector('#sp-gate-no');
       if (sentBtn) {
-        sentBtn.addEventListener('click', async () => {
+        sentBtn.addEventListener('click', () => {
+          // First click = strong send claim. Create the order NOW (in the background) and mark
+          // in-flight so a close at the gate can't auto-cancel — if they really sent and bail,
+          // the order row must exist for the scanner (incl. grace window) to credit the funds.
+          this._paymentInFlight = true;
+          this._createDeferredOrder().catch(() => {});
+          if (!sentGate || !gateYes) return proceedSent();
+          const gateQ = this.container.querySelector('#sp-sent-gate-q');
+          if (gateQ) gateQ.textContent = `Quick check — did the ${this.selectedToken || 'crypto'} actually leave your ${this._wizardState?.source === 'exchange' ? 'exchange' : 'wallet'}?`;
+          sentBtn.style.display = 'none';
+          sentGate.style.display = 'block';
+        });
+      }
+      if (gateYes) {
+        gateYes.addEventListener('click', () => {
+          this._track('SENT_CONFIRM_GATE', { answer: 'sent', source: this._wizardState?.source || 'unknown' });
+          if (sentGate) sentGate.style.display = 'none';
+          if (sentBtn) sentBtn.style.display = '';
+          proceedSent();
+        });
+      }
+      if (gateNo) {
+        gateNo.addEventListener('click', () => {
+          this._track('SENT_CONFIRM_GATE', { answer: 'not_yet', source: this._wizardState?.source || 'unknown' });
+          if (sentGate) sentGate.style.display = 'none';
+          if (sentBtn) sentBtn.style.display = '';
+          const howTo = this.container.querySelector('#sp-howto');
+          if (howTo) { howTo.open = true; howTo.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        });
+      }
+
+      const proceedSent = async () => {
           sentBtn.disabled = true;
           sentBtn.textContent = 'REGISTERING...';
           // A/B telemetry: customer claims they sent payment. Equivalent to PAY_CLICKED for manual flow.
@@ -1521,44 +1623,14 @@
           // Stop countdown — they're confirming
           if (this._countdownInterval) clearInterval(this._countdownInterval);
 
-          // Create order NOW (not before) — only register when user says they sent payment
-          if (!this.currentOrderId && this._pendingPayment) {
-            try {
-              const p = this._pendingPayment;
-              const res = await fetch(`${STABLEPAY_URL}/api/embed/checkout`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  merchantId: p.merchantId,
-                  storeId: this.options.storeId || undefined,
-                  amount: p.amount,
-                  chain: p.chain,
-                  token: p.token,
-                  customerEmail: p.customerEmail,
-                  productName: p.productName,
-                  customerWallet: p.customerWallet,
-                  paymentMethod: 'MANUAL_SEND',
-                  source: 'EMBED_WIDGET',
-                })
-              });
-              const data = await res.json();
-              if (data.success) {
-                this.currentOrderId = data.order.id;
-                // Reconcile the placeholder send-screen countdown to the order's REAL expiresAt
-                // now that the deferred stablecoin order exists.
-                if (data.order.expiresAt) this.reconcileCountdown(data.order.expiresAt);
-              } else {
-                this.showError(data.error || 'Failed to register payment');
-                sentBtn.disabled = false;
-                sentBtn.textContent = "I'VE SENT THE PAYMENT";
-                return;
-              }
-            } catch (err) {
-              this.showError('Failed to register payment — please try again');
-              sentBtn.disabled = false;
-              sentBtn.textContent = "I'VE SENT THE PAYMENT";
-              return;
-            }
+          // Ensure the deferred order exists (usually already created at the first "I've sent it"
+          // click, before the gate). Shared in-flight promise — never double-creates.
+          const created = await this._createDeferredOrder();
+          if (!created.success) {
+            this.showError(created.error || 'Failed to register payment — please try again');
+            sentBtn.disabled = false;
+            sentBtn.textContent = "I'VE SENT THE PAYMENT";
+            return;
           }
 
           this.container.querySelector('#sp-send-step2').style.display = 'none';
@@ -1629,8 +1701,7 @@
               }
             }
           }
-        });
-      }
+      };
 
       // Cancel from step 3 (listening) — go back to step 2
       const cancelListenBtn = this.container.querySelector('#sp-cancel-listen-btn');
@@ -2063,6 +2134,14 @@
         if (this.eurcRate) amount = parseFloat((amount / this.eurcRate).toFixed(2));
       }
 
+      // Cent-jitter: shave a unique sub-cent off USD-stable amounts so concurrent same-price
+      // orders at the shared address are distinguishable — the scanner matches by closest amount.
+      // Customer pays slightly LESS, never more. Cached per instance so repaints don't drift.
+      if (this.selectedToken !== 'EURC' && amount >= 1) {
+        if (!this._amtJitter) this._amtJitter = (1 + Math.floor(Math.random() * 99)) * 0.0001;
+        amount = Math.round((amount - this._amtJitter) * 1e6) / 1e6;
+      }
+
       this._pendingPayment = {
         merchantId: this.options.merchantId,
         amount,
@@ -2089,6 +2168,7 @@
       if (sendAmountDisplay) sendAmountDisplay.textContent = `${amount} ${this.selectedToken}`;
       const sendWarning = this.container.querySelector('#sp-send-warning');
       if (sendWarning) sendWarning.innerHTML = `Send <strong>only ${this.selectedToken}</strong> on <strong>${this.selectedChain?.config?.chainName || 'this network'}</strong> — a different coin or network may be permanently lost.`;
+      this._populateHowTo(amount);
 
       const canvas = this.container.querySelector('#sp-qr-canvas');
       const chainConfig = this.selectedChain?.config;
@@ -2150,6 +2230,35 @@
       this.lockSelectors();
       this.startCountdown();
       this._stabloOnPayScreen();
+    }
+
+    // Step-by-step send instructions on the send screen. Open by default for exchange senders
+    // (they told us on the source step), collapsed for everyone else. The two warnings that
+    // actually lose money (wrong network, fee deducted from amount) are always spelled out.
+    _populateHowTo(amount) {
+      const box = this.container.querySelector('#sp-howto');
+      const summary = this.container.querySelector('#sp-howto-summary');
+      const steps = this.container.querySelector('#sp-howto-steps');
+      if (!box || !steps) return;
+      const ex = this._wizardState?.exchange;
+      const isExchange = this._wizardState?.source === 'exchange';
+      const exName = ex === 'coinbase' ? 'Coinbase' : ex === 'binance' ? 'Binance' : null;
+      const tok = this.selectedToken || 'USDC';
+      const chainName = this.selectedChain?.config?.chainName || 'this network';
+      const appLabel = exName || (isExchange ? 'your exchange' : 'your wallet or exchange app');
+      const findStep = ex === 'coinbase'
+        ? `Open Coinbase, tap your <strong>${tok}</strong> balance, then tap <strong>Send</strong>.`
+        : ex === 'binance'
+        ? `Open Binance, go to <strong>Wallet → Withdraw</strong>, pick <strong>${tok}</strong>.`
+        : `Open ${appLabel} and start a <strong>send / withdraw</strong> of ${tok}.`;
+      if (summary) summary.innerHTML = `How to send from ${appLabel} ▾`;
+      steps.innerHTML = `
+        <li>${findStep}</li>
+        <li>Copy the address above and paste it as the recipient.</li>
+        <li><strong>Network: choose ${chainName}.</strong> If ${chainName} isn't offered, stop — picking a different network loses the money.</li>
+        <li>Make sure <strong>${amount} ${tok} arrives after fees</strong> — if the app asks, add the fee on top instead of deducting it.</li>
+        <li>Confirm. Exchange withdrawals can take a few minutes — keep this open and we'll detect it.</li>`;
+      box.open = isExchange;
     }
 
     // Inject/refresh a tappable "Open in wallet" deep-link button on the send screen. Uses the
@@ -2440,6 +2549,50 @@
       .finally(() => { this._stabloLoading = false; });
     }
     // ── end Stablo ───────────────────────────────────────────────────────────
+
+    // Create the deferred stablecoin order (widget creates lazily, not on screen render).
+    // Idempotent: returns immediately when the order exists; concurrent callers share one
+    // in-flight promise so the first-click background create and the gate-confirm path can
+    // never double-create. On failure the promise is cleared so a retry can re-attempt.
+    _createDeferredOrder() {
+      if (this.currentOrderId) return Promise.resolve({ success: true });
+      if (!this._pendingPayment) return Promise.resolve({ success: false, error: 'No payment prepared' });
+      if (this._orderCreatePromise) return this._orderCreatePromise;
+      const p = this._pendingPayment;
+      this._orderCreatePromise = (async () => {
+        try {
+          const res = await fetch(`${STABLEPAY_URL}/api/embed/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchantId: p.merchantId,
+              storeId: this.options.storeId || undefined,
+              amount: p.amount,
+              chain: p.chain,
+              token: p.token,
+              customerEmail: p.customerEmail,
+              productName: p.productName,
+              customerWallet: p.customerWallet,
+              paymentMethod: 'MANUAL_SEND',
+              source: 'EMBED_WIDGET',
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            this.currentOrderId = data.order.id;
+            // Reconcile the placeholder send-screen countdown to the order's REAL expiresAt.
+            if (data.order.expiresAt) this.reconcileCountdown(data.order.expiresAt);
+            return { success: true };
+          }
+          this._orderCreatePromise = null;
+          return { success: false, error: data.error || 'Failed to register payment' };
+        } catch (err) {
+          this._orderCreatePromise = null;
+          return { success: false, error: 'Failed to register payment — please try again' };
+        }
+      })();
+      return this._orderCreatePromise;
+    }
 
     startPaymentPolling() {
       if (this._pollingInterval) return; // Don't double-poll

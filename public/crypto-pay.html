@@ -1224,6 +1224,8 @@
             const key = btn.getAttribute('data-wiz');
             const val = btn.getAttribute('data-val') || '';
             if (key === 'answer') { const [k, v] = val.split(':'); cpWizAnswer(k, v); }
+            else if (key === 'source') cpWizSourceAnswer(val);
+            else if (key === 'exchange') cpWizExchangeAnswer(val);
             else if (key === 'goto') cpWizGoStep(val);
             else if (key === 'back') cpWizGoBack();
             else if (key === 'show-address') cpWizShowAddressAgain();
@@ -1385,7 +1387,9 @@
                 }
                 cpWizState.token = cpWizGetTokens()[0] || null;
                 cpWizState.method = 'manual';
-                cpWizStartPay();
+                // Segment first: "Where's your crypto?" — order creation (and its expiry clock)
+                // only starts once the customer says they can actually send.
+                cpWizGoStep('source');
             } catch (e) {
                 console.error('Fast preselect failed:', e);
                 window._cpFastStarted = false;
@@ -1405,6 +1409,8 @@
             const idx = order.indexOf(fromStep);
             if (idx > 0) return order[idx - 1];
             if (fromStep === '1b') return 'payType';
+            if (fromStep === 'exchange-pick') return 'source';
+            if (fromStep === 'get-crypto') return 'source';
             if (fromStep === 'sender-wallet') return 'method';
             // manual-send: guided variant came from sender-wallet. FAST has no picker to rewind to
             // (the edit panel replaces it), so no back target — keeps fast off the skipped picker.
@@ -1450,6 +1456,9 @@
             const journey = ['Pick payment type', 'Pick network', 'Pick coin', 'Pick send method', 'Send / connect & pay'];
             const lines = [];
             if (num) lines.push(`You're on step ${num} of ${total}.`);
+            if (step === 'source') lines.push('Tell us where your crypto lives so we can show the right send instructions.');
+            if (step === 'exchange-pick') lines.push('Pick your exchange — each app has a slightly different send/withdraw flow.');
+            if (step === 'get-crypto') lines.push('You need USDC (a digital dollar) to pay. Buy it on an exchange, then come back — this link keeps working.');
             if (step === 'payType') lines.push('Choose stablecoin (USDC/USDT — no fee) or native crypto (ETH/SOL/BNB — +1.5% auto-converted).');
             if (step === 'network') lines.push('Pick the network your wallet uses.');
             if (step === 'token')   lines.push('Pick the coin you actually hold in your wallet.');
@@ -1687,8 +1696,79 @@
                         </div>
                     </div>`;
 
+                // FAST first screen: segment by where the customer's crypto lives. One tap, three
+                // routes — wallet holders go straight to the address (old behavior), exchange
+                // holders get send instructions, no-crypto gets a get-USDC guide instead of an
+                // address they can't use. Telemetry: HAS_CRYPTO_ANSWERED tells us the audience mix.
+                case 'source': {
+                    const srcToken = cpWizState.token || 'USDC';
+                    return `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">Where's your crypto?</h2>
+                        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">To pay $${usd} you'll send ${srcToken} — we'll guide you.</p>
+                        <div style="display:flex;flex-direction:column;gap:12px;">
+                        ${cpWizBtn('In my own wallet', 'Phantom, MetaMask, Trust, Coinbase Wallet…', 'source', 'wallet')}
+                        ${cpWizBtn('On an exchange', 'Coinbase, Binance, Kraken, Crypto.com…', 'source', 'exchange')}
+                        ${cpWizBtn("I don't have crypto yet", "We'll show you the fastest way to get it", 'source', 'none')}
+                        </div>`;
+                }
+
+                case 'exchange-pick': {
+                    return `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">Which exchange?</h2>
+                        <p style="font-size:14px;color:#6b7280;margin-bottom:24px;text-align:center;">We'll show you exactly how to send from it</p>
+                        <div style="display:flex;flex-direction:column;gap:12px;">
+                        ${cpWizBtn('Coinbase', 'Send crypto from the Coinbase app', 'exchange', 'coinbase')}
+                        ${cpWizBtn('Binance', 'Withdraw from the Binance app', 'exchange', 'binance')}
+                        ${cpWizBtn('Cash App', '', 'exchange', 'cashapp')}
+                        ${cpWizBtn('Another exchange', 'Kraken, Crypto.com, OKX, Bybit…', 'exchange', 'other')}
+                        </div>`;
+                }
+
+                // No-crypto guide. Instruct only — no embedded onramp. GET_CRYPTO_GUIDE_VIEWED
+                // fires when routed here; if customers stall at this screen, telemetry shows it.
+                case 'get-crypto': {
+                    const gcToken = cpWizState.token || 'USDC';
+                    const cashappNote = cpWizState.noCryptoReason === 'cashapp'
+                        ? `<div style="border:2px solid #18181B;background:#F4F4F5;padding:10px 12px;margin-bottom:16px;font-size:13px;color:#18181B;"><strong>Heads up:</strong> Cash App can only send Bitcoin — it can't send ${gcToken}. Use one of the options below instead.</div>`
+                        : '';
+                    return `<h2 style="font-size:24px;font-weight:700;color:#000;margin-bottom:8px;text-align:center;">Get ${gcToken} in ~10 minutes</h2>
+                        <p style="font-size:14px;color:#6b7280;margin-bottom:16px;text-align:center;">${gcToken} is a digital dollar — $1 = 1 ${gcToken}. You need about $${usd} worth, plus ~$2 extra for fees.</p>
+                        ${cashappNote}
+                        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+                            <a href="https://www.coinbase.com/" target="_blank" rel="noopener" style="display:block;width:100%;padding:12px 16px;background:#fff;color:#000;border:4px solid #000;text-decoration:none;box-sizing:border-box;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;"><div><div style="font-weight:700;">Coinbase <span style="font-weight:400;font-size:12px;color:#6b7280;">— easiest</span></div><div style="font-size:12px;color:#6b7280;font-weight:400;margin-top:2px;">Create account → buy ${gcToken} with your card → come back here</div></div><span style="color:#9ca3af;">↗</span></div></a>
+                            <a href="https://www.binance.com/" target="_blank" rel="noopener" style="display:block;width:100%;padding:12px 16px;background:#fff;color:#000;border:4px solid #000;text-decoration:none;box-sizing:border-box;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;"><div><div style="font-weight:700;">Binance</div><div style="font-size:12px;color:#6b7280;font-weight:400;margin-top:2px;">Largest exchange — buy ${gcToken} with card or bank</div></div><span style="color:#9ca3af;">↗</span></div></a>
+                        </div>
+                        <p style="font-size:12px;color:#6b7280;line-height:1.5;margin-bottom:16px;">First-time signup needs ID verification (a few minutes). Once you have ${gcToken}, come back — your payment link still works.</p>
+                        <button data-wiz="goto" data-val="source" style="width:100%;padding:16px;font-weight:700;font-size:16px;border:4px solid #000;background:#18181B;color:#fff;cursor:pointer;">I have crypto now →</button>`;
+                }
+
                 default: return '';
             }
+        }
+
+        // 'source' step answer — segment + route. The order is only created AFTER this step
+        // (cpWizStartPay), so people who stall at the guides never generate junk EXPIRED orders.
+        function cpWizSourceAnswer(val) {
+            cpWizState.source = val;
+            cpWizTrack('HAS_CRYPTO_ANSWERED', { answer: val, variant: window._spVariant });
+            if (val === 'wallet') return cpWizStartPay();
+            if (val === 'exchange') return cpWizGoStep('exchange-pick');
+            cpWizState.noCryptoReason = null;
+            cpWizTrack('GET_CRYPTO_GUIDE_VIEWED', { reason: 'no_crypto' });
+            return cpWizGoStep('get-crypto');
+        }
+
+        function cpWizExchangeAnswer(val) {
+            cpWizState.exchange = val;
+            cpWizTrack('EXCHANGE_GUIDE_VIEWED', { exchange: val });
+            if (val === 'cashapp') {
+                // Cash App is Bitcoin-only — sending USDC from it is impossible. Route to the
+                // get-crypto guide with an explanation instead of an address they can't pay.
+                cpWizState.noCryptoReason = 'cashapp';
+                cpWizTrack('GET_CRYPTO_GUIDE_VIEWED', { reason: 'cashapp' });
+                return cpWizGoStep('get-crypto');
+            }
+            return cpWizStartPay();
         }
 
         function cpWizAnswer(key, value) {
@@ -2011,9 +2091,17 @@
                     // Merchant-supplied email via ?email= on the checkout link; we never prompt the customer for it.
                     const _emailRaw = (_params.get('email') || _params.get('customer_email') || _params.get('customerEmail') || '').trim();
                     const _customerEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_emailRaw) ? _emailRaw : undefined;
-                    const amountToCharge = (cpWizState.token === 'EURC' && info.amount)
+                    let amountToCharge = (cpWizState.token === 'EURC' && info.amount)
                         ? info.amount
                         : parseFloat(currentProduct?.price ?? _params.get('price') ?? _params.get('amount') ?? 0);
+                    // Cent-jitter: shave a unique sub-cent off stablecoin orders so concurrent
+                    // same-price orders at the shared address have distinguishable amounts — the
+                    // scanner matches by closest amount. Customer pays slightly LESS, never more.
+                    // Stable USD tokens only (native has per-order wallets; EURC is EUR-converted).
+                    if (!NATIVE_TOKENS_SET.has(cpWizState.token) && cpWizState.token !== 'EURC' && amountToCharge >= 1) {
+                        if (!window._cpAmtJitter) window._cpAmtJitter = (1 + Math.floor(Math.random() * 99)) * 0.0001;
+                        amountToCharge = Math.round((amountToCharge - window._cpAmtJitter) * 1e6) / 1e6;
+                    }
                     const res = await fetch('/api/embed/checkout', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -2074,8 +2162,11 @@
                 amtStr = '€' + (orderData?.amount || info.amount).toFixed(2) + ' EURC';
                 amtForQR = orderData?.amount || info.amount;
             } else {
-                amtStr = (orderData?.amount || info.amount).toFixed(2) + ' ' + cpWizState.token;
-                amtForQR = orderData?.amount || info.amount;
+                // Show the FULL amount (up to 4 decimals) — cent-jitter makes it e.g. 9.9901 and
+                // the customer must send exactly that for closest-amount matching to bind to them.
+                const _rawAmt = Number(orderData?.amount ?? info.amount);
+                amtStr = (Math.round(_rawAmt * 10000) / 10000) + ' ' + cpWizState.token;
+                amtForQR = _rawAmt;
             }
 
             const expiresAt = orderData?.expiresAt
@@ -2184,6 +2275,33 @@
             cpWizShowManualSend();
         }
 
+        // Step-by-step send instructions for the address screen. Open by default for exchange
+        // senders (they picked their exchange on the way in), collapsed-but-present for everyone
+        // else. Content stays generic where exchange UIs drift; the two warnings that actually
+        // lose money (wrong network, fee deducted from amount) are always spelled out.
+        function cpWizHowToHTML(info) {
+            const ex = cpWizState.exchange;
+            const exName = ex === 'coinbase' ? 'Coinbase' : ex === 'binance' ? 'Binance' : null;
+            const isExchange = cpWizState.source === 'exchange';
+            const tok = cpWizState.token || 'USDC';
+            const appLabel = exName || (isExchange ? 'your exchange' : 'your wallet or exchange app');
+            const findStep = ex === 'coinbase'
+                ? `Open Coinbase, tap your <strong>${tok}</strong> balance, then tap <strong>Send</strong>.`
+                : ex === 'binance'
+                ? `Open Binance, go to <strong>Wallet → Withdraw</strong>, pick <strong>${tok}</strong>.`
+                : `Open ${appLabel} and start a <strong>send / withdraw</strong> of ${tok}.`;
+            return `<details id="cpWizHowTo" ${isExchange ? 'open' : ''} style="border:2px solid #D4D4D8;background:#fff;padding:10px 12px;margin-bottom:12px;">
+                <summary style="cursor:pointer;font-weight:700;font-size:13px;color:#18181B;">How to send from ${appLabel} ▾</summary>
+                <ol style="margin:10px 0 0;padding-left:18px;font-size:12px;color:#18181B;line-height:1.6;">
+                    <li>${findStep}</li>
+                    <li>Paste the address above as the recipient.</li>
+                    <li><strong>Network: choose ${info.chainName}.</strong> If ${info.chainName} isn't offered, stop — picking a different network loses the money.</li>
+                    <li>Make sure <strong>${info.amtStr} arrives after fees</strong> — if the app asks, add the fee on top instead of deducting it.</li>
+                    <li>Confirm. Exchange withdrawals can take a few minutes — keep this page open and we'll detect it.</li>
+                </ol>
+            </details>`;
+        }
+
         // Renders the "Send exactly / address / QR / countdown / I've sent" screen from a cached
         // info object. Shared by the first render (cpWizShowManualSend) and the go-back path
         // (cpWizShowAddressAgain) so the two can never drift.
@@ -2223,6 +2341,7 @@
                     <span style="font-size:10px;line-height:1.4;color:#18181B;">Send <strong>only ${cpWizState.token}</strong> on <strong>${info.chainName}</strong> — a different coin or network may be permanently lost.</span>
                 </div>
                 ${cpWizState.senderWallet ? `<p class="text-xs mb-3 text-center" style="color:#71717A;">Sending from: <code class="font-mono">${cpWizState.senderWallet.slice(0,6)}...${cpWizState.senderWallet.slice(-4)}</code></p>` : ''}
+                ${cpWizHowToHTML(info)}
                 ${_isFast ? cpWizEditPanelHTML() : ''}
                 <div class="text-center mb-4">
                     <p class="text-xs" style="color:#71717A;">Expires in <span id="cpWizManualCountdown" class="font-bold" style="color:#18181B;">--:--</span></p>
@@ -2231,6 +2350,11 @@
                 <button id="cpWizSentBtn" class="w-full py-4 px-4 font-bold text-base border-4 transition" style="border-color:#18181B;background:#18181B;color:#fff;">
                     I've sent the payment →
                 </button>
+                <div id="cpWizSentGate" style="display:none;border:4px solid #18181B;background:#F4F4F5;padding:14px;">
+                    <p style="font-size:14px;font-weight:700;color:#18181B;margin-bottom:10px;text-align:center;">Quick check — did the ${cpWizState.token || ''} actually leave your ${cpWizState.source === 'exchange' ? 'exchange' : 'wallet'}?</p>
+                    <button id="cpWizGateYes" style="width:100%;padding:14px;font-weight:700;font-size:15px;border:4px solid #18181B;background:#18181B;color:#fff;cursor:pointer;margin-bottom:8px;">Yes — I sent it ✓</button>
+                    <button id="cpWizGateNo" style="width:100%;padding:12px;font-weight:600;font-size:13px;border:2px solid #71717A;background:#fff;color:#18181B;cursor:pointer;">Not yet — show me how</button>
+                </div>
                 ${info.payUri ? `<a href="${info.payUri}" class="mobile-wallet-link w-full text-center" style="display:block;background:transparent;color:#71717A;border:none;padding:6px;margin-top:8px;font-weight:600;font-size:11px;text-transform:none;text-decoration:underline;">Open in your wallet app ↗</a>` : ''}
                 <p class="text-center" style="font-size:10px;color:#71717A;margin-top:10px;line-height:1.4;">🔒 No signup — what you paste is only used to confirm your payment, never sold or shared.</p>`;
 
@@ -2249,7 +2373,12 @@
                 }
             }, 1000);
 
-            document.getElementById('cpWizSentBtn').onclick = () => {
+            // "I've sent it" is gated: first click shows a did-you-actually-send check. On-chain
+            // data showed 124 clicks → ~0 real transfers in a week; the gate catches the people
+            // who think the button itself completes the payment and routes them to the how-to.
+            const _sentBtn = document.getElementById('cpWizSentBtn');
+            const _sentGate = document.getElementById('cpWizSentGate');
+            const _proceedToScan = () => {
                 if (window._cpWizCountdown) { clearInterval(window._cpWizCountdown); window._cpWizCountdown = null; }
                 // PAY_CLICKED here too — manual "I've sent it" is the intent signal in the manual flow.
                 // Already fires when wallet flow processes payment; fire here to match for manual.
@@ -2264,6 +2393,24 @@
                     cpWizGoStep('scanning');
                     cpWizStartScanning();
                 }
+            };
+            _sentBtn.onclick = () => {
+                if (!_sentGate) return _proceedToScan();
+                _sentBtn.style.display = 'none';
+                _sentGate.style.display = 'block';
+            };
+            const _gateYes = document.getElementById('cpWizGateYes');
+            const _gateNo = document.getElementById('cpWizGateNo');
+            if (_gateYes) _gateYes.onclick = () => {
+                cpWizTrack('SENT_CONFIRM_GATE', { answer: 'sent', source: cpWizState.source || 'unknown' });
+                _proceedToScan();
+            };
+            if (_gateNo) _gateNo.onclick = () => {
+                cpWizTrack('SENT_CONFIRM_GATE', { answer: 'not_yet', source: cpWizState.source || 'unknown' });
+                _sentGate.style.display = 'none';
+                _sentBtn.style.display = '';
+                const howTo = document.getElementById('cpWizHowTo');
+                if (howTo) { howTo.open = true; howTo.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
             };
 
             // Edit-panel telemetry: measure how often customers expand "Edit payment options".

@@ -9,6 +9,13 @@ import { receiptService } from './receiptService';
 import { emailService } from './emailService';
 import { resolvePaymentAddress } from './storeResolver';
 
+// Exchange withdrawals routinely land 10-30+ min after the customer hits send — past the 30-min
+// order window. Within this grace period the scanner keeps watching EXPIRED stablecoin orders and
+// confirmOrder still accepts them (marked metadata.latePayment). Stablecoin only: funds go straight
+// to the merchant's settlement address, so a late confirm just records reality. Native is excluded —
+// its 15-min price snapshot goes stale and late swaps belong to recoveryService.
+export const LATE_PAYMENT_GRACE_MS = 6 * 60 * 60 * 1000;
+
 export class OrderService {
   async createOrder(data: CreateOrderRequest): Promise<CreateOrderResponse> {
     const chainConfig = CHAIN_CONFIGS[data.chain];
@@ -245,6 +252,16 @@ export class OrderService {
         where: { txHash: txData.txHash }
       });
 
+      // One on-chain transfer can only ever pay ONE order. Reject a txHash that's already bound
+      // to a different order — otherwise a merchant-API replay (or buggy retry) of a known hash
+      // could confirm a second order off the same transfer.
+      if (existingTx && existingTx.orderId !== orderId) {
+        logger.warn('confirmOrder rejected — txHash already bound to another order', {
+          orderId, txHash: txData.txHash, boundTo: existingTx.orderId, event: 'order.tx_replay_blocked',
+        });
+        throw new Error('Transaction hash already used by another order');
+      }
+
       if (existingTx) {
         // Update existing transaction
         await db.transaction.update({
@@ -275,18 +292,24 @@ export class OrderService {
       }
     }
 
-    // Atomic guard. Two legitimate confirmable states:
+    // Atomic guard. Three legitimate confirmable states:
     //  - PENDING + not expired: the normal stablecoin path.
     //  - PROCESSING (any expiry): the native-swap path. swapAndForward atomically claims the order
     //    PENDING→PROCESSING (that claim is itself the double-execution guard), runs the swap+forward
     //    — which can finish AFTER the 15-min window and re-quotes stale prices — then calls confirm.
     //    Requiring PENDING here is exactly why native orders could NEVER confirm (0/27). B1 fix.
-    // The IN-set still rejects already CONFIRMED/EXPIRED/CANCELLED/REFUNDED orders → no double-confirm.
+    //  - EXPIRED stablecoin within LATE_PAYMENT_GRACE_MS: exchange withdrawals routinely outlive
+    //    the order window; the money still arrived at the merchant's address. Stablecoin only
+    //    ("nativeToken" IS NULL) — late native swaps would re-quote stale prices.
+    // CONFIRMED/CANCELLED/REFUNDED remain rejected → no double-confirm.
     const confirmNow = new Date();
+    const graceFloor = new Date(Date.now() - LATE_PAYMENT_GRACE_MS);
     const updated = await db.$executeRaw`
       UPDATE orders SET status = 'CONFIRMED'::"OrderStatus", "updatedAt" = ${confirmNow}
       WHERE id = ${orderId}
-        AND (status = 'PROCESSING'::"OrderStatus" OR (status = 'PENDING'::"OrderStatus" AND "expiresAt" > ${confirmNow}))
+        AND (status = 'PROCESSING'::"OrderStatus"
+          OR (status = 'PENDING'::"OrderStatus" AND "expiresAt" > ${confirmNow})
+          OR (status = 'EXPIRED'::"OrderStatus" AND "nativeToken" IS NULL AND "expiresAt" > ${graceFloor}))
     `;
     if (updated === 0) {
       logger.warn('confirmOrder skipped — order not PENDING or expired', {
@@ -309,6 +332,23 @@ export class OrderService {
         })),
         _staleSkipped: true,
       };
+    }
+
+    // Late payment (was EXPIRED, arrived within grace): record it so dashboard/webhooks can
+    // distinguish on-time from late settlements. Non-blocking metadata write.
+    // Also catches the sweep race: orderDetails was read as PENDING, the sweep flipped it EXPIRED,
+    // and the UPDATE succeeded via the EXPIRED arm — past-expiry stablecoin PENDING means late too.
+    const wasLate = orderDetails.status === 'EXPIRED'
+      || (orderDetails.status === 'PENDING' && orderDetails.nativeToken == null && orderDetails.expiresAt <= confirmNow);
+    if (wasLate) {
+      try {
+        const meta = (orderDetails.metadata as Record<string, unknown>) || {};
+        await db.order.update({
+          where: { id: orderId },
+          data: { metadata: { ...meta, latePayment: { expiredAt: orderDetails.expiresAt.toISOString(), confirmedAt: confirmNow.toISOString() } } },
+        });
+        logger.warn('late payment confirmed after expiry', { orderId, txHash: txData?.txHash, event: 'order.late_payment' });
+      } catch (e) { logger.warn('failed to flag late payment', { orderId, error: (e as Error).message }); }
     }
 
     const confirmedOrder = await db.order.findUnique({

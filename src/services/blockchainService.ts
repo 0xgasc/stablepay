@@ -3,7 +3,7 @@ import { db } from '../config/database';
 import { CHAIN_CONFIGS } from '../config/chains';
 import { Chain } from '../types';
 import { Decimal } from '@prisma/client/runtime/library';
-import { OrderService } from './orderService';
+import { OrderService, LATE_PAYMENT_GRACE_MS } from './orderService';
 import { webhookService } from './webhookService';
 import { logger } from '../utils/logger';
 
@@ -90,8 +90,20 @@ async function flagSettledInToken(orderId: string, expected: string, received: s
   } catch (e) { logger.warn('flagSettledInToken failed', { orderId, error: (e as Error).message }); }
 }
 
+// One wrong-token transfer must flag AT MOST ONE order, EVER. Without this, a single stray USDT
+// tx got re-matched against every new pending order at the shared address for days (observed: the
+// same txHash flagged 13 times across different orders). In-memory set is the fast path; the JSON
+// metadata lookup makes it durable across scanner restarts.
+const flaggedWrongTokenTxs = new Set<string>();
+
 async function flagWrongToken(orderId: string, merchantId: string | null, expected: string, received: string | null, txHash: string, chain: string) {
   try {
+    if (flaggedWrongTokenTxs.has(txHash)) return;
+    const alreadyFlagged = await db.order.findFirst({
+      where: { metadata: { path: ['wrongTokenDetected', 'txHash'], equals: txHash } },
+      select: { id: true },
+    });
+    if (alreadyFlagged) { flaggedWrongTokenTxs.add(txHash); return; }
     const existing = await db.order.findUnique({ where: { id: orderId }, select: { metadata: true } });
     const meta = (existing?.metadata as Record<string, unknown>) || {};
     await db.order.update({
@@ -103,12 +115,29 @@ async function flagWrongToken(orderId: string, merchantId: string | null, expect
         },
       },
     });
+    // Only mark deduped AFTER the durable write succeeds — adding before it would permanently
+    // suppress a retry if the update threw, leaving the transfer never flagged.
+    flaggedWrongTokenTxs.add(txHash);
     if (merchantId) {
       webhookService.sendWebhook(merchantId, 'order.wrong_token', {
         orderId, expectedToken: expected, receivedToken: received, txHash, chain,
       }).catch(() => {});
     }
   } catch (e) { logger.warn('flagWrongToken failed', { orderId, error: (e as Error).message }); }
+}
+
+// Scannable order set: live PENDING orders, plus EXPIRED stablecoin orders still inside the
+// late-payment grace window. Exchange withdrawals routinely land after the 30-min order TTL;
+// before this, the scanner dropped the order at expiry and an arriving payment sat at the
+// merchant address credited to no one. Native orders are excluded (stale price snapshots —
+// recoveryService owns those).
+function scannableOrderWhere() {
+  return {
+    OR: [
+      { status: 'PENDING' as const, expiresAt: { gt: new Date() } },
+      { status: 'EXPIRED' as const, nativeToken: null, expiresAt: { gt: new Date(Date.now() - LATE_PAYMENT_GRACE_MS) } },
+    ],
+  };
 }
 
 export function amountWithinTolerance(txAmount: number, orderAmount: number, tolerance = 0.01): boolean {
@@ -151,13 +180,9 @@ export class BlockchainService {
         return 0;
       }
 
-      // Get pending orders for this chain
+      // Get scannable orders for this chain (PENDING + EXPIRED-within-grace stablecoin)
       const pendingOrders = await db.order.findMany({
-        where: {
-          chain,
-          status: 'PENDING',
-          expiresAt: { gt: new Date() },
-        },
+        where: { chain, ...scannableOrderWhere() },
         select: { id: true, paymentAddress: true, amount: true, customerWallet: true, createdAt: true, token: true, merchantId: true },
         orderBy: { createdAt: 'desc' },
       });
@@ -388,7 +413,13 @@ export class BlockchainService {
               c.order.customerWallet.toLowerCase() === fromLower
             );
             const tier = fromCands.length > 0 ? fromCands : candidates;
-            const chosen = tier.find(c => c.exact) || tier[0];
+            // Within the tier, the order whose amount is CLOSEST to the transfer wins — checkout
+            // cent-jitter gives concurrent same-price orders unique amounts, so closeness is the
+            // disambiguator. Exact-token beats cross-stable only among equally-close candidates.
+            const chosen = [...tier].sort((a, b) =>
+              Math.abs(a.txAmount - Number(a.order.amount)) - Math.abs(b.txAmount - Number(b.order.amount))
+              || (b.exact ? 1 : 0) - (a.exact ? 1 : 0)
+            )[0];
             matchedOrder = chosen.order;
             matchedAmount = chosen.txAmount.toString();
             // Advisory flag (non-blocking): confirmed despite the sender differing from the captured wallet.
@@ -517,12 +548,16 @@ export class BlockchainService {
       const config = CHAIN_CONFIGS[chain];
       const currentBlock = await provider.getBlockNumber();
 
-      // Find transactions that are confirmed on-chain but order is still PENDING
+      // Find transactions confirmed on-chain whose order is still PENDING — or EXPIRED within
+      // the late-payment grace window. Without the EXPIRED arm, an EVM payment detected with too
+      // few confirmations gets its tx record created, the order expires while awaiting finality,
+      // and nothing ever promotes it (the txHash dedup blocks rescans) — funds at the merchant,
+      // order stuck EXPIRED forever.
       const pendingTxs = await db.transaction.findMany({
         where: {
           chain,
           status: 'CONFIRMED',
-          order: { status: 'PENDING' },
+          order: { ...scannableOrderWhere() },
         },
         include: { order: true },
       });
@@ -537,7 +572,7 @@ export class BlockchainService {
           data: { confirmations },
         });
 
-        if (confirmations >= config.requiredConfirms && tx.order.status === 'PENDING') {
+        if (confirmations >= config.requiredConfirms && (tx.order.status === 'PENDING' || tx.order.status === 'EXPIRED')) {
           try {
             await this.orderService.confirmOrder(tx.orderId, {
               txHash: tx.txHash,
@@ -570,7 +605,7 @@ export class BlockchainService {
 
     // EVM chains — scan in parallel, skip chains with no pending orders
     const evmScans = SCAN_CHAINS.map(async (chain) => {
-      const hasPending = await db.order.count({ where: { chain, status: 'PENDING', expiresAt: { gt: new Date() } } });
+      const hasPending = await db.order.count({ where: { chain, ...scannableOrderWhere() } });
       if (hasPending > 0) {
         await timeoutPromise(this.scanForPayments(chain), 15000, `${chain} scan`).catch(e => console.error(`[scanner] ${chain} error:`, e.message));
         await this.updatePendingConfirmations(chain);
@@ -714,8 +749,11 @@ export class BlockchainService {
       });
       if (stale.length > 0) {
         const now = new Date();
+        // status re-filter is load-bearing: between findMany and here the scanner can CONFIRM one
+        // of these orders — without it the sweep clobbers CONFIRMED→EXPIRED, and the grace arm in
+        // confirmOrder would then let it re-confirm (double fees, duplicate webhooks).
         await db.order.updateMany({
-          where: { id: { in: stale.map(s => s.id) } },
+          where: { id: { in: stale.map(s => s.id) }, status: 'PENDING' },
           data: { status: 'EXPIRED' },
         });
         console.log(`[scanner] Expired ${stale.length} stale orders`);
@@ -730,7 +768,7 @@ export class BlockchainService {
     console.log('[scanner] Solana scan starting...');
     try {
       const pendingOrders = await db.order.findMany({
-        where: { chain: 'SOLANA_MAINNET', status: 'PENDING', expiresAt: { gt: new Date() } },
+        where: { chain: 'SOLANA_MAINNET', ...scannableOrderWhere() },
         select: { id: true, paymentAddress: true, amount: true, customerWallet: true, token: true, merchantId: true },
         orderBy: { createdAt: 'desc' },
       });
@@ -929,7 +967,12 @@ export class BlockchainService {
                 // match over a cross-stable one, else the first.
                 const fromCands = solCandidates.filter(o => o.customerWallet && o.customerWallet === from);
                 const tier = fromCands.length > 0 ? fromCands : solCandidates;
-                const order = tier.find(o => o.token === sentTok) || tier[0];
+                // Closest order amount wins (cent-jitter disambiguates same-price collisions);
+                // exact-token beats cross-stable only among equally-close candidates.
+                const order = [...tier].sort((a, b) =>
+                  Math.abs(amount - Number(a.amount)) - Math.abs(amount - Number(b.amount))
+                  || ((b.token === sentTok ? 1 : 0) - (a.token === sentTok ? 1 : 0))
+                )[0];
                 const senderMismatch = !!(order.customerWallet && order.customerWallet !== from);
                 if (senderMismatch) {
                   logger.warn('scanner confirming FROM-mismatched payment (customerWallet is a tiebreaker, not a filter)', {
@@ -996,11 +1039,7 @@ export class BlockchainService {
   async scanTronPayments(): Promise<void> {
     try {
       const pendingOrders = await db.order.findMany({
-        where: {
-          chain: 'TRON_MAINNET',
-          status: 'PENDING',
-          expiresAt: { gt: new Date() },
-        },
+        where: { chain: 'TRON_MAINNET', ...scannableOrderWhere() },
         select: { id: true, paymentAddress: true, amount: true, customerWallet: true, token: true, merchantId: true },
         orderBy: { createdAt: 'desc' },
       });
@@ -1096,7 +1135,12 @@ export class BlockchainService {
               // match over a cross-stable one, else the first.
               const fromCands = tronCandidates.filter(o => o.customerWallet && o.customerWallet === fromAddress);
               const tier = fromCands.length > 0 ? fromCands : tronCandidates;
-              const order = tier.find(o => o.token === tokenName) || tier[0];
+              // Closest order amount wins (cent-jitter disambiguates same-price collisions);
+              // exact-token beats cross-stable only among equally-close candidates.
+              const order = [...tier].sort((a, b) =>
+                Math.abs(amount - Number(a.amount)) - Math.abs(amount - Number(b.amount))
+                || ((b.token === tokenName ? 1 : 0) - (a.token === tokenName ? 1 : 0))
+              )[0];
               const senderMismatch = !!(order.customerWallet && order.customerWallet !== fromAddress);
               if (senderMismatch) {
                 logger.warn('scanner confirming FROM-mismatched payment (customerWallet is a tiebreaker, not a filter)', {

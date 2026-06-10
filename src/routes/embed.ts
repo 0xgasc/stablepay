@@ -1007,12 +1007,18 @@ router.post('/order/:orderId/tx', async (req, res) => {
     });
 
     if (!order) return res.status(404).json({ error: 'Order not found' });
-    if (order.status !== 'PENDING') {
+    // EXPIRED stablecoin orders within the late-payment grace window stay verifiable: the late
+    // payer who pastes their tx hash is exactly the customer grace scanning exists for. Native
+    // stays PENDING-only (stale price snapshots).
+    const { LATE_PAYMENT_GRACE_MS } = await import('../services/orderService');
+    const inGrace = order.status === 'EXPIRED' && order.nativeToken == null
+      && order.expiresAt > new Date(Date.now() - LATE_PAYMENT_GRACE_MS);
+    if (order.status !== 'PENDING' && !inGrace) {
       return res.status(400).json({ error: `Order status is ${order.status}`, status: order.status });
     }
 
-    // Check expiry
-    if (order.expiresAt < new Date()) {
+    // Check expiry (grace-window EXPIRED orders pass through to on-chain verification)
+    if (order.status === 'PENDING' && order.expiresAt < new Date()) {
       return res.status(400).json({ error: 'Order has expired', status: 'EXPIRED' });
     }
 
@@ -1407,6 +1413,11 @@ const ALLOWED_WIDGET_EVENTS = new Set([
   'STABLO_OPENED',            // customer opened the Stablo chat panel
   'STABLO_NUDGE_FIRED',       // proactive nudge auto-opened the panel
   'STABLO_MESSAGE_SENT',      // customer sent a message to Stablo
+  // No-crypto funnel branch — measures where non-wallet-holders stall
+  'HAS_CRYPTO_ANSWERED',      // first-screen answer. details.answer = 'wallet'|'exchange'|'none'
+  'GET_CRYPTO_GUIDE_VIEWED',  // the "how to get USDC" instruction screen was shown
+  'EXCHANGE_GUIDE_VIEWED',    // exchange-specific send instructions. details.exchange = 'coinbase'|'binance'|'cashapp'|'other'
+  'SENT_CONFIRM_GATE',        // "did you actually send?" gate. details.answer = 'sent'|'not_yet'
 ]);
 
 router.post('/event', async (req, res) => {
