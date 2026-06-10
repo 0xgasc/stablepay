@@ -146,6 +146,45 @@ export function amountWithinTolerance(txAmount: number, orderAmount: number, tol
   return diff <= tolerance;
 }
 
+// Asymmetric acceptance: the symmetric ±1% tolerance, PLUS underpayment up to min($1.00, 3%).
+// Exchanges deduct their withdrawal fee from the sent amount (observed live: 4.90 arrived for a
+// 4.99 order — customer paid, scanner skipped it, order expired). Fees are small flat amounts, so
+// the $1 absolute cap covers them while bounding deliberate undercutting at $1/order; the 3%
+// relative cap stops the $1 allowance from dominating small orders. Every fee-rule acceptance is
+// flagged (metadata.underpaid) so abuse patterns are visible in the dashboard.
+export function amountAcceptable(txAmount: number, orderAmount: number): { ok: boolean; underpaid: boolean; shortfall: number } {
+  if (orderAmount <= 0) return { ok: false, underpaid: false, shortfall: 0 };
+  const shortfall = Math.round((orderAmount - txAmount) * 1e6) / 1e6;
+  if (amountWithinTolerance(txAmount, orderAmount)) return { ok: true, underpaid: false, shortfall: Math.max(0, shortfall) };
+  if (shortfall > 0 && shortfall <= Math.min(1.0, orderAmount * 0.03)) return { ok: true, underpaid: true, shortfall };
+  return { ok: false, underpaid: shortfall > 0, shortfall: Math.max(0, shortfall) };
+}
+
+// Record a fee-rule underpay acceptance on the order (advisory, non-blocking).
+export async function flagUnderpaid(orderId: string, expected: number, received: number, txHash: string, chain: string) {
+  try {
+    const existing = await db.order.findUnique({ where: { id: orderId }, select: { metadata: true } });
+    const meta = (existing?.metadata as Record<string, unknown>) || {};
+    await db.order.update({
+      where: { id: orderId },
+      data: {
+        metadata: {
+          ...meta,
+          underpaid: {
+            expected, received,
+            shortfall: Math.round((expected - received) * 1e6) / 1e6,
+            reason: 'accepted under exchange-fee rule', txHash, chain,
+            detectedAt: new Date().toISOString(),
+          },
+        },
+      },
+    });
+    logger.warn('underpaid payment accepted (exchange-fee rule)', {
+      orderId, expected, received, txHash, chain, event: 'scanner.underpay_accepted',
+    });
+  } catch (e) { logger.warn('flagUnderpaid failed', { orderId, error: (e as Error).message }); }
+}
+
 export class BlockchainService {
   private providers: Record<string, ethers.JsonRpcProvider> = {};
   private contracts: Record<string, ethers.Contract[]> = {}; // Multiple contracts per chain
@@ -334,7 +373,7 @@ export class BlockchainService {
           // Actual token sent (the scanned contract that emitted this Transfer). On EVM we only scan
           // CHAIN_STABLES contracts, so this resolves to a known stable.
           const sentToken = reverseTokenLookup(chain, logContract);
-          const candidates: { order: typeof pendingOrders[number]; txAmount: number; exact: boolean }[] = [];
+          const candidates: { order: typeof pendingOrders[number]; txAmount: number; exact: boolean; underpaid: boolean }[] = [];
           // Wrong-token orders are collected here, then AT MOST ONE is flagged after the loop (the
           // amount-matched payer). Flagging inside the loop fanned one wrong-coin transfer across
           // every open order at the shared address — over-counting + firing duplicate webhooks.
@@ -357,7 +396,8 @@ export class BlockchainService {
             const decimals = getTokenDecimals(chain, sentToken || order.token);
             const txAmount = Number(ethers.formatUnits(log.args.value, decimals));
             const orderAmount = Number(order.amount);
-            if (!amountWithinTolerance(txAmount, orderAmount)) {
+            const acceptance = amountAcceptable(txAmount, orderAmount);
+            if (!acceptance.ok) {
               logger.warn('scanner skipped amount outside tolerance', {
                 event: txAmount > orderAmount ? 'scanner.skip.overpay' : 'scanner.skip.underpay',
                 orderId: order.id,
@@ -369,7 +409,7 @@ export class BlockchainService {
               continue;
             }
 
-            candidates.push({ order, txAmount, exact: tokenMatches });
+            candidates.push({ order, txAmount, exact: tokenMatches, underpaid: acceptance.underpaid });
           }
 
           // Wrong-token: flag only the single order whose amount matches this transfer (the real
@@ -402,6 +442,7 @@ export class BlockchainService {
           let matchedOrder: typeof pendingOrders[number] | null = null;
           let matchedAmount: string | null = null;
           let senderMismatch = false;
+          let matchedUnderpaid = false;
           if (candidates.length > 0) {
             const fromLower = (fromAddress || '').toLowerCase();
             // FROM-wallet is the strongest intent signal (the customer bound this order to their
@@ -422,6 +463,7 @@ export class BlockchainService {
             )[0];
             matchedOrder = chosen.order;
             matchedAmount = chosen.txAmount.toString();
+            matchedUnderpaid = chosen.underpaid;
             // Advisory flag (non-blocking): confirmed despite the sender differing from the captured wallet.
             if (chosen.order.customerWallet && chosen.order.customerWallet.startsWith('0x') &&
                 chosen.order.customerWallet.toLowerCase() !== fromLower) {
@@ -507,6 +549,11 @@ export class BlockchainService {
               if (sentToken && sentToken !== matchedOrder.token) {
                 await flagSettledInToken(matchedOrder.id, matchedOrder.token, sentToken, txHash, chain);
                 logger.warn('scanner cross-stable settlement', { event: 'scanner.cross_stable', orderId: matchedOrder.id, chain, expected: matchedOrder.token, received: sentToken, txHash });
+              }
+
+              // Accepted under the exchange-fee underpay rule — record the shortfall.
+              if (matchedUnderpaid) {
+                await flagUnderpaid(matchedOrder.id, Number(matchedOrder.amount), Number(matchedAmount), txHash, chain);
               }
 
               await this.orderService.confirmOrder(matchedOrder.id, {
@@ -930,7 +977,7 @@ export class BlockchainService {
                 }
 
                 const orderAmt = Number(order.amount);
-                if (!amountWithinTolerance(amount, orderAmt)) {
+                if (!amountAcceptable(amount, orderAmt).ok) {
                   logger.warn('scanner skipped amount outside tolerance', {
                     event: amount > orderAmt ? 'scanner.skip.overpay' : 'scanner.skip.underpay',
                     orderId: order.id,
@@ -1014,6 +1061,10 @@ export class BlockchainService {
                   if (sentTok && sentTok !== order.token) {
                     await flagSettledInToken(order.id, order.token, sentTok, txHash, 'SOLANA_MAINNET');
                     logger.warn('scanner cross-stable settlement', { event: 'scanner.cross_stable', orderId: order.id, chain: 'SOLANA_MAINNET', expected: order.token, received: sentTok, txHash });
+                  }
+                  // Accepted under the exchange-fee underpay rule — record the shortfall.
+                  if (amountAcceptable(amount, Number(order.amount)).underpaid) {
+                    await flagUnderpaid(order.id, Number(order.amount), amount, txHash, 'SOLANA_MAINNET');
                   }
                   await this.orderService.confirmOrder(order.id, { txHash });
                   console.log(`[scanner] ✅ Solana confirmed ${order.id} — ${amount} ${tokenName || 'SPL'}`);
@@ -1102,7 +1153,7 @@ export class BlockchainService {
               }
 
               const orderAmount = Number(order.amount);
-              if (!amountWithinTolerance(amount, orderAmount)) {
+              if (!amountAcceptable(amount, orderAmount).ok) {
                 logger.warn('scanner skipped amount outside tolerance', {
                   event: amount > orderAmount ? 'scanner.skip.overpay' : 'scanner.skip.underpay',
                   orderId: order.id,
@@ -1188,6 +1239,10 @@ export class BlockchainService {
                 if (tokenName && tokenName !== order.token) {
                   await flagSettledInToken(order.id, order.token, tokenName, txHash, 'TRON_MAINNET');
                   logger.warn('scanner cross-stable settlement', { event: 'scanner.cross_stable', orderId: order.id, chain: 'TRON_MAINNET', expected: order.token, received: tokenName, txHash });
+                }
+                // Accepted under the exchange-fee underpay rule — record the shortfall.
+                if (amountAcceptable(amount, Number(order.amount)).underpaid) {
+                  await flagUnderpaid(order.id, Number(order.amount), amount, txHash, 'TRON_MAINNET');
                 }
                 await this.orderService.confirmOrder(order.id, { txHash });
                 console.log(`[scanner] ✅ TRON confirmed order ${order.id} — ${amount} ${tokenName}`);

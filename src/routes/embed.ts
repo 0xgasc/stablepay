@@ -1095,9 +1095,10 @@ router.post('/order/:orderId/tx', async (req, res) => {
             }
 
             const orderAmt = Number(order.amount);
+            const solAcceptance = (await import('../services/blockchainService')).amountAcceptable(matchedAmount, orderAmt);
             if (matchedAmount === 0) {
               verifyError = `This transaction does not send ${order.token} to the merchant wallet`;
-            } else if (!amountWithinTolerance(matchedAmount, orderAmt)) {
+            } else if (!solAcceptance.ok) {
               verifyError = matchedAmount > orderAmt
                 ? `Overpayment: TX sends ${matchedAmount.toFixed(6)} ${order.token} but order requires ${orderAmt.toFixed(6)}`
                 : `Amount mismatch: TX sends ${matchedAmount.toFixed(6)} ${order.token} but order requires ${orderAmt.toFixed(6)}`;
@@ -1109,6 +1110,10 @@ router.post('/order/:orderId/tx', async (req, res) => {
                   status: 'CONFIRMED', confirmations: 1,
                   blockTimestamp: tx.blockTime ? new Date(tx.blockTime * 1000) : new Date() },
               });
+              if (solAcceptance.underpaid) {
+                const { flagUnderpaid } = await import('../services/blockchainService');
+                await flagUnderpaid(orderId, orderAmt, matchedAmount, txHash, order.chain);
+              }
               const { OrderService } = await import('../services/orderService');
               await new OrderService().confirmOrder(orderId, { txHash });
             }
@@ -1158,7 +1163,8 @@ router.post('/order/:orderId/tx', async (req, res) => {
                 const decimals = getTokenDecimals(order.chain, order.token);
                 const txAmount = parseFloat(ethers.formatUnits(BigInt(matchingLog.data), decimals));
                 const evmOrderAmt = Number(order.amount);
-                if (!amountWithinTolerance(txAmount, evmOrderAmt)) {
+                const evmAcceptance = (await import('../services/blockchainService')).amountAcceptable(txAmount, evmOrderAmt);
+                if (!evmAcceptance.ok) {
                   verifyError = txAmount > evmOrderAmt
                     ? `Overpayment: TX sends ${txAmount.toFixed(6)} ${order.token} but order requires ${evmOrderAmt.toFixed(6)}`
                     : `Amount mismatch: TX sends ${txAmount.toFixed(6)} ${order.token} but order requires ${evmOrderAmt.toFixed(6)}`;
@@ -1179,6 +1185,10 @@ router.post('/order/:orderId/tx', async (req, res) => {
                       blockTimestamp: new Date(),
                     },
                   });
+                  if (evmAcceptance.underpaid) {
+                    const { flagUnderpaid } = await import('../services/blockchainService');
+                    await flagUnderpaid(orderId, evmOrderAmt, txAmount, txHash, order.chain);
+                  }
                   if (isFinal) {
                     verified = true;
                     const { OrderService } = await import('../services/orderService');
