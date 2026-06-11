@@ -435,6 +435,11 @@ router.post('/checkout', rateLimit({
     const finalMetadata: any = { ...baseMetadata };
     if (data.returnUrl) finalMetadata._returnUrl = data.returnUrl;
     if (chainAgnostic) finalMetadata._chainAgnostic = true;
+    // Per-order access token: returned ONCE in the checkout response and required by the public
+    // mutation endpoints (/cancel, /wallet, /contact). Without it, anyone holding an orderId
+    // could cancel the order or redirect customer contact/refund details.
+    const crypto = await import('crypto');
+    finalMetadata._accessToken = crypto.randomBytes(16).toString('hex');
 
     // Resolve final payment address: honor store wallet override if present.
     const resolvedChain = (data.chain || wallet.chain) as any;
@@ -588,6 +593,7 @@ router.post('/checkout', rateLimit({
         expiresAt: order.expiresAt.toISOString(),
         nativeSendAmount: nativeSendAmount ?? null,
         nativeToken: isNative ? data.token : null,
+        accessToken: finalMetadata._accessToken,
       }
     });
   } catch (error) {
@@ -870,20 +876,42 @@ router.post('/order/:orderId/chain', async (req, res) => {
 });
 
 /**
- * Set customer wallet on existing order (for manual flow when order was pre-created via API)
- * Helps the scanner match by FROM address. Only allowed for PENDING orders.
+ * Per-order access token check for the public mutation endpoints. The token is minted at
+ * checkout creation (metadata._accessToken), returned once in the create response, and held
+ * client-side — proof the caller is the session that created the order, not someone who
+ * guessed/saw an orderId. Enforcement is conditional: orders without a token (created before
+ * this shipped, or via the merchant server API whose links don't carry tokens yet) stay open
+ * as before and age out within the 30-min TTL. Timing-safe compare.
  */
+async function verifyOrderAccess(orderId: string, provided: unknown): Promise<boolean> {
+  const o = await db.order.findUnique({ where: { id: orderId }, select: { metadata: true } });
+  const expected = (o?.metadata as Record<string, unknown> | null)?.['_accessToken'];
+  if (!expected || typeof expected !== 'string') return true; // legacy/API order — nothing to check
+  if (typeof provided !== 'string' || !provided) return false;
+  const crypto = await import('crypto');
+  const a = crypto.createHash('sha256').update(provided).digest();
+  const b = crypto.createHash('sha256').update(expected).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+function orderTokenFrom(req: { headers: Record<string, unknown>; body?: unknown }): unknown {
+  return (req.headers['x-order-token'] as string | undefined)
+    || ((req.body || {}) as Record<string, unknown>).accessToken;
+}
+
 /**
  * Customer-initiated cancel. Marks a PENDING order as CANCELLED and fires the
  * order.cancelled webhook (distinct from order.expired, which is the 30-min timeout).
  *
- * Public endpoint — no auth required. Customer-friendly. Only works on PENDING orders;
- * confirmed/refunded/already-cancelled orders are no-ops with a clear message.
+ * Public endpoint, gated by the per-order access token (see verifyOrderAccess).
  */
 router.post('/order/:orderId/cancel', async (req, res) => {
   try {
     const { orderId } = req.params;
     const { reason } = (req.body || {}) as { reason?: string };
+    if (!(await verifyOrderAccess(orderId, orderTokenFrom(req)))) {
+      return res.status(401).json({ error: 'Invalid order token' });
+    }
     const order = await db.order.findUnique({
       where: { id: orderId },
       select: { id: true, status: true, merchantId: true, storeId: true, amount: true, chain: true, externalId: true },
@@ -924,6 +952,9 @@ router.post('/order/:orderId/wallet', async (req, res) => {
     const { customerWallet } = req.body;
     if (!customerWallet || customerWallet.length < 10) {
       return res.status(400).json({ error: 'Valid customerWallet required' });
+    }
+    if (!(await verifyOrderAccess(orderId, orderTokenFrom(req)))) {
+      return res.status(401).json({ error: 'Invalid order token' });
     }
     const order = await db.order.findUnique({ where: { id: orderId }, select: { status: true } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
@@ -966,6 +997,9 @@ router.post('/order/:orderId/contact', rateLimit({
       update.customerWallet = w;
     }
     if (Object.keys(update).length === 0) return res.status(400).json({ error: 'Provide customerEmail and/or customerWallet' });
+    if (!(await verifyOrderAccess(orderId, orderTokenFrom(req)))) {
+      return res.status(401).json({ error: 'Invalid order token' });
+    }
     const order = await db.order.findUnique({ where: { id: orderId }, select: { status: true } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.status !== 'PENDING') return res.status(400).json({ error: `Order status is ${order.status}` });
@@ -1581,6 +1615,8 @@ router.post('/support', async (req, res) => {
 
     const rateLimitKey = (orderId && typeof orderId === 'string') ? orderId : (cleanSessionId || req.ip || 'anon');
     const now = Date.now();
+    // Fast path: per-instance memory. NOT sufficient alone on Vercel serverless — every cold
+    // start gets a fresh Map, so a burst across instances bypasses it entirely.
     const rl = stabloRateMap.get(rateLimitKey);
     if (rl && rl.resetAt > now && rl.count >= 20) {
       return res.json({ reply: "You've sent a lot of messages — take a breath and try again in a bit. If you're really stuck, contact the store directly." });
@@ -1589,6 +1625,19 @@ router.post('/support', async (req, res) => {
       stabloRateMap.set(rateLimitKey, { count: 1, resetAt: now + 60 * 60 * 1000 });
     } else {
       rl.count++;
+    }
+    // Durable backstop: every exchange persists to stablo_chats, so the table IS the shared
+    // counter. 20 customer messages (40 rows) per key per hour — protects the Anthropic spend
+    // across instances and cold starts.
+    const durableKey = (orderId && typeof orderId === 'string')
+      ? { orderId: orderId as string } : (cleanSessionId ? { sessionId: cleanSessionId } : null);
+    if (durableKey) {
+      const recent = await db.stabloChat.count({
+        where: { ...durableKey, createdAt: { gt: new Date(now - 60 * 60 * 1000) } },
+      });
+      if (recent >= 40) {
+        return res.json({ reply: "You've sent a lot of messages — take a breath and try again in a bit. If you're really stuck, contact the store directly." });
+      }
     }
 
     let order: { amount: any; token: string | null; chain: string; status: string; expiresAt: Date | null; nativeToken: string | null } | null = null;

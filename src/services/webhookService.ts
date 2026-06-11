@@ -381,6 +381,20 @@ class WebhookService {
     if (config.webhookUrl && !config.webhookUrl.startsWith('https://')) {
       throw new Error('Webhook URL must use HTTPS');
     }
+    // SSRF guard: a merchant-supplied URL pointing at loopback/link-local/private ranges would
+    // turn our webhook sender into a probe of internal Railway/Vercel services. Hostname-level
+    // check (literal IPs + obvious internal names); DNS-rebinding is out of scope at this tier.
+    if (config.webhookUrl) {
+      let hostname = '';
+      try { hostname = new URL(config.webhookUrl).hostname.toLowerCase(); }
+      catch { throw new Error('Invalid webhook URL'); }
+      const isPrivate =
+        hostname === 'localhost' || hostname.endsWith('.local') || hostname.endsWith('.internal') ||
+        /^127\.|^10\.|^192\.168\.|^169\.254\.|^0\./.test(hostname) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+        hostname === '::1' || hostname.startsWith('fc') || hostname.startsWith('fd') || hostname.startsWith('fe80');
+      if (isPrivate) throw new Error('Webhook URL cannot point to private or internal addresses');
+    }
 
     // Auto-generate a secret the first time a merchant configures a URL, so signature verification
     // is never a silent null. Returned exactly once in the response — the dashboard should surface it

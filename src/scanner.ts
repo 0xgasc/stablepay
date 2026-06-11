@@ -89,6 +89,56 @@ setTimeout(() => {
   setInterval(driveStrandedRecovery, RECOVERY_INTERVAL_MS);
 }, 90 * 1000);
 
+// Fee overdue check — was a node-cron in the web tier, where it only fired on warm serverless
+// instances. The logic lives behind POST /api/fees/check-overdue; call the production API so the
+// route stays the single implementation. Every 6 hours.
+const FEE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const PLATFORM_BASE_URL = process.env.PLATFORM_BASE_URL?.trim() || 'https://wetakestables.shop';
+async function driveFeeCheck() {
+  try {
+    if (!process.env.ADMIN_KEY) return; // not configured on this worker — skip quietly
+    const res = await fetch(`${PLATFORM_BASE_URL}/api/fees/check-overdue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': process.env.ADMIN_KEY },
+      body: JSON.stringify({}),
+    });
+    const result = await res.json().catch(() => ({}));
+    console.log('[fees] overdue check:', res.status, JSON.stringify(result).slice(0, 200));
+  } catch (err: any) {
+    console.error('[fees] overdue check error:', err?.message || err);
+  }
+}
+setTimeout(() => {
+  driveFeeCheck();
+  setInterval(driveFeeCheck, FEE_CHECK_INTERVAL_MS);
+}, 3 * 60 * 1000);
+
+// Data retention — telemetry/log tables grew unbounded (widget_events alone fires ~10 events
+// per checkout). Daily sweep, 90-day window; idempotency keys use their own 24h TTL cleanup
+// (the function existed since launch but was never called from anywhere).
+const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const RETENTION_DAYS = 90;
+async function driveRetention() {
+  try {
+    const { db } = await import('./config/database');
+    const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    const [events, chats, webhookLogs] = await Promise.all([
+      db.widgetEvent.deleteMany({ where: { createdAt: { lt: cutoff } } }),
+      db.stabloChat.deleteMany({ where: { createdAt: { lt: cutoff } } }),
+      db.webhookLog.deleteMany({ where: { createdAt: { lt: cutoff } } }),
+    ]);
+    const { cleanupExpiredIdempotencyKeys } = await import('./middleware/idempotency');
+    const idem = await cleanupExpiredIdempotencyKeys();
+    console.log(`[retention] widget_events=${events.count} stablo_chats=${chats.count} webhook_logs=${webhookLogs.count} idempotency=${idem}`);
+  } catch (err: any) {
+    console.error('[retention] error:', err?.message || err);
+  }
+}
+setTimeout(() => {
+  driveRetention();
+  setInterval(driveRetention, RETENTION_INTERVAL_MS);
+}, 10 * 60 * 1000);
+
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('[scanner] Shutting down...');

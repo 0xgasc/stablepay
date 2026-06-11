@@ -810,15 +810,20 @@ export class BlockchainService {
         take: 50,
       });
       if (stale.length > 0) {
-        const now = new Date();
-        // status re-filter is load-bearing: between findMany and here the scanner can CONFIRM one
-        // of these orders — without it the sweep clobbers CONFIRMED→EXPIRED, and the grace arm in
-        // confirmOrder would then let it re-confirm (double fees, duplicate webhooks).
-        await db.order.updateMany({
-          where: { id: { in: stale.map(s => s.id) }, status: 'PENDING' },
-          data: { status: 'EXPIRED' },
-        });
-        console.log(`[scanner] Expired ${stale.length} stale orders`);
+        // THE single expiry path (the web-tier node-cron duplicate was removed — it only fired
+        // on warm serverless instances and lacked the status guard). expireOrder re-checks
+        // status='PENDING' atomically (scanner may CONFIRM between the select and the update)
+        // and fires the order.expired webhook the merchant integration expects.
+        let expired = 0;
+        for (const s of stale) {
+          try {
+            await this.orderService.expireOrder(s.id);
+            expired++;
+          } catch (err: any) {
+            console.error(`[scanner] expireOrder failed for ${s.id}:`, err?.message || err);
+          }
+        }
+        console.log(`[scanner] Expired ${expired}/${stale.length} stale orders`);
       }
     } catch (err: any) {
       console.error('[scanner] Order expiry error:', err.message);

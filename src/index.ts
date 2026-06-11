@@ -24,7 +24,6 @@ import cronRouter from './routes/cron';
 import { db } from './config/database';
 import { validateEnv } from './utils/env';
 import { logger } from './utils/logger';
-import cron from 'node-cron';
 
 // Load and validate environment variables
 dotenv.config();
@@ -76,15 +75,21 @@ app.use(helmet({
   },
 }));
 
-// CORS is wide-open — the embed widget product needs to be callable from any merchant
-// domain (unlockriver.com, oneteasetech.com, flirtynlocal.com, etc.). An ALLOWED_ORIGINS
-// allowlist breaks the entire product because we'd need every merchant domain pre-registered.
-//
-// The proper fix is: scope an allowlist to non-embed routes only (auth, admin, dashboard)
-// and keep /api/embed/* wide-open OR validate at request time via merchant.id lookup.
-// Tracked as a security task in the growth plan — not safe to ship without testing
-// against actual merchant integrations.
-app.use(cors());
+// Split CORS by sensitivity:
+//  • /api/embed/* stays WIDE-OPEN — the widget is embedded on arbitrary merchant domains
+//    (unlockriver.com, flirtynlocal.com, …); pre-registering origins would break the product.
+//    x-order-token is allowlisted for preflight (per-order auth on the mutation endpoints).
+//  • Everything else gets NO cross-origin grant. The dashboard and hosted checkout are
+//    same-origin (CORS never applies to them) and merchant server-to-server API calls don't
+//    use a browser — so this only blocks hostile cross-origin scripts hitting admin/auth.
+//    Extra browser origins can be granted via ALLOWED_ORIGINS (comma-separated) if ever needed.
+const embedCors = cors({ origin: true, allowedHeaders: ['Content-Type', 'x-order-token'] });
+app.use('/api/embed', embedCors);
+app.options('/api/embed/*', embedCors);
+// The widget's only non-embed cross-origin call (customer receipt lookup after success).
+app.use('/api/receipts/for-order', embedCors);
+const restrictedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+app.use(cors({ origin: restrictedOrigins.length ? restrictedOrigins : false }));
 app.use(express.json());
 
 // Serve static files from public directory
@@ -238,48 +243,12 @@ async function startServer() {
       console.log(`Health check: http://localhost:${port}/api/health`);
     });
 
-    // Cron: Check for overdue fees every 6 hours
-    cron.schedule('0 */6 * * *', async () => {
-      try {
-        logger.info('Running scheduled fee overdue check', { event: 'cron.fee_check_start' });
-        const response = await fetch(`http://localhost:${port}/api/fees/check-overdue`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ adminKey: process.env.ADMIN_KEY }),
-        });
-        const result = await response.json() as Record<string, any>;
-        logger.info('Fee overdue check completed', { result, event: 'cron.fee_check_done' });
-      } catch (error) {
-        logger.error('Cron fee check failed', error as Error, { event: 'cron.fee_check_error' });
-      }
-    });
-
-    // Webhook retries run on the Railway scanner (long-running process) — node-cron
-    // here never fires on Vercel serverless. See src/scanner.ts driveWebhookRetries.
-
-    // Cron: Expire stale PENDING orders every 5 minutes
-    cron.schedule('*/5 * * * *', async () => {
-      try {
-        const { db } = await import('./config/database');
-        const { OrderService } = await import('./services/orderService');
-        const orderService = new OrderService();
-        const staleOrders = await db.order.findMany({
-          where: { status: 'PENDING', expiresAt: { lt: new Date() } },
-          select: { id: true },
-          take: 50,
-        });
-        for (const order of staleOrders) {
-          await orderService.expireOrder(order.id);
-        }
-        if (staleOrders.length > 0) {
-          logger.info('Expired stale orders', { count: staleOrders.length, event: 'cron.order_expiry' });
-        }
-      } catch (error) {
-        logger.error('Cron order expiry failed', error as Error, { event: 'cron.order_expiry_error' });
-      }
-    });
-
-    console.log('Cron jobs scheduled: fee check (every 6h), webhook retries (every 5m), order expiry (every 5m)');
+    // NO node-cron here. Serverless functions don't survive between requests — anything
+    // scheduled in this tier fires only on warm instances ("sometimes" is worse than never:
+    // the old order-expiry cron here raced the scanner's confirm and lacked a status guard).
+    // ALL schedulers live on the Railway scanner (src/scanner.ts): payment scan, order expiry,
+    // webhook retries, fee overdue check, health/merchant alerters, recovery, data retention.
+    console.log('Web tier started — schedulers run on the Railway scanner');
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

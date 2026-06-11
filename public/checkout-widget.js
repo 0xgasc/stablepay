@@ -1664,7 +1664,7 @@
                   const body = kind === 'wallet' ? { customerWallet: v } : { customerEmail: v };
                   try {
                     const res = await fetch(`${STABLEPAY_URL}/api/embed/order/${self.currentOrderId}/contact`, {
-                      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+                      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-order-token': self._orderAccessToken || '' }, body: JSON.stringify(body),
                     });
                     if (res.ok) {
                       statusEl.style.display = 'block'; statusEl.style.color = '#18181B';
@@ -2022,6 +2022,7 @@
 
           // Order created — set orderId so "I've sent it" skips re-creation
           this.currentOrderId = data.order.id;
+          this._orderAccessToken = data.order.accessToken || null;
           const receiveAddress = data.order.paymentAddress;
           const nativeSendAmt = data.order.nativeSendAmount;
           const expiresAt = data.order.expiresAt;
@@ -2564,6 +2565,7 @@
           const data = await res.json();
           if (data.success) {
             this.currentOrderId = data.order.id;
+            this._orderAccessToken = data.order.accessToken || null;
             // Reconcile the placeholder send-screen countdown to the order's REAL expiresAt.
             if (data.order.expiresAt) this.reconcileCountdown(data.order.expiresAt);
             return { success: true };
@@ -2765,7 +2767,7 @@
                 // matching transfer lands. Safest path when the customer doesn't have the tx hash.
                 if (kind === 'wallet') {
                   const r = await fetch(`${STABLEPAY_URL}/api/embed/order/${this.currentOrderId}/contact`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-order-token': this._orderAccessToken || '' },
                     body: JSON.stringify({ customerWallet: value }),
                   });
                   if (r.ok) {
@@ -4069,8 +4071,8 @@
         const _inFlight = spCheckout && (spCheckout._pollingInterval || spCheckout._orderConfirmedTracked || spCheckout._paymentInFlight);
         if (spCheckout && spCheckout.currentOrderId && !_inFlight) {
           fetch(`${STABLEPAY_URL}/api/embed/order/${spCheckout.currentOrderId}/cancel`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'customer_closed' })
-          }).catch(() => {});
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-order-token': spCheckout._orderAccessToken || '' }, body: JSON.stringify({ reason: 'customer_closed' })
+          }).catch(err => console.warn('[SP] close-cancel failed:', err && err.message));
         }
         if (spCheckout && spCheckout._pollingInterval) clearInterval(spCheckout._pollingInterval);
         if (spCheckout && spCheckout._countdownInterval) clearInterval(spCheckout._countdownInterval);
