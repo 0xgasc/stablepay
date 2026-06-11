@@ -3475,7 +3475,10 @@
               })
             });
             const data = await res.json();
-            if (data.success) this.currentOrderId = data.order.id;
+            if (data.success) {
+              this.currentOrderId = data.order.id;
+              this._orderAccessToken = data.order.accessToken || null;
+            }
           } catch (err) {
             console.error('Failed to create order:', err);
           }
@@ -3544,6 +3547,7 @@
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Failed to create payment');
         this.currentOrderId  = data.order.id;
+        this._orderAccessToken = data.order.accessToken || null;
         this._receiveAddress = data.order.paymentAddress;
         this._nativeSendAmt  = data.order.nativeSendAmount;
       }

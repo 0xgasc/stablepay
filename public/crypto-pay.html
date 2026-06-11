@@ -1980,7 +1980,7 @@
                                 if (cpWizState.token === 'EURC') lockBody.amount = info.amount;
                                 const lockRes = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', 'x-order-token': window._cpOrderToken || '' },
                                     body: JSON.stringify(lockBody),
                                 });
                                 const lockData = await lockRes.json();
@@ -2064,7 +2064,7 @@
                     const lockBody = { chain: cpWizState.chain, token: cpWizState.token };
                     if (cpWizState.token === 'EURC') lockBody.amount = info.amount;
                     const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-order-token': window._cpOrderToken || '' },
                         body: JSON.stringify(lockBody),
                     });
                     orderData = await res.json();
@@ -4695,7 +4695,7 @@
                             const patchAmount = (selectedToken === 'EURC' && displayAmount) ? displayAmount : undefined;
                             const patchRes = await fetch('/api/embed/order/' + existingOrderId + '/chain', {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: { 'Content-Type': 'application/json', 'x-order-token': window._cpOrderToken || '' },
                                 body: JSON.stringify({ chain: selectedChain.value, token: selectedToken, amount: patchAmount }),
                             });
                             const patched = await patchRes.json();
@@ -4766,6 +4766,7 @@
                             orderData.usdcAddress = tokenConfig.address;
                             orderData.paymentAddress = orderData.paymentAddress || selectedChainData?.address;
                             if (orderData.id) window._cpOrderId = orderData.id;
+                            window._cpOrderToken = orderData.accessToken || window._cpOrderToken || null;
                             var _sc2 = parseInt(sessionStorage.getItem('sp_order_count') || '0', 10) + 1;
                             sessionStorage.setItem('sp_order_count', String(_sc2));
                             if (_sc2 >= 2 && typeof stabloOnRetry === 'function') stabloOnRetry();
@@ -5558,7 +5559,7 @@
                         // Chain-agnostic order: PATCH to lock chain and create NativeReceiveWallet
                         const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', 'x-order-token': window._cpOrderToken || '' },
                             body: JSON.stringify({ chain: chainKey, token }),
                         });
                         const data = await res.json();
@@ -5861,7 +5862,7 @@
                 try {
                     const res = await fetch('/api/embed/order/' + window.currentOrderId + '/chain', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', 'x-order-token': window._cpOrderToken || '' },
                         body: JSON.stringify({ chain: pickedChain, token: pickedToken, amount: convertedAmount }),
                     });
                     const data = await res.json();

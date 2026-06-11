@@ -83,7 +83,7 @@ app.use(helmet({
 //    same-origin (CORS never applies to them) and merchant server-to-server API calls don't
 //    use a browser — so this only blocks hostile cross-origin scripts hitting admin/auth.
 //    Extra browser origins can be granted via ALLOWED_ORIGINS (comma-separated) if ever needed.
-const embedCors = cors({ origin: true, allowedHeaders: ['Content-Type', 'x-order-token'] });
+const embedCors = cors({ origin: true, allowedHeaders: ['Content-Type', 'x-order-token', 'Idempotency-Key', 'X-Idempotency-Key'] });
 app.use('/api/embed', embedCors);
 app.options('/api/embed/*', embedCors);
 // The widget's only non-embed cross-origin call (customer receipt lookup after success).

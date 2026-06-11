@@ -753,6 +753,11 @@ router.post('/order/:orderId/chain', async (req, res) => {
     const { orderId } = req.params;
     const { chain, token, amount: amountOverride } = req.body;
     if (!chain) return res.status(400).json({ error: 'chain required' });
+    // Same conditional gate as cancel/wallet/contact — a bare-orderId holder must not be able
+    // to repoint a pending order's chain/token/address. Tokenless (server-created) orders pass.
+    if (!(await verifyOrderAccess(orderId, orderTokenFrom(req)))) {
+      return res.status(401).json({ error: 'Invalid order token' });
+    }
 
     const order = await db.order.findUnique({
       where: { id: orderId },

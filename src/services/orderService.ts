@@ -541,9 +541,14 @@ export class OrderService {
     if (order?.merchantId) {
       webhookService.sendWebhook(order.merchantId, 'order.expired', {
         orderId: order.id,
+        externalId: order.externalId || null,
         amount: Number(order.amount),
+        token: order.token,
         chain: order.chain,
         expiredAt: now.toISOString(),
+        // Grace window: a late on-chain payment can still CONFIRM this order for up to 6h —
+        // integrations must not treat order.expired as a terminal "release inventory" signal.
+        mayStillConfirmUntil: new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString(),
       }, { storeId: order.storeId || undefined }).catch(err => {
         logger.error('Failed to send order.expired webhook', err as Error, { orderId });
       });

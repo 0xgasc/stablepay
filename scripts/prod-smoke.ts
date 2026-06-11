@@ -157,6 +157,7 @@ async function main() {
 
   // Create a chain-agnostic order (then cancel it)
   let testOrderId: string | null = null;
+  let testOrderToken: string | null = null;
   await check('POST /api/embed/checkout (chain-agnostic)', async () => {
     const d = await fetchJSON(`${BASE}/api/embed/checkout`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -170,6 +171,7 @@ async function main() {
     });
     if (!d.success || !d.order?.id) throw new Error('missing order.id');
     testOrderId = d.order.id;
+    testOrderToken = d.order.accessToken || null; // required by mutation endpoints since 2026-06-11
     return `created ${testOrderId!.slice(-8)} chain=${d.order.chain}`;
   });
 
@@ -193,13 +195,16 @@ async function main() {
 
   await check('POST /api/embed/order/:id/cancel', async () => {
     if (!testOrderId) throw new Error('skipped');
-    const d = await fetchJSON(`${BASE}/api/embed/order/${testOrderId}/cancel`, { method: 'POST' });
+    const d = await fetchJSON(`${BASE}/api/embed/order/${testOrderId}/cancel`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-order-token': testOrderToken || '' },
+    });
     if (d.success === false) throw new Error('cancel returned success=false');
     return 'cancelled';
   });
 
   // Native token order (also cancel)
   let nativeOrderId: string | null = null;
+  let nativeOrderToken: string | null = null;
   await check('POST /api/embed/checkout (native ETH on Base)', async () => {
     const d = await fetchJSON(`${BASE}/api/embed/checkout`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -216,12 +221,15 @@ async function main() {
     if (!d.order.nativeSendAmount) throw new Error('nativeSendAmount not set');
     if (!d.order.paymentAddress || !d.order.paymentAddress.startsWith('0x')) throw new Error('bad receive address');
     nativeOrderId = d.order.id;
+    nativeOrderToken = d.order.accessToken || null;
     return `${d.order.nativeSendAmount.toFixed(6)} ETH → ${d.order.paymentAddress.slice(0,10)}…`;
   });
 
   await check('Cancel native test order', async () => {
     if (!nativeOrderId) throw new Error('skipped');
-    await fetchJSON(`${BASE}/api/embed/order/${nativeOrderId}/cancel`, { method: 'POST' });
+    await fetchJSON(`${BASE}/api/embed/order/${nativeOrderId}/cancel`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-order-token': nativeOrderToken || '' },
+    });
     return 'cleaned up';
   });
 
