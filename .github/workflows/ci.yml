@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+        env:
+          # prisma generate only reads the schema; the URL just has to parse.
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npx vitest run
+
+      - name: Widget syntax
+        run: node --check public/checkout-widget.js
+
+      - name: Hosted-page inline-script syntax
+        run: |
+          python3 - <<'EOF'
+          import re
+          html = open('public/crypto-pay.html').read()
+          scripts = re.findall(r'<script>(.*?)</script>', html, re.DOTALL)
+          open('/tmp/cp-all.js','w').write('\n;\n'.join(scripts))
+          EOF
+          node --check /tmp/cp-all.js
+
+      - name: Token config drift (scanner vs widget vs page)
+        run: npx tsx scripts/check-config-drift.ts

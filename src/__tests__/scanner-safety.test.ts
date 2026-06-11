@@ -7,6 +7,7 @@ import {
   getTokenDecimals,
   amountWithinTolerance,
   amountAcceptable,
+  rankByAmountCloseness,
 } from '../services/blockchainService';
 
 // Current spec: symmetric ±1% tolerance (wallet rounding), raised from the original 0.1%
@@ -89,6 +90,42 @@ describe('exchange-fee underpay acceptance', () => {
   it('zero/negative order amounts rejected', () => {
     expect(amountAcceptable(5, 0).ok).toBe(false);
     expect(amountAcceptable(5, -1).ok).toBe(false);
+  });
+});
+
+// Candidate selection: cent-jitter gives concurrent same-price orders unique amounts; the
+// matcher must bind the transfer to the CLOSEST amount, breaking exact ties by token match.
+describe('candidate ranking (closest amount, exact-token tiebreak)', () => {
+  const tx = 9.9871; // what arrived on-chain
+  const o = (id: string, amount: number, token = 'USDC') => ({ id, amount, token });
+  const rank = (orders: ReturnType<typeof o>[], sentTok = 'USDC') =>
+    rankByAmountCloseness(orders, x => Math.abs(tx - x.amount), x => x.token === sentTok);
+
+  it('binds to the jittered order that matches, not a same-price sibling', () => {
+    const winner = rank([o('a', 9.9902), o('b', 9.9871), o('c', 9.99)])[0];
+    expect(winner.id).toBe('b');
+  });
+
+  it('on an exact closeness tie, exact token beats cross-stable', () => {
+    const winner = rank([o('usdt', 9.9871, 'USDT'), o('usdc', 9.9871, 'USDC')], 'USDC')[0];
+    expect(winner.id).toBe('usdc');
+  });
+
+  it('cross-stable still wins when its amount is closer', () => {
+    const winner = rank([o('usdc-far', 9.93, 'USDC'), o('usdt-close', 9.9871, 'USDT')], 'USDT')[0];
+    expect(winner.id).toBe('usdt-close');
+  });
+
+  it('preserves input order for full ties (stable sort → newest-first from the query)', () => {
+    const winner = rank([o('newest', 9.99), o('older', 9.99)])[0];
+    expect(winner.id).toBe('newest');
+  });
+
+  it('does not mutate the input array', () => {
+    const input = [o('a', 9.99), o('b', 9.9871)];
+    const copy = [...input];
+    rank(input);
+    expect(input).toEqual(copy);
   });
 });
 

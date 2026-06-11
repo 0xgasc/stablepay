@@ -140,6 +140,16 @@ function scannableOrderWhere() {
   };
 }
 
+// Candidate selection used by all three chain matchers: the order whose amount is CLOSEST to
+// the on-chain transfer wins (checkout cent-jitter gives concurrent same-price orders unique
+// amounts, so closeness is the disambiguator); exact-token beats cross-stable only among
+// equally-close candidates. Pure + exported so the selection policy is unit-testable.
+export function rankByAmountCloseness<T>(items: T[], diffOf: (t: T) => number, exactOf: (t: T) => boolean): T[] {
+  return [...items].sort((a, b) =>
+    diffOf(a) - diffOf(b) || (exactOf(b) ? 1 : 0) - (exactOf(a) ? 1 : 0)
+  );
+}
+
 export function amountWithinTolerance(txAmount: number, orderAmount: number, tolerance = 0.01): boolean {
   if (orderAmount <= 0) return false;
   const diff = Math.abs(txAmount - orderAmount) / orderAmount;
@@ -464,13 +474,8 @@ export class BlockchainService {
               c.order.customerWallet.toLowerCase() === fromLower
             );
             const tier = fromCands.length > 0 ? fromCands : candidates;
-            // Within the tier, the order whose amount is CLOSEST to the transfer wins — checkout
-            // cent-jitter gives concurrent same-price orders unique amounts, so closeness is the
-            // disambiguator. Exact-token beats cross-stable only among equally-close candidates.
-            const chosen = [...tier].sort((a, b) =>
-              Math.abs(a.txAmount - Number(a.order.amount)) - Math.abs(b.txAmount - Number(b.order.amount))
-              || (b.exact ? 1 : 0) - (a.exact ? 1 : 0)
-            )[0];
+            const chosen = rankByAmountCloseness(tier,
+              c => Math.abs(c.txAmount - Number(c.order.amount)), c => c.exact)[0];
             matchedOrder = chosen.order;
             matchedAmount = chosen.txAmount.toString();
             matchedUnderpaid = chosen.underpaid;
@@ -1024,12 +1029,8 @@ export class BlockchainService {
                 // match over a cross-stable one, else the first.
                 const fromCands = solCandidates.filter(o => o.customerWallet && o.customerWallet === from);
                 const tier = fromCands.length > 0 ? fromCands : solCandidates;
-                // Closest order amount wins (cent-jitter disambiguates same-price collisions);
-                // exact-token beats cross-stable only among equally-close candidates.
-                const order = [...tier].sort((a, b) =>
-                  Math.abs(amount - Number(a.amount)) - Math.abs(amount - Number(b.amount))
-                  || ((b.token === sentTok ? 1 : 0) - (a.token === sentTok ? 1 : 0))
-                )[0];
+                const order = rankByAmountCloseness(tier,
+                  o => Math.abs(amount - Number(o.amount)), o => o.token === sentTok)[0];
                 const senderMismatch = !!(order.customerWallet && order.customerWallet !== from);
                 if (senderMismatch) {
                   logger.warn('scanner confirming FROM-mismatched payment (customerWallet is a tiebreaker, not a filter)', {
@@ -1196,12 +1197,8 @@ export class BlockchainService {
               // match over a cross-stable one, else the first.
               const fromCands = tronCandidates.filter(o => o.customerWallet && o.customerWallet === fromAddress);
               const tier = fromCands.length > 0 ? fromCands : tronCandidates;
-              // Closest order amount wins (cent-jitter disambiguates same-price collisions);
-              // exact-token beats cross-stable only among equally-close candidates.
-              const order = [...tier].sort((a, b) =>
-                Math.abs(amount - Number(a.amount)) - Math.abs(amount - Number(b.amount))
-                || ((b.token === tokenName ? 1 : 0) - (a.token === tokenName ? 1 : 0))
-              )[0];
+              const order = rankByAmountCloseness(tier,
+                o => Math.abs(amount - Number(o.amount)), o => o.token === tokenName)[0];
               const senderMismatch = !!(order.customerWallet && order.customerWallet !== fromAddress);
               if (senderMismatch) {
                 logger.warn('scanner confirming FROM-mismatched payment (customerWallet is a tiebreaker, not a filter)', {
