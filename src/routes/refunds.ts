@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { db } from '../config/database';
 import { PRICING_TIERS } from '../config/pricing';
 import { rateLimit } from '../middleware/rateLimit';
-import { requireMerchantAuth, requirePro } from '../middleware/auth';
+import { requireMerchantAuth, requirePro, AuthenticatedRequest } from '../middleware/auth';
 import { idempotency } from '../middleware/idempotency';
 import { logAdminAction } from '../utils/audit';
 import { logger } from '../utils/logger';
@@ -162,35 +162,18 @@ router.post('/managed', requireMerchantAuth, requirePro('Refunds'), async (req, 
 // GENERAL ROUTES
 // ============================================
 
-// Get refunds for a merchant (list)
-router.get('/', async (req, res) => {
+// Get refunds for a merchant (list).
+// Auth is REQUIRED and results are scoped to the authenticated merchant — the old handler
+// only verified the token when BOTH merchantId and token were supplied, so a bare
+// GET /api/refunds returned every refund in the system (amounts + customer emails).
+router.get('/', requireMerchantAuth, async (req, res) => {
   try {
-    const { merchantId, orderId } = req.query;
+    const merchant = (req as AuthenticatedRequest).merchant;
+    const { orderId } = req.query;
 
-    // Check auth header for merchantId validation
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-    if (merchantId && token) {
-      // Verify token matches merchantId
-      const merchant = await db.merchant.findFirst({
-        where: { id: merchantId as string, loginToken: token }
-      });
-      if (!merchant) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-    }
-
-    let where: any = {};
-
+    const where: any = { order: { merchantId: merchant.id } };
     if (orderId) {
       where.orderId = orderId as string;
-    }
-
-    if (merchantId) {
-      where.order = {
-        merchantId: merchantId as string
-      };
     }
 
     const refunds = await db.refund.findMany({

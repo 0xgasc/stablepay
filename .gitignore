@@ -63,3 +63,6 @@ temp/
 tmp/bfg.jar
 .vercel
 .env.vercel
+
+# Dead-code archive lives at ~/Desktop/_archive/stablepay-dead
+bfg.jar

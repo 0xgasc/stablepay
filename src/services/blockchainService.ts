@@ -146,18 +146,28 @@ export function amountWithinTolerance(txAmount: number, orderAmount: number, tol
   return diff <= tolerance;
 }
 
-// Asymmetric acceptance: the symmetric ±1% tolerance, PLUS underpayment up to min($1.00, 3%).
-// Exchanges deduct their withdrawal fee from the sent amount (observed live: 4.90 arrived for a
-// 4.99 order — customer paid, scanner skipped it, order expired). Fees are small flat amounts, so
-// the $1 absolute cap covers them while bounding deliberate undercutting at $1/order; the 3%
-// relative cap stops the $1 allowance from dominating small orders. Every fee-rule acceptance is
-// flagged (metadata.underpaid) so abuse patterns are visible in the dashboard.
+// Asymmetric acceptance.
+//  • Overpayment / exact: symmetric ±1% band (wallet rounding) — unchanged.
+//  • Underpayment: shortfall must be ≤ min($1.00, 3% of order) ABSOLUTE. Exchanges deduct their
+//    withdrawal fee from the sent amount (observed live: 4.90 arrived for a 4.99 order — customer
+//    paid, scanner skipped it, order expired). The $1 cap bounds deliberate undercutting at
+//    $1/order on EVERY order size — the earlier version let the 1% band override it, so a $500
+//    order could be shorted $5 unflagged. The 3% relative cap stops the $1 allowance from
+//    dominating small orders.
+//  • `underpaid` flags acceptances whose shortfall exceeds the 1% rounding band (fee-rule
+//    acceptances) — written to metadata.underpaid so abuse patterns stay visible.
 export function amountAcceptable(txAmount: number, orderAmount: number): { ok: boolean; underpaid: boolean; shortfall: number } {
   if (orderAmount <= 0) return { ok: false, underpaid: false, shortfall: 0 };
   const shortfall = Math.round((orderAmount - txAmount) * 1e6) / 1e6;
-  if (amountWithinTolerance(txAmount, orderAmount)) return { ok: true, underpaid: false, shortfall: Math.max(0, shortfall) };
-  if (shortfall > 0 && shortfall <= Math.min(1.0, orderAmount * 0.03)) return { ok: true, underpaid: true, shortfall };
-  return { ok: false, underpaid: shortfall > 0, shortfall: Math.max(0, shortfall) };
+  if (shortfall <= 0) {
+    return { ok: amountWithinTolerance(txAmount, orderAmount), underpaid: false, shortfall: 0 };
+  }
+  // Round the cap like the shortfall — 30*0.03 is 0.8999999… in IEEE754 and would make the
+  // exact-boundary case (0.90 short on $30) flip on float noise.
+  const cap = Math.round(Math.min(1.0, orderAmount * 0.03) * 1e6) / 1e6;
+  const ok = shortfall <= cap;
+  const underpaid = ok && shortfall > orderAmount * 0.01;
+  return { ok, underpaid, shortfall };
 }
 
 // Record a fee-rule underpay acceptance on the order (advisory, non-blocking).

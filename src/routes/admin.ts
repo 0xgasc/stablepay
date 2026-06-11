@@ -75,7 +75,15 @@ const requireAdminKey = async (req: any, res: any, next: any) => {
   const providedKey = req.headers['x-admin-key'] || bearerToken;
 
   const expectedKey = await getAdminKey();
-  if (!providedKey || providedKey !== expectedKey) {
+  // Timing-safe compare — `!==` leaks key prefix length/content through response timing.
+  // Hash both sides first so timingSafeEqual gets equal-length buffers regardless of input size.
+  const ok = !!providedKey && !!expectedKey && (() => {
+    const nodeCrypto = require('crypto') as typeof import('crypto');
+    const a = nodeCrypto.createHash('sha256').update(String(providedKey)).digest();
+    const b = nodeCrypto.createHash('sha256').update(String(expectedKey)).digest();
+    return nodeCrypto.timingSafeEqual(a, b);
+  })();
+  if (!ok) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
@@ -1211,29 +1219,10 @@ router.post('/receipts/:id/resend', requireAdminKey, async (req, res) => {
   }
 });
 
-// One-time fix: drop broken Supabase moddatetime triggers on tables with camelCase columns
+// One-time fix (RETIRED): the moddatetime trigger cleanup ran long ago. The handler held the
+// repo's only $queryRawUnsafe (interpolated trigger name) — removed rather than parameterized.
 router.post('/fix-triggers', requireAdminKey, async (_req, res) => {
-  try {
-    // List triggers on refunds table
-    const triggers: any[] = await db.$queryRaw`
-      SELECT trigger_name, event_manipulation, action_statement
-      FROM information_schema.triggers
-      WHERE event_object_table = 'refunds'
-    `;
-
-    // Drop any moddatetime triggers that reference updated_at (snake_case)
-    const dropped: string[] = [];
-    for (const t of triggers) {
-      if (t.action_statement?.includes('updated_at') || t.trigger_name?.includes('moddatetime')) {
-        await db.$queryRawUnsafe(`DROP TRIGGER IF EXISTS "${t.trigger_name}" ON refunds`);
-        dropped.push(t.trigger_name);
-      }
-    }
-
-    res.json({ success: true, triggers, dropped });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed', details: error instanceof Error ? error.message : String(error) });
-  }
+  res.status(410).json({ error: 'Retired — one-time migration already applied' });
 });
 
 // One-time migration: create receipts table if missing

@@ -6,27 +6,30 @@ import {
   CHAIN_TOKEN_DECIMALS,
   getTokenDecimals,
   amountWithinTolerance,
+  amountAcceptable,
 } from '../services/blockchainService';
 
-describe('scanner amount tolerance', () => {
+// Current spec: symmetric ±1% tolerance (wallet rounding), raised from the original 0.1%
+// on 2026-06-09 because real wallets/exchanges rounded payments out of the window.
+describe('scanner amount tolerance (±1% symmetric)', () => {
   it('accepts exact match', () => {
     expect(amountWithinTolerance(100, 100)).toBe(true);
   });
 
-  it('accepts within +0.1%', () => {
-    expect(amountWithinTolerance(100.05, 100)).toBe(true);
+  it('accepts within +1%', () => {
+    expect(amountWithinTolerance(100.9, 100)).toBe(true);
   });
 
-  it('accepts within -0.1%', () => {
-    expect(amountWithinTolerance(99.95, 100)).toBe(true);
+  it('accepts within -1%', () => {
+    expect(amountWithinTolerance(99.1, 100)).toBe(true);
   });
 
-  it('rejects overpayment > 0.1%', () => {
-    expect(amountWithinTolerance(100.5, 100)).toBe(false);
+  it('rejects overpayment > 1%', () => {
+    expect(amountWithinTolerance(101.5, 100)).toBe(false);
   });
 
-  it('rejects underpayment > 0.1%', () => {
-    expect(amountWithinTolerance(99.5, 100)).toBe(false);
+  it('rejects underpayment > 1%', () => {
+    expect(amountWithinTolerance(98.5, 100)).toBe(false);
   });
 
   it('rejects zero-amount orders', () => {
@@ -35,6 +38,57 @@ describe('scanner amount tolerance', () => {
 
   it('rejects negative order amounts', () => {
     expect(amountWithinTolerance(100, -50)).toBe(false);
+  });
+});
+
+// Underpay rule (2026-06-10): beyond the symmetric tolerance, accept a shortfall of up to
+// min($1.00, 3% of order) — exchanges deduct withdrawal fees from the sent amount. Every
+// fee-rule acceptance is flagged `underpaid:true` so abuse stays visible.
+describe('exchange-fee underpay acceptance', () => {
+  it('accepts the live case that motivated the rule: 4.90 sent for a 4.99 order', () => {
+    const r = amountAcceptable(4.9, 4.99);
+    expect(r.ok).toBe(true);
+    expect(r.underpaid).toBe(true);
+    expect(r.shortfall).toBeCloseTo(0.09, 6);
+  });
+
+  it('within ±1% is ok and NOT flagged underpaid', () => {
+    const r = amountAcceptable(99.5, 100);
+    expect(r.ok).toBe(true);
+    expect(r.underpaid).toBe(false);
+  });
+
+  it('3% cap binds on small orders: 4.80 for 4.99 (0.19 > 3% of 4.99) rejected', () => {
+    expect(amountAcceptable(4.8, 4.99).ok).toBe(false);
+  });
+
+  it('$1 cap binds on large orders: $1 short on $500 accepted (not flagged — within 1% rounding band)', () => {
+    const r = amountAcceptable(499.0, 500);
+    expect(r.ok).toBe(true);
+    expect(r.underpaid).toBe(false); // 0.2% — rounding-scale, no fee-rule flag
+  });
+
+  it('$1.01 short on $500 rejected (absolute cap)', () => {
+    expect(amountAcceptable(498.99, 500).ok).toBe(false);
+  });
+
+  it('crossover (~$33.33): below it 3% binds, above it $1 binds', () => {
+    // $30 order: 3% = $0.90 < $1 → 0.90 accepted, 0.95 rejected
+    expect(amountAcceptable(29.10, 30).ok).toBe(true);
+    expect(amountAcceptable(29.05, 30).ok).toBe(false);
+    // $50 order: min($1, $1.50) = $1 → 1.00 accepted, 1.10 rejected
+    expect(amountAcceptable(49.0, 50).ok).toBe(true);
+    expect(amountAcceptable(48.9, 50).ok).toBe(false);
+  });
+
+  it('OVERpayment gets no extended allowance — strictly 1%', () => {
+    expect(amountAcceptable(101.5, 100).ok).toBe(false);
+    expect(amountAcceptable(100.9, 100).ok).toBe(true);
+  });
+
+  it('zero/negative order amounts rejected', () => {
+    expect(amountAcceptable(5, 0).ok).toBe(false);
+    expect(amountAcceptable(5, -1).ok).toBe(false);
   });
 });
 

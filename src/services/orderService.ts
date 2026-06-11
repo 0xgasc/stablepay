@@ -526,8 +526,16 @@ export class OrderService {
     // Get order details first for webhook
     const order = await db.order.findUnique({ where: { id: orderId } });
 
+    // Status guard is load-bearing: between the caller's PENDING select and this UPDATE the
+    // scanner can CONFIRM the order. Unconditional UPDATE clobbered CONFIRMED→EXPIRED, fired a
+    // false order.expired webhook, and (since the late-payment grace arm) made the order
+    // re-confirmable — double fees. Same race fixed in the scanner sweep on 2026-06-10.
     const now = new Date();
-    await db.$executeRaw`UPDATE orders SET status = 'EXPIRED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId}`;
+    const updated = await db.$executeRaw`UPDATE orders SET status = 'EXPIRED'::"OrderStatus", "updatedAt" = ${now} WHERE id = ${orderId} AND status = 'PENDING'::"OrderStatus"`;
+    if (updated === 0) {
+      logger.warn('expireOrder skipped — order no longer PENDING', { orderId, status: order?.status, event: 'order.expire_stale' });
+      return db.order.findUnique({ where: { id: orderId } });
+    }
 
     // Send webhook for order expiration
     if (order?.merchantId) {

@@ -103,24 +103,8 @@
     'function decimals() view returns (uint8)'
   ];
 
-  // Splitter contract configuration
-  const SPLITTER_CONFIG = {
-    // Contract addresses per chain (update after deployment)
-    addresses: {
-      BASE_SEPOLIA: '0xCf6A9F0dA89aA829ACB49Ff3A853df196D4E322d',
-      ETHEREUM_SEPOLIA: null,
-      BASE_MAINNET: null,
-      ETHEREUM_MAINNET: null,
-      POLYGON_MAINNET: null
-    },
-    // Fee tiers in basis points
-    feeTiers: { STARTER: 50, GROWTH: 40, SCALE: 30, VOLUME: 20 },
-    volumeThresholds: { STARTER: 0, GROWTH: 10000, SCALE: 50000, VOLUME: 250000 },
-    // Splitter ABI
-    abi: [
-      'function processPayment(address token, address merchant, uint256 amount, uint16 feeBasisPoints, bytes32 orderId) external'
-    ]
-  };
+  // (SPLITTER_CONFIG removed 2026-06-11 — defined since the testnet era, never referenced;
+  //  the splitter contract path lives in ~/Desktop/_archive/stablepay-dead/contracts-hardhat.)
 
   // Get fee basis points based on monthly volume
   function getFeeBasisPoints(monthlyVolume, customFee = null) {
