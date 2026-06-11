@@ -438,8 +438,16 @@ router.post('/checkout', rateLimit({
     // Per-order access token: returned ONCE in the checkout response and required by the public
     // mutation endpoints (/cancel, /wallet, /contact). Without it, anyone holding an orderId
     // could cancel the order or redirect customer contact/refund details.
-    const crypto = await import('crypto');
-    finalMetadata._accessToken = crypto.randomBytes(16).toString('hex');
+    // CLIENT-created orders only (widget / hosted page keep it in session memory). Server-created
+    // orders (API/INVOICE/DASHBOARD) reach checkout via bare /checkout?orderId= links that can't
+    // carry a secret — handing the token to whoever resolves the orderId would defeat the gate,
+    // so those stay tokenless/open as before.
+    const tokenSource = data.source || 'EMBED_WIDGET';
+    const isClientCreated = tokenSource === 'EMBED_WIDGET' || tokenSource === 'CHECKOUT_LINK';
+    if (isClientCreated) {
+      const crypto = await import('crypto');
+      finalMetadata._accessToken = crypto.randomBytes(16).toString('hex');
+    }
 
     // Resolve final payment address: honor store wallet override if present.
     const resolvedChain = (data.chain || wallet.chain) as any;
@@ -1274,7 +1282,7 @@ router.post('/order/:orderId/tx', async (req, res) => {
       webhookService.sendWebhook(order.merchant.id, 'order.created', {
         orderId, txHash, status: 'PENDING_REVIEW',
         message: 'Customer submitted TX hash manually — please verify',
-      }).catch(() => {});
+      }).catch(err => logger.warn('non-critical async op failed (embed)', { error: (err as Error)?.message }));
     }
 
     logger.info('Manual TX submitted for review', {

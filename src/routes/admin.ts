@@ -1046,7 +1046,7 @@ router.post('/refunds/:id/process', requireAdminKey, async (req, res) => {
         const { webhookService } = await import('../services/webhookService');
         webhookService.sendWebhook(refund.order.merchantId, 'refund.processed', {
           refundId: id, orderId: refund.orderId, amount: Number(refund.amount), txHash,
-        }).catch(() => {});
+        }).catch(err => logger.warn('non-critical async op failed (admin)', { error: (err as Error)?.message }));
       } catch {}
     }
 

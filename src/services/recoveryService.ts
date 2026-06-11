@@ -62,7 +62,7 @@ async function flagManualReview(orderId: string, meta: any, rec: any, why: strin
   rec.needsManualReview = true;
   rec.flaggedAt = new Date().toISOString();
   rec.flagReason = why;
-  await db.order.update({ where: { id: orderId }, data: { metadata: { ...meta, recovery: rec } } }).catch(() => {});
+  await db.order.update({ where: { id: orderId }, data: { metadata: { ...meta, recovery: rec } } }).catch(err => logger.warn('non-critical async op failed (recoveryService)', { error: (err as Error)?.message }));
   logger.security(`Auto-recovery: MANUAL review — ${why}`, { orderId, event: 'recovery.manual_review', ...extra });
 }
 
@@ -145,7 +145,7 @@ export async function recoverStrandedNative(): Promise<RecoveryStats> {
             rec.swapAttempts = (rec.swapAttempts || 0) + 1;
             rec.lastAttemptAt = new Date().toISOString();
             rec.lastError = msg.slice(0, 300);
-            await db.order.update({ where: { id: order.id }, data: { metadata: { ...meta, recovery: rec } } }).catch(() => {});
+            await db.order.update({ where: { id: order.id }, data: { metadata: { ...meta, recovery: rec } } }).catch(err => logger.warn('non-critical async op failed (recoveryService)', { error: (err as Error)?.message }));
             stats.errors++;
             logger.warn('Auto-recovery: swap retry failed', { orderId: order.id, attempt: rec.swapAttempts, error: rec.lastError });
             continue;
@@ -157,7 +157,7 @@ export async function recoverStrandedNative(): Promise<RecoveryStats> {
           rec.lastForwardTxHash = forwardTxHash;
           rec.resolved = 'swapped';
           rec.resolvedAt = new Date().toISOString();
-          await db.order.update({ where: { id: order.id }, data: { metadata: { ...meta, recovery: rec } } }).catch(() => {});
+          await db.order.update({ where: { id: order.id }, data: { metadata: { ...meta, recovery: rec } } }).catch(err => logger.warn('non-critical async op failed (recoveryService)', { error: (err as Error)?.message }));
           if (await tryConfirm(order.id, forwardTxHash)) {
             stats.swapped++;
             logger.security('Auto-recovery: swap succeeded', { orderId: order.id, txHash: forwardTxHash, attempt: (rec.swapAttempts || 0) + 1, event: 'recovery.swap_succeeded' });
@@ -182,7 +182,7 @@ export async function recoverStrandedNative(): Promise<RecoveryStats> {
               if (order.merchantId) {
                 webhookService.sendWebhook(order.merchantId, 'order.auto_refunded', {
                   orderId: order.id, destinationAddress: order.customerWallet, txHash, amount, chain, nativeToken: order.nativeToken,
-                }).catch(() => {});
+                }).catch(err => logger.warn('non-critical async op failed (recoveryService)', { error: (err as Error)?.message }));
               }
             }
           } catch (refundErr) {

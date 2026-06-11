@@ -471,7 +471,7 @@ export async function swapAndForward(orderId: string): Promise<{ forwardTxHash: 
           orderId, chain, nativeToken: order.nativeToken,
           nativeAmountReceived: nativeAmt, error: (swapErr as Error).message,
           paymentAddress: order.paymentAddress,
-        }).catch(() => {});
+        }).catch(err => logger.warn('non-critical async op failed (swapService)', { error: (err as Error)?.message }));
       }
     } catch { /* webhook is best-effort */ }
     throw swapErr;
@@ -604,7 +604,7 @@ export async function refundNativeToAddress(
       refundError: ((sendErr as Error).message || '').slice(0, 300),
       ...(broadcast ? { refundBroadcastUnconfirmed: true, refundTxHash: txHash } : { refundClaimedButFailed: true }),
     };
-    await db.order.update({ where: { id: orderId }, data: { metadata: m } }).catch(() => {});
+    await db.order.update({ where: { id: orderId }, data: { metadata: m } }).catch(err => logger.warn('non-critical async op failed (swapService)', { error: (err as Error)?.message }));
     logger.error(
       broadcast
         ? 'refundNativeToAddress: refund BROADCAST but confirmation failed — VERIFY tx on-chain before any manual refund'
@@ -617,7 +617,7 @@ export async function refundNativeToAddress(
   // Record the refund tx for idempotency/audit.
   const m: any = (order.metadata && typeof order.metadata === 'object') ? { ...(order.metadata as any) } : {};
   m.recovery = { ...(m.recovery || {}), refundTxHash: txHash, refundedAt: new Date().toISOString() };
-  await db.order.update({ where: { id: orderId }, data: { metadata: m } }).catch(() => {});
+  await db.order.update({ where: { id: orderId }, data: { metadata: m } }).catch(err => logger.warn('non-critical async op failed (swapService)', { error: (err as Error)?.message }));
 
   logger.security('Native refund executed', { orderId, destinationAddress, txHash, amount, chain, event: 'native.refund' });
   return { txHash, amount };

@@ -149,7 +149,7 @@ class WebhookService {
 
         // Track health on merchant
         if (merchantId) {
-          db.merchant.update({ where: { id: merchantId }, data: { webhookLastSuccess: new Date() } }).catch(() => {});
+          db.merchant.update({ where: { id: merchantId }, data: { webhookLastSuccess: new Date() } }).catch(err => logger.warn('non-critical async op failed (webhookService)', { error: (err as Error)?.message }));
         }
 
         logger.info('Webhook delivered successfully', {
@@ -188,7 +188,7 @@ class WebhookService {
 
       // Track failure on merchant
       if (merchantId) {
-        db.merchant.update({ where: { id: merchantId }, data: { webhookLastFailure: new Date() } }).catch(() => {});
+        db.merchant.update({ where: { id: merchantId }, data: { webhookLastFailure: new Date() } }).catch(err => logger.warn('non-critical async op failed (webhookService)', { error: (err as Error)?.message }));
       }
 
       try {
@@ -210,7 +210,7 @@ class WebhookService {
         await db.webhookLog.update({
           where: { id: logId },
           data: { response: errorMessage.substring(0, 1000), nextRetryAt: new Date(Date.now() + 60000) },
-        }).catch(() => {});
+        }).catch(err => logger.warn('non-critical async op failed (webhookService)', { error: (err as Error)?.message }));
       }
       return false;
     }

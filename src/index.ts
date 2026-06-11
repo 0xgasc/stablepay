@@ -29,7 +29,7 @@ import { logger } from './utils/logger';
 dotenv.config();
 
 // Initialize Sentry early — captures errors during startup too. Opt-in via SENTRY_DSN.
-import('./utils/sentry').then(({ initSentry }) => initSentry('web')).catch(() => {});
+import('./utils/sentry').then(({ initSentry }) => initSentry('web')).catch(err => console.warn('[sentry] init failed:', err?.message || err));
 
 let env;
 try {
@@ -128,7 +128,14 @@ app.get('/checkout', async (req, res) => {
       if (order.chain) params.set('chain', order.chain);
       if (order.customerEmail) params.set('customerEmail', order.customerEmail);
       if (order.externalId) params.set('externalId', order.externalId);
-      if (order.metadata) params.set('metadata', JSON.stringify(order.metadata));
+      // Strip internal keys (underscore-prefixed: _accessToken, _nativeSendAmount, …) — this
+      // redirect URL is obtainable by anyone holding a bare orderId, so secrets must not ride it.
+      if (order.metadata && typeof order.metadata === 'object') {
+        const publicMeta = Object.fromEntries(
+          Object.entries(order.metadata as Record<string, unknown>).filter(([k]) => !k.startsWith('_'))
+        );
+        if (Object.keys(publicMeta).length > 0) params.set('metadata', JSON.stringify(publicMeta));
+      }
       return res.redirect(`/crypto-pay.html?${params.toString()}`);
     }
     // No orderId — serve checkout page directly (merchant embeds with params)

@@ -121,7 +121,7 @@ async function flagWrongToken(orderId: string, merchantId: string | null, expect
     if (merchantId) {
       webhookService.sendWebhook(merchantId, 'order.wrong_token', {
         orderId, expectedToken: expected, receivedToken: received, txHash, chain,
-      }).catch(() => {});
+      }).catch(err => logger.warn('non-critical async op failed (blockchainService)', { error: (err as Error)?.message }));
     }
   } catch (e) { logger.warn('flagWrongToken failed', { orderId, error: (e as Error).message }); }
 }
@@ -1346,7 +1346,7 @@ export class BlockchainService {
       } else {
         idleCycles++;
         if (idleCycles % 6 === 0) { // Every 30s when idle (6 × 5s)
-          await this.expireStaleOrders().catch(() => {});
+          await this.expireStaleOrders().catch(err => logger.warn('non-critical async op failed (blockchainService)', { error: (err as Error)?.message }));
         }
       }
     }, 5000);

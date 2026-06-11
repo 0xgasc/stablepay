@@ -391,7 +391,7 @@ class InvoiceService {
           orderId,
           amount: Number(updated.total),
           paidAt: new Date().toISOString(),
-        }).catch(() => {});
+        }).catch(err => logger.warn('non-critical async op failed (invoiceService)', { error: (err as Error)?.message }));
       } catch {}
     }
 

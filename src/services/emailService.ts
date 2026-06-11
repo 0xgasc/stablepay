@@ -272,7 +272,7 @@ class EmailService {
             receiptNumber: receipt.receiptNumber,
             customerEmail: toEmail,
             amount: Number(receipt.amount),
-          }).catch(() => {});
+          }).catch(err => logger.warn('non-critical async op failed (emailService)', { error: (err as Error)?.message }));
         } catch {}
       }
 
