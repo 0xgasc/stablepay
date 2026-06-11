@@ -2541,7 +2541,7 @@
       fetch(`${STABLEPAY_URL}/api/embed/support`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, message: text }),
+        body: JSON.stringify({ orderId, sessionId: this._sessionId || '', message: text }),
       })
       .then(r => r.json())
       .then(data => { loadEl.textContent = data.reply || 'Something went wrong — try refreshing.'; msgs.scrollTop = msgs.scrollHeight; })

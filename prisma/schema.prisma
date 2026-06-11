@@ -873,14 +873,16 @@ model NativeReceiveWallet {
 
 model StabloChat {
   id        String   @id @default(cuid())
-  orderId   String
+  orderId   String? // null for pre-order sessions (source-step chats) — sessionId identifies those
+  sessionId String?
   role      String   // 'user' | 'bot'
   content   String
   createdAt DateTime @default(now())
 
-  order Order @relation(fields: [orderId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
 
   @@index([orderId])
+  @@index([sessionId])
   @@index([createdAt])
   @@map("stablo_chats")
   @@schema("public")

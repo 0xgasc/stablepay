@@ -1574,11 +1574,12 @@ const stabloRateMap = new Map<string, { count: number; resetAt: number }>();
 
 router.post('/support', async (req, res) => {
   try {
-    const { orderId, message } = req.body || {};
+    const { orderId, message, sessionId } = req.body || {};
     if (!message || typeof message !== 'string' || !message.trim()) return res.status(400).json({ error: 'message required' });
     if (message.length > 500) return res.status(400).json({ error: 'Message too long' });
+    const cleanSessionId = (sessionId && typeof sessionId === 'string' && sessionId.length <= 64) ? sessionId : null;
 
-    const rateLimitKey = (orderId && typeof orderId === 'string') ? orderId : (req.ip || 'anon');
+    const rateLimitKey = (orderId && typeof orderId === 'string') ? orderId : (cleanSessionId || req.ip || 'anon');
     const now = Date.now();
     const rl = stabloRateMap.get(rateLimitKey);
     if (rl && rl.resetAt > now && rl.count >= 20) {
@@ -1651,11 +1652,16 @@ MORE RULES:
 
     const reply = response.content[0]?.type === 'text' ? response.content[0].text : "Sorry, I couldn't process that. Try refreshing the page.";
 
-    if (orderId && typeof orderId === 'string') {
+    // Persist EVERY conversation — pre-order chats (source-step questions) are exactly the
+    // voice-of-customer data Stablo exists to capture; they're keyed by sessionId instead.
+    // Bind to the order only if the lookup found it — an unknown orderId would FK-fail the
+    // insert and silently drop the chat; sessionId still keys it in that case.
+    const chatOrderId = (order && orderId && typeof orderId === 'string') ? orderId : null;
+    if (chatOrderId || cleanSessionId) {
       db.stabloChat.createMany({
         data: [
-          { orderId, role: 'user', content: message.trim() },
-          { orderId, role: 'bot', content: reply },
+          { orderId: chatOrderId, sessionId: cleanSessionId, role: 'user', content: message.trim() },
+          { orderId: chatOrderId, sessionId: cleanSessionId, role: 'bot', content: reply },
         ],
       }).catch(e => console.warn('Stablo persist failed:', e instanceof Error ? e.message : e));
     }

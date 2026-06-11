@@ -1712,42 +1712,57 @@ router.get('/stablo/chats', requireAdminKey, async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
     const offset = parseInt(req.query.offset as string) || 0;
 
-    // Get distinct orders that have stablo chats, most recent first
-    const recentOrders = await db.stabloChat.groupBy({
-      by: ['orderId'],
+    // Get distinct conversations (order-bound OR pre-order session chats), most recent first
+    const recentConvos = await db.stabloChat.groupBy({
+      by: ['orderId', 'sessionId'],
       orderBy: { _max: { createdAt: 'desc' } },
       take: limit,
       skip: offset,
     });
 
-    if (!recentOrders.length) return res.json({ conversations: [], total: 0 });
+    if (!recentConvos.length) return res.json({ conversations: [], total: 0 });
 
-    const orderIds = recentOrders.map(r => r.orderId);
+    const orderIds = [...new Set(recentConvos.map(r => r.orderId).filter((x): x is string => !!x))];
+    const sessionIds = [...new Set(recentConvos.map(r => r.sessionId).filter((x): x is string => !!x))];
+    const chatFilters = [];
+    if (orderIds.length) chatFilters.push({ orderId: { in: orderIds } });
+    if (sessionIds.length) chatFilters.push({ sessionId: { in: sessionIds } });
 
     const [chats, orders, total] = await Promise.all([
       db.stabloChat.findMany({
-        where: { orderId: { in: orderIds } },
+        where: { OR: chatFilters },
         orderBy: { createdAt: 'asc' },
       }),
       db.order.findMany({
         where: { id: { in: orderIds } },
         select: { id: true, amount: true, token: true, chain: true, status: true, customerEmail: true, createdAt: true, merchantId: true },
       }),
-      db.stabloChat.groupBy({ by: ['orderId'] }).then(r => r.length),
+      db.stabloChat.groupBy({ by: ['orderId', 'sessionId'] }).then(r => r.length),
     ]);
 
     const orderMap = new Map(orders.map(o => [o.id, o]));
+    // Conversation key: order-bound chats group by order; pre-order chats group by session.
+    const keyOf = (m: { orderId: string | null; sessionId: string | null }) =>
+      m.orderId ? `o:${m.orderId}` : `s:${m.sessionId || 'anon'}`;
     const chatMap = new Map<string, typeof chats>();
     for (const msg of chats) {
-      if (!chatMap.has(msg.orderId)) chatMap.set(msg.orderId, []);
-      chatMap.get(msg.orderId)!.push(msg);
+      const k = keyOf(msg);
+      if (!chatMap.has(k)) chatMap.set(k, []);
+      chatMap.get(k)!.push(msg);
     }
 
-    const conversations = orderIds.map(oid => ({
-      orderId: oid,
-      order: orderMap.get(oid) || null,
-      messages: chatMap.get(oid) || [],
-    }));
+    const seen = new Set<string>();
+    const conversations = recentConvos.flatMap(rc => {
+      const k = keyOf(rc);
+      if (seen.has(k)) return []; // same order with/without sessionId rows — one conversation
+      seen.add(k);
+      return [{
+        orderId: rc.orderId || null,
+        sessionId: rc.sessionId || null,
+        order: rc.orderId ? (orderMap.get(rc.orderId) || null) : null,
+        messages: chatMap.get(k) || [],
+      }];
+    });
 
     res.json({ conversations, total });
   } catch (error) {

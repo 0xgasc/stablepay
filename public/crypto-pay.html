@@ -6443,7 +6443,7 @@
                 fetch('/api/embed/support', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ orderId, message: text }),
+                    body: JSON.stringify({ orderId, sessionId: (typeof cpSessionId === 'function' ? cpSessionId() : ''), message: text }),
                 })
                 .then(r => r.json())
                 .then(data => {
