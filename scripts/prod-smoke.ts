@@ -186,7 +186,7 @@ async function main() {
   await check('POST /api/embed/order/:id/chain (Solana lock)', async () => {
     if (!testOrderId) throw new Error('skipped');
     const d = await fetchJSON(`${BASE}/api/embed/order/${testOrderId}/chain`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-order-token': testOrderToken || '' },
       body: JSON.stringify({ chain: 'SOLANA_MAINNET', token: 'USDC' }),
     });
     if (!d.success) throw new Error(`chain lock failed: ${JSON.stringify(d).slice(0, 200)}`);
